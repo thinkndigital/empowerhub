@@ -1,0 +1,202 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && getUserData().role == 'admin';
+    }
+
+    function isOrganization() {
+      return isSignedIn() && getUserData().role == 'organization';
+    }
+
+    function isMentor() {
+      return isSignedIn() && getUserData().role == 'mentor';
+    }
+
+    function isCoach() {
+      return isSignedIn() && getUserData().role == 'coach';
+    }
+
+    function isBeneficiary() {
+      return isSignedIn() && getUserData().role == 'beneficiary';
+    }
+
+    function isAdminOrOrg() {
+      return isAdmin() || isOrganization();
+    }
+
+    // =====================
+    // USERS COLLECTION
+    // =====================
+    match /users/{userId} {
+      // Users can read their own profile; admins and org managers can read all
+      allow get: if isOwner(userId) || isAdmin() || isOrganization();
+      allow list: if isAdmin() || isOrganization();
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // =====================
+    // ORGANIZATIONS COLLECTION
+    // =====================
+    match /organizations/{orgId} {
+      allow read: if isSignedIn();
+      allow create: if isAdmin();
+      allow update: if isAdmin() || (isOrganization() && getUserData().organizationId == orgId);
+      allow delete: if isAdmin();
+    }
+
+    // =====================
+    // COURSES COLLECTION
+    // =====================
+    match /courses/{courseId} {
+      // Any signed-in user can read published courses
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      // Only admins, org managers, and coaches can create/edit
+      allow create: if isAdmin() || isOrganization() || isCoach();
+      allow update: if isAdmin() || isOrganization() || isCoach();
+      allow delete: if isAdmin() || isOrganization();
+    }
+
+    // Course modules
+    match /courses/{courseId}/modules/{moduleId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin() || isOrganization() || isCoach();
+    }
+
+    // =====================
+    // SESSIONS COLLECTION (mentorship sessions)
+    // =====================
+    match /sessions/{sessionId} {
+      // Participants and admins can read
+      allow get: if isSignedIn() && (
+        isAdmin() ||
+        isOrganization() ||
+        request.auth.uid == resource.data.hostId ||
+        request.auth.uid in resource.data.attendees
+      );
+      allow list: if isSignedIn();
+      // Mentors, admins, org can create sessions
+      allow create: if isSignedIn() && (isAdmin() || isOrganization() || isMentor());
+      allow update: if isSignedIn() && (
+        isAdmin() ||
+        isOrganization() ||
+        request.auth.uid == resource.data.hostId
+      );
+      allow delete: if isAdmin() || isOrganization();
+    }
+
+    // =====================
+    // PRODUCTS COLLECTION
+    // =====================
+    match /products/{productId} {
+      // Public can view products
+      allow read: if true;
+      // Only the product owner, admin, or org can write
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && (
+        isAdmin() ||
+        isOrganization() ||
+        request.auth.uid == resource.data.beneficiaryId
+      );
+      allow delete: if isAdmin() || isOrganization() || (
+        isSignedIn() && request.auth.uid == resource.data.beneficiaryId
+      );
+    }
+
+    // =====================
+    // STORES COLLECTION
+    // =====================
+    match /stores/{storeId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && (
+        isAdmin() ||
+        isOrganization() ||
+        request.auth.uid == resource.data.beneficiaryId
+      );
+      allow delete: if isAdmin() || (isSignedIn() && request.auth.uid == resource.data.beneficiaryId);
+    }
+
+    // =====================
+    // ORDERS COLLECTION
+    // =====================
+    match /orders/{orderId} {
+      allow read: if isSignedIn() && (
+        isAdmin() ||
+        isOrganization() ||
+        request.auth.uid == resource.data.beneficiaryId ||
+        request.auth.uid == resource.data.customerId
+      );
+      allow list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && (
+        isAdmin() ||
+        request.auth.uid == resource.data.beneficiaryId
+      );
+      allow delete: if isAdmin();
+    }
+
+    // =====================
+    // CONVERSATIONS / MESSAGES
+    // =====================
+    match /conversations/{convId} {
+      allow read: if isSignedIn() && (
+        isAdmin() ||
+        request.auth.uid in resource.data.participants
+      );
+      allow list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && request.auth.uid in resource.data.participants;
+      allow delete: if isAdmin();
+    }
+
+    match /conversations/{convId}/messages/{msgId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && request.auth.uid == resource.data.senderId;
+      allow delete: if isAdmin();
+    }
+
+    // =====================
+    // NOTIFICATIONS
+    // =====================
+    match /notifications/{notifId} {
+      allow read: if isSignedIn() && (
+        isAdmin() ||
+        request.auth.uid == resource.data.userId
+      );
+      allow list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && request.auth.uid == resource.data.userId;
+      allow delete: if isSignedIn() && (isAdmin() || request.auth.uid == resource.data.userId);
+    }
+
+    // =====================
+    // EVALUATIONS
+    // =====================
+    match /evaluations/{evalId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+  }
+}
