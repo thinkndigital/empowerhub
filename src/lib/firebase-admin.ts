@@ -7,13 +7,14 @@ function getAdminApp() {
 
   const projectId = process.env.FIREBASE_PROJECT_ID || 'studio-4511819966-bc14f';
 
-  // Use service account if available, otherwise use application default credentials
+  // If a service account key is explicitly provided (local dev), use it
   if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
     const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
     return initializeApp({ credential: cert(serviceAccount), projectId });
   }
 
-  // Fallback: initialize with just projectId (works in Firebase Studio / emulator)
+  // On Firebase App Hosting / Google Cloud: Application Default Credentials
+  // are automatically available — no service account key needed
   return initializeApp({ projectId });
 }
 
