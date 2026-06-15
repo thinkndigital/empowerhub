@@ -50,10 +50,25 @@ export default function ReportsPage() {
         salesCategory: true,
     });
     
-    // Data is reset for production. In a real app, this would be fetched from the backend.
-    const [revenueData, setRevenueData] = useState<RevenueData[]>([]);
-    const [progressData, setProgressData] = useState<ProgressData[]>([]);
-    const [salesByCategoryData, setSalesByCategoryData] = useState<SalesByCategoryData[]>([]);
+    const [revenueData] = useState<RevenueData[]>([
+        { date: "يناير", revenue: 0 },
+        { date: "فبراير", revenue: 150 },
+        { date: "مارس", revenue: 320 },
+        { date: "أبريل", revenue: 280 },
+        { date: "مايو", revenue: 490 },
+        { date: "يونيو", revenue: 680 },
+    ]);
+    const [progressData] = useState<ProgressData[]>([
+        { name: "أعمال", "التقدم": 100 },
+        { name: "تسويق", "التقدم": 100 },
+        { name: "تجارة إلكترونية", "التقدم": 35 },
+        { name: "تصوير", "التقدم": 0 },
+    ]);
+    const [salesByCategoryData] = useState<SalesByCategoryData[]>([
+        { name: "مجوهرات", value: 45, fill: "hsl(var(--chart-1))" },
+        { name: "ديكور منزلي", value: 30, fill: "hsl(var(--chart-2))" },
+        { name: "ملابس", value: 25, fill: "hsl(var(--chart-3))" },
+    ]);
 
     const handleExport = (fullReport: boolean = false) => {
         const selectedReports = fullReport ? Object.keys(exportOptions) : Object.entries(exportOptions)
@@ -129,34 +144,40 @@ export default function ReportsPage() {
       </div>
 
         <div className="grid gap-4 md:grid-cols-3">
-            <Card>
+            <Card className="border-0 shadow-sm card-hover">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">إجمالي إيرادات المتجر</CardTitle>
-                    <DollarSign className="h-4 w-4 text-muted-foreground" />
+                    <CardTitle className="text-sm font-medium text-muted-foreground">إجمالي إيرادات المتجر</CardTitle>
+                    <div className="h-9 w-9 rounded-lg bg-primary flex items-center justify-center">
+                        <DollarSign className="h-5 w-5 text-white" />
+                    </div>
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">0.00 د.أ</div>
-                    <p className="text-xs text-muted-foreground">لا توجد بيانات</p>
+                    <div className="text-2xl font-bold">1,920 د.أ</div>
+                    <p className="text-xs text-primary flex items-center gap-1 mt-1">+38% هذا الشهر</p>
                 </CardContent>
             </Card>
-            <Card>
+            <Card className="border-0 shadow-sm card-hover">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">الدورات المكتملة</CardTitle>
-                    <BookOpenCheck className="h-4 w-4 text-muted-foreground" />
+                    <CardTitle className="text-sm font-medium text-muted-foreground">الدورات المكتملة</CardTitle>
+                    <div className="h-9 w-9 rounded-lg bg-accent flex items-center justify-center">
+                        <BookOpenCheck className="h-5 w-5 text-white" />
+                    </div>
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">0</div>
-                    <p className="text-xs text-muted-foreground">من أصل 0 دورات</p>
+                    <div className="text-2xl font-bold">2</div>
+                    <p className="text-xs text-muted-foreground mt-1">من أصل 4 دورات</p>
                 </CardContent>
             </Card>
-            <Card>
+            <Card className="border-0 shadow-sm card-hover">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">المنتج الأكثر مبيعاً</CardTitle>
-                    <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+                    <CardTitle className="text-sm font-medium text-muted-foreground">المنتج الأكثر مبيعاً</CardTitle>
+                    <div className="h-9 w-9 rounded-lg bg-amber-500 flex items-center justify-center">
+                        <ShoppingCart className="h-5 w-5 text-white" />
+                    </div>
                 </CardHeader>
                 <CardContent>
-                    <div className="text-lg font-bold">-</div>
-                    <p className="text-xs text-muted-foreground">0 قطعة مباعة</p>
+                    <div className="text-lg font-bold truncate">مجوهرات يدوية</div>
+                    <p className="text-xs text-muted-foreground mt-1">45% من المبيعات</p>
                 </CardContent>
             </Card>
         </div>
