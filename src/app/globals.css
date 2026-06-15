@@ -1,0 +1,174 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: 'Cairo', sans-serif;
+}
+
+@layer base {
+  :root {
+    --background: 145 30% 96%;
+    --foreground: 145 10% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 145 10% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 145 10% 10%;
+    --primary: 152 60% 40%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 145 20% 92%;
+    --secondary-foreground: 145 10% 15%;
+    --muted: 145 15% 93%;
+    --muted-foreground: 145 5% 45%;
+    --accent: 183 45% 60%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 145 15% 88%;
+    --input: 145 15% 88%;
+    --ring: 152 60% 40%;
+    --radius: 0.75rem;
+
+    --chart-1: 152 60% 40%;
+    --chart-2: 183 45% 50%;
+    --chart-3: 32 95% 53%;
+    --chart-4: 262 72% 56%;
+    --chart-5: 342 82% 56%;
+
+    --sidebar-background: 145 10% 10%;
+    --sidebar-foreground: 145 10% 70%;
+    --sidebar-primary: 152 55% 55%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 145 8% 18%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 145 8% 18%;
+    --sidebar-ring: 152 55% 55%;
+  }
+
+  .dark {
+    --background: 145 10% 8%;
+    --foreground: 0 0% 95%;
+    --card: 145 8% 12%;
+    --card-foreground: 0 0% 95%;
+    --popover: 145 10% 8%;
+    --popover-foreground: 0 0% 95%;
+    --primary: 152 55% 50%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 145 8% 18%;
+    --secondary-foreground: 0 0% 95%;
+    --muted: 145 8% 18%;
+    --muted-foreground: 145 5% 55%;
+    --accent: 183 45% 45%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 40%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 145 8% 20%;
+    --input: 145 8% 20%;
+    --ring: 152 55% 50%;
+
+    --chart-1: 152 55% 50%;
+    --chart-2: 183 45% 50%;
+    --chart-3: 32 95% 63%;
+    --chart-4: 262 72% 66%;
+    --chart-5: 342 82% 66%;
+
+    --sidebar-background: 145 10% 6%;
+    --sidebar-foreground: 145 10% 65%;
+    --sidebar-primary: 152 55% 55%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 145 8% 15%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 145 8% 15%;
+    --sidebar-ring: 152 55% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--primary) / 0.5);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary));
+}
+
+/* Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes pulse-gentle {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out forwards;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+.delay-100 { animation-delay: 100ms; }
+.delay-200 { animation-delay: 200ms; }
+.delay-300 { animation-delay: 300ms; }
+.delay-400 { animation-delay: 400ms; }
+.delay-500 { animation-delay: 500ms; }
+
+/* Card hover effects */
+.card-hover {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(41, 163, 107, 0.15);
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, hsl(152, 60%, 35%), hsl(183, 45%, 50%));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Glass morphism */
+.glass {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}

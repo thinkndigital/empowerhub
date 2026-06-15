@@ -1,0 +1,223 @@
+
+"use client";
+
+import { MoreHorizontal, Download, User, Calendar, MessageSquare, Eye } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Progress } from "@/components/ui/progress";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useToast } from "@/hooks/use-toast";
+import { useCollection } from "@/firebase/firestore/use-collection";
+import { collection, query, where, orderBy } from "firebase/firestore";
+import { useFirestore, useMemoFirebase } from "@/firebase/provider";
+import { useUser, type UserProfile } from "@/firebase/auth/use-user";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useState, useMemo } from "react";
+import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
+
+
+type Session = {
+    id: string;
+    date: string;
+    attendees: string[];
+}
+
+export default function MyBeneficiariesPage() {
+  const { toast } = useToast();
+  const firestore = useFirestore();
+  const { user } = useUser();
+  const [beneficiaryToView, setBeneficiaryToView] = useState<UserProfile | null>(null);
+
+  const beneficiariesQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return query(collection(firestore, "users"), where("mentorId", "==", user.uid));
+  }, [firestore, user]);
+
+  const { data: beneficiaries, isLoading: beneficiariesLoading } = useCollection<UserProfile>(beneficiariesQuery);
+
+  const sessionsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    // This could be optimized further if needed by querying only sessions for this mentor's beneficiaries
+    return query(collection(firestore, "sessions"), orderBy("date", "desc"));
+  }, [firestore]);
+  const { data: sessions, isLoading: sessionsLoading } = useCollection<Session>(sessionsQuery);
+
+  const lastSessionsMap = useMemo(() => {
+    if (!sessions || !beneficiaries) return new Map();
+    const map = new Map<string, string>();
+    beneficiaries.forEach(beneficiary => {
+        const userSession = sessions.find(s => s.attendees.includes(beneficiary.id));
+        if (userSession) {
+            map.set(beneficiary.id, new Date(userSession.date).toLocaleDateString('ar-SA'));
+        }
+    });
+    return map;
+  }, [sessions, beneficiaries]);
+
+  const loading = beneficiariesLoading || sessionsLoading;
+
+  const handleExport = () => {
+    toast({
+      title: "جاري تصدير قائمة المستفيدين...",
+      description: "سيتم تنزيل ملف CSV قريبًا.",
+    });
+  }
+
+  return (
+    <>
+     <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle>المستفيدون</CardTitle>
+            <CardDescription>
+              قائمة المستفيدين الذين تشرف على إرشادهم.
+            </CardDescription>
+          </div>
+          <Button variant="outline" size="sm" onClick={handleExport}>
+            <Download className="ml-2 h-4 w-4" />
+            تصدير
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>الاسم</TableHead>
+              <TableHead className="hidden md:table-cell">البريد الإلكتروني</TableHead>
+              <TableHead>التقدم</TableHead>
+              <TableHead className="hidden md:table-cell">آخر جلسة</TableHead>
+              <TableHead>
+                <span className="sr-only">الإجراءات</span>
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading && [...Array(4)].map((_, i) => (
+                <TableRow key={i}>
+                    <TableCell><div className="flex items-center gap-2"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-4 w-[150px]" /></div></TableCell>
+                    <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-[200px]" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-[120px]" /></TableCell>
+                    <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-[100px]" /></TableCell>
+                    <TableCell><Skeleton className="h-8 w-8" /></TableCell>
+                </TableRow>
+            ))}
+            {!loading && beneficiaries?.map((user) => {
+              const userName = user.name || 'مستفيد بلا اسم';
+              return (
+              <TableRow key={user.id}>
+                <TableCell className="font-medium">
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-8 w-8">
+                       <AvatarImage src={user.avatarUrl || `https://picsum.photos/seed/${user.id}/40/40`} alt={userName} />
+                      <AvatarFallback>{userName.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <span>{userName}</span>
+                  </div>
+                </TableCell>
+                <TableCell className="hidden md:table-cell">{user.email || '-'}</TableCell>
+                <TableCell>
+                    <div className="flex items-center gap-2">
+                        <Progress value={user.progress || 0} className="h-2 w-24" />
+                        <span className="text-xs text-muted-foreground">{user.progress || 0}%</span>
+                    </div>
+                </TableCell>
+                <TableCell className="hidden md:table-cell">{lastSessionsMap.get(user.id) || 'لم تحدد'}</TableCell>
+                <TableCell>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button aria-haspopup="true" size="icon" variant="ghost">
+                        <MoreHorizontal className="h-4 w-4" />
+                        <span className="sr-only">قائمة</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
+                      <DropdownMenuItem onSelect={() => setBeneficiaryToView(user)}>
+                        <Eye className="ml-2 h-4 w-4" />
+                        عرض الملف الشخصي
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/mentor-dashboard/sessions">
+                          <Calendar className="ml-2 h-4 w-4" />
+                          جدولة جلسة جديدة
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/mentor-dashboard/messages">
+                          <MessageSquare className="ml-2 h-4 w-4" />
+                          إرسال رسالة
+                        </Link>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            )})}
+            {!loading && (!beneficiaries || beneficiaries.length === 0) && (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center h-24">لا يوجد مستفيدون معينون لك.</TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+
+     <Dialog open={!!beneficiaryToView} onOpenChange={(isOpen) => !isOpen && setBeneficiaryToView(null)}>
+        <DialogContent dir="rtl">
+            <DialogHeader>
+                <DialogTitle>الملف الشخصي للمستفيد</DialogTitle>
+                <DialogDescription>تفاصيل المستفيد {beneficiaryToView?.name || 'بلا اسم'}</DialogDescription>
+            </DialogHeader>
+            <div className="py-4 space-y-4">
+                 <Avatar className="h-24 w-24 mx-auto">
+                    <AvatarImage src={beneficiaryToView?.avatarUrl || `https://picsum.photos/seed/${beneficiaryToView?.id}/100/100`} alt={beneficiaryToView?.name || ''} />
+                    <AvatarFallback>{beneficiaryToView?.name?.charAt(0) || 'U'}</AvatarFallback>
+                </Avatar>
+                <div className="text-center">
+                    <h3 className="text-xl font-semibold">{beneficiaryToView?.name || 'مستفيد بلا اسم'}</h3>
+                    <p className="text-muted-foreground">{beneficiaryToView?.email || 'لا يوجد بريد إلكتروني'}</p>
+                </div>
+                <div className="text-right space-y-2 border-t pt-4">
+                    <p><strong>الفئة:</strong> {beneficiaryToView?.category || 'غير محدد'}</p>
+                    <p><strong>الحالة:</strong> <Badge variant={beneficiaryToView?.status === "نشط" ? "default" : "secondary"}>{beneficiaryToView?.status || 'غير محدد'}</Badge></p>
+                    <p><strong>آخر جلسة:</strong> {lastSessionsMap.get(beneficiaryToView?.id || "") || 'لم تحدد'}</p>
+                    <div className="space-y-1">
+                        <p><strong>التقدم العام:</strong></p>
+                        <div className="flex items-center gap-2">
+                           <Progress value={beneficiaryToView?.progress || 0} className="h-2" />
+                           <span className="text-xs font-medium text-muted-foreground">{beneficiaryToView?.progress || 0}%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </DialogContent>
+    </Dialog>
+    </>
+  );
+}

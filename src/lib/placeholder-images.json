@@ -1,0 +1,22 @@
+{
+  "placeholderImages": [
+    {
+      "id": "login-background",
+      "description": "A diverse group of people collaborating around a table with laptops, symbolizing teamwork and empowerment.",
+      "imageUrl": "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxtb2Rlcm4lMjBvZmZpY2V8ZW58MHx8fHwxNzE3ODU1NTg1fDA&ixlib=rb-4.0.3&q=80&w=1080",
+      "imageHint": "modern office"
+    },
+    {
+      "id": "register-background",
+      "description": "A diverse group of hands coming together, symbolizing community, support, and empowerment.",
+      "imageUrl": "https://images.unsplash.com/photo-1529390079861-591de354faf5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxjb2xsYWJvcmF0aW9uJTIwZGl2ZXJzaXR5fGVufDB8fHx8MTcxNzU5ODQ0N3ww&ixlib=rb-4.0.3&q=80&w=1080",
+      "imageHint": "collaboration diversity"
+    },
+    {
+      "id": "landing-hero",
+      "description": "Two women from a local community engaged in sewing and crafts, symbolizing empowerment and skill-building.",
+      "imageUrl": "https://images.unsplash.com/photo-1595223949987-1b4274ed44a5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wzNzE3MDB8MHwxfHNlYXJjaHwxfHx3b21lbiUyMHNld2luZ3xlbnwwfHx8fDE3MTgyMDY5MDd8MA&ixlib=rb-4.0.3&q=80&w=1080",
+      "imageHint": "women sewing"
+    }
+  ]
+}
