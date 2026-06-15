@@ -40,8 +40,21 @@ export default function MentorAnalyticsPage() {
     frequency: true,
   });
 
-  const [progressData, setProgressData] = useState<ProgressData[]>([]);
-  const [sessionFrequencyData, setSessionFrequencyData] = useState<SessionFrequencyData[]>([]);
+  const [progressData] = useState<ProgressData[]>([
+    { name: "سارة م.", progress: 88 },
+    { name: "نورة أ.", progress: 72 },
+    { name: "منى س.", progress: 55 },
+    { name: "ريم ع.", progress: 40 },
+    { name: "فاطمة ن.", progress: 25 },
+  ]);
+  const [sessionFrequencyData] = useState<SessionFrequencyData[]>([
+    { month: "يناير", sessions: 8 },
+    { month: "فبراير", sessions: 12 },
+    { month: "مارس", sessions: 10 },
+    { month: "أبريل", sessions: 15 },
+    { month: "مايو", sessions: 18 },
+    { month: "يونيو", sessions: 14 },
+  ]);
 
   const handleExport = (fullReport: boolean = false) => {
     const selectedReports = fullReport ? Object.keys(exportOptions) : Object.entries(exportOptions)
@@ -110,44 +123,52 @@ export default function MentorAnalyticsPage() {
          </Dialog>
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
+        <Card className="border-0 shadow-sm card-hover">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">إجمالي المستفيدين</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">إجمالي المستفيدين</CardTitle>
+            <div className="h-9 w-9 rounded-lg bg-primary flex items-center justify-center">
+              <Users className="h-5 w-5 text-white" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">مستفيد نشط حاليًا</p>
+            <div className="text-2xl font-bold">5</div>
+            <p className="text-xs text-muted-foreground mt-1">مستفيدين نشطين</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-0 shadow-sm card-hover">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">متوسط تقدم المستفيدين</CardTitle>
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">متوسط تقدم المستفيدين</CardTitle>
+            <div className="h-9 w-9 rounded-lg bg-accent flex items-center justify-center">
+              <BarChart3 className="h-5 w-5 text-white" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0%</div>
-            <p className="text-xs text-muted-foreground">لا توجد بيانات</p>
+            <div className="text-2xl font-bold">56%</div>
+            <p className="text-xs text-primary flex items-center gap-1 mt-1">+8% هذا الشهر</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-0 shadow-sm card-hover">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">جلسات هذا الشهر</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">جلسات هذا الشهر</CardTitle>
+            <div className="h-9 w-9 rounded-lg bg-amber-500 flex items-center justify-center">
+              <Clock className="h-5 w-5 text-white" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">بإجمالي 0 ساعة</p>
+            <div className="text-2xl font-bold">14</div>
+            <p className="text-xs text-muted-foreground mt-1">بإجمالي 21 ساعة</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-0 shadow-sm card-hover">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">أرباح هذا الشهر</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">أرباح هذا الشهر</CardTitle>
+            <div className="h-9 w-9 rounded-lg bg-purple-500 flex items-center justify-center">
+              <DollarSign className="h-5 w-5 text-white" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0 د.أ</div>
-            <p className="text-xs text-muted-foreground">من الجلسات الإرشادية</p>
+            <div className="text-2xl font-bold">840 د.أ</div>
+            <p className="text-xs text-primary flex items-center gap-1 mt-1">+15% عن الشهر الماضي</p>
           </CardContent>
         </Card>
       </div>

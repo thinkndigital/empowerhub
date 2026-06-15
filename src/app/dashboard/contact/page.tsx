@@ -9,7 +9,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Send, Building } from "lucide-react";
+import { Send, Building, MessageSquare, HelpCircle, Wrench, BookOpen } from "lucide-react";
 import { useUser } from "@/firebase/auth/use-user";
 
 const contactFormSchema = z.object({
@@ -35,28 +35,54 @@ export default function ContactOrganizationPage() {
     form.reset();
   }
 
+  const subjectIcons: Record<string, React.ReactNode> = {
+    "طلب تدريب جديد": <BookOpen className="h-4 w-4" />,
+    "طلب جلسة إرشاد": <MessageSquare className="h-4 w-4" />,
+    "استفسار عام": <HelpCircle className="h-4 w-4" />,
+    "مشكلة فنية": <Wrench className="h-4 w-4" />,
+  };
+
   return (
-    <div className="max-w-2xl mx-auto">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Building className="h-6 w-6" />
-            التواصل مع المنظمة
+    <div className="max-w-2xl mx-auto space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">التواصل مع المنظمة</h1>
+        <p className="text-muted-foreground mt-1">أرسل طلباتك واستفساراتك لمدير منظمتك مباشرةً.</p>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {Object.entries(subjectIcons).map(([label, icon]) => (
+          <button
+            key={label}
+            type="button"
+            onClick={() => form.setValue("subject", label)}
+            className="flex flex-col items-center gap-2 p-3 rounded-xl border bg-card hover:bg-primary/5 hover:border-primary/30 transition-colors text-center group"
+          >
+            <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors">
+              {icon}
+            </div>
+            <span className="text-xs font-medium leading-tight">{label}</span>
+          </button>
+        ))}
+      </div>
+
+      <Card className="border-0 shadow-sm">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Building className="h-4 w-4 text-primary" />
+            نموذج الطلب
           </CardTitle>
-          <CardDescription>
-            استخدم هذا النموذج لطلب تدريب أو إرشاد، أو لإرسال أي استفسار آخر إلى مدير منظمتك.
-          </CardDescription>
+          <CardDescription>سيتم إرسال طلبك لمدير منظمتك للمراجعة.</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
               <FormField
                 control={form.control}
                 name="subject"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>الموضوع</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="اختر نوع الطلب..." />
@@ -82,7 +108,7 @@ export default function ContactOrganizationPage() {
                     <FormControl>
                       <Textarea
                         placeholder="اشرح طلبك بالتفصيل هنا..."
-                        className="min-h-[150px]"
+                        className="min-h-[140px] resize-none"
                         {...field}
                       />
                     </FormControl>
@@ -90,7 +116,7 @@ export default function ContactOrganizationPage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit">
+              <Button type="submit" className="shadow-md">
                 <Send className="ml-2 h-4 w-4" />
                 إرسال الطلب
               </Button>

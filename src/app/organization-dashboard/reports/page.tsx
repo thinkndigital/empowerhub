@@ -48,9 +48,27 @@ export default function OrgReportsPage() {
     sales: true,
   });
 
-  const [engagementData, setEngagementData] = useState<EngagementData[]>([]);
-  const [completionData, setCompletionData] = useState<CompletionData[]>([]);
-  const [salesData, setSalesData] = useState<SalesData[]>([]);
+  const [engagementData] = useState<EngagementData[]>([
+    { month: "يناير", active: 18 },
+    { month: "فبراير", active: 24 },
+    { month: "مارس", active: 29 },
+    { month: "أبريل", active: 35 },
+    { month: "مايو", active: 41 },
+    { month: "يونيو", active: 48 },
+  ]);
+  const [completionData] = useState<CompletionData[]>([
+    { name: "أعمال", "معدل الإكمال": 82 },
+    { name: "تسويق", "معدل الإكمال": 74 },
+    { name: "تجارة إلكترونية", "معدل الإكمال": 56 },
+    { name: "تصوير", "معدل الإكمال": 38 },
+  ]);
+  const [salesData] = useState<SalesData[]>([
+    { name: "سارة", sales: 4200 },
+    { name: "منى", sales: 3100 },
+    { name: "فاطمة", sales: 2700 },
+    { name: "نورة", sales: 1900 },
+    { name: "ريم", sales: 1400 },
+  ]);
 
 
   const handleExport = (fullReport: boolean = false) => {
@@ -126,44 +144,52 @@ export default function OrgReportsPage() {
       </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card>
+            <Card className="border-0 shadow-sm card-hover">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">إجمالي المستفيدين</CardTitle>
-                    <Users className="h-4 w-4 text-muted-foreground" />
+                    <CardTitle className="text-sm font-medium text-muted-foreground">إجمالي المستفيدين</CardTitle>
+                    <div className="h-9 w-9 rounded-lg bg-primary flex items-center justify-center">
+                        <Users className="h-5 w-5 text-white" />
+                    </div>
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">0</div>
-                    <p className="text-xs text-muted-foreground">لا توجد بيانات</p>
+                    <div className="text-2xl font-bold">48</div>
+                    <p className="text-xs text-primary flex items-center gap-1 mt-1">+6 هذا الشهر</p>
                 </CardContent>
             </Card>
-            <Card>
+            <Card className="border-0 shadow-sm card-hover">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">المستفيدون النشطون</CardTitle>
-                    <Activity className="h-4 w-4 text-muted-foreground" />
+                    <CardTitle className="text-sm font-medium text-muted-foreground">المستفيدون النشطون</CardTitle>
+                    <div className="h-9 w-9 rounded-lg bg-accent flex items-center justify-center">
+                        <Activity className="h-5 w-5 text-white" />
+                    </div>
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">0</div>
-                    <p className="text-xs text-muted-foreground">0% من الإجمالي</p>
+                    <div className="text-2xl font-bold">41</div>
+                    <p className="text-xs text-muted-foreground mt-1">85% من الإجمالي</p>
                 </CardContent>
             </Card>
-            <Card>
+            <Card className="border-0 shadow-sm card-hover">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">التقدم العام للمسارات</CardTitle>
-                    <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                    <CardTitle className="text-sm font-medium text-muted-foreground">التقدم العام للمسارات</CardTitle>
+                    <div className="h-9 w-9 rounded-lg bg-amber-500 flex items-center justify-center">
+                        <BarChart3 className="h-5 w-5 text-white" />
+                    </div>
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">0%</div>
-                    <p className="text-xs text-muted-foreground">متوسط إكمال الدورات</p>
+                    <div className="text-2xl font-bold">63%</div>
+                    <p className="text-xs text-muted-foreground mt-1">متوسط إكمال الدورات</p>
                 </CardContent>
             </Card>
-            <Card>
+            <Card className="border-0 shadow-sm card-hover">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">إيرادات المتاجر</CardTitle>
-                    <DollarSign className="h-4 w-4 text-muted-foreground" />
+                    <CardTitle className="text-sm font-medium text-muted-foreground">إيرادات المتاجر</CardTitle>
+                    <div className="h-9 w-9 rounded-lg bg-purple-500 flex items-center justify-center">
+                        <DollarSign className="h-5 w-5 text-white" />
+                    </div>
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">0 د.أ</div>
-                    <p className="text-xs text-muted-foreground">إجمالي المبيعات</p>
+                    <div className="text-2xl font-bold">13,400 د.أ</div>
+                    <p className="text-xs text-primary flex items-center gap-1 mt-1">+22% هذا الشهر</p>
                 </CardContent>
             </Card>
         </div>

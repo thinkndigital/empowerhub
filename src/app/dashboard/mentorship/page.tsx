@@ -101,111 +101,144 @@ export default function MentorshipPage() {
 
   return (
     <>
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      <div className="lg:col-span-2 space-y-8">
-         <Card>
-            <CardHeader>
-                <CardTitle>الجلسات القادمة</CardTitle>
-                <CardDescription>استعد لجلسات الإرشاد القادمة.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                {loading && <Skeleton className="h-20 w-full" />}
-                {!loading && upcomingSessions.length === 0 && <p className="text-muted-foreground text-center p-4">لا توجد جلسات قادمة.</p>}
-                {!loading && upcomingSessions.map(session => (
-                    <div key={session.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                        <div>
-                            <p className="font-semibold">{session.title}</p>
-                            <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-                                <span className="flex items-center gap-1.5"><Calendar className="h-4 w-4" /> {format(parseISO(session.date), "d MMMM yyyy", { locale: ar })}</span>
-                                <span className="flex items-center gap-1.5"><Clock className="h-4 w-4" /> {format(parseISO(session.date), "p", { locale: ar })}</span>
-                            </div>
-                        </div>
-                        <Button asChild>
-                            <a href={session.meetLink || "https://meet.google.com"} target="_blank" rel="noopener noreferrer">
-                                <Video className="ml-2 h-4 w-4" />
-                                انضم للجلسة
-                            </a>
-                        </Button>
-                    </div>
-                ))}
-            </CardContent>
-         </Card>
-         <Card>
-            <CardHeader>
-                <CardTitle>الجلسات السابقة</CardTitle>
-                 <CardDescription>مراجعة ملاحظات الجلسات السابقة وتقييمها.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                {loading && <Skeleton className="h-24 w-full" />}
-                {!loading && pastSessions.length === 0 && <p className="text-muted-foreground text-center p-4">لا توجد جلسات سابقة.</p>}
-                {!loading && pastSessions.map(session => (
-                    <div key={session.id} className="p-3 border-b flex justify-between items-center">
-                        <div>
-                            <p className="font-semibold">{session.title} <span className="text-sm text-muted-foreground font-normal">- {format(parseISO(session.date), "d MMMM yyyy", { locale: ar })}</span></p>
-                            <p className="text-sm text-muted-foreground mt-1">{session.notes || "لا توجد ملاحظات."}</p>
-                        </div>
-                        {session.status === 'completed' && (
-                            <Button variant="outline" size="sm" onClick={() => handleEvaluationClick(session)}>
-                                <Star className="ml-2 h-4 w-4" />
-                                تقييم الجلسة
-                            </Button>
-                        )}
-                    </div>
-                ))}
-            </CardContent>
-         </Card>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">الإرشاد والتوجيه</h1>
+        <p className="text-muted-foreground mt-1">تابع جلساتك الإرشادية وتواصل مع مرشدك.</p>
       </div>
 
-      <div className="space-y-6">
-        {loading ? (
-             <Card>
-                <CardHeader className="items-center text-center">
-                    <Skeleton className="w-24 h-24 rounded-full" />
-                    <div className="pt-2 w-full space-y-2">
-                        <Skeleton className="h-6 w-3/4 mx-auto" />
-                        <Skeleton className="h-4 w-1/2 mx-auto" />
-                    </div>
-                </CardHeader>
-            </Card>
-        ) : mentor ? (
-            <Card>
-                <CardHeader className="items-center text-center">
-                    <Avatar className="w-24 h-24 border-4 border-primary">
-                        <AvatarImage src={mentor.avatarUrl || `https://picsum.photos/seed/${mentor.id}/100/100`} />
-                        <AvatarFallback>{mentor.name?.charAt(0) || 'M'}</AvatarFallback>
-                    </Avatar>
-                    <div className="pt-2">
-                        <CardTitle>المرشد: {mentor.name || 'مرشد بلا اسم'}</CardTitle>
-                        <CardDescription>{mentor.expertise || "خبير في مجاله"}</CardDescription>
-                    </div>
-                </CardHeader>
-                <CardContent className="text-center">
-                    <p className="text-sm text-muted-foreground">"مهمتي هي مساعدتك على تحقيق أهدافك وتحويل فكرتك إلى مشروع ناجح. لا تتردد في طرح أي سؤال."</p>
-                </CardContent>
-            </Card>
-        ) : (
-             <Card>
-                <CardHeader>
-                    <CardTitle>لم يتم تعيين مرشد</CardTitle>
-                    <CardDescription>تواصل مع مدير منظمتك لتعيين مرشد لك.</CardDescription>
-                </CardHeader>
-            </Card>
-        )}
-        <Card>
-            <CardHeader>
-                <CardTitle>أرسل رسالة لمرشدك</CardTitle>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Video className="h-4 w-4 text-primary" />
+                الجلسات القادمة
+              </CardTitle>
+              <CardDescription>استعد لجلسات الإرشاد القادمة.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-                <Textarea 
-                    placeholder="اكتب رسالتك هنا..." 
-                    className="min-h-[120px]"
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    disabled={!mentor}
-                />
-                <Button className="w-full" onClick={handleSendMessage} disabled={!mentor}>إرسال</Button>
+            <CardContent className="space-y-3">
+              {loading && <Skeleton className="h-20 w-full" />}
+              {!loading && upcomingSessions.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Calendar className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                  <p className="text-sm">لا توجد جلسات قادمة</p>
+                </div>
+              )}
+              {!loading && upcomingSessions.map(session => (
+                <div key={session.id} className="flex items-center justify-between p-4 rounded-xl bg-primary/5 border border-primary/10">
+                  <div>
+                    <p className="font-semibold">{session.title}</p>
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1.5">
+                      <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {format(parseISO(session.date), "d MMMM yyyy", { locale: ar })}</span>
+                      <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {format(parseISO(session.date), "p", { locale: ar })}</span>
+                    </div>
+                  </div>
+                  <Button size="sm" className="shadow-sm" asChild>
+                    <a href={session.meetLink || "https://meet.google.com"} target="_blank" rel="noopener noreferrer">
+                      <Video className="ml-2 h-3.5 w-3.5" />
+                      انضم
+                    </a>
+                  </Button>
+                </div>
+              ))}
             </CardContent>
-        </Card>
+          </Card>
+
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Star className="h-4 w-4 text-primary" />
+                الجلسات السابقة
+              </CardTitle>
+              <CardDescription>مراجعة ملاحظات الجلسات السابقة وتقييمها.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {loading && <Skeleton className="h-24 w-full" />}
+              {!loading && pastSessions.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <User className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                  <p className="text-sm">لا توجد جلسات سابقة</p>
+                </div>
+              )}
+              {!loading && pastSessions.map(session => (
+                <div key={session.id} className="flex items-start justify-between p-4 rounded-xl bg-muted/40 gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-semibold text-sm">{session.title}</p>
+                      <span className="text-xs text-muted-foreground">{format(parseISO(session.date), "d MMMM yyyy", { locale: ar })}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2">{session.notes || "لا توجد ملاحظات."}</p>
+                  </div>
+                  {session.status === 'completed' && (
+                    <Button variant="outline" size="sm" className="shrink-0" onClick={() => handleEvaluationClick(session)}>
+                      <Star className="ml-1.5 h-3.5 w-3.5" />
+                      تقييم
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="space-y-5">
+          {loading ? (
+            <Card className="border-0 shadow-sm">
+              <CardHeader className="items-center text-center">
+                <Skeleton className="w-24 h-24 rounded-full" />
+                <div className="pt-2 w-full space-y-2">
+                  <Skeleton className="h-6 w-3/4 mx-auto" />
+                  <Skeleton className="h-4 w-1/2 mx-auto" />
+                </div>
+              </CardHeader>
+            </Card>
+          ) : mentor ? (
+            <Card className="border-0 shadow-sm">
+              <CardHeader className="items-center text-center pb-2">
+                <Avatar className="w-20 h-20 border-4 border-primary/20 shadow-md">
+                  <AvatarImage src={mentor.avatarUrl} />
+                  <AvatarFallback className="bg-primary/10 text-primary text-xl">{mentor.name?.charAt(0) || 'م'}</AvatarFallback>
+                </Avatar>
+                <div className="pt-2">
+                  <CardTitle className="text-base">{mentor.name || 'مرشد'}</CardTitle>
+                  <CardDescription className="text-xs mt-1">{mentor.expertise || "خبير في مجاله"}</CardDescription>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="bg-muted/40 rounded-xl p-3 text-xs text-muted-foreground text-center leading-relaxed italic">
+                  "مهمتي مساعدتك على تحقيق أهدافك وتحويل فكرتك إلى مشروع ناجح."
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="border-0 shadow-sm">
+              <CardHeader className="items-center text-center py-8">
+                <div className="p-4 bg-muted rounded-full mb-3">
+                  <User className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <CardTitle className="text-base">لم يتم تعيين مرشد</CardTitle>
+                <CardDescription className="text-sm">تواصل مع مدير منظمتك لتعيين مرشد لك.</CardDescription>
+              </CardHeader>
+            </Card>
+          )}
+
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">أرسل رسالة لمرشدك</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Textarea
+                placeholder="اكتب رسالتك هنا..."
+                className="min-h-[110px] resize-none"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                disabled={!mentor}
+              />
+              <Button className="w-full shadow-sm" onClick={handleSendMessage} disabled={!mentor}>إرسال الرسالة</Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
     {evaluationTarget && authUser && (
