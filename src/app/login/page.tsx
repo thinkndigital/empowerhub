@@ -117,81 +117,86 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="w-full lg:grid lg:min-h-screen lg:grid-cols-2">
-      <div className="flex items-center justify-center py-12">
-        <div className="mx-auto grid w-[350px] gap-6">
+    <div className="w-full lg:grid lg:min-h-screen lg:grid-cols-2" dir="rtl">
+      <div className="flex items-center justify-center py-12 px-4">
+        <div className="mx-auto grid w-full max-w-[380px] gap-6">
           <div className="grid gap-2 text-center">
-            <Link href="/" className="flex justify-center items-center gap-2">
-              <Logo className="w-16 h-16 mx-auto" />
+            <Link href="/" className="flex justify-center items-center gap-2 mb-2">
+              <Logo className="w-12 h-12 mx-auto" />
             </Link>
             <h1 className="text-3xl font-bold">مرحبًا بعودتك</h1>
-             <p className="text-balance text-muted-foreground">
+            <p className="text-balance text-muted-foreground">
               أدخل بريدك الإلكتروني وكلمة المرور للوصول إلى حسابك
             </p>
           </div>
 
-           <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
-                 <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                        <FormItem className="text-right">
-                            <FormLabel>البريد الإلكتروني</FormLabel>
-                            <FormControl>
-                                <Input type="email" placeholder="mail@example.com" required dir="ltr" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                 <FormField
-                    control={form.control}
-                    name="password"
-                    render={({ field }) => (
-                        <FormItem className="text-right">
-                            <div className="flex items-center">
-                                <FormLabel>كلمة المرور</FormLabel>
-                                <Link href="#" className="mr-auto inline-block text-sm underline">
-                                هل نسيت كلمة المرور؟
-                                </Link>
-                            </div>
-                            <FormControl>
-                                <Input type="password" required dir="ltr" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? 'جاري تسجيل الدخول...' : 'تسجيل الدخول'}
-                </Button>
-                <Button variant="secondary" asChild>
-                    <Link href="/try-roles">تجربة المنصة بدون حساب</Link>
-                </Button>
-              </form>
-           </Form>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem className="text-right">
+                    <FormLabel>البريد الإلكتروني</FormLabel>
+                    <FormControl>
+                      <Input type="email" placeholder="mail@example.com" dir="ltr" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem className="text-right">
+                    <div className="flex items-center justify-between">
+                      <FormLabel>كلمة المرور</FormLabel>
+                      <Link href="#" className="text-xs text-primary hover:underline">
+                        هل نسيت كلمة المرور؟
+                      </Link>
+                    </div>
+                    <FormControl>
+                      <Input type="password" placeholder="••••••••" dir="ltr" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" className="w-full shadow-md" disabled={isLoading}>
+                {isLoading ? 'جاري تسجيل الدخول...' : 'تسجيل الدخول'}
+              </Button>
+              <Button variant="outline" asChild>
+                <Link href="/try-roles">تجربة المنصة بدون حساب</Link>
+              </Button>
+            </form>
+          </Form>
 
-          <div className="mt-4 text-center text-sm">
+          <p className="text-center text-sm text-muted-foreground">
             ألا تمتلك حسابًا؟{' '}
-            <Link href="/register" className="underline">
-              أنشئ حسابًا
+            <Link href="/register" className="underline font-medium text-primary">
+              أنشئ حسابًا مجانًا
             </Link>
-          </div>
+          </p>
         </div>
       </div>
-      <div className="hidden bg-muted lg:block relative">
+      <div className="hidden bg-muted lg:block relative overflow-hidden">
         {loginImage && (
           <Image
             src={loginImage.imageUrl}
             alt={loginImage.description}
-            width={1200}
-            height={900}
-            className="h-full w-full object-cover"
+            fill
+            className="object-cover"
             data-ai-hint={loginImage.imageHint}
           />
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+        <div className="absolute bottom-10 right-10 text-white max-w-xs">
+          <h2 className="text-2xl font-bold mb-2">مرحباً بك مجدداً</h2>
+          <p className="text-white/80 text-sm leading-relaxed">
+            استمر في رحلتك نحو النجاح مع منصة EmpowerHub
+          </p>
+        </div>
       </div>
     </div>
   );

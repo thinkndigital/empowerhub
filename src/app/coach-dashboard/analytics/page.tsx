@@ -55,11 +55,34 @@ export default function CoachAnalyticsPage() {
     topCourses: true,
   });
 
-  // Data is reset for production. In a real app, this would be fetched from the backend.
-  const [enrollmentChartData, setEnrollmentChartData] = useState<EnrollmentChartData[]>([]);
-  const [completionRateData, setCompletionRateData] = useState<CompletionRateData[]>([]);
-  const [earningsData, setEarningsData] = useState<EarningsData[]>([]);
-  const [topCoursesData, setTopCoursesData] = useState<TopCourseData[]>([]);
+  const [enrollmentChartData] = useState<EnrollmentChartData[]>([
+    { month: "يناير", users: 12 },
+    { month: "فبراير", users: 19 },
+    { month: "مارس", users: 24 },
+    { month: "أبريل", users: 31 },
+    { month: "مايو", users: 38 },
+    { month: "يونيو", users: 45 },
+  ]);
+  const [completionRateData] = useState<CompletionRateData[]>([
+    { course: "أعمال", rate: 78 },
+    { course: "تسويق", rate: 65 },
+    { course: "تجارة إلكترونية", rate: 52 },
+    { course: "تصوير", rate: 40 },
+  ]);
+  const [earningsData] = useState<EarningsData[]>([
+    { month: "يناير", earnings: 600 },
+    { month: "فبراير", earnings: 950 },
+    { month: "مارس", earnings: 1200 },
+    { month: "أبريل", earnings: 1050 },
+    { month: "مايو", earnings: 1450 },
+    { month: "يونيو", earnings: 1800 },
+  ]);
+  const [topCoursesData] = useState<TopCourseData[]>([
+    { title: "أساسيات التسويق الرقمي", enrolled: 45, completion: "78%" },
+    { title: "إدارة التجارة الإلكترونية", enrolled: 32, completion: "65%" },
+    { title: "التصوير التجاري للمنتجات", enrolled: 28, completion: "52%" },
+    { title: "أساسيات الأعمال التجارية", enrolled: 51, completion: "88%" },
+  ]);
 
   const handleExport = (fullReport: boolean = false) => {
     const selectedReports = fullReport ? Object.keys(exportOptions) : Object.entries(exportOptions)
@@ -136,44 +159,52 @@ export default function CoachAnalyticsPage() {
          </Dialog>
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
+        <Card className="border-0 shadow-sm card-hover">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">إجمالي المسجلين</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">إجمالي المسجلين</CardTitle>
+            <div className="h-9 w-9 rounded-lg bg-primary flex items-center justify-center">
+              <Users className="h-5 w-5 text-white" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">لا توجد بيانات</p>
+            <div className="text-2xl font-bold">156</div>
+            <p className="text-xs text-primary flex items-center gap-1 mt-1">+45 هذا الشهر</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-0 shadow-sm card-hover">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">الطلاب النشطون</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">الطلاب النشطون</CardTitle>
+            <div className="h-9 w-9 rounded-lg bg-accent flex items-center justify-center">
+              <Activity className="h-5 w-5 text-white" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">لا توجد بيانات</p>
+            <div className="text-2xl font-bold">118</div>
+            <p className="text-xs text-muted-foreground mt-1">76% من الإجمالي</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-0 shadow-sm card-hover">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">متوسط معدل الإكمال</CardTitle>
-            <CheckCircle className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">متوسط معدل الإكمال</CardTitle>
+            <div className="h-9 w-9 rounded-lg bg-amber-500 flex items-center justify-center">
+              <CheckCircle className="h-5 w-5 text-white" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0%</div>
-            <p className="text-xs text-muted-foreground">لكل الدورات</p>
+            <div className="text-2xl font-bold">71%</div>
+            <p className="text-xs text-muted-foreground mt-1">عبر جميع الدورات</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-0 shadow-sm card-hover">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">إجمالي الأرباح</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">إجمالي الأرباح</CardTitle>
+            <div className="h-9 w-9 rounded-lg bg-purple-500 flex items-center justify-center">
+              <DollarSign className="h-5 w-5 text-white" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0 د.أ</div>
-            <p className="text-xs text-muted-foreground">الأرباح من الجلسات التدريبية</p>
+            <div className="text-2xl font-bold">7,050 د.أ</div>
+            <p className="text-xs text-primary flex items-center gap-1 mt-1">+24% هذا الشهر</p>
           </CardContent>
         </Card>
       </div>
