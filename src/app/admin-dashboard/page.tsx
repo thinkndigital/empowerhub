@@ -1,14 +1,19 @@
+"use client";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Activity, Building, BookOpen, ShoppingCart, TrendingUp, ArrowUpRight, ArrowDownRight, UserCheck, GraduationCap } from "lucide-react";
+import { Users, Activity, Building, BookOpen, ShoppingCart, TrendingUp, ArrowUpRight, UserCheck, GraduationCap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { useCollection } from "@/firebase/firestore/use-collection";
+import { collection, query, where, orderBy, limit } from "firebase/firestore";
+import { useFirestore, useMemoFirebase } from "@/firebase/provider";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const StatCard = ({
-  title, value, sub, icon, trend, trendUp, color
+  title, value, sub, icon, color, loading
 }: {
-  title: string, value: string, sub: string, icon: React.ReactNode,
-  trend?: string, trendUp?: boolean, color: string
+  title: string, value: string, sub: string, icon: React.ReactNode, color: string, loading?: boolean
 }) => (
   <Card className="card-hover border-0 shadow-sm">
     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -18,16 +23,8 @@ const StatCard = ({
       </div>
     </CardHeader>
     <CardContent>
-      <div className="text-2xl font-bold">{value}</div>
-      <div className="flex items-center gap-1 mt-1">
-        <p className="text-xs text-muted-foreground">{sub}</p>
-        {trend && (
-          <span className={`text-xs flex items-center font-medium ${trendUp ? 'text-primary' : 'text-destructive'}`}>
-            {trendUp ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
-            {trend}
-          </span>
-        )}
-      </div>
+      {loading ? <Skeleton className="h-8 w-20 mb-2" /> : <div className="text-2xl font-bold">{value}</div>}
+      <p className="text-xs text-muted-foreground">{sub}</p>
     </CardContent>
   </Card>
 );
@@ -42,6 +39,34 @@ const QuickLink = ({ href, label, desc, icon }: { href: string, label: string, d
 );
 
 export default function AdminDashboardPage() {
+  const firestore = useFirestore();
+
+  const usersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, "users")) : null, [firestore]);
+  const { data: users, isLoading: usersLoading } = useCollection(usersQuery);
+
+  const orgsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, "organizations")) : null, [firestore]);
+  const { data: orgs, isLoading: orgsLoading } = useCollection(orgsQuery);
+
+  const coursesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, "courses")) : null, [firestore]);
+  const { data: courses, isLoading: coursesLoading } = useCollection(coursesQuery);
+
+  const recentUsersQuery = useMemoFirebase(() =>
+    firestore ? query(collection(firestore, "users"), orderBy("createdAt", "desc"), limit(5)) : null,
+    [firestore]
+  );
+  const { data: recentUsers } = useCollection<{ id: string; name: string; role: string; createdAt: string }>(recentUsersQuery);
+
+  const activeUsers = users?.filter((u: any) => u.status === 'نشط' || u.status === 'نشطة') || [];
+  const beneficiaries = users?.filter((u: any) => u.role === 'beneficiary') || [];
+
+  const roleLabels: Record<string, string> = {
+    admin: 'مشرف',
+    organization: 'مدير منظمة',
+    coach: 'مدرب',
+    mentor: 'مرشد',
+    beneficiary: 'مستفيد',
+  };
+
   return (
     <>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
@@ -52,17 +77,14 @@ export default function AdminDashboardPage() {
         <Badge className="bg-primary/10 text-primary border-primary/20 w-fit">مشرف النظام</Badge>
       </div>
 
-      {/* Stats */}
-      <div className="grid gap-4 pt-4 grid-cols-2 lg:grid-cols-5">
-        <StatCard title="إجمالي المستخدمين" value="2,547" sub="مستخدم مسجل" icon={<Users className="h-5 w-5 text-white" />} trend="+12%" trendUp color="bg-primary" />
-        <StatCard title="إجمالي المنظمات" value="38" sub="منظمة نشطة" icon={<Building className="h-5 w-5 text-white" />} trend="+3" trendUp color="bg-accent" />
-        <StatCard title="المستخدمون النشطون" value="1,284" sub="هذا الشهر" icon={<Activity className="h-5 w-5 text-white" />} trend="+8%" trendUp color="bg-purple-500" />
-        <StatCard title="إجمالي المبيعات" value="48,320 د.أ" sub="هذا الشهر" icon={<ShoppingCart className="h-5 w-5 text-white" />} trend="+23%" trendUp color="bg-amber-500" />
-        <StatCard title="إجمالي الدورات" value="154" sub="دورة منشورة" icon={<BookOpen className="h-5 w-5 text-white" />} trend="+7" trendUp color="bg-rose-500" />
+      <div className="grid gap-4 pt-4 grid-cols-2 lg:grid-cols-4">
+        <StatCard title="إجمالي المستخدمين" value={String(users?.length ?? 0)} sub="مستخدم مسجل" icon={<Users className="h-5 w-5 text-white" />} color="bg-primary" loading={usersLoading} />
+        <StatCard title="إجمالي المنظمات" value={String(orgs?.length ?? 0)} sub="منظمة مسجلة" icon={<Building className="h-5 w-5 text-white" />} color="bg-accent" loading={orgsLoading} />
+        <StatCard title="إجمالي المستفيدين" value={String(beneficiaries.length)} sub="مستفيد في المنصة" icon={<Activity className="h-5 w-5 text-white" />} color="bg-purple-500" loading={usersLoading} />
+        <StatCard title="إجمالي الدورات" value={String(courses?.length ?? 0)} sub="دورة منشورة" icon={<BookOpen className="h-5 w-5 text-white" />} color="bg-rose-500" loading={coursesLoading} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 pt-4">
-        {/* Quick Links */}
         <Card className="border-0 shadow-sm lg:col-span-2">
           <CardHeader>
             <CardTitle className="text-base">إجراءات سريعة</CardTitle>
@@ -78,27 +100,35 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Recent Activity */}
         <Card className="border-0 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-base">آخر النشاطات</CardTitle>
-            <CardDescription>أحدث الأحداث على المنصة</CardDescription>
+            <CardTitle className="text-base">آخر المسجلين</CardTitle>
+            <CardDescription>أحدث المستخدمين المنضمين للمنصة</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {[
-              { text: "انضمت منظمة جديدة: مؤسسة الأمل", time: "منذ ساعة", color: "bg-primary" },
-              { text: "تم تسجيل 12 مستفيد جديد", time: "منذ 3 ساعات", color: "bg-accent" },
-              { text: "نُشرت دورة: أساسيات المحاسبة", time: "أمس", color: "bg-amber-500" },
-              { text: "تم إتمام 5 طلبات شراء جديدة", time: "أمس", color: "bg-purple-500" },
-            ].map((item, i) => (
-              <div key={i} className="flex items-start gap-3">
-                <div className={`h-2 w-2 rounded-full ${item.color} mt-1.5 shrink-0`} />
-                <div>
-                  <p className="text-sm">{item.text}</p>
-                  <p className="text-xs text-muted-foreground">{item.time}</p>
+          <CardContent className="space-y-3">
+            {usersLoading && [...Array(4)].map((_, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <Skeleton className="h-8 w-8 rounded-full" />
+                <div className="flex-1 space-y-1">
+                  <Skeleton className="h-3 w-28" />
+                  <Skeleton className="h-3 w-16" />
                 </div>
               </div>
             ))}
+            {!usersLoading && recentUsers?.map((user) => (
+              <div key={user.id} className="flex items-center gap-3">
+                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium text-primary">
+                  {user.name?.charAt(0) || '?'}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{user.name || 'مستخدم'}</p>
+                  <p className="text-xs text-muted-foreground">{roleLabels[user.role] || user.role}</p>
+                </div>
+              </div>
+            ))}
+            {!usersLoading && (!recentUsers || recentUsers.length === 0) && (
+              <p className="text-sm text-muted-foreground text-center py-4">لا يوجد مستخدمون بعد.</p>
+            )}
           </CardContent>
         </Card>
       </div>

@@ -4,7 +4,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { MoreHorizontal, Download, Edit, Trash2, Eye } from "lucide-react";
+import { MoreHorizontal, Download, Edit, Trash2, Eye, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,6 +31,7 @@ import {
     DialogHeader,
     DialogTitle,
     DialogClose,
+    DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -82,12 +83,20 @@ const orgFormSchema = z.object({
   }).default({ courses: false, mentorship: false }),
 });
 
+const createOrgSchema = z.object({
+  orgName: z.string().min(2, { message: "يجب أن يكون اسم المنظمة حرفين على الأقل." }),
+  adminName: z.string().min(2, { message: "يجب أن يكون الاسم حرفين على الأقل." }),
+  adminEmail: z.string().email({ message: "الرجاء إدخال بريد إلكتروني صحيح." }),
+});
+
 export default function OrganizationsPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [orgToDelete, setOrgToDelete] = useState<Organization | null>(null);
   const [orgToEdit, setOrgToEdit] = useState<Organization | null>(null);
   const [orgToView, setOrgToView] = useState<Organization | null>(null);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
 
   const organizationsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -98,6 +107,11 @@ export default function OrganizationsPage() {
 
   const form = useForm<z.infer<typeof orgFormSchema>>({
     resolver: zodResolver(orgFormSchema),
+  });
+
+  const createForm = useForm<z.infer<typeof createOrgSchema>>({
+    resolver: zodResolver(createOrgSchema),
+    defaultValues: { orgName: "", adminName: "", adminEmail: "" },
   });
 
   useEffect(() => {
@@ -111,6 +125,26 @@ export default function OrganizationsPage() {
       });
     }
   }, [orgToEdit, form]);
+
+  async function handleCreateOrg(values: z.infer<typeof createOrgSchema>) {
+    setIsCreating(true);
+    try {
+      const res = await fetch('/api/create-organization', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(values),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      toast({ title: "تم الإنشاء بنجاح!", description: data.message });
+      setIsCreateOpen(false);
+      createForm.reset();
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "خطأ!", description: err.message });
+    } finally {
+      setIsCreating(false);
+    }
+  }
 
   const handleExport = () => {
     toast({
@@ -184,10 +218,16 @@ export default function OrganizationsPage() {
               إدارة المنظمات الشريكة وصلاحياتهم.
             </CardDescription>
           </div>
-           <Button variant="outline" size="sm" onClick={handleExport}>
-            <Download className="ml-2 h-4 w-4" />
-            تصدير
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={handleExport}>
+              <Download className="ml-2 h-4 w-4" />
+              تصدير
+            </Button>
+            <Button size="sm" onClick={() => setIsCreateOpen(true)}>
+              <Plus className="ml-2 h-4 w-4" />
+              إنشاء منظمة جديدة
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -346,6 +386,33 @@ export default function OrganizationsPage() {
         </DialogContent>
     </Dialog>
 
+
+    <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+      <DialogContent dir="rtl" className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>إنشاء منظمة جديدة</DialogTitle>
+          <DialogDescription>أدخل بيانات المنظمة وحساب المدير المسؤول.</DialogDescription>
+        </DialogHeader>
+        <Form {...createForm}>
+          <form onSubmit={createForm.handleSubmit(handleCreateOrg)} className="space-y-4 pt-2">
+            <FormField control={createForm.control} name="orgName" render={({ field }) => (
+              <FormItem><FormLabel>اسم المنظمة</FormLabel><FormControl><Input placeholder="مثال: مؤسسة الأمل" {...field} /></FormControl><FormMessage /></FormItem>
+            )}/>
+            <FormField control={createForm.control} name="adminName" render={({ field }) => (
+              <FormItem><FormLabel>اسم مدير المنظمة</FormLabel><FormControl><Input placeholder="الاسم الكامل" {...field} /></FormControl><FormMessage /></FormItem>
+            )}/>
+            <FormField control={createForm.control} name="adminEmail" render={({ field }) => (
+              <FormItem><FormLabel>البريد الإلكتروني للمدير</FormLabel><FormControl><Input dir="ltr" placeholder="admin@org.com" {...field} /></FormControl><FormMessage /></FormItem>
+            )}/>
+            <p className="text-xs text-muted-foreground">كلمة المرور المؤقتة: <span className="font-mono font-medium">EmpowerHub@2024</span></p>
+            <DialogFooter>
+              <DialogClose asChild><Button type="button" variant="ghost">إلغاء</Button></DialogClose>
+              <Button type="submit" disabled={isCreating}>{isCreating ? "جاري الإنشاء..." : "إنشاء المنظمة"}</Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
 
      <AlertDialog open={!!orgToDelete} onOpenChange={(isOpen) => !isOpen && setOrgToDelete(null)}>
         <AlertDialogContent dir="rtl">
