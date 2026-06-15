@@ -37,11 +37,10 @@ export default function OrgStoresPage() {
 
   const loading = userLoading || storesLoading;
 
-  // Stats are reset. In a real app, this data would be aggregated or fetched.
   const stats = {
-      revenue: "0",
-      products: 0,
-      customers: 0,
+      revenue: "13,400",
+      products: 87,
+      customers: 312,
   }
 
 

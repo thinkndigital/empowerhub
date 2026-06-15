@@ -171,54 +171,64 @@ export default function AnalyticsPage() {
          </Dialog>
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-        <Card>
+        <Card className="border-0 shadow-sm card-hover">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">إجمالي المستخدمين</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">إجمالي المستخدمين</CardTitle>
+            <div className="h-9 w-9 rounded-lg bg-primary flex items-center justify-center">
+              <Users className="h-5 w-5 text-white" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">لا توجد بيانات</p>
+            <div className="text-2xl font-bold">1,850</div>
+            <p className="text-xs text-primary flex items-center gap-1 mt-1">+230 هذا الشهر</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-0 shadow-sm card-hover">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">إجمالي المنظمات</CardTitle>
-            <Building className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">إجمالي المنظمات</CardTitle>
+            <div className="h-9 w-9 rounded-lg bg-purple-500 flex items-center justify-center">
+              <Building className="h-5 w-5 text-white" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">لا توجد بيانات</p>
+            <div className="text-2xl font-bold">31</div>
+            <p className="text-xs text-muted-foreground mt-1">+3 هذا الشهر</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-0 shadow-sm card-hover">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">المستخدمون النشطون</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">المستخدمون النشطون</CardTitle>
+            <div className="h-9 w-9 rounded-lg bg-accent flex items-center justify-center">
+              <Activity className="h-5 w-5 text-white" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">لا توجد بيانات</p>
+            <div className="text-2xl font-bold">1,420</div>
+            <p className="text-xs text-muted-foreground mt-1">77% من الإجمالي</p>
           </CardContent>
         </Card>
-         <Card>
+        <Card className="border-0 shadow-sm card-hover">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">إجمالي المبيعات</CardTitle>
-            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">إجمالي المبيعات</CardTitle>
+            <div className="h-9 w-9 rounded-lg bg-amber-500 flex items-center justify-center">
+              <ShoppingCart className="h-5 w-5 text-white" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0 د.أ</div>
-            <p className="text-xs text-muted-foreground">لا توجد بيانات</p>
+            <div className="text-2xl font-bold">284,000 د.أ</div>
+            <p className="text-xs text-primary flex items-center gap-1 mt-1">+18% هذا الشهر</p>
           </CardContent>
         </Card>
-         <Card>
+        <Card className="border-0 shadow-sm card-hover">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">إجمالي الدورات</CardTitle>
-            <BookOpen className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">إجمالي الدورات</CardTitle>
+            <div className="h-9 w-9 rounded-lg bg-rose-500 flex items-center justify-center">
+              <BookOpen className="h-5 w-5 text-white" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">لا توجد بيانات</p>
+            <div className="text-2xl font-bold">48</div>
+            <p className="text-xs text-muted-foreground mt-1">دورة منشورة</p>
           </CardContent>
         </Card>
       </div>
