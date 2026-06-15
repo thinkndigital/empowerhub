@@ -42,7 +42,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 
-const ORG_ID = "org-hope"; // Mock Organization ID
+// ORG_ID is now dynamic — read from userProfile inside the component
 
 // Represents the data structure in Firestore's 'users' collection
 type RawBeneficiary = UserProfile & {
@@ -72,30 +72,33 @@ const assignFormSchema = z.object({
 
 export default function BeneficiariesPage() {
     const { toast } = useToast();
+    const { userProfile } = useUser();
+    const ORG_ID = userProfile?.organizationId || '';
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState("الكل");
     const [beneficiaryToDelete, setBeneficiaryToDelete] = useState<Beneficiary | null>(null);
     const [beneficiaryToView, setBeneficiaryToView] = useState<Beneficiary | null>(null);
     const [assignment, setAssignment] = useState<{beneficiary: Beneficiary, role: 'mentor' | 'coach'} | null>(null);
+    const [isCreating, setIsCreating] = useState(false);
     const firestore = useFirestore();
 
     const beneficiariesQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
+        if (!firestore || !ORG_ID) return null;
         return query(collection(firestore, "users"), where("role", "==", "beneficiary"), where("organizationId", "==", ORG_ID));
-    }, [firestore]);
+    }, [firestore, ORG_ID]);
     const { data: rawBeneficiaries, isLoading: beneficiariesLoading } = useCollection<RawBeneficiary>(beneficiariesQuery);
 
     const mentorsQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
+        if (!firestore || !ORG_ID) return null;
         return query(collection(firestore, "users"), where("role", "==", "mentor"), where("organizationId", "==", ORG_ID));
-    }, [firestore]);
+    }, [firestore, ORG_ID]);
     const { data: mentors, isLoading: mentorsLoading } = useCollection<UserProfile>(mentorsQuery);
 
     const coachesQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
+        if (!firestore || !ORG_ID) return null;
         return query(collection(firestore, "users"), where("role", "==", "coach"), where("organizationId", "==", ORG_ID));
-    }, [firestore]);
+    }, [firestore, ORG_ID]);
     const { data: coaches, isLoading: coachesLoading } = useCollection<UserProfile>(coachesQuery);
 
     const loading = beneficiariesLoading || mentorsLoading || coachesLoading;
@@ -152,42 +155,33 @@ export default function BeneficiariesPage() {
         resolver: zodResolver(assignFormSchema),
     });
 
-    function onAddSubmit(values: z.infer<typeof formSchema>) {
-        if (!firestore) return;
-
-        const newBeneficiaryData = {
-            name: values.name,
-            email: values.email,
-            role: "beneficiary" as const,
-            organizationId: ORG_ID,
-            category: values.category,
-            progress: 0,
-        };
-        
-        const beneficiariesCollection = collection(firestore, "users");
-        
-        addDoc(beneficiariesCollection, newBeneficiaryData)
-          .then(() => {
+    async function onAddSubmit(values: z.infer<typeof formSchema>) {
+        setIsCreating(true);
+        try {
+            const res = await fetch('/api/create-user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: values.name,
+                    email: values.email,
+                    role: 'beneficiary',
+                    organizationId: ORG_ID,
+                    category: values.category,
+                }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error);
             toast({
                 title: "تم بنجاح!",
-                description: `تمت إضافة المستفيد "${values.name}" إلى منظمتك.`,
+                description: `تمت إضافة "${values.name}". كلمة المرور المؤقتة: EmpowerHub@2024`,
             });
             form.reset();
             setIsAddDialogOpen(false);
-          })
-          .catch((serverError) => {
-            const permissionError = new FirestorePermissionError({
-                path: beneficiariesCollection.path,
-                operation: 'create',
-                requestResourceData: newBeneficiaryData,
-            });
-            errorEmitter.emit('permission-error', permissionError);
-            toast({
-                variant: "destructive",
-                title: "فشل الإنشاء",
-                description: "ليس لديك إذن لإضافة مستفيدين جدد.",
-            });
-          });
+        } catch (err: any) {
+            toast({ variant: "destructive", title: "فشل الإنشاء", description: err.message });
+        } finally {
+            setIsCreating(false);
+        }
     }
     
     async function handleAssignSubmit(values: z.infer<typeof assignFormSchema>) {

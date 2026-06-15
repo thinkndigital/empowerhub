@@ -100,25 +100,26 @@ export default function OrgMentorsPage() {
     });
 
     async function handleAddMentor(values: z.infer<typeof addMentorSchema>) {
-        if (!firestore || !userProfile?.organizationId) return;
-        const newMentorData = {
-            ...values,
-            role: 'mentor',
-            organizationId: userProfile.organizationId,
-            status: 'نشط',
-            createdAt: new Date().toISOString(),
-        };
-
-        addDoc(collection(firestore, "users"), newMentorData)
-            .then(() => {
-                toast({ title: "تمت الإضافة بنجاح!", description: `تمت إضافة المرشد ${values.name} إلى منظمتك.` });
-                setIsAddDialogOpen(false);
-                form.reset();
-            })
-            .catch(err => {
-                toast({ variant: "destructive", title: "خطأ!", description: "فشلت إضافة المرشد." });
-                errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'users', operation: 'create', requestResourceData: newMentorData }));
+        if (!userProfile?.organizationId) return;
+        try {
+            const res = await fetch('/api/create-user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: values.name,
+                    email: values.email,
+                    role: 'mentor',
+                    organizationId: userProfile.organizationId,
+                }),
             });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error);
+            toast({ title: "تمت الإضافة بنجاح!", description: `تمت إضافة المرشد ${values.name}. كلمة المرور المؤقتة: EmpowerHub@2024` });
+            setIsAddDialogOpen(false);
+            form.reset();
+        } catch (err: any) {
+            toast({ variant: "destructive", title: "خطأ!", description: err.message });
+        }
     }
 
     async function handleAssignMentor(mentor: Mentor) {

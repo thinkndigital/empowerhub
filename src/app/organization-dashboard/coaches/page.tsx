@@ -95,25 +95,26 @@ export default function OrgCoachesPage() {
     });
 
     async function handleAddCoach(values: z.infer<typeof addCoachSchema>) {
-        if (!firestore || !userProfile?.organizationId) return;
-        const newCoachData = {
-            ...values,
-            role: 'coach',
-            organizationId: userProfile.organizationId,
-            status: 'نشط',
-            createdAt: new Date().toISOString(),
-        };
-
-        addDoc(collection(firestore, "users"), newCoachData)
-            .then(() => {
-                toast({ title: "تمت الإضافة بنجاح!", description: `تمت إضافة المدرب ${values.name} إلى منظمتك.` });
-                setIsDialogOpen(false);
-                form.reset();
-            })
-            .catch(err => {
-                toast({ variant: "destructive", title: "خطأ!", description: "فشلت إضافة المدرب." });
-                errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'users', operation: 'create', requestResourceData: newCoachData }));
+        if (!userProfile?.organizationId) return;
+        try {
+            const res = await fetch('/api/create-user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: values.name,
+                    email: values.email,
+                    role: 'coach',
+                    organizationId: userProfile.organizationId,
+                }),
             });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error);
+            toast({ title: "تمت الإضافة بنجاح!", description: `تمت إضافة المدرب ${values.name}. كلمة المرور المؤقتة: EmpowerHub@2024` });
+            setIsDialogOpen(false);
+            form.reset();
+        } catch (err: any) {
+            toast({ variant: "destructive", title: "خطأ!", description: err.message });
+        }
     }
 
     async function handleAssignCoach(coach: UserProfile) {
