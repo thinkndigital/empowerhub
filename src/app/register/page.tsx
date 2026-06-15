@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -28,7 +28,7 @@ const formSchema = z.object({
     role: z.string({ required_error: "الرجاء اختيار دور." }),
 });
 
-export default function RegisterPage() {
+function RegisterForm() {
     const registerImage = PlaceHolderImages.find((image) => image.id === 'register-background');
     const { toast } = useToast();
     const router = useRouter();
@@ -118,16 +118,16 @@ export default function RegisterPage() {
     }
 
     return (
-        <div className="w-full lg:grid lg:min-h-screen lg:grid-cols-2">
-            <div className="flex items-center justify-center py-12">
-                <div className="mx-auto grid w-[350px] gap-6">
+        <div className="w-full lg:grid lg:min-h-screen lg:grid-cols-2" dir="rtl">
+            <div className="flex items-center justify-center py-12 px-4">
+                <div className="mx-auto grid w-full max-w-[380px] gap-6">
                     <div className="grid gap-2 text-center">
-                        <Link href="/" className="flex justify-center items-center gap-2">
-                           <Logo className="w-16 h-16 mx-auto" />
+                        <Link href="/" className="flex justify-center items-center gap-2 mb-2">
+                           <Logo className="w-12 h-12 mx-auto" />
                         </Link>
                         <h1 className="text-3xl font-bold">إنشاء حساب جديد</h1>
                         <p className="text-balance text-muted-foreground">
-                            أدخل معلوماتك أدناه لإنشاء حسابك
+                            انضم إلى آلاف المستفيدين على منصة EmpowerHub
                         </p>
                     </div>
 
@@ -140,7 +140,7 @@ export default function RegisterPage() {
                                     <FormItem className="text-right">
                                         <FormLabel>الاسم الكامل</FormLabel>
                                         <FormControl>
-                                            <Input {...field} />
+                                            <Input placeholder="محمد أحمد" {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -153,7 +153,7 @@ export default function RegisterPage() {
                                     <FormItem className="text-right">
                                         <FormLabel>البريد الإلكتروني</FormLabel>
                                         <FormControl>
-                                            <Input type="email" dir="ltr" {...field} />
+                                            <Input type="email" dir="ltr" placeholder="mail@example.com" {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -166,7 +166,7 @@ export default function RegisterPage() {
                                     <FormItem className="text-right">
                                         <FormLabel>كلمة المرور</FormLabel>
                                         <FormControl>
-                                            <Input type="password" dir="ltr" {...field} />
+                                            <Input type="password" dir="ltr" placeholder="6 أحرف على الأقل" {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -195,33 +195,53 @@ export default function RegisterPage() {
                                     </FormItem>
                                 )}
                             />
-                            <Button type="submit" className="w-full" disabled={isLoading}>
-                                {isLoading ? 'جاري الإنشاء...' : 'إنشاء حساب'}
+                            <Button type="submit" className="w-full shadow-md" disabled={isLoading}>
+                                {isLoading ? 'جاري إنشاء الحساب...' : 'إنشاء حساب مجاناً'}
                             </Button>
                         </form>
                     </Form>
 
-                    <div className="mt-4 text-center text-sm">
+                    <p className="text-xs text-center text-muted-foreground">
+                        بالتسجيل أنت توافق على{' '}
+                        <Link href="#" className="underline hover:text-primary">شروط الاستخدام</Link>
+                        {' '}و{' '}
+                        <Link href="#" className="underline hover:text-primary">سياسة الخصوصية</Link>
+                    </p>
+
+                    <div className="text-center text-sm">
                         لديك حساب بالفعل؟{' '}
-                        <Link href="/login" className="underline">
+                        <Link href="/login" className="underline font-medium text-primary">
                             تسجيل الدخول
                         </Link>
                     </div>
                 </div>
             </div>
-            <div className="hidden bg-muted lg:block relative">
+            <div className="hidden bg-muted lg:block relative overflow-hidden">
                 {registerImage && (
                     <Image
                         src={registerImage.imageUrl}
                         alt={registerImage.description}
-                        width={1200}
-                        height={900}
-                        className="h-full w-full object-cover"
+                        fill
+                        className="object-cover"
                         data-ai-hint={registerImage.imageHint}
                     />
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+                <div className="absolute bottom-10 right-10 text-white max-w-xs">
+                    <h2 className="text-2xl font-bold mb-2">ابدأ رحلتك نحو النجاح</h2>
+                    <p className="text-white/80 text-sm leading-relaxed">
+                        انضم إلى آلاف المستفيدين الذين غيّروا حياتهم من خلال منصة EmpowerHub
+                    </p>
+                </div>
             </div>
         </div>
+    );
+}
+
+export default function RegisterPage() {
+    return (
+        <Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="animate-pulse text-muted-foreground">جاري التحميل...</div></div>}>
+            <RegisterForm />
+        </Suspense>
     );
 }

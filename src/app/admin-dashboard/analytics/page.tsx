@@ -65,11 +65,36 @@ export default function AnalyticsPage() {
     courseEnrollment: true,
   });
 
-  // Data is reset for production. In a real app, this would be fetched from the backend.
-  const [userChartData, setUserChartData] = useState<UserGrowthData[]>([]);
-  const [salesChartData, setSalesChartData] = useState<SalesData[]>([]);
-  const [userRolesData, setUserRolesData] = useState<PieChartData[]>([]);
-  const [courseEnrollmentData, setCourseEnrollmentData] = useState<CourseEnrollmentData[]>([]);
+  const [userChartData] = useState<UserGrowthData[]>([
+    { month: "يناير", users: 180, orgs: 4 },
+    { month: "فبراير", users: 310, orgs: 6 },
+    { month: "مارس", users: 520, orgs: 9 },
+    { month: "أبريل", users: 780, orgs: 14 },
+    { month: "مايو", users: 1200, orgs: 22 },
+    { month: "يونيو", users: 1850, orgs: 31 },
+  ]);
+  const [salesChartData] = useState<SalesData[]>([
+    { month: "يناير", sales: 3200 },
+    { month: "فبراير", sales: 7800 },
+    { month: "مارس", sales: 12500 },
+    { month: "أبريل", sales: 18000 },
+    { month: "مايو", sales: 29000 },
+    { month: "يونيو", sales: 48320 },
+  ]);
+  const [userRolesData] = useState<PieChartData[]>([
+    { name: "مستفيدون", value: 2100, fill: "hsl(var(--chart-1))" },
+    { name: "مرشدون", value: 80, fill: "hsl(var(--chart-2))" },
+    { name: "مدربون", value: 54, fill: "hsl(var(--chart-3))" },
+    { name: "مدراء منظمات", value: 38, fill: "hsl(var(--chart-4))" },
+    { name: "مشرفون", value: 5, fill: "hsl(var(--chart-5))" },
+  ]);
+  const [courseEnrollmentData] = useState<CourseEnrollmentData[]>([
+    { name: "أساسيات التسويق", enrollments: 148 },
+    { name: "ريادة الأعمال", enrollments: 122 },
+    { name: "التجارة الإلكترونية", enrollments: 98 },
+    { name: "إدارة المشاريع", enrollments: 74 },
+    { name: "التصوير للمنتجات", enrollments: 61 },
+  ]);
 
   const handleExport = (fullReport: boolean = false) => {
     const selectedReports = fullReport ? Object.keys(exportOptions) : Object.entries(exportOptions)
