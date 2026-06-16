@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useMemo, type ReactNode } from 'react';
+import React, { useMemo, useState, useEffect, type ReactNode } from 'react';
 import { FirebaseProvider } from '@/firebase/provider';
-// Import directly from the new client-only file
 import { initializeFirebaseSDKs } from '@/firebase/client';
 
 interface FirebaseClientProviderProps {
@@ -10,10 +9,26 @@ interface FirebaseClientProviderProps {
 }
 
 export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   const firebaseServices = useMemo(() => {
-    // This now calls the function from the completely isolated module.
+    if (!isClient) return null;
     return initializeFirebaseSDKs();
-  }, []); // Empty dependency array ensures this runs only once on mount
+  }, [isClient]);
+
+  if (!firebaseServices) {
+    // Server-side or before hydration — render children without Firebase
+    // Firebase hooks will return null gracefully
+    return (
+      <FirebaseProvider firebaseApp={null as any} auth={null as any} firestore={null} storage={null}>
+        {children}
+      </FirebaseProvider>
+    );
+  }
 
   return (
     <FirebaseProvider
