@@ -32,7 +32,6 @@ export default function AuthRedirectPage() {
     if (loading && !waited) return;
     if (!user) { router.replace("/login"); return; }
 
-    // Check sessionStorage first (set right after registration)
     const pendingRole = sessionStorage.getItem("pending_role");
     const pendingUid  = sessionStorage.getItem("pending_uid");
 
