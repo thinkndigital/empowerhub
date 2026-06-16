@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { doc } from "firebase/firestore";
-import { useMemo, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useAuth, useFirestore, useMemoFirebase } from "@/firebase/provider";
 import { useDoc } from "@/firebase/firestore/use-doc";
 import Image from "next/image";
@@ -70,16 +70,17 @@ export default function MentorDashboardLayout({
     router.push("/login");
   };
 
-  const demoUserProfile = useMemo<UserProfile>(() => ({
-    id: 'demo-mentor',
-    name: 'مرشد تجريبي',
-    email: 'mentor@example.com',
-    role: 'mentor',
-    avatarUrl: `https://picsum.photos/seed/demo-mentor/40/40`,
-  }), []);
-
-  const userProfile = (authUser && realUserProfile) ? realUserProfile : demoUserProfile;
+  const userProfile = realUserProfile ?? null;
   const firestore = useFirestore();
+
+  // Fallback: if profile doesn't load within 5s for an authenticated user, unblock UI
+  const [profileTimedOut, setProfileTimedOut] = useState(false);
+  useEffect(() => {
+    if (!authUser || userProfile) { setProfileTimedOut(false); return; }
+    const t = setTimeout(() => setProfileTimedOut(true), 5000);
+    return () => clearTimeout(t);
+  }, [authUser, userProfile]);
+
 
   const orgRef = useMemoFirebase(() => {
     if (!firestore || !userProfile?.organizationId) return null;
@@ -109,7 +110,7 @@ export default function MentorDashboardLayout({
     document.documentElement.style.setProperty('--primary', `${h} ${s}% ${l}%`);
   }, [organization?.primaryColor]);
 
-  if (loading) {
+  if (loading || (authUser && !userProfile && !profileTimedOut)) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
@@ -120,8 +121,8 @@ export default function MentorDashboardLayout({
     );
   }
 
-  const displayName = userProfile.name || 'مرشد';
-  const displayEmail = userProfile.email || 'لا يوجد بريد إلكتروني';
+  const displayName = userProfile?.name || authUser?.displayName || 'مرشد';
+  const displayEmail = userProfile?.email || authUser?.email || 'لا يوجد بريد إلكتروني';
 
   return (
     <SidebarProvider>
@@ -192,7 +193,7 @@ export default function MentorDashboardLayout({
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0">
                 <Avatar>
-                  <AvatarImage src={userProfile.avatarUrl} alt={displayName} />
+                  <AvatarImage src={userProfile?.avatarUrl} alt={displayName} />
                   <AvatarFallback>{displayName.charAt(0)}</AvatarFallback>
                 </Avatar>
               </Button>

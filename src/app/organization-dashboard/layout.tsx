@@ -14,7 +14,7 @@ import {
   MessageSquare,
   GraduationCap,
 } from "lucide-react";
-import { useMemo } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import { signOut } from "firebase/auth";
 import { doc } from 'firebase/firestore';
@@ -73,27 +73,26 @@ export default function OrganizationDashboardLayout({
   const firestore = useFirestore();
   const auth = useAuth();
 
-  const demoUserProfile = useMemo<UserProfile>(() => ({
-    id: 'demo-org',
-    name: 'مدير منظمة تجريبي',
-    email: 'org@example.com',
-    role: 'organization',
-    organizationId: 'org-hope', // Mock ID
-    avatarUrl: `https://picsum.photos/seed/demo-org/40/40`,
-  }), []);
+  const userProfile = realUserProfile ?? null;
 
-  const userProfile = (authUser && realUserProfile) ? realUserProfile : demoUserProfile;
+  // Fallback: if profile doesn't load within 5s for an authenticated user, unblock UI
+  const [profileTimedOut, setProfileTimedOut] = useState(false);
+  useEffect(() => {
+    if (!authUser || userProfile) { setProfileTimedOut(false); return; }
+    const t = setTimeout(() => setProfileTimedOut(true), 5000);
+    return () => clearTimeout(t);
+  }, [authUser, userProfile]);
 
   const orgRef = useMemoFirebase(() => {
     if (!firestore || !userProfile?.organizationId) return null;
-    return doc(firestore, 'organizations', userProfile.organizationId);
+    return doc(firestore, 'organizations', userProfile?.organizationId!);
   }, [firestore, userProfile?.organizationId]);
 
   const { data: organization, isLoading: orgLoading } = useDoc<any>(orgRef);
   const loading = userLoading || Boolean(authUser && orgLoading);
 
-  const orgName = authUser ? (organization?.name || "منظمتي") : "منظمة تجريبية";
-  const logoUrl = authUser ? organization?.logoUrl : null;
+  const orgName = organization?.name || "منظمتي";
+  const logoUrl = organization?.logoUrl || null;
 
   useEffect(() => {
     if (!organization?.primaryColor) return;
@@ -122,7 +121,7 @@ export default function OrganizationDashboardLayout({
     router.push("/login");
   };
 
-  if (loading) {
+  if (loading || (authUser && !userProfile && !profileTimedOut)) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
@@ -133,8 +132,8 @@ export default function OrganizationDashboardLayout({
     );
   }
   
-  const displayName = userProfile.name || 'مدير';
-  const displayEmail = userProfile.email || 'لا يوجد بريد إلكتروني';
+  const displayName = userProfile?.name || authUser?.displayName || 'مدير';
+  const displayEmail = userProfile?.email || authUser?.email || 'لا يوجد بريد إلكتروني';
 
   return (
     <SidebarProvider>
@@ -203,7 +202,7 @@ export default function OrganizationDashboardLayout({
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0">
                 <Avatar>
-                  <AvatarImage src={userProfile.avatarUrl} alt={displayName} />
+                  <AvatarImage src={userProfile?.avatarUrl} alt={displayName} />
                   <AvatarFallback>{(displayName || 'O').charAt(0)}</AvatarFallback>
                 </Avatar>
               </Button>
