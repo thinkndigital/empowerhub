@@ -1,41 +1,43 @@
 'use client';
 
-import React, { useMemo, useState, useEffect, type ReactNode } from 'react';
+import React, { useState, useEffect, type ReactNode } from 'react';
 import { FirebaseProvider } from '@/firebase/provider';
-import { initializeFirebaseSDKs } from '@/firebase/client';
+import type { FirebaseApp } from 'firebase/app';
+import type { Auth } from 'firebase/auth';
+import type { Firestore } from 'firebase/firestore';
+import type { FirebaseStorage } from 'firebase/storage';
+
+interface FirebaseServices {
+  firebaseApp: FirebaseApp;
+  auth: Auth;
+  firestore: Firestore | null;
+  storage: FirebaseStorage | null;
+}
 
 interface FirebaseClientProviderProps {
   children: ReactNode;
 }
 
 export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {
-  const [isClient, setIsClient] = useState(false);
+  const [services, setServices] = useState<FirebaseServices | null>(null);
 
   useEffect(() => {
-    setIsClient(true);
+    // Dynamically import Firebase ONLY after mounting on the client
+    // This guarantees Firebase never runs during SSR
+    import('./client').then(({ initializeFirebaseSDKs }) => {
+      const s = initializeFirebaseSDKs();
+      setServices(s);
+    }).catch(err => {
+      console.error('[Firebase] Failed to load:', err);
+    });
   }, []);
-
-  const firebaseServices = useMemo(() => {
-    if (!isClient) return null;
-    return initializeFirebaseSDKs();
-  }, [isClient]);
-
-  if (!firebaseServices) {
-    // Server-side or before hydration — render children without Firebase
-    // Firebase hooks will return null gracefully
-    return (
-      <FirebaseProvider firebaseApp={null as any} auth={null as any} firestore={null} storage={null}>
-        {children}
-      </FirebaseProvider>
-    );
-  }
 
   return (
     <FirebaseProvider
-      firebaseApp={firebaseServices.firebaseApp}
-      auth={firebaseServices.auth}
-      firestore={firebaseServices.firestore}
-      storage={firebaseServices.storage}
+      firebaseApp={services?.firebaseApp ?? (null as any)}
+      auth={services?.auth ?? (null as any)}
+      firestore={services?.firestore ?? null}
+      storage={services?.storage ?? null}
     >
       {children}
     </FirebaseProvider>
