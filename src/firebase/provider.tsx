@@ -17,10 +17,12 @@ import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 
 interface FirebaseProviderProps {
   children: ReactNode;
-  firebaseApp: FirebaseApp;
+  firebaseApp: FirebaseApp | null;
   firestore: Firestore | null;
-  auth: Auth;
+  auth: Auth | null;
   storage: FirebaseStorage | null;
+  /** True while the client-side Firebase SDK is still being imported */
+  isInitializing?: boolean;
 }
 
 // Internal state for user authentication
@@ -41,9 +43,22 @@ export interface FirebaseContextState {
   userError: Error | null;
 }
 
-// React Context
+// Default context value used before any FirebaseProvider mounts (e.g. during SSR
+// or before the dynamic import resolves on the client).
+const defaultContextValue: FirebaseContextState = {
+  firebaseApp: null,
+  firestore: null,
+  auth: null,
+  storage: null,
+  user: null,
+  isUserLoading: true,
+  userError: null,
+};
+
+// React Context — defaults to the no-op state so hooks never throw
+// even when used before the provider mounts.
 export const FirebaseContext =
-  createContext<FirebaseContextState | undefined>(undefined);
+  createContext<FirebaseContextState>(defaultContextValue);
 
 /**
  * FirebaseProvider manages and provides Firebase services and user authentication state.
@@ -54,31 +69,33 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   firestore,
   auth,
   storage,
+  isInitializing = false,
 }) => {
   const [userAuthState, setUserAuthState] = useState<UserAuthState>({
     user: null,
-    isUserLoading: true, // Start loading until first auth event
+    // Keep loading true only while Firebase SDK is still initializing.
+    // Once we know there's no auth (isInitializing=false, auth=null), stop loading.
+    isUserLoading: isInitializing,
     userError: null,
   });
 
   // Effect to subscribe to Firebase auth state changes
   useEffect(() => {
     if (!auth) {
-      // If no Auth service instance, cannot determine user state
+      // Firebase SDK not ready yet, or no Auth service — stop loading
       setUserAuthState({
         user: null,
         isUserLoading: false,
-        userError: new Error('Auth service not provided.'),
+        userError: null,
       });
       return;
     }
 
-    setUserAuthState({ user: null, isUserLoading: true, userError: null }); // Reset on auth instance change
+    setUserAuthState({ user: null, isUserLoading: true, userError: null });
 
     const unsubscribe = onAuthStateChanged(
       auth,
       (firebaseUser) => {
-        // Auth state determined
         setUserAuthState({
           user: firebaseUser,
           isUserLoading: false,
@@ -86,13 +103,25 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
         });
       },
       (error) => {
-        // Auth listener error
         console.error('FirebaseProvider: onAuthStateChanged error:', error);
         setUserAuthState({ user: null, isUserLoading: false, userError: error });
       }
     );
-    return () => unsubscribe(); // Cleanup
-  }, [auth]); // Depends on the auth instance
+
+    // Safety: if onAuthStateChanged hasn't fired within 4 seconds, unblock UI
+    const timeout = setTimeout(() => {
+      setUserAuthState((prev) => {
+        if (!prev.isUserLoading) return prev;
+        console.warn('[FB] onAuthStateChanged timed out — unblocking UI');
+        return { user: null, isUserLoading: false, userError: null };
+      });
+    }, 4000);
+
+    return () => {
+      unsubscribe();
+      clearTimeout(timeout);
+    };
+  }, [auth]);
 
   // Memoize the context value
   const contextValue = useMemo((): FirebaseContextState => {
@@ -116,11 +145,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
 };
 
 function useFirebaseContext() {
-  const context = useContext(FirebaseContext);
-  if (context === undefined) {
-    throw new Error('useFirebase hooks must be used within a FirebaseProvider.');
-  }
-  return context;
+  return useContext(FirebaseContext);
 }
 
 /** Hook to access Firebase Auth instance. Returns null if not ready yet. */
@@ -133,14 +158,16 @@ export const useAuth = (): Auth | null => {
 export const useFirestore = (): Firestore | null => useFirebaseContext().firestore;
 
 /** Hook to access Firebase App instance. */
-export const useFirebaseApp = (): FirebaseApp => {
+export const useFirebaseApp = (): FirebaseApp | null => {
     const { firebaseApp } = useFirebaseContext();
-    if (!firebaseApp) throw new Error("Firebase App is not available. Check your Firebase setup.");
-    return firebaseApp;
+    return firebaseApp || null;
 };
 
 /** Hook to access Firebase Storage instance. It may be null if the service is unavailable. */
 export const useStorage = (): FirebaseStorage | null => useFirebaseContext().storage;
+
+/** Hook to read the full Firebase context including loading state. */
+export const useFirebaseState = (): FirebaseContextState => useFirebaseContext();
 
 type MemoFirebase<T> = T & { __memo?: boolean };
 

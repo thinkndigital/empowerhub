@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { useMemo } from "react";
 import Image from "next/image";
-import { getAuth, signOut } from "firebase/auth";
+import { signOut } from "firebase/auth";
 import { doc } from 'firebase/firestore';
 
 import {
@@ -44,7 +44,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Logo } from "@/components/logo";
 import { useUser, type UserProfile } from "@/firebase/auth/use-user";
-import { useFirestore, useMemoFirebase } from "@/firebase/provider";
+import { useAuth, useFirestore, useMemoFirebase } from "@/firebase/provider";
 import { useDoc } from "@/firebase/firestore/use-doc";
 import { NotificationBell } from "@/components/notification-bell";
 
@@ -70,6 +70,7 @@ export default function OrganizationDashboardLayout({
   const router = useRouter();
   const { user: authUser, userProfile: realUserProfile, loading: userLoading } = useUser();
   const firestore = useFirestore();
+  const auth = useAuth();
 
   const demoUserProfile = useMemo<UserProfile>(() => ({
     id: 'demo-org',
@@ -80,7 +81,7 @@ export default function OrganizationDashboardLayout({
     avatarUrl: `https://picsum.photos/seed/demo-org/40/40`,
   }), []);
 
-  const userProfile = authUser ? realUserProfile : demoUserProfile;
+  const userProfile = (authUser && realUserProfile) ? realUserProfile : demoUserProfile;
 
   const orgRef = useMemoFirebase(() => {
     if (!firestore || !userProfile?.organizationId) return null;
@@ -88,14 +89,13 @@ export default function OrganizationDashboardLayout({
   }, [firestore, userProfile?.organizationId]);
 
   const { data: organization, isLoading: orgLoading } = useDoc<any>(orgRef);
-  const loading = userLoading || (authUser && orgLoading);
+  const loading = userLoading || Boolean(authUser && orgLoading);
 
   const orgName = authUser ? (organization?.name || "منظمتي") : "منظمة تجريبية";
   const logoUrl = authUser ? organization?.logoUrl : null;
   
   const handleLogout = async () => {
-    const auth = getAuth();
-    await signOut(auth);
+    if (auth) await signOut(auth);
     router.push("/login");
   };
 
@@ -110,17 +110,6 @@ export default function OrganizationDashboardLayout({
     );
   }
   
-  if (!userProfile) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <Logo className="h-24 w-24 animate-pulse" />
-          <p className="text-muted-foreground">جاري تحميل ملفك الشخصي...</p>
-        </div>
-      </div>
-    );
-  }
-
   const displayName = userProfile.name || 'مدير';
   const displayEmail = userProfile.email || 'لا يوجد بريد إلكتروني';
 

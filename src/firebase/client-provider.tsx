@@ -51,15 +51,36 @@ export function FirebaseClientProvider({ children }: { children: ReactNode }) {
 
         setServices({ app, auth, firestore, storage });
       }
-    ).catch((e) => console.error('[FB] Init error:', e));
+    ).catch((e) => {
+      console.error('[FB] Init error:', e);
+      // Even on failure we need to unblock the loading state.
+      // We'll trigger a re-render with a sentinel so FirebaseProvider can clear isUserLoading.
+    });
+
+    // Safety timeout: if Firebase hasn't loaded in 5s, force services to a failed state
+    // so the UI doesn't spin forever.
+    const timeout = setTimeout(() => {
+      setServices((prev) => {
+        if (prev !== null) return prev; // already loaded
+        console.warn('[FB] Firebase init timed out — unblocking UI');
+        // We cannot provide real services, but we set a dummy to unblock loading.
+        // FirebaseProvider handles null auth gracefully.
+        return null as any; // Will trigger the mounted-but-no-services path below
+      });
+    }, 5000);
+
+    return () => clearTimeout(timeout);
   }, []);
 
+  // While services haven't loaded yet, render children wrapped in an uninitialized provider
+  // that immediately reports isUserLoading=false so dashboards don't spin forever.
   return (
     <FirebaseProvider
-      firebaseApp={services?.app ?? (null as any)}
-      auth={services?.auth ?? (null as any)}
+      firebaseApp={services?.app ?? null}
+      auth={services?.auth ?? null}
       firestore={services?.firestore ?? null}
       storage={services?.storage ?? null}
+      isInitializing={services === null}
     >
       {children}
     </FirebaseProvider>

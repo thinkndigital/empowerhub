@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { doc, onSnapshot, type DocumentData } from 'firebase/firestore';
-import { useAuth, useFirestore } from '../provider';
+import { useAuth, useFirestore, useFirebaseState } from '../provider';
 
 export type UserProfile = DocumentData & {
   id: string;
@@ -23,35 +23,45 @@ export type UserProfile = DocumentData & {
 export function useUser() {
   const auth = useAuth();
   const firestore = useFirestore();
+  const { isUserLoading: contextUserLoading } = useFirebaseState();
   const [user, setUser] = useState<User | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(false);
 
+  // Subscribe to auth state changes
   useEffect(() => {
-    if (!auth) return;
+    if (!auth) {
+      // Auth not ready yet — wait for it (contextUserLoading tracks this)
+      if (!contextUserLoading) {
+        // Firebase finished initializing but no auth available
+        setUser(null);
+        setAuthChecked(true);
+      }
+      return;
+    }
+
     const unsubscribeAuth = onAuthStateChanged(auth, (authUser) => {
       setUser(authUser);
       setAuthChecked(true);
       if (!authUser) {
         setUserProfile(null);
-        setLoading(false);
+        setProfileLoading(false);
       }
     });
     return () => unsubscribeAuth();
-  }, [auth]);
+  }, [auth, contextUserLoading]);
 
+  // Subscribe to Firestore profile once auth is confirmed
   useEffect(() => {
-    // Wait until auth state is confirmed before acting
     if (!authChecked) return;
 
     if (!user || !firestore) {
-      // User not logged in, or firestore unavailable — stop loading
-      setLoading(false);
+      setProfileLoading(false);
       return;
     }
 
-    setLoading(true);
+    setProfileLoading(true);
     const userDocRef = doc(firestore, 'users', user.uid);
     const unsubscribeProfile = onSnapshot(
       userDocRef,
@@ -61,17 +71,21 @@ export function useUser() {
         } else {
           setUserProfile(null);
         }
-        setLoading(false);
+        setProfileLoading(false);
       },
       (error) => {
         console.error('Error fetching user profile:', error);
         setUserProfile(null);
-        setLoading(false);
+        setProfileLoading(false);
       }
     );
 
     return () => unsubscribeProfile();
   }, [user, firestore, authChecked]);
+
+  // Overall loading: true only while we haven't yet determined auth state,
+  // OR while we're loading the Firestore profile for a logged-in user.
+  const loading = contextUserLoading || !authChecked || profileLoading;
 
   return { user, userProfile, loading };
 }
