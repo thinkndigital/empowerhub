@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Palette, Save, BookOpen, Users } from "lucide-react";
+import { Palette, Save, BookOpen, Users, Copy, Key } from "lucide-react";
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { useFirestore, useStorage } from "@/firebase/provider";
@@ -54,6 +54,7 @@ export default function OrgSettingsPage() {
   const { userProfile } = useUser();
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [inviteCode, setInviteCode] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof settingsSchema>>({
     resolver: zodResolver(settingsSchema),
@@ -77,6 +78,7 @@ export default function OrgSettingsPage() {
       if (data.logoUrl) setLogoPreview(data.logoUrl);
       if (data.courseSessionPrice != null) form.setValue('courseSessionPrice', data.courseSessionPrice);
       if (data.mentorshipSessionPrice != null) form.setValue('mentorshipSessionPrice', data.mentorshipSessionPrice);
+      if (data.inviteCode) setInviteCode(data.inviteCode);
     }).catch(() => {
       // Fallback to localStorage
       const savedName = localStorage.getItem('orgName');
@@ -292,6 +294,24 @@ export default function OrgSettingsPage() {
           </div>
         </form>
       </Form>
+
+      {/* Invite Code */}
+      {inviteCode && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-primary"><Key className="h-5 w-5" /> كود دعوة المرشدين والمدربين</CardTitle>
+            <CardDescription>شارك هذا الكود مع المرشدين والمدربين حتى يتمكنوا من التسجيل وربط حساباتهم بمنظمتك.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-3">
+              <div className="text-2xl font-mono font-bold tracking-widest bg-card border rounded-lg px-6 py-3">{inviteCode}</div>
+              <Button variant="outline" size="icon" onClick={() => { navigator.clipboard.writeText(inviteCode); toast({ title: "تم النسخ!", description: "تم نسخ كود الدعوة." }); }}>
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

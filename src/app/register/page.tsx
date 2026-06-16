@@ -26,6 +26,7 @@ const formSchema = z.object({
     password: z.string().min(6, { message: "يجب أن تكون كلمة المرور 6 أحرف على الأقل." }),
     role: z.string({ required_error: "الرجاء اختيار نوع الحساب." }),
     organizationName: z.string().optional(),
+    orgInviteCode: z.string().optional(),
 }).refine((data) => {
     if (data.role === 'organization') {
         return data.organizationName && data.organizationName.length >= 2;
@@ -34,6 +35,14 @@ const formSchema = z.object({
 }, {
     message: "يجب إدخال اسم المنظمة (حرفان على الأقل).",
     path: ["organizationName"],
+}).refine((data) => {
+    if (data.role === 'mentor' || data.role === 'coach') {
+        return data.orgInviteCode && data.orgInviteCode.length >= 4;
+    }
+    return true;
+}, {
+    message: "يجب إدخال كود دعوة المنظمة.",
+    path: ["orgInviteCode"],
 });
 
 function RegisterForm() {
@@ -52,10 +61,11 @@ function RegisterForm() {
             name: "",
             email: "",
             password: "",
-            role: roleFromQuery && ["beneficiary", "organization"].includes(roleFromQuery)
+            role: roleFromQuery && ["beneficiary", "organization", "mentor", "coach"].includes(roleFromQuery)
                 ? roleFromQuery
                 : "beneficiary",
             organizationName: "",
+            orgInviteCode: "",
         },
     });
 
@@ -63,7 +73,7 @@ function RegisterForm() {
 
     useEffect(() => {
         const role = searchParams.get('role');
-        if (role && ["beneficiary", "organization"].includes(role)) {
+        if (role && ["beneficiary", "organization", "mentor", "coach"].includes(role)) {
             form.setValue('role', role);
         }
     }, [searchParams, form]);
@@ -81,7 +91,6 @@ function RegisterForm() {
     async function onSubmit(values: z.infer<typeof formSchema>) {
         setIsLoading(true);
         try {
-            // Step 1: Create account via server-side API (uses Admin SDK — no client Firestore needed)
             const res = await fetch('/api/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -91,6 +100,7 @@ function RegisterForm() {
                     password: values.password,
                     role: values.role,
                     organizationName: values.organizationName,
+                    orgInviteCode: values.orgInviteCode,
                 }),
             });
 
@@ -100,7 +110,6 @@ function RegisterForm() {
                 throw new Error(data.error || 'فشل إنشاء الحساب.');
             }
 
-            // Step 2: Sign in the user with Firebase Auth
             if (auth) {
                 await signInWithEmailAndPassword(auth, values.email, values.password);
             }
@@ -204,10 +213,14 @@ function RegisterForm() {
                                             <SelectContent>
                                                 <SelectItem value="beneficiary">مستفيد</SelectItem>
                                                 <SelectItem value="organization">مدير منظمة</SelectItem>
+                                                <SelectItem value="mentor">مرشد</SelectItem>
+                                                <SelectItem value="coach">مدرب / مدربة</SelectItem>
                                             </SelectContent>
                                         </Select>
                                         <FormDescription className="text-xs">
-                                            المرشدون والمدربون يُضافون من قبل مدير المنظمة.
+                                            {(selectedRole === 'mentor' || selectedRole === 'coach')
+                                                ? 'ستحتاج إلى كود دعوة من المنظمة التي تنتمي إليها.'
+                                                : 'اختر دورك على المنصة.'}
                                         </FormDescription>
                                         <FormMessage />
                                     </FormItem>
@@ -226,6 +239,25 @@ function RegisterForm() {
                                             </FormControl>
                                             <FormDescription className="text-xs">
                                                 سيتم إنشاء حساب منظمتك تلقائياً.
+                                            </FormDescription>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            )}
+
+                            {(selectedRole === 'mentor' || selectedRole === 'coach') && (
+                                <FormField
+                                    control={form.control}
+                                    name="orgInviteCode"
+                                    render={({ field }) => (
+                                        <FormItem className="text-right">
+                                            <FormLabel>كود دعوة المنظمة</FormLabel>
+                                            <FormControl>
+                                                <Input dir="ltr" placeholder="أدخل كود الدعوة" {...field} />
+                                            </FormControl>
+                                            <FormDescription className="text-xs">
+                                                احصل على كود الدعوة من مدير المنظمة التي تنتمي إليها.
                                             </FormDescription>
                                             <FormMessage />
                                         </FormItem>

@@ -8,8 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Banknote, Save, Wallet } from 'lucide-react';
+import { Banknote, Save, Wallet, User, BookOpen, Award } from 'lucide-react';
 import { useFirestore, useMemoFirebase } from '@/firebase/provider';
 import { useUser, type UserProfile } from '@/firebase/auth/use-user';
 import { useDoc } from '@/firebase/firestore/use-doc';
@@ -17,21 +18,39 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { Separator } from '@/components/ui/separator';
+
+const mentorProfileSchema = z.object({
+  name: z.string().min(2, { message: 'يجب أن يكون الاسم حرفين على الأقل.' }),
+  bio: z.string().optional(),
+  specializations: z.string().optional(),
+  certifications: z.string().optional(),
+  phone: z.string().optional(),
+  linkedIn: z.string().optional(),
+  yearsOfExperience: z.coerce.number().min(0).optional(),
+});
 
 const payoutSchema = z.object({
   accountHolderName: z.string().min(2, { message: 'يجب أن يكون اسم صاحب الحساب حرفين على الأقل.' }),
-  iban: z.string().min(15, { message: 'الرجاء إدخال رقم IBAN صحيح.' }).max(34, { message: 'الرجاء إدخال رقم IBAN صحيح.' }),
+  iban: z.string().min(15, { message: 'الرجاء إدخال رقم IBAN صحيح.' }).max(34),
   bankName: z.string().min(3, { message: 'يجب أن يكون اسم البنك 3 أحرف على الأقل.' }),
   address: z.string().min(5, { message: 'يجب أن يكون العنوان 5 أحرف على الأقل.' }),
 });
 
+type MentorProfileValues = z.infer<typeof mentorProfileSchema>;
 type PayoutInfo = z.infer<typeof payoutSchema>;
 
 type MentorProfile = UserProfile & {
+  bio?: string;
+  specializations?: string;
+  certifications?: string;
+  phone?: string;
+  linkedIn?: string;
+  yearsOfExperience?: number;
   wallet?: {
     balance?: number;
     payoutInfo?: PayoutInfo;
-  }
+  };
 };
 
 export default function MentorSettingsPage() {
@@ -46,7 +65,20 @@ export default function MentorSettingsPage() {
 
   const { data: user, isLoading: loading } = useDoc<MentorProfile>(userRef);
 
-  const form = useForm<PayoutInfo>({
+  const profileForm = useForm<MentorProfileValues>({
+    resolver: zodResolver(mentorProfileSchema),
+    defaultValues: {
+      name: '',
+      bio: '',
+      specializations: '',
+      certifications: '',
+      phone: '',
+      linkedIn: '',
+      yearsOfExperience: 0,
+    },
+  });
+
+  const payoutForm = useForm<PayoutInfo>({
     resolver: zodResolver(payoutSchema),
     defaultValues: {
       accountHolderName: '',
@@ -57,91 +89,158 @@ export default function MentorSettingsPage() {
   });
 
   useEffect(() => {
-    if (user?.wallet?.payoutInfo) {
-      form.reset(user.wallet.payoutInfo);
+    if (user) {
+      profileForm.reset({
+        name: user.name || '',
+        bio: user.bio || '',
+        specializations: user.specializations || '',
+        certifications: user.certifications || '',
+        phone: user.phone || '',
+        linkedIn: user.linkedIn || '',
+        yearsOfExperience: user.yearsOfExperience || 0,
+      });
+      if (user.wallet?.payoutInfo) {
+        payoutForm.reset(user.wallet.payoutInfo);
+      }
     }
-  }, [user, form]);
-  
+  }, [user, profileForm, payoutForm]);
 
-  async function onSubmit(values: PayoutInfo) {
+  async function onSubmitProfile(values: MentorProfileValues) {
     if (!userRef) return;
-    
+    updateDoc(userRef, values)
+      .then(() => toast({ title: 'تم حفظ الملف الشخصي', description: 'تم تحديث معلوماتك بنجاح.' }))
+      .catch(() => {
+        toast({ variant: 'destructive', title: 'خطأ!', description: 'فشلت عملية الحفظ.' });
+        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: userRef.path, operation: 'update' }));
+      });
+  }
+
+  async function onSubmitPayout(values: PayoutInfo) {
+    if (!userRef) return;
     updateDoc(userRef, { 'wallet.payoutInfo': values })
-        .then(() => {
-            toast({
-                title: 'تم حفظ الإعدادات',
-                description: 'تم تحديث معلومات الدفع الخاصة بك بنجاح.',
-            });
-        })
-        .catch(err => {
-            toast({ variant: 'destructive', title: 'خطأ!', description: 'فشلت عملية الحفظ.' });
-            errorEmitter.emit('permission-error', new FirestorePermissionError({ path: userRef.path, operation: 'update', requestResourceData: { 'wallet.payoutInfo': values } }));
-        });
+      .then(() => toast({ title: 'تم حفظ الإعدادات', description: 'تم تحديث معلومات الدفع بنجاح.' }))
+      .catch(() => {
+        toast({ variant: 'destructive', title: 'خطأ!', description: 'فشلت عملية الحفظ.' });
+        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: userRef.path, operation: 'update' }));
+      });
   }
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       <div>
-          <h1 className="text-lg font-semibold md:text-2xl">المحفظة والإعدادات</h1>
-          <p className="text-muted-foreground">إدارة أرباحك وتفاصيل الدفع الخاصة بك.</p>
+        <h1 className="text-lg font-semibold md:text-2xl">إعدادات الملف الشخصي والمحفظة</h1>
+        <p className="text-muted-foreground">إدارة معلوماتك المهنية وتفاصيل الدفع.</p>
       </div>
-      
+
+      {/* Professional Profile */}
+      <Form {...profileForm}>
+        <form onSubmit={profileForm.handleSubmit(onSubmitProfile)} className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><User className="h-5 w-5" /> المعلومات الشخصية</CardTitle>
+              <CardDescription>معلوماتك المعروضة للمستفيدين على المنصة</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {loading ? <Skeleton className="h-10 w-full" /> : (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <FormField control={profileForm.control} name="name" render={({ field }) => (
+                      <FormItem><FormLabel>الاسم الكامل</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={profileForm.control} name="phone" render={({ field }) => (
+                      <FormItem><FormLabel>رقم الهاتف</FormLabel><FormControl><Input dir="ltr" placeholder="+966 5..." {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={profileForm.control} name="yearsOfExperience" render={({ field }) => (
+                      <FormItem><FormLabel>سنوات الخبرة</FormLabel><FormControl><Input type="number" min={0} {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={profileForm.control} name="linkedIn" render={({ field }) => (
+                      <FormItem><FormLabel>رابط LinkedIn</FormLabel><FormControl><Input dir="ltr" placeholder="https://linkedin.com/in/..." {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                  </div>
+                  <FormField control={profileForm.control} name="bio" render={({ field }) => (
+                    <FormItem><FormLabel>نبذة شخصية / السيرة الذاتية</FormLabel><FormControl><Textarea rows={4} placeholder="اكتب نبذة مختصرة عن خبراتك ومسيرتك المهنية..." {...field} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><BookOpen className="h-5 w-5" /> التخصصات والشهادات</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {loading ? <Skeleton className="h-10 w-full" /> : (
+                <>
+                  <FormField control={profileForm.control} name="specializations" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>التخصصات (افصل بينها بفاصلة)</FormLabel>
+                      <FormControl><Input placeholder="مثال: ريادة الأعمال، تسويق رقمي، تطوير المهارات..." {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={profileForm.control} name="certifications" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>الشهادات والمؤهلات</FormLabel>
+                      <FormControl><Textarea rows={3} placeholder="أدخل شهاداتك ومؤهلاتك المهنية..." {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          <Button type="submit">
+            <Save className="ml-2 h-4 w-4" />
+            حفظ الملف الشخصي
+          </Button>
+        </form>
+      </Form>
+
+      <Separator />
+
+      {/* Wallet */}
       <Card>
-          <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                  <Wallet className="h-5 w-5" />
-                  رصيد الأرباح
-              </CardTitle>
-              <CardDescription>
-                  هذا هو إجمالي أرباحك الحالية من جلسات الإرشاد.
-              </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {loading ? <Skeleton className="h-10 w-32" /> :
-              <p className="text-3xl font-bold">
-                  {(user?.wallet?.balance || 0).toFixed(2)} د.أ
-              </p>
-            }
-              <p className="text-xs text-muted-foreground mt-1">
-                  سيتم تحويل الرصيد إلى حسابك البنكي في بداية كل شهر.
-              </p>
-          </CardContent>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Wallet className="h-5 w-5" /> رصيد الأرباح</CardTitle>
+          <CardDescription>إجمالي أرباحك من جلسات الإرشاد.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loading ? <Skeleton className="h-10 w-32" /> :
+            <p className="text-3xl font-bold">{(user?.wallet?.balance || 0).toFixed(2)} د.أ</p>
+          }
+          <p className="text-xs text-muted-foreground mt-1">سيتم تحويل الرصيد إلى حسابك البنكي في بداية كل شهر.</p>
+        </CardContent>
       </Card>
 
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <Banknote className="h-5 w-5" />
-                        معلومات الدفع
-                    </CardTitle>
-                    <CardDescription>
-                        الرجاء إدخال معلومات حسابك البنكي لاستلام أرباحك.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                    <FormField control={form.control} name="accountHolderName" render={({ field }) => (
-                        <FormItem><FormLabel>اسم صاحب الحساب</FormLabel><FormControl><Input placeholder="الاسم كما هو مسجل في البنك" {...field} /></FormControl><FormMessage /></FormItem>
-                    )}/>
-                     <FormField control={form.control} name="iban" render={({ field }) => (
-                        <FormItem><FormLabel>رقم الحساب المصرفي الدولي (IBAN)</FormLabel><FormControl><Input dir="ltr" placeholder="JOXX XXXX XXXX XXXX XXXX XXXX XX" {...field} /></FormControl><FormMessage /></FormItem>
-                    )}/>
-                     <FormField control={form.control} name="bankName" render={({ field }) => (
-                        <FormItem><FormLabel>اسم البنك</FormLabel><FormControl><Input placeholder="اسم البنك" {...field} /></FormControl><FormMessage /></FormItem>
-                    )}/>
-                     <FormField control={form.control} name="address" render={({ field }) => (
-                        <FormItem><FormLabel>عنوان الفرع</FormLabel><FormControl><Input placeholder="عنوان فرع البنك" {...field} /></FormControl><FormMessage /></FormItem>
-                    )}/>
-                </CardContent>
-            </Card>
+      <Form {...payoutForm}>
+        <form onSubmit={payoutForm.handleSubmit(onSubmitPayout)} className="space-y-8">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><Banknote className="h-5 w-5" /> معلومات الدفع</CardTitle>
+              <CardDescription>أدخل معلومات حسابك البنكي لاستلام أرباحك.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <FormField control={payoutForm.control} name="accountHolderName" render={({ field }) => (
+                <FormItem><FormLabel>اسم صاحب الحساب</FormLabel><FormControl><Input placeholder="الاسم كما هو مسجل في البنك" {...field} /></FormControl><FormMessage /></FormItem>
+              )} />
+              <FormField control={payoutForm.control} name="iban" render={({ field }) => (
+                <FormItem><FormLabel>رقم IBAN</FormLabel><FormControl><Input dir="ltr" placeholder="JOXX XXXX XXXX XXXX XXXX XXXX XX" {...field} /></FormControl><FormMessage /></FormItem>
+              )} />
+              <FormField control={payoutForm.control} name="bankName" render={({ field }) => (
+                <FormItem><FormLabel>اسم البنك</FormLabel><FormControl><Input placeholder="اسم البنك" {...field} /></FormControl><FormMessage /></FormItem>
+              )} />
+              <FormField control={payoutForm.control} name="address" render={({ field }) => (
+                <FormItem><FormLabel>عنوان الفرع</FormLabel><FormControl><Input placeholder="عنوان فرع البنك" {...field} /></FormControl><FormMessage /></FormItem>
+              )} />
+            </CardContent>
+          </Card>
 
-            <div>
-                <Button type="submit">
-                    <Save className="ml-2 h-4 w-4" />
-                    حفظ المعلومات
-                </Button>
-            </div>
+          <Button type="submit">
+            <Save className="ml-2 h-4 w-4" />
+            حفظ معلومات الدفع
+          </Button>
         </form>
       </Form>
     </div>

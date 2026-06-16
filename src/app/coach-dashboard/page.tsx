@@ -1,21 +1,26 @@
 'use client';
 
+import { useMemo } from "react";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
-import { Users, Activity, CheckCircle, DollarSign, ArrowUpRight, BookOpen, PlayCircle, PlusCircle, BarChart3 } from "lucide-react";
+import { Users, Activity, CheckCircle, DollarSign, ArrowUpRight, BookOpen, PlayCircle, PlusCircle, BarChart3, CalendarDays } from "lucide-react";
 import { useFirestore, useMemoFirebase } from '@/firebase/provider';
 import { useUser, type UserProfile } from '@/firebase/auth/use-user';
 import { useDoc } from '@/firebase/firestore/use-doc';
-import { doc } from 'firebase/firestore';
+import { useCollection } from '@/firebase/firestore/use-collection';
+import { collection, doc, query, where, orderBy } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
+import { isPast, parseISO } from "date-fns";
 
 type CoachProfile = UserProfile & { wallet?: { balance?: number } };
+type Course = { id: string; title?: string; enrolledCount?: number; completionRate?: number; status?: string };
+type Session = { id: string; status: string; date: string };
 
-const StatCard = ({ title, value, sub, icon, trend, color }: {
-  title: string, value: string | React.ReactNode, sub: string, icon: React.ReactNode, trend?: string, color: string
+const StatCard = ({ title, value, sub, icon, trend, color, loading }: {
+  title: string, value: string | React.ReactNode, sub: string, icon: React.ReactNode, trend?: string, color: string, loading?: boolean
 }) => (
   <Card className="card-hover border-0 shadow-sm">
     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -23,7 +28,7 @@ const StatCard = ({ title, value, sub, icon, trend, color }: {
       <div className={`h-9 w-9 rounded-lg ${color} flex items-center justify-center shrink-0`}>{icon}</div>
     </CardHeader>
     <CardContent>
-      <div className="text-2xl font-bold">{value}</div>
+      {loading ? <Skeleton className="h-8 w-20 mb-1" /> : <div className="text-2xl font-bold">{value}</div>}
       <div className="flex items-center gap-1 mt-1">
         <p className="text-xs text-muted-foreground">{sub}</p>
         {trend && <span className="text-xs text-primary flex items-center"><ArrowUpRight className="h-3 w-3" />{trend}</span>}
@@ -31,13 +36,6 @@ const StatCard = ({ title, value, sub, icon, trend, color }: {
     </CardContent>
   </Card>
 );
-
-const myCourses = [
-  { title: "أساسيات التسويق الرقمي", enrolled: 48, completion: 72, status: "منشورة" },
-  { title: "مقدمة في ريادة الأعمال", enrolled: 32, completion: 88, status: "منشورة" },
-  { title: "استراتيجيات التفاوض", enrolled: 19, completion: 45, status: "منشورة" },
-  { title: "إدارة المشاريع الصغيرة", enrolled: 0, completion: 0, status: "مسودة" },
-];
 
 export default function CoachDashboardPage() {
   const firestore = useFirestore();
@@ -47,8 +45,31 @@ export default function CoachDashboardPage() {
     if (!firestore || !authUser) return null;
     return doc(firestore, 'users', authUser.uid);
   }, [firestore, authUser]);
+  const { data: user, isLoading: userLoading } = useDoc<CoachProfile>(userRef);
 
-  const { data: user, isLoading: loading } = useDoc<CoachProfile>(userRef);
+  const coursesQuery = useMemoFirebase(() => {
+    if (!firestore || !authUser) return null;
+    return query(collection(firestore, "courses"), where("createdBy", "==", authUser.uid));
+  }, [firestore, authUser]);
+  const { data: courses, isLoading: coursesLoading } = useCollection<Course>(coursesQuery);
+
+  const sessionsQuery = useMemoFirebase(() => {
+    if (!firestore || !authUser) return null;
+    return query(collection(firestore, "sessions"), where("hostId", "==", authUser.uid), orderBy("date", "desc"));
+  }, [firestore, authUser]);
+  const { data: sessions, isLoading: sessLoading } = useCollection<Session>(sessionsQuery);
+
+  const stats = useMemo(() => {
+    const totalEnrolled = courses?.reduce((sum, c) => sum + (c.enrolledCount || 0), 0) || 0;
+    const publishedCourses = courses?.filter(c => c.status === 'published' || c.status === 'منشورة').length || 0;
+    const avgCompletion = courses && courses.length > 0
+      ? Math.round(courses.reduce((sum, c) => sum + (c.completionRate || 0), 0) / courses.length)
+      : 0;
+    const upcomingSessions = sessions?.filter(s => s.status === 'scheduled' && !isPast(parseISO(s.date))).length || 0;
+    return { totalEnrolled, publishedCourses, avgCompletion, upcomingSessions };
+  }, [courses, sessions]);
+
+  const loading = coursesLoading || sessLoading;
 
   return (
     <>
@@ -61,15 +82,37 @@ export default function CoachDashboardPage() {
       </div>
 
       <div className="grid gap-4 pt-4 grid-cols-2 lg:grid-cols-4">
-        <StatCard title="إجمالي المسجلين" value="99" sub="في جميع دوراتك" icon={<Users className="h-5 w-5 text-white" />} trend="+12 هذا الشهر" color="bg-primary" />
-        <StatCard title="الطلاب النشطون" value="74" sub="هذا الشهر" icon={<Activity className="h-5 w-5 text-white" />} trend="+8%" color="bg-accent" />
-        <StatCard title="متوسط معدل الإكمال" value="68%" sub="لكل الدورات" icon={<CheckCircle className="h-5 w-5 text-white" />} trend="+5%" color="bg-purple-500" />
+        <StatCard
+          title="إجمالي المسجلين"
+          value={stats.totalEnrolled}
+          sub="في جميع دوراتك"
+          icon={<Users className="h-5 w-5 text-white" />}
+          color="bg-primary"
+          loading={coursesLoading}
+        />
+        <StatCard
+          title="الجلسات القادمة"
+          value={stats.upcomingSessions}
+          sub="جلسة مجدولة"
+          icon={<CalendarDays className="h-5 w-5 text-white" />}
+          color="bg-accent"
+          loading={sessLoading}
+        />
+        <StatCard
+          title="متوسط معدل الإكمال"
+          value={`${stats.avgCompletion}%`}
+          sub="لكل الدورات"
+          icon={<CheckCircle className="h-5 w-5 text-white" />}
+          color="bg-purple-500"
+          loading={coursesLoading}
+        />
         <StatCard
           title="إجمالي الأرباح"
-          value={loading ? <Skeleton className="h-8 w-20" /> : `${(user?.wallet?.balance || 0).toFixed(2)} د.أ`}
+          value={`${((user as any)?.wallet?.balance || 0).toFixed(2)} د.أ`}
           sub="رصيد المحفظة"
           icon={<DollarSign className="h-5 w-5 text-white" />}
           color="bg-amber-500"
+          loading={userLoading}
         />
       </div>
 
@@ -84,35 +127,38 @@ export default function CoachDashboardPage() {
               </div>
               <Button size="sm" asChild>
                 <Link href="/coach-dashboard/courses">
-                  <PlusCircle className="h-4 w-4 mr-1" />
-                  دورة جديدة
+                  <PlusCircle className="h-4 w-4 mr-1" />دورة جديدة
                 </Link>
               </Button>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {myCourses.map((course, i) => (
-              <div key={i} className="p-3 rounded-lg border border-border hover:bg-muted/40 transition-colors">
+            {coursesLoading && [...Array(3)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
+            {!coursesLoading && (courses || []).slice(0, 4).map(course => (
+              <div key={course.id} className="p-3 rounded-lg border border-border hover:bg-muted/40 transition-colors">
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <div className="flex items-center gap-2">
                     <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                       <BookOpen className="h-4 w-4 text-primary" />
                     </div>
-                    <p className="font-medium text-sm">{course.title}</p>
+                    <p className="font-medium text-sm">{course.title || 'دورة بدون عنوان'}</p>
                   </div>
-                  <Badge variant={course.status === "منشورة" ? "default" : "secondary"} className="text-xs shrink-0">
-                    {course.status}
+                  <Badge variant={course.status === 'published' || course.status === 'منشورة' ? "default" : "secondary"} className="text-xs shrink-0">
+                    {course.status === 'published' ? 'منشورة' : course.status || 'مسودة'}
                   </Badge>
                 </div>
                 <div className="space-y-1 pr-10">
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>{course.enrolled} مسجل</span>
-                    <span>{course.completion}% إكمال</span>
+                    <span>{course.enrolledCount || 0} مسجل</span>
+                    <span>{course.completionRate || 0}% إكمال</span>
                   </div>
-                  <Progress value={course.completion} className="h-1.5" />
+                  <Progress value={course.completionRate || 0} className="h-1.5" />
                 </div>
               </div>
             ))}
+            {!coursesLoading && (!courses || courses.length === 0) && (
+              <p className="text-sm text-muted-foreground text-center py-4">لا توجد دورات بعد. <Link href="/coach-dashboard/courses" className="text-primary underline">أضف أول دورة</Link></p>
+            )}
           </CardContent>
         </Card>
 
@@ -124,17 +170,17 @@ export default function CoachDashboardPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               {[
-                { label: "إجمالي الدورات", value: "4", icon: <BookOpen className="h-4 w-4 text-primary" /> },
-                { label: "دورات منشورة", value: "3", icon: <PlayCircle className="h-4 w-4 text-accent" /> },
-                { label: "متوسط التقييم", value: "4.6 ★", icon: <CheckCircle className="h-4 w-4 text-amber-500" /> },
-                { label: "نسبة الرضا", value: "94%", icon: <BarChart3 className="h-4 w-4 text-purple-500" /> },
+                { label: "إجمالي الدورات", value: courses?.length || 0, icon: <BookOpen className="h-4 w-4 text-primary" />, loading: coursesLoading },
+                { label: "دورات منشورة", value: stats.publishedCourses, icon: <PlayCircle className="h-4 w-4 text-accent" />, loading: coursesLoading },
+                { label: "إجمالي الجلسات", value: sessions?.length || 0, icon: <CalendarDays className="h-4 w-4 text-amber-500" />, loading: sessLoading },
+                { label: "الجلسات المكتملة", value: sessions?.filter(s => s.status === 'completed').length || 0, icon: <Activity className="h-4 w-4 text-purple-500" />, loading: sessLoading },
               ].map((item, i) => (
                 <div key={i} className="flex items-center justify-between py-1.5 border-b last:border-0">
                   <div className="flex items-center gap-2 text-sm">
                     {item.icon}
                     <span className="text-muted-foreground">{item.label}</span>
                   </div>
-                  <span className="font-bold text-sm">{item.value}</span>
+                  {item.loading ? <Skeleton className="h-5 w-8" /> : <span className="font-bold text-sm">{item.value}</span>}
                 </div>
               ))}
             </CardContent>
@@ -149,10 +195,13 @@ export default function CoachDashboardPage() {
                 <Link href="/coach-dashboard/courses"><BookOpen className="h-3 w-3" />الدورات</Link>
               </Button>
               <Button variant="outline" size="sm" asChild className="text-xs justify-start gap-1">
+                <Link href="/coach-dashboard/sessions"><CalendarDays className="h-3 w-3" />الجلسات</Link>
+              </Button>
+              <Button variant="outline" size="sm" asChild className="text-xs justify-start gap-1">
                 <Link href="/coach-dashboard/analytics"><BarChart3 className="h-3 w-3" />التحليلات</Link>
               </Button>
-              <Button variant="outline" size="sm" asChild className="col-span-2 justify-start gap-1">
-                <Link href="/coach-dashboard/messages"><Users className="h-3 w-3" />التواصل مع الطلاب</Link>
+              <Button variant="outline" size="sm" asChild className="text-xs justify-start gap-1">
+                <Link href="/coach-dashboard/messages"><Users className="h-3 w-3" />الرسائل</Link>
               </Button>
             </CardContent>
           </Card>

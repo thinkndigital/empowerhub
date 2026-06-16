@@ -22,7 +22,7 @@ import { useState, useMemo } from "react";
 import { useFirestore, useMemoFirebase } from "@/firebase/provider";
 import { useUser, type UserProfile } from "@/firebase/auth/use-user";
 import { useCollection } from "@/firebase/firestore/use-collection";
-import { collection, addDoc, doc, updateDoc, query, where, orderBy } from "firebase/firestore";
+import { collection, addDoc, doc, updateDoc, query, where, orderBy, serverTimestamp } from "firebase/firestore";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -129,10 +129,21 @@ export default function MentorSessionsPage() {
         const sessionsCollection = collection(firestore, "sessions");
         
         addDoc(sessionsCollection, newSessionData)
-            .then(() => {
+            .then(async (docRef) => {
                 toast({ title: "تمت الجدولة!", description: `تم جدولة جلستك "${values.title}".` });
                 setIsDialogOpen(false);
                 form.reset();
+                // Send notification to beneficiary
+                try {
+                    await addDoc(collection(firestore, "notifications"), {
+                        userId: values.beneficiaryId,
+                        title: "جلسة إرشادية جديدة",
+                        body: `تم جدولة جلسة "${values.title}" بتاريخ ${sessionDateTime.toLocaleDateString('ar-SA')}`,
+                        read: false,
+                        createdAt: serverTimestamp(),
+                        link: "/dashboard/mentorship",
+                    });
+                } catch (_) {}
             })
             .catch((err) => {
                 toast({ variant: "destructive", title: "خطأ!", description: "فشل جدولة الجلسة." });
@@ -143,10 +154,23 @@ export default function MentorSessionsPage() {
     async function handleUpdateSessionStatus(sessionId: string, status: 'completed' | 'cancelled') {
         if (!firestore) return;
         const sessionRef = doc(firestore, 'sessions', sessionId);
+        const session = sessions?.find(s => s.id === sessionId);
 
         updateDoc(sessionRef, { status })
-            .then(() => {
+            .then(async () => {
                 toast({ title: "تم التحديث", description: `تم تحديث حالة الجلسة بنجاح.` });
+                if (session && status === 'completed') {
+                    try {
+                        await addDoc(collection(firestore, "notifications"), {
+                            userId: session.attendees[0],
+                            title: "تم إتمام جلستك الإرشادية",
+                            body: `تم تحديد جلسة "${session.title}" كمكتملة.`,
+                            read: false,
+                            createdAt: serverTimestamp(),
+                            link: "/dashboard/mentorship",
+                        });
+                    } catch (_) {}
+                }
             })
             .catch((err) => {
                 toast({ variant: "destructive", title: "خطأ!", description: "فشل تحديث حالة الجلسة." });

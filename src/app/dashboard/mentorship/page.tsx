@@ -11,7 +11,7 @@ import { useUser, type UserProfile } from "@/firebase/auth/use-user";
 import { useFirestore, useMemoFirebase } from "@/firebase/provider";
 import { useCollection } from "@/firebase/firestore/use-collection";
 import { useDoc } from "@/firebase/firestore/use-doc";
-import { collection, query, where, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, doc, addDoc, getDocs, serverTimestamp } from 'firebase/firestore';
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, isPast, parseISO } from "date-fns";
 import { ar } from "date-fns/locale";
@@ -73,21 +73,52 @@ export default function MentorshipPage() {
   }, [sessions]);
 
 
-  const handleSendMessage = () => {
-    if (message.trim() === "") {
-        toast({
-            variant: "destructive",
-            title: "خطأ",
-            description: "لا يمكن إرسال رسالة فارغة.",
-        });
-        return;
+  const handleSendMessage = async () => {
+    if (!message.trim()) {
+      toast({ variant: "destructive", title: "خطأ", description: "لا يمكن إرسال رسالة فارغة." });
+      return;
     }
-    console.log("Sending message:", message);
-    toast({
-        title: "تم الإرسال!",
-        description: "تم إرسال رسالتك إلى مرشدك بنجاح.",
-    });
-    setMessage("");
+    if (!firestore || !authUser || !mentor) return;
+    try {
+      // Find or create conversation between beneficiary and mentor
+      const convoQuery = query(
+        collection(firestore, "conversations"),
+        where("participants", "array-contains", authUser.uid)
+      );
+      const snap = await getDocs(convoQuery);
+      let convoId: string | null = null;
+      snap.forEach(d => {
+        const p: string[] = d.data().participants || [];
+        if (p.includes(mentor.id)) convoId = d.id;
+      });
+      if (!convoId) {
+        const convoRef = await addDoc(collection(firestore, "conversations"), {
+          participants: [authUser.uid, mentor.id],
+          createdAt: serverTimestamp(),
+          lastMessage: message.trim(),
+          lastMessageAt: serverTimestamp(),
+        });
+        convoId = convoRef.id;
+      }
+      await addDoc(collection(firestore, "conversations", convoId, "messages"), {
+        senderId: authUser.uid,
+        text: message.trim(),
+        createdAt: serverTimestamp(),
+      });
+      // Notify mentor
+      await addDoc(collection(firestore, "notifications"), {
+        userId: mentor.id,
+        title: "رسالة جديدة من مستفيد",
+        body: message.trim().slice(0, 80),
+        read: false,
+        createdAt: serverTimestamp(),
+        link: "/mentor-dashboard/messages",
+      });
+      toast({ title: "تم الإرسال!", description: "تم إرسال رسالتك إلى مرشدك بنجاح." });
+      setMessage("");
+    } catch {
+      toast({ variant: "destructive", title: "خطأ!", description: "فشل إرسال الرسالة. حاول مرة أخرى." });
+    }
   };
 
   const handleEvaluationClick = (session: Session) => {

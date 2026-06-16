@@ -4,7 +4,7 @@ import { adminAuth, adminDb } from '@/lib/firebase-admin';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { name, email, password, role, organizationName } = body;
+    const { name, email, password, role, organizationName, orgInviteCode } = body;
 
     if (!name || !email || !password || !role) {
       return NextResponse.json(
@@ -34,10 +34,29 @@ export async function POST(req: NextRequest) {
         status: 'نشطة',
         createdAt: new Date().toISOString(),
         primaryColor: '#2563eb',
+        inviteCode: Math.random().toString(36).substring(2, 8).toUpperCase(),
       });
     }
 
-    // 3. Create user document in Firestore
+    // 3. If registering as mentor/coach, validate invite code and link to org
+    if ((role === 'mentor' || role === 'coach') && orgInviteCode) {
+      const orgsSnapshot = await adminDb.collection('organizations')
+        .where('inviteCode', '==', orgInviteCode.trim().toUpperCase())
+        .limit(1)
+        .get();
+
+      if (!orgsSnapshot.empty) {
+        organizationId = orgsSnapshot.docs[0].id;
+      } else {
+        await adminAuth.deleteUser(uid);
+        return NextResponse.json(
+          { error: 'كود الدعوة غير صحيح. تأكد من الكود وحاول مرة أخرى.' },
+          { status: 400 }
+        );
+      }
+    }
+
+    // 4. Create user document in Firestore
     const userData: Record<string, any> = {
       id: uid,
       name,

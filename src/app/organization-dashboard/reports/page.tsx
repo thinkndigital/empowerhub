@@ -1,265 +1,265 @@
 
 "use client"
 
-import { useState } from "react";
-import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts"
+import { useMemo, useState } from "react";
+import { Bar, BarChart, CartesianGrid, Line, LineChart, XAxis, YAxis, Tooltip } from "recharts"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
-import { Download, Users, Activity, BarChart3, DollarSign } from "lucide-react"
+import { Download, Users, Activity, BarChart3, TrendingUp, Target, Award, CheckCircle } from "lucide-react"
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
+import { Progress } from "@/components/ui/progress"
+import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
+import { useFirestore, useMemoFirebase } from "@/firebase/provider"
+import { useUser, type UserProfile } from "@/firebase/auth/use-user"
+import { useCollection } from "@/firebase/firestore/use-collection"
+import { collection, query, where, orderBy } from "firebase/firestore"
+import { format, subMonths, startOfMonth } from "date-fns"
+import { ar } from "date-fns/locale"
 
-interface EngagementData {
-  month: string;
-  active: number;
-}
+const engagementConfig = { active: { label: "المستفيدون النشطون", color: "hsl(var(--chart-1))" } }
+const completionConfig = { "معدل الإكمال": { label: "معدل الإكمال", color: "hsl(var(--chart-2))" } }
 
-interface CompletionData {
-  name: string;
-  "معدل الإكمال": number;
-}
-
-interface SalesData {
-  name: string;
-  sales: number;
-}
-
-const engagementConfig = {
-  active: { label: "مستفيد نشط", color: "hsl(var(--chart-1))" },
-}
-
-const completionConfig = {
-  "معدل الإكمال": { label: "معدل الإكمال", color: "hsl(var(--chart-2))" },
-}
-
-const salesConfig = {
-    sales: { label: "المبيعات", color: "hsl(var(--chart-1))" },
-}
+type Session = { id: string; date: string; status: string; hostId: string; attendees: string[] };
 
 export default function OrgReportsPage() {
   const { toast } = useToast();
+  const firestore = useFirestore();
+  const { userProfile } = useUser();
+  const orgId = (userProfile as any)?.organizationId;
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
-  const [exportOptions, setExportOptions] = useState({
-    engagement: true,
-    completion: true,
-    sales: true,
-  });
+  const [exportOptions, setExportOptions] = useState({ summary: true, progress: true, engagement: true });
 
-  const [engagementData] = useState<EngagementData[]>([
-    { month: "يناير", active: 18 },
-    { month: "فبراير", active: 24 },
-    { month: "مارس", active: 29 },
-    { month: "أبريل", active: 35 },
-    { month: "مايو", active: 41 },
-    { month: "يونيو", active: 48 },
-  ]);
-  const [completionData] = useState<CompletionData[]>([
-    { name: "أعمال", "معدل الإكمال": 82 },
-    { name: "تسويق", "معدل الإكمال": 74 },
-    { name: "تجارة إلكترونية", "معدل الإكمال": 56 },
-    { name: "تصوير", "معدل الإكمال": 38 },
-  ]);
-  const [salesData] = useState<SalesData[]>([
-    { name: "سارة", sales: 4200 },
-    { name: "منى", sales: 3100 },
-    { name: "فاطمة", sales: 2700 },
-    { name: "نورة", sales: 1900 },
-    { name: "ريم", sales: 1400 },
-  ]);
+  const beneficiariesQuery = useMemoFirebase(() => {
+    if (!firestore || !orgId) return null;
+    return query(collection(firestore, "users"), where("organizationId", "==", orgId), where("role", "==", "beneficiary"));
+  }, [firestore, orgId]);
+  const { data: beneficiaries, isLoading: benefLoading } = useCollection<UserProfile>(beneficiariesQuery);
 
+  const mentorsQuery = useMemoFirebase(() => {
+    if (!firestore || !orgId) return null;
+    return query(collection(firestore, "users"), where("organizationId", "==", orgId), where("role", "==", "mentor"));
+  }, [firestore, orgId]);
+  const { data: mentors, isLoading: mentorsLoading } = useCollection<UserProfile>(mentorsQuery);
 
-  const handleExport = (fullReport: boolean = false) => {
-    const selectedReports = fullReport ? Object.keys(exportOptions) : Object.entries(exportOptions)
-        .filter(([, isSelected]) => isSelected)
-        .map(([reportName]) => reportName);
+  const sessionsQuery = useMemoFirebase(() => {
+    if (!firestore || !orgId) return null;
+    return query(collection(firestore, "sessions"), where("organizationId", "==", orgId));
+  }, [firestore, orgId]);
+  const { data: sessions, isLoading: sessLoading } = useCollection<Session>(sessionsQuery);
 
-    if (selectedReports.length === 0) {
-        toast({
-            variant: "destructive",
-            title: "لم يتم تحديد أي أجزاء",
-            description: "الرجاء تحديد جزء واحد على الأقل من التقرير لتصديره.",
-        });
-        return;
-    }
+  const loading = benefLoading || mentorsLoading || sessLoading;
 
-    toast({
-      title: "جاري تصدير التقرير...",
-      description: `سيتم تنزيل ${fullReport ? "التقرير الكامل" : "الأجزاء المحددة"} قريبًا.`,
+  const stats = useMemo(() => {
+    const total = beneficiaries?.length || 0;
+    const active = beneficiaries?.filter(b => (b as any).progress > 0).length || 0;
+    const avgProgress = total > 0
+      ? Math.round(beneficiaries!.reduce((s, b) => s + ((b as any).progress || 0), 0) / total)
+      : 0;
+    const completed = beneficiaries?.filter(b => (b as any).progress >= 100).length || 0;
+    const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
+    const totalSessions = sessions?.filter(s => s.status === 'completed').length || 0;
+    return { total, active, avgProgress, completed, completionRate, totalSessions };
+  }, [beneficiaries, sessions]);
+
+  const engagementData = useMemo(() => {
+    if (!beneficiaries) return [];
+    return Array.from({ length: 6 }, (_, i) => {
+      const d = subMonths(new Date(), 5 - i);
+      const start = startOfMonth(d).getTime();
+      const end = new Date(d.getFullYear(), d.getMonth() + 1, 0).getTime();
+      const activeInMonth = beneficiaries.filter(b => {
+        const created = new Date((b as any).createdAt || '').getTime();
+        return created <= end && (b as any).progress > 0;
+      }).length;
+      return { month: format(d, 'MMM', { locale: ar }), active: activeInMonth };
     });
-    setIsExportDialogOpen(false);
-  }
+  }, [beneficiaries]);
 
-  const handleCheckboxChange = (key: keyof typeof exportOptions) => {
-    setExportOptions(prev => ({...prev, [key]: !prev[key]}));
-  }
+  const progressDistribution = useMemo(() => {
+    if (!beneficiaries) return [];
+    const ranges = [
+      { name: "0-25%", min: 0, max: 25 },
+      { name: "26-50%", min: 26, max: 50 },
+      { name: "51-75%", min: 51, max: 75 },
+      { name: "76-100%", min: 76, max: 100 },
+    ];
+    return ranges.map(r => ({
+      name: r.name,
+      "معدل الإكمال": beneficiaries.filter(b => {
+        const p = (b as any).progress || 0;
+        return p >= r.min && p <= r.max;
+      }).length,
+    }));
+  }, [beneficiaries]);
+
+  const handleExport = () => {
+    toast({ title: "جاري تصدير التقرير...", description: "سيتم تنزيل التقرير قريبًا." });
+    setIsExportDialogOpen(false);
+  };
 
   return (
-     <div className="space-y-8">
-       <div className="flex items-center justify-between">
-            <div>
-                <h1 className="text-2xl font-bold tracking-tight">تقارير المنظمة</h1>
-                <p className="text-muted-foreground">
-                تحليل أداء وتأثير المستفيدين في منظمتك.
-                </p>
+    <>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-lg font-semibold md:text-2xl">تقارير الأثر والتحليلات</h1>
+          <p className="text-muted-foreground text-sm">قياس أثر برامج التمكين في منظمتك</p>
+        </div>
+        <Dialog open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="sm">
+              <Download className="ml-2 h-4 w-4" />
+              تصدير التقارير
+            </Button>
+          </DialogTrigger>
+          <DialogContent dir="rtl">
+            <DialogHeader>
+              <DialogTitle>تصدير التقارير</DialogTitle>
+              <DialogDescription>اختر أجزاء التقرير للتصدير.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 py-4">
+              {[
+                { key: "summary" as const, label: "الملخص الإحصائي" },
+                { key: "progress" as const, label: "توزيع التقدم" },
+                { key: "engagement" as const, label: "مشاركة المستفيدين" },
+              ].map(item => (
+                <div key={item.key} className="flex items-center gap-2">
+                  <Checkbox id={item.key} checked={exportOptions[item.key]} onCheckedChange={() => setExportOptions(p => ({ ...p, [item.key]: !p[item.key] }))} />
+                  <Label htmlFor={item.key}>{item.label}</Label>
+                </div>
+              ))}
             </div>
-             <Dialog open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen}>
-                <DialogTrigger asChild>
-                    <Button variant="outline" size="sm">
-                        <Download className="ml-2 h-4 w-4" />
-                        تصدير التقارير
-                    </Button>
-                </DialogTrigger>
-                <DialogContent dir="rtl">
-                    <DialogHeader>
-                        <DialogTitle>تصدير التقارير والتحليلات</DialogTitle>
-                        <DialogDescription>اختر أجزاء التقرير التي ترغب في تصديرها.</DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                        <div className="font-medium">أجزاء التقرير</div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="flex items-center space-x-2 space-x-reverse">
-                                <Checkbox id="engagement" checked={exportOptions.engagement} onCheckedChange={() => handleCheckboxChange("engagement")} />
-                                <Label htmlFor="engagement">تفاعل المستفيدين</Label>
-                            </div>
-                            <div className="flex items-center space-x-2 space-x-reverse">
-                                <Checkbox id="completion" checked={exportOptions.completion} onCheckedChange={() => handleCheckboxChange("completion")} />
-                                <Label htmlFor="completion">معدلات إكمال الدورات</Label>
-                            </div>
-                            <div className="flex items-center space-x-2 space-x-reverse">
-                                <Checkbox id="sales" checked={exportOptions.sales} onCheckedChange={() => handleCheckboxChange("sales")} />
-                                <Label htmlFor="sales">مبيعات متاجر المستفيدين</Label>
-                            </div>
-                        </div>
-                    </div>
-                    <DialogFooter>
-                        <DialogClose asChild><Button variant="ghost">إلغاء</Button></DialogClose>
-                        <Button variant="outline" onClick={() => handleExport(false)}>تصدير المحدد</Button>
-                        <Button onClick={() => handleExport(true)}>تصدير التقرير الكامل</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            <DialogFooter>
+              <DialogClose asChild><Button variant="ghost">إلغاء</Button></DialogClose>
+              <Button onClick={handleExport}>تصدير</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card className="border-0 shadow-sm card-hover">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">إجمالي المستفيدين</CardTitle>
-                    <div className="h-9 w-9 rounded-lg bg-primary flex items-center justify-center">
-                        <Users className="h-5 w-5 text-white" />
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold">48</div>
-                    <p className="text-xs text-primary flex items-center gap-1 mt-1">+6 هذا الشهر</p>
-                </CardContent>
-            </Card>
-            <Card className="border-0 shadow-sm card-hover">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">المستفيدون النشطون</CardTitle>
-                    <div className="h-9 w-9 rounded-lg bg-accent flex items-center justify-center">
-                        <Activity className="h-5 w-5 text-white" />
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold">41</div>
-                    <p className="text-xs text-muted-foreground mt-1">85% من الإجمالي</p>
-                </CardContent>
-            </Card>
-            <Card className="border-0 shadow-sm card-hover">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">التقدم العام للمسارات</CardTitle>
-                    <div className="h-9 w-9 rounded-lg bg-amber-500 flex items-center justify-center">
-                        <BarChart3 className="h-5 w-5 text-white" />
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold">63%</div>
-                    <p className="text-xs text-muted-foreground mt-1">متوسط إكمال الدورات</p>
-                </CardContent>
-            </Card>
-            <Card className="border-0 shadow-sm card-hover">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">إيرادات المتاجر</CardTitle>
-                    <div className="h-9 w-9 rounded-lg bg-purple-500 flex items-center justify-center">
-                        <DollarSign className="h-5 w-5 text-white" />
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold">13,400 د.أ</div>
-                    <p className="text-xs text-primary flex items-center gap-1 mt-1">+22% هذا الشهر</p>
-                </CardContent>
-            </Card>
-        </div>
-
-
-       <div className="grid gap-6 md:grid-cols-2">
-            <Card>
-                <CardHeader>
-                    <CardTitle>تفاعل المستفيدين</CardTitle>
-                    <CardDescription>عدد المستفيدين النشطين شهريًا.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                     <ChartContainer config={engagementConfig} className="h-[250px] w-full relative">
-                        {engagementData.length === 0 ? (
-                             <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">لا توجد بيانات للعرض</div>
-                        ) : (
-                            <LineChart accessibilityLayer data={engagementData} margin={{ left: -20, right: 10 }}>
-                                <CartesianGrid vertical={false} />
-                                <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
-                                <YAxis orientation="right" tickLine={false} axisLine={false} tickMargin={8} />
-                                <Tooltip cursor={false} content={<ChartTooltipContent indicator="line" />} />
-                                <Line dataKey="active" type="monotone" stroke="var(--color-active)" strokeWidth={2} dot={false} />
-                            </LineChart>
-                        )}
-                    </ChartContainer>
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader>
-                    <CardTitle>معدلات إكمال الدورات</CardTitle>
-                    <CardDescription>معدل إكمال الدورات حسب الفئة.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                     <ChartContainer config={completionConfig} className="h-[250px] w-full relative">
-                        {completionData.length === 0 ? (
-                           <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">لا توجد بيانات للعرض</div>
-                        ) : (
-                            <BarChart accessibilityLayer data={completionData} margin={{ left: 10, right: 20 }}>
-                                <CartesianGrid vertical={false} />
-                                <XAxis dataKey="name" tickLine={false} tickMargin={10} axisLine={false} />
-                                <YAxis orientation="right" tickLine={false} axisLine={false} tickMargin={10} tickFormatter={(value) => `${value}%`} />
-                                <Tooltip cursor={false} content={<ChartTooltipContent />} />
-                                <Bar dataKey="معدل الإكمال" fill="var(--color-معدل الإكمال)" radius={4} />
-                            </BarChart>
-                        )}
-                    </ChartContainer>
-                </CardContent>
-            </Card>
-       </div>
-        <Card className="col-span-1 md:col-span-2">
-            <CardHeader>
-                <CardTitle>مبيعات متاجر المستفيدين</CardTitle>
-                <CardDescription>أفضل المستفيدين أداءً من حيث المبيعات.</CardDescription>
+      {/* KPI Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {[
+          { label: "إجمالي المستفيدين", value: stats.total, sub: "مستفيد مسجل", icon: <Users className="h-5 w-5 text-white" />, color: "bg-primary" },
+          { label: "المستفيدون النشطون", value: stats.active, sub: `من أصل ${stats.total}`, icon: <Activity className="h-5 w-5 text-white" />, color: "bg-accent" },
+          { label: "متوسط التقدم", value: `${stats.avgProgress}%`, sub: "نسبة الإنجاز الكلية", icon: <BarChart3 className="h-5 w-5 text-white" />, color: "bg-amber-500" },
+          { label: "نسبة الإكمال", value: `${stats.completionRate}%`, sub: `${stats.completed} أتموا البرنامج`, icon: <Award className="h-5 w-5 text-white" />, color: "bg-purple-500" },
+        ].map((s, i) => (
+          <Card key={i} className="border-0 shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">{s.label}</CardTitle>
+              <div className={`h-9 w-9 rounded-lg ${s.color} flex items-center justify-center`}>{s.icon}</div>
             </CardHeader>
             <CardContent>
-                <ChartContainer config={salesConfig} className="h-[300px] w-full relative">
-                    {salesData.length === 0 ? (
-                        <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">لا توجد بيانات للعرض</div>
-                    ) : (
-                        <BarChart accessibilityLayer data={salesData} margin={{ left: 10, right: 20 }}>
-                                <CartesianGrid vertical={false} />
-                            <XAxis dataKey="name" tickLine={false} tickMargin={10} axisLine={false} />
-                            <YAxis orientation="right" tickLine={false} axisLine={false} tickMargin={10} tickFormatter={(value) => `${value / 1000} ألف`} />
-                            <Tooltip cursor={false} content={<ChartTooltipContent />} />
-                            <Bar dataKey="sales" fill="var(--color-sales)" radius={4} />
-                        </BarChart>
-                    )}
-                </ChartContainer>
+              {loading ? <Skeleton className="h-8 w-16" /> : <div className="text-2xl font-bold">{s.value}</div>}
+              <p className="text-xs text-muted-foreground mt-1">{s.sub}</p>
             </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Impact Summary */}
+      <Card className="border-primary/20 bg-primary/5">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-primary"><Target className="h-5 w-5" /> ملخص الأثر الاجتماعي</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {loading ? (
+              [...Array(4)].map((_, i) => <Skeleton key={i} className="h-16" />)
+            ) : (
+              <>
+                <div className="text-center">
+                  <div className="text-3xl font-extrabold text-primary">{stats.total}</div>
+                  <div className="text-sm text-muted-foreground mt-1">مستفيد تمكّن</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl font-extrabold text-primary">{mentors?.length || 0}</div>
+                  <div className="text-sm text-muted-foreground mt-1">مرشد متطوع</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl font-extrabold text-primary">{stats.totalSessions}</div>
+                  <div className="text-sm text-muted-foreground mt-1">جلسة إرشادية</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl font-extrabold text-primary">{stats.completed}</div>
+                  <div className="text-sm text-muted-foreground mt-1">أتموا البرنامج</div>
+                </div>
+              </>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Beneficiary Progress List */}
+      {!loading && beneficiaries && beneficiaries.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><TrendingUp className="h-5 w-5" /> تقدم المستفيدين</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 max-h-64 overflow-y-auto">
+            {[...beneficiaries].sort((a, b) => ((b as any).progress || 0) - ((a as any).progress || 0)).map(b => (
+              <div key={b.id}>
+                <div className="flex justify-between text-sm mb-1">
+                  <span className="font-medium">{b.name}</span>
+                  <div className="flex items-center gap-2">
+                    {(b as any).progress >= 100 && <CheckCircle className="h-4 w-4 text-green-500" />}
+                    <span className="text-muted-foreground">{(b as any).progress || 0}%</span>
+                  </div>
+                </div>
+                <Progress value={(b as any).progress || 0} className="h-2" />
+              </div>
+            ))}
+          </CardContent>
         </Card>
-    </div>
+      )}
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>مشاركة المستفيدين</CardTitle>
+            <CardDescription>المستفيدون النشطون على مدار 6 أشهر.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={engagementConfig} className="h-[250px] w-full relative">
+              {loading ? <Skeleton className="h-full w-full" /> : (
+                <LineChart accessibilityLayer data={engagementData} margin={{ left: -20, right: 10 }}>
+                  <CartesianGrid vertical={false} />
+                  <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
+                  <YAxis orientation="right" tickLine={false} axisLine={false} tickMargin={8} />
+                  <Tooltip cursor={false} content={<ChartTooltipContent indicator="line" />} />
+                  <Line dataKey="active" type="monotone" stroke="var(--color-active)" strokeWidth={2} dot={false} />
+                </LineChart>
+              )}
+            </ChartContainer>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>توزيع التقدم</CardTitle>
+            <CardDescription>توزيع المستفيدين حسب نسبة إنجازهم.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={completionConfig} className="h-[250px] w-full relative">
+              {loading ? <Skeleton className="h-full w-full" /> : progressDistribution.length === 0 ? (
+                <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">لا توجد بيانات</div>
+              ) : (
+                <BarChart accessibilityLayer data={progressDistribution} margin={{ left: 10, right: 20 }}>
+                  <CartesianGrid vertical={false} />
+                  <XAxis dataKey="name" tickLine={false} tickMargin={10} axisLine={false} />
+                  <YAxis orientation="right" tickLine={false} axisLine={false} tickMargin={10} />
+                  <Tooltip cursor={false} content={<ChartTooltipContent />} />
+                  <Bar dataKey="معدل الإكمال" fill="hsl(var(--chart-2))" radius={4} />
+                </BarChart>
+              )}
+            </ChartContainer>
+          </CardContent>
+        </Card>
+      </div>
+    </>
   );
 }

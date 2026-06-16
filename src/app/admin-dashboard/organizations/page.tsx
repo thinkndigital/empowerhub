@@ -4,7 +4,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { MoreHorizontal, Download, Edit, Trash2, Eye, Plus } from "lucide-react";
+import { MoreHorizontal, Download, Edit, Trash2, Eye, Plus, Check, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,7 +55,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { useCollection } from "@/firebase/firestore/use-collection";
-import { collection, query, doc, deleteDoc, updateDoc } from "firebase/firestore";
+import { collection, query, doc, deleteDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useFirestore, useMemoFirebase } from "@/firebase/provider";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -69,14 +70,20 @@ type Organization = {
   name: string;
   joined?: string;
   status?: "نشط" | "غير نشط";
+  plan?: "basic" | "pro" | "enterprise";
   features?: {
       courses: boolean;
       mentorship: boolean;
   }
 }
 
+const PLAN_LABELS: Record<string, string> = {
+  basic: "أساسي", pro: "احترافي", enterprise: "مؤسسي",
+};
+
 const orgFormSchema = z.object({
   name: z.string().min(2, { message: "يجب أن يكون اسم المنظمة حرفين على الأقل." }),
+  plan: z.enum(["basic", "pro", "enterprise"]).default("basic"),
   features: z.object({
     courses: z.boolean().default(false),
     mentorship: z.boolean().default(false),
@@ -118,6 +125,7 @@ export default function OrganizationsPage() {
     if (orgToEdit) {
       form.reset({
         name: orgToEdit.name,
+        plan: orgToEdit.plan || "basic",
         features: {
           courses: orgToEdit.features?.courses ?? false,
           mentorship: orgToEdit.features?.mentorship ?? false,
@@ -125,6 +133,15 @@ export default function OrganizationsPage() {
       });
     }
   }, [orgToEdit, form]);
+
+  async function handleToggleStatus(org: Organization) {
+    if (!firestore) return;
+    const newStatus = org.status === "نشط" ? "غير نشط" : "نشط";
+    const orgRef = doc(firestore, 'organizations', org.id);
+    updateDoc(orgRef, { status: newStatus })
+      .then(() => toast({ title: "تم التحديث", description: `تم تغيير حالة "${org.name}" إلى ${newStatus}.` }))
+      .catch(() => toast({ variant: "destructive", title: "خطأ!", description: "فشل تغيير الحالة." }));
+  }
 
   async function handleCreateOrg(values: z.infer<typeof createOrgSchema>) {
     setIsCreating(true);
@@ -237,9 +254,7 @@ export default function OrganizationsPage() {
               <TableHead>الاسم</TableHead>
               <TableHead className="hidden md:table-cell">تاريخ الانضمام</TableHead>
               <TableHead className="text-center">الحالة</TableHead>
-              <TableHead className="hidden md:table-cell text-center">
-                عدد المستفيدين
-              </TableHead>
+              <TableHead className="hidden md:table-cell text-center">الخطة</TableHead>
               <TableHead>
                 <span className="sr-only">الإجراءات</span>
               </TableHead>
@@ -269,7 +284,7 @@ export default function OrganizationsPage() {
                   </Badge>
                 </TableCell>
                 <TableCell className="hidden md:table-cell text-center">
-                  -
+                  <Badge variant="outline">{PLAN_LABELS[org.plan || 'basic'] || 'أساسي'}</Badge>
                 </TableCell>
                 <TableCell>
                   <DropdownMenu>
@@ -285,9 +300,13 @@ export default function OrganizationsPage() {
                         <Eye className="ml-2 h-4 w-4" />
                         عرض التفاصيل
                       </DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => handleToggleStatus(org)}>
+                        {org.status === "نشط" ? <X className="ml-2 h-4 w-4" /> : <Check className="ml-2 h-4 w-4" />}
+                        {org.status === "نشط" ? "تعطيل الاشتراك" : "تفعيل الاشتراك"}
+                      </DropdownMenuItem>
                       <DropdownMenuItem onSelect={() => setOrgToEdit(org)}>
                         <Edit className="ml-2 h-4 w-4" />
-                        تحرير الصلاحيات والاسم
+                        تحرير الصلاحيات والخطة
                       </DropdownMenuItem>
                       <DropdownMenuItem className="text-red-500" onSelect={(e) => { e.preventDefault(); setOrgToDelete(org); }}>
                         <Trash2 className="ml-2 h-4 w-4" />
@@ -318,6 +337,7 @@ export default function OrganizationsPage() {
                 <p><strong>الاسم:</strong> {orgToView?.name}</p>
                 <p><strong>تاريخ الانضمام:</strong> {orgToView?.joined ? new Date(orgToView.joined).toLocaleDateString('ar-SA') : '-'}</p>
                 <p><strong>الحالة:</strong> <Badge variant={orgToView?.status === "نشط" ? "default" : "secondary"}>{orgToView?.status}</Badge></p>
+                <p><strong>خطة الاشتراك:</strong> <Badge variant="outline">{PLAN_LABELS[orgToView?.plan || 'basic'] || 'أساسي'}</Badge></p>
                  <div className="border-t pt-4 mt-4 space-y-2">
                     <h4 className="font-semibold">الصلاحيات المتاحة</h4>
                     <p>الدورات التدريبية: <span className="font-medium">{orgToView?.features?.courses ? 'مفعل' : 'معطل'}</span></p>
@@ -343,6 +363,23 @@ export default function OrganizationsPage() {
                         <FormItem>
                             <FormLabel>اسم المنظمة</FormLabel>
                             <FormControl><Input {...field} /></FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}/>
+
+                    <FormField control={form.control} name="plan" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>خطة الاشتراك</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                    <SelectTrigger><SelectValue placeholder="اختر الخطة" /></SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    <SelectItem value="basic">أساسي</SelectItem>
+                                    <SelectItem value="pro">احترافي</SelectItem>
+                                    <SelectItem value="enterprise">مؤسسي</SelectItem>
+                                </SelectContent>
+                            </Select>
                             <FormMessage />
                         </FormItem>
                     )}/>

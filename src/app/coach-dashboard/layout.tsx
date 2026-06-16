@@ -10,6 +10,7 @@ import {
   BookOpen,
   MessageSquare,
   BarChartHorizontal,
+  CalendarDays,
 } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { doc } from "firebase/firestore";
@@ -48,6 +49,7 @@ import { NotificationBell } from "@/components/notification-bell";
 const menuItems = [
   { href: "/coach-dashboard", label: "لوحة التحكم", icon: LayoutGrid },
   { href: "/coach-dashboard/courses", label: "دوراتي", icon: BookOpen },
+  { href: "/coach-dashboard/sessions", label: "الجلسات", icon: CalendarDays },
   { href: "/coach-dashboard/analytics", label: "التحليلات", icon: BarChartHorizontal },
   { href: "/coach-dashboard/messages", label: "الرسائل", icon: MessageSquare },
 ];
