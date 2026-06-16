@@ -2,10 +2,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+  transpilePackages: ['firebase'],
   typescript: {
-    // !! WARN !!
-    // This is set to `true` to bypass TypeScript errors during the build.
-    // It is highly recommended to resolve the type errors instead of ignoring them.
     ignoreBuildErrors: false,
   },
   experimental: {
