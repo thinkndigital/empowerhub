@@ -11,8 +11,9 @@ import {
   MessageSquare,
   BarChartHorizontal,
 } from "lucide-react";
-import { getAuth, signOut } from "firebase/auth";
+import { signOut } from "firebase/auth";
 import { useMemo } from "react";
+import { useAuth } from "@/firebase/provider";
 
 import {
   SidebarProvider,
@@ -57,10 +58,10 @@ export default function CoachDashboardLayout({
   const pathname = usePathname();
   const router = useRouter();
   const { user: authUser, userProfile: realUserProfile, loading } = useUser();
+  const auth = useAuth();
 
   const handleLogout = async () => {
-    const auth = getAuth();
-    await signOut(auth);
+    if (auth) await signOut(auth);
     router.push("/login");
   };
 
@@ -72,7 +73,7 @@ export default function CoachDashboardLayout({
     avatarUrl: `https://picsum.photos/seed/demo-coach/40/40`,
   }), []);
 
-  const userProfile = authUser ? realUserProfile : demoUserProfile;
+  const userProfile = (authUser && realUserProfile) ? realUserProfile : demoUserProfile;
 
   if (loading) {
     return (
@@ -80,17 +81,6 @@ export default function CoachDashboardLayout({
         <div className="flex flex-col items-center gap-4">
           <Logo className="h-24 w-24 animate-pulse" />
           <p className="text-muted-foreground">جاري التحميل...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!userProfile) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <Logo className="h-24 w-24 animate-pulse" />
-          <p className="text-muted-foreground">جاري تحميل ملفك الشخصي...</p>
         </div>
       </div>
     );
