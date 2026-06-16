@@ -154,10 +154,23 @@ export default function MentorSessionsPage() {
     async function handleUpdateSessionStatus(sessionId: string, status: 'completed' | 'cancelled') {
         if (!firestore) return;
         const sessionRef = doc(firestore, 'sessions', sessionId);
+        const session = sessions?.find(s => s.id === sessionId);
 
         updateDoc(sessionRef, { status })
-            .then(() => {
+            .then(async () => {
                 toast({ title: "تم التحديث", description: `تم تحديث حالة الجلسة بنجاح.` });
+                if (session && status === 'completed') {
+                    try {
+                        await addDoc(collection(firestore, "notifications"), {
+                            userId: session.attendees[0],
+                            title: "تم إتمام جلستك الإرشادية",
+                            body: `تم تحديد جلسة "${session.title}" كمكتملة.`,
+                            read: false,
+                            createdAt: serverTimestamp(),
+                            link: "/dashboard/mentorship",
+                        });
+                    } catch (_) {}
+                }
             })
             .catch((err) => {
                 toast({ variant: "destructive", title: "خطأ!", description: "فشل تحديث حالة الجلسة." });
