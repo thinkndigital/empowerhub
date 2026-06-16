@@ -22,27 +22,37 @@ export default function AuthRedirectPage() {
   const { user, userProfile, loading } = useUser();
   const firestore = useFirestore();
   const [waited, setWaited] = useState(false);
+  const [tokenRole, setTokenRole] = useState<string | null>(null);
+  const [tokenChecked, setTokenChecked] = useState(false);
 
   useEffect(() => {
     const t = setTimeout(() => setWaited(true), 5000);
     return () => clearTimeout(t);
   }, []);
 
+  // Read role from Auth custom claim (works after logout/login, no Firestore needed)
+  useEffect(() => {
+    if (!user) return;
+    user.getIdTokenResult(true).then(result => {
+      setTokenRole((result.claims.role as string) || null);
+      setTokenChecked(true);
+    }).catch(() => setTokenChecked(true));
+  }, [user]);
+
   useEffect(() => {
     if (loading && !waited) return;
     if (!user) { router.replace("/login"); return; }
 
+    // 1. sessionStorage: set right after registration (fastest)
     const pendingRole = sessionStorage.getItem("pending_role");
     const pendingUid  = sessionStorage.getItem("pending_uid");
-
     if (pendingRole && pendingUid && pendingUid === user.uid) {
       if (firestore) {
         const data: Record<string, any> = {
           id: user.uid,
           name:  sessionStorage.getItem("pending_name")  || "",
           email: sessionStorage.getItem("pending_email") || "",
-          role:  pendingRole,
-          status: "نشط", progress: 0,
+          role:  pendingRole, status: "نشط", progress: 0,
           createdAt: new Date().toISOString(),
         };
         const orgId = sessionStorage.getItem("pending_org_id");
@@ -55,9 +65,16 @@ export default function AuthRedirectPage() {
       return;
     }
 
-    if (!userProfile && !waited) return;
+    // 2. Auth custom claim: works after logout/login without Firestore
+    if (tokenChecked && tokenRole) {
+      router.replace(getRoleDashboard(tokenRole));
+      return;
+    }
+
+    // 3. Firestore profile: fallback
+    if (!userProfile && !waited && !tokenChecked) return;
     router.replace(getRoleDashboard(userProfile?.role));
-  }, [loading, user, userProfile, waited, firestore, router]);
+  }, [loading, user, userProfile, waited, firestore, tokenRole, tokenChecked, router]);
 
   return (
     <div className="flex h-screen w-full items-center justify-center bg-background">

@@ -56,7 +56,12 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 4. Create user document in Firestore
+    // 4. Set custom claim so client can read role without Firestore
+    const claims: Record<string, any> = { role };
+    if (organizationId) claims.organizationId = organizationId;
+    await adminAuth.setCustomUserClaims(uid, claims);
+
+    // 5. Create user document in Firestore (best-effort)
     const userData: Record<string, any> = {
       id: uid,
       name,
@@ -69,7 +74,7 @@ export async function POST(req: NextRequest) {
 
     if (organizationId) userData.organizationId = organizationId;
 
-    await adminDb.collection('users').doc(uid).set(userData);
+    try { await adminDb.collection('users').doc(uid).set(userData); } catch {}
 
     return NextResponse.json({
       success: true,
