@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Logo } from "@/components/logo";
 import { OrderDialog } from "@/components/order-dialog";
-import { ShoppingCart, MapPin, Search, Store, SlidersHorizontal, Star } from "lucide-react";
+import { ShoppingCart, MapPin, Search, Store, SlidersHorizontal, Star, MessageCircle } from "lucide-react";
 import { useCollection } from "@/firebase/firestore/use-collection";
 import { collection, query } from "firebase/firestore";
 import { useFirestore, useMemoFirebase } from "@/firebase/provider";
@@ -205,12 +205,22 @@ export default function MarketPage() {
                         </div>
                       </div>
                     </CardContent>
-                    <CardFooter className="flex justify-between items-center p-4 pt-0 border-t mt-2">
+                    <CardFooter className="flex justify-between items-center p-4 pt-0 border-t mt-2 gap-2">
                       <p className="text-lg font-bold text-primary">{product.price.toFixed(2)} <span className="text-sm font-normal text-muted-foreground">د.أ</span></p>
-                      <Button size="sm" onClick={() => setSelectedProduct(product)} className="gap-1.5">
-                        <ShoppingCart className="h-4 w-4" />
-                        اطلب الآن
-                      </Button>
+                      <div className="flex gap-2">
+                        {(product as any).whatsapp && (
+                          <Button size="sm" variant="outline" className="gap-1.5 border-green-500 text-green-600 hover:bg-green-50" asChild>
+                            <a href={`https://wa.me/${((product as any).whatsapp || '').replace(/\D/g,'')}`} target="_blank" rel="noopener noreferrer">
+                              <MessageCircle className="h-4 w-4" />
+                              واتساب
+                            </a>
+                          </Button>
+                        )}
+                        <Button size="sm" onClick={() => setSelectedProduct(product)} className="gap-1.5">
+                          <ShoppingCart className="h-4 w-4" />
+                          اطلب
+                        </Button>
+                      </div>
                     </CardFooter>
                   </Card>
                 ))}
