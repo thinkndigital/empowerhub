@@ -1,13 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/firebase/auth/use-user";
-import { useFirestore } from "@/firebase/provider";
-import { doc, setDoc } from "firebase/firestore";
 import { Logo } from "@/components/logo";
 
-function getRoleDashboard(role: string | undefined) {
+function getRoleDashboard(role: string) {
   switch (role) {
     case "organization": return "/organization-dashboard";
     case "mentor":       return "/mentor-dashboard";
@@ -19,62 +17,31 @@ function getRoleDashboard(role: string | undefined) {
 
 export default function AuthRedirectPage() {
   const router = useRouter();
-  const { user, userProfile, loading } = useUser();
-  const firestore = useFirestore();
-  const [waited, setWaited] = useState(false);
-  const [tokenRole, setTokenRole] = useState<string | null>(null);
-  const [tokenChecked, setTokenChecked] = useState(false);
+  const { user, loading } = useUser();
 
   useEffect(() => {
-    const t = setTimeout(() => setWaited(true), 5000);
-    return () => clearTimeout(t);
-  }, []);
-
-  // Read role from Auth custom claim (works after logout/login, no Firestore needed)
-  useEffect(() => {
-    if (!user) return;
-    user.getIdTokenResult(true).then(result => {
-      setTokenRole((result.claims.role as string) || null);
-      setTokenChecked(true);
-    }).catch(() => setTokenChecked(true));
-  }, [user]);
-
-  useEffect(() => {
-    if (loading && !waited) return;
+    if (loading) return;
     if (!user) { router.replace("/login"); return; }
 
-    // 1. sessionStorage: set right after registration (fastest)
+    // sessionStorage: set right after registration — instant
     const pendingRole = sessionStorage.getItem("pending_role");
     const pendingUid  = sessionStorage.getItem("pending_uid");
     if (pendingRole && pendingUid && pendingUid === user.uid) {
-      if (firestore) {
-        const data: Record<string, any> = {
-          id: user.uid,
-          name:  sessionStorage.getItem("pending_name")  || "",
-          email: sessionStorage.getItem("pending_email") || "",
-          role:  pendingRole, status: "نشط", progress: 0,
-          createdAt: new Date().toISOString(),
-        };
-        const orgId = sessionStorage.getItem("pending_org_id");
-        if (orgId) data.organizationId = orgId;
-        setDoc(doc(firestore, "users", user.uid), data, { merge: true }).catch(console.error);
-      }
       ["pending_role","pending_uid","pending_name","pending_email","pending_org_id"]
         .forEach(k => sessionStorage.removeItem(k));
       router.replace(getRoleDashboard(pendingRole));
       return;
     }
 
-    // 2. Auth custom claim: works after logout/login without Firestore
-    if (tokenChecked && tokenRole) {
-      router.replace(getRoleDashboard(tokenRole));
-      return;
-    }
-
-    // 3. Firestore profile: fallback
-    if (!userProfile && !waited && !tokenChecked) return;
-    router.replace(getRoleDashboard(userProfile?.role));
-  }, [loading, user, userProfile, waited, firestore, tokenRole, tokenChecked, router]);
+    // Ask the server for the role (uses Admin SDK — always reliable)
+    user.getIdToken().then(token =>
+      fetch("/api/my-role", { headers: { authorization: `Bearer ${token}` } })
+    ).then(r => r.json()).then(data => {
+      router.replace(getRoleDashboard(data.role || "beneficiary"));
+    }).catch(() => {
+      router.replace("/dashboard");
+    });
+  }, [loading, user, router]);
 
   return (
     <div className="flex h-screen w-full items-center justify-center bg-background">
