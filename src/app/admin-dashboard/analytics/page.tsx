@@ -6,6 +6,10 @@ import { Bar, BarChart, CartesianGrid, Line, LineChart, Pie, PieChart, Cell, Res
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { Users, Building, Activity, ShoppingCart, Download, BookOpen, UserCheck } from "lucide-react"
+import { useFirestore, useMemoFirebase } from "@/firebase/provider"
+import { useCollection } from "@/firebase/firestore/use-collection"
+import { collection, query } from "firebase/firestore"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -56,7 +60,28 @@ const courseEnrollmentConfig = {
 
 export default function AnalyticsPage() {
   const { toast } = useToast();
+  const firestore = useFirestore();
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
+
+  const usersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, "users")) : null, [firestore]);
+  const { data: allUsers, isLoading: usersLoading } = useCollection(usersQuery);
+
+  const orgsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, "organizations")) : null, [firestore]);
+  const { data: allOrgs, isLoading: orgsLoading } = useCollection(orgsQuery);
+
+  const coursesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, "courses")) : null, [firestore]);
+  const { data: allCourses, isLoading: coursesLoading } = useCollection(coursesQuery);
+
+  const productsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, "products")) : null, [firestore]);
+  const { data: allProducts } = useCollection(productsQuery);
+
+  const realStats = {
+    totalUsers: allUsers?.length || 0,
+    totalOrgs: allOrgs?.length || 0,
+    totalCourses: allCourses?.length || 0,
+    totalProducts: allProducts?.length || 0,
+    activeUsers: allUsers?.filter((u: any) => u.status === 'نشط').length || 0,
+  };
   const [exportOptions, setExportOptions] = useState({
     summary: true,
     userGrowth: true,
@@ -179,8 +204,8 @@ export default function AnalyticsPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">1,850</div>
-            <p className="text-xs text-primary flex items-center gap-1 mt-1">+230 هذا الشهر</p>
+            {usersLoading ? <Skeleton className="h-8 w-16" /> : <div className="text-2xl font-bold">{realStats.totalUsers.toLocaleString()}</div>}
+            <p className="text-xs text-muted-foreground mt-1">مستخدم مسجل</p>
           </CardContent>
         </Card>
         <Card className="border-0 shadow-sm card-hover">
@@ -191,8 +216,8 @@ export default function AnalyticsPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">31</div>
-            <p className="text-xs text-muted-foreground mt-1">+3 هذا الشهر</p>
+            {orgsLoading ? <Skeleton className="h-8 w-16" /> : <div className="text-2xl font-bold">{realStats.totalOrgs}</div>}
+            <p className="text-xs text-muted-foreground mt-1">منظمة مسجلة</p>
           </CardContent>
         </Card>
         <Card className="border-0 shadow-sm card-hover">
@@ -203,20 +228,20 @@ export default function AnalyticsPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">1,420</div>
-            <p className="text-xs text-muted-foreground mt-1">77% من الإجمالي</p>
+            {usersLoading ? <Skeleton className="h-8 w-16" /> : <div className="text-2xl font-bold">{realStats.activeUsers}</div>}
+            <p className="text-xs text-muted-foreground mt-1">{realStats.totalUsers > 0 ? Math.round((realStats.activeUsers / realStats.totalUsers) * 100) : 0}% من الإجمالي</p>
           </CardContent>
         </Card>
         <Card className="border-0 shadow-sm card-hover">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">إجمالي المبيعات</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">إجمالي المنتجات</CardTitle>
             <div className="h-9 w-9 rounded-lg bg-amber-500 flex items-center justify-center">
               <ShoppingCart className="h-5 w-5 text-white" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">284,000 د.أ</div>
-            <p className="text-xs text-primary flex items-center gap-1 mt-1">+18% هذا الشهر</p>
+            <div className="text-2xl font-bold">{realStats.totalProducts}</div>
+            <p className="text-xs text-muted-foreground mt-1">منتج في المتجر</p>
           </CardContent>
         </Card>
         <Card className="border-0 shadow-sm card-hover">
@@ -227,7 +252,7 @@ export default function AnalyticsPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">48</div>
+            {coursesLoading ? <Skeleton className="h-8 w-16" /> : <div className="text-2xl font-bold">{realStats.totalCourses}</div>}
             <p className="text-xs text-muted-foreground mt-1">دورة منشورة</p>
           </CardContent>
         </Card>
