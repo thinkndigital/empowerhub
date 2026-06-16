@@ -34,12 +34,12 @@ export function FirebaseClientProvider({ children }: { children: ReactNode }) {
 
       let firestore: Firestore | null = null;
       try {
-        // Try to get existing Firestore instance first
-        firestore = getFirestore(app);
+        // initializeFirestore must be called before getFirestore if we want custom settings
+        firestore = initializeFirestore(app, { localCache: memoryLocalCache() });
       } catch {
         try {
-          // Initialize fresh with memory cache (avoids IndexedDB issues in some envs)
-          firestore = initializeFirestore(app, { localCache: memoryLocalCache() });
+          // Already initialized — just get the existing instance
+          firestore = getFirestore(app);
         } catch (e) {
           console.error('[FB] Firestore init failed:', e);
         }

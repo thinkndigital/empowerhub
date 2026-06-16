@@ -49,29 +49,37 @@ export default function LoginPage() {
   };
 
   async function handleUserProfile(uid: string, displayName: string | null, email: string | null) {
+    // If Firestore not ready yet, still allow login and redirect to default dashboard
     if (!firestore) {
-      toast({ variant: "destructive", title: "خطأ", description: "قاعدة البيانات غير متاحة مؤقتاً." });
+      toast({ title: "تم تسجيل الدخول!", description: `مرحباً!` });
+      router.push('/dashboard');
       return;
     }
-    const userDocRef = doc(firestore, 'users', uid);
-    const userDoc = await getDoc(userDocRef);
+    try {
+      const userDocRef = doc(firestore, 'users', uid);
+      const userDoc = await getDoc(userDocRef);
 
-    let userData: any;
-    if (userDoc.exists()) {
-      userData = userDoc.data();
-    } else {
-      userData = {
-        id: uid,
-        name: displayName || email?.split('@')[0] || 'مستخدم',
-        email: email || '',
-        role: 'beneficiary',
-        status: 'نشط',
-        createdAt: new Date().toISOString(),
-      };
-      await setDoc(userDocRef, userData);
+      let userData: any;
+      if (userDoc.exists()) {
+        userData = userDoc.data();
+      } else {
+        userData = {
+          id: uid,
+          name: displayName || email?.split('@')[0] || 'مستخدم',
+          email: email || '',
+          role: 'beneficiary',
+          status: 'نشط',
+          createdAt: new Date().toISOString(),
+        };
+        await setDoc(userDocRef, userData);
+      }
+      toast({ title: "تم تسجيل الدخول!", description: `مرحباً ${userData.name}!` });
+      router.push(getDashboardLink(userData.role));
+    } catch {
+      // If Firestore read fails, redirect to dashboard anyway
+      toast({ title: "تم تسجيل الدخول!", description: `مرحباً!` });
+      router.push('/dashboard');
     }
-    toast({ title: "تم تسجيل الدخول!", description: `مرحباً ${userData.name}!` });
-    router.push(getDashboardLink(userData.role));
   }
 
   // Handle Google redirect result on page load
