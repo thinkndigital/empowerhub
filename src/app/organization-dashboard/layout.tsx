@@ -19,6 +19,7 @@ import Image from "next/image";
 import { signOut } from "firebase/auth";
 import { doc } from 'firebase/firestore';
 
+import { useEffect } from "react";
 import {
   SidebarProvider,
   Sidebar,
@@ -93,6 +94,28 @@ export default function OrganizationDashboardLayout({
 
   const orgName = authUser ? (organization?.name || "منظمتي") : "منظمة تجريبية";
   const logoUrl = authUser ? organization?.logoUrl : null;
+
+  useEffect(() => {
+    if (!organization?.primaryColor) return;
+    const hex = organization.primaryColor.replace(/^#/, '');
+    let r = parseInt(hex.substring(0, 2), 16);
+    let g = parseInt(hex.substring(2, 4), 16);
+    let b = parseInt(hex.substring(4, 6), 16);
+    r /= 255; g /= 255; b /= 255;
+    let cmin = Math.min(r, g, b), cmax = Math.max(r, g, b), delta = cmax - cmin, h = 0, s = 0, l = 0;
+    l = (cmax + cmin) / 2;
+    if (delta !== 0) {
+      s = l > 0.5 ? delta / (2 - cmax - cmin) : delta / (cmax + cmin);
+      if (cmax === r) h = (g - b) / delta + (g < b ? 6 : 0);
+      else if (cmax === g) h = (b - r) / delta + 2;
+      else h = (r - g) / delta + 4;
+      h = Math.round(h * 60);
+    }
+    if (h < 0) h += 360;
+    s = Math.round(s * 100);
+    l = Math.round(l * 100);
+    document.documentElement.style.setProperty('--primary', `${h} ${s}% ${l}%`);
+  }, [organization?.primaryColor]);
   
   const handleLogout = async () => {
     if (auth) await signOut(auth);
