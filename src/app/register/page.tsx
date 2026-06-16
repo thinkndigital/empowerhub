@@ -16,16 +16,15 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Logo } from '@/components/logo';
 import { useToast } from "@/hooks/use-toast";
 
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc, collection, addDoc } from "firebase/firestore";
-import { useAuth, useFirestore } from '@/firebase/provider';
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { useAuth } from '@/firebase/provider';
 
 
 const formSchema = z.object({
     name: z.string().min(2, { message: "يجب أن يكون الاسم حرفين على الأقل." }),
     email: z.string().email({ message: "الرجاء إدخال بريد إلكتروني صحيح." }),
     password: z.string().min(6, { message: "يجب أن تكون كلمة المرور 6 أحرف على الأقل." }),
-    role: z.string({ required_error: "الرجاء اختيار دور." }),
+    role: z.string({ required_error: "الرجاء اختيار نوع الحساب." }),
     organizationName: z.string().optional(),
 }).refine((data) => {
     if (data.role === 'organization') {
@@ -43,7 +42,6 @@ function RegisterForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const auth = useAuth();
-    const firestore = useFirestore();
     const [isLoading, setIsLoading] = useState(false);
 
     const roleFromQuery = searchParams.get('role');
@@ -54,7 +52,9 @@ function RegisterForm() {
             name: "",
             email: "",
             password: "",
-            role: roleFromQuery && ["beneficiary", "organization"].includes(roleFromQuery) ? roleFromQuery : "beneficiary",
+            role: roleFromQuery && ["beneficiary", "organization"].includes(roleFromQuery)
+                ? roleFromQuery
+                : "beneficiary",
             organizationName: "",
         },
     });
@@ -63,7 +63,9 @@ function RegisterForm() {
 
     useEffect(() => {
         const role = searchParams.get('role');
-        if (role) form.setValue('role', role);
+        if (role && ["beneficiary", "organization"].includes(role)) {
+            form.setValue('role', role);
+        }
     }, [searchParams, form]);
 
     const getDashboardLink = (role: string) => {
@@ -79,45 +81,33 @@ function RegisterForm() {
     async function onSubmit(values: z.infer<typeof formSchema>) {
         setIsLoading(true);
         try {
-            if (!auth || !firestore) throw new Error("الخدمة غير متاحة مؤقتاً، حاول مرة أخرى.");
+            // Step 1: Create account via server-side API (uses Admin SDK — no client Firestore needed)
+            const res = await fetch('/api/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: values.name,
+                    email: values.email,
+                    password: values.password,
+                    role: values.role,
+                    organizationName: values.organizationName,
+                }),
+            });
 
-            const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
-            const user = userCredential.user;
+            const data = await res.json();
 
-            let organizationId: string | undefined;
-
-            // If registering as organization admin, create the org document first
-            if (values.role === 'organization') {
-                const orgRef = doc(collection(firestore, 'organizations'));
-                organizationId = orgRef.id;
-                await setDoc(orgRef, {
-                    id: organizationId,
-                    name: values.organizationName || values.name,
-                    adminId: user.uid,
-                    status: 'نشطة',
-                    createdAt: new Date().toISOString(),
-                    primaryColor: '#2563eb',
-                });
+            if (!res.ok) {
+                throw new Error(data.error || 'فشل إنشاء الحساب.');
             }
 
-            // Create user document in Firestore
-            const userData: Record<string, any> = {
-                id: user.uid,
-                name: values.name,
-                email: values.email,
-                role: values.role,
-                status: 'نشط',
-                progress: 0,
-                createdAt: new Date().toISOString(),
-            };
-
-            if (organizationId) userData.organizationId = organizationId;
-
-            await setDoc(doc(firestore, "users", user.uid), userData);
+            // Step 2: Sign in the user with Firebase Auth
+            if (auth) {
+                await signInWithEmailAndPassword(auth, values.email, values.password);
+            }
 
             toast({
                 title: "تم إنشاء الحساب بنجاح!",
-                description: "تم تسجيل دخولك تلقائيًا.",
+                description: "مرحباً بك في EmpowerHub!",
             });
 
             router.push(getDashboardLink(values.role));
@@ -125,10 +115,14 @@ function RegisterForm() {
         } catch (error: any) {
             console.error("Registration error", error);
             let errorMessage = "فشل إنشاء الحساب. الرجاء المحاولة مرة أخرى.";
-            if (error.code === 'auth/email-already-in-use') {
+            if (error.message?.includes('مستخدم')) {
+                errorMessage = error.message;
+            } else if (error.code === 'auth/email-already-in-use') {
                 errorMessage = "هذا البريد الإلكتروني مستخدم بالفعل.";
             } else if (error.code === 'auth/weak-password') {
-                errorMessage = "كلمة المرور ضعيفة جدًا.";
+                errorMessage = "كلمة المرور ضعيفة جدًا (6 أحرف على الأقل).";
+            } else if (error.message) {
+                errorMessage = error.message;
             }
             toast({ variant: "destructive", title: "حدث خطأ", description: errorMessage });
         } finally {
@@ -197,7 +191,11 @@ function RegisterForm() {
                                 render={({ field }) => (
                                     <FormItem className="text-right">
                                         <FormLabel>نوع الحساب</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value} disabled={!!roleFromQuery}>
+                                        <Select
+                                            onValueChange={field.onChange}
+                                            value={field.value}
+                                            disabled={!!roleFromQuery}
+                                        >
                                             <FormControl>
                                                 <SelectTrigger>
                                                     <SelectValue placeholder="اختر نوع حسابك" />
@@ -280,7 +278,11 @@ function RegisterForm() {
 
 export default function RegisterPage() {
     return (
-        <Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="animate-pulse text-muted-foreground">جاري التحميل...</div></div>}>
+        <Suspense fallback={
+            <div className="flex h-screen items-center justify-center">
+                <div className="animate-pulse text-muted-foreground">جاري التحميل...</div>
+            </div>
+        }>
             <RegisterForm />
         </Suspense>
     );
