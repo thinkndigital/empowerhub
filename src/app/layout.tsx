@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { Toaster } from '@/components/ui/toaster';
 import './globals.css';
-import { FirebaseClientProvider } from '@/firebase/client-provider';
+import { FirebaseProviderDynamic } from '@/components/firebase-provider-dynamic';
 
 export const metadata: Metadata = {
   title: 'EmpowerHub | منصة التمكين الرقمي',
@@ -29,10 +29,10 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
-        <FirebaseClientProvider>
+        <FirebaseProviderDynamic>
           {children}
           <Toaster />
-        </FirebaseClientProvider>
+        </FirebaseProviderDynamic>
       </body>
     </html>
   );
