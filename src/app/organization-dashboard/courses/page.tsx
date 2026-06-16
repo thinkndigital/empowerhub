@@ -18,8 +18,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useCollection } from "@/firebase/firestore/use-collection";
 import { useFirestore, useMemoFirebase } from "@/firebase/provider";
 import { useUser } from "@/firebase/auth/use-user";
-import { collection, query, where } from "firebase/firestore";
+import { collection, query, where, updateDoc, doc } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useState } from "react";
 
 type Course = {
     id: string;
@@ -37,6 +38,8 @@ export default function OrgCoursesPage() {
     const firestore = useFirestore();
     const { userProfile } = useUser();
     const ORG_ID = userProfile?.organizationId;
+    const [selectedBeneficiaries, setSelectedBeneficiaries] = useState<Record<string, Set<string>>>({});
+    const [assigning, setAssigning] = useState(false);
 
     const coursesQuery = useMemoFirebase(() => {
         if (!firestore) return null;
@@ -53,12 +56,35 @@ export default function OrgCoursesPage() {
     const loading = coursesLoading || beneficiariesLoading;
 
 
-    const handleAssign = (courseTitle: string) => {
-         toast({
-            title: "تم التعيين بنجاح!",
-            description: `تم تعيين دورة "${courseTitle}" للمستفيدين المختارين.`,
+    const toggleBeneficiary = (courseId: string, beneficiaryId: string) => {
+        setSelectedBeneficiaries(prev => {
+            const courseSet = new Set(prev[courseId] || []);
+            if (courseSet.has(beneficiaryId)) courseSet.delete(beneficiaryId);
+            else courseSet.add(beneficiaryId);
+            return { ...prev, [courseId]: courseSet };
         });
-    }
+    };
+
+    const handleAssign = async (courseId: string, courseTitle: string) => {
+        if (!firestore) return;
+        const ids = Array.from(selectedBeneficiaries[courseId] || []);
+        if (ids.length === 0) {
+            toast({ variant: "destructive", title: "لم تختر أحداً", description: "اختر مستفيداً واحداً على الأقل." });
+            return;
+        }
+        setAssigning(true);
+        try {
+            await Promise.all(ids.map(id =>
+                updateDoc(doc(firestore, 'users', id), { assignedCourses: [courseId] })
+            ));
+            toast({ title: "تم التعيين!", description: `تم تعيين دورة "${courseTitle}" لـ ${ids.length} مستفيد.` });
+            setSelectedBeneficiaries(prev => ({ ...prev, [courseId]: new Set() }));
+        } catch {
+            toast({ variant: "destructive", title: "خطأ!", description: "فشل التعيين." });
+        } finally {
+            setAssigning(false);
+        }
+    };
 
   return (
     <Card>
@@ -112,8 +138,12 @@ export default function OrgCoursesPage() {
                                 <div className="space-y-2">
                                 {beneficiaries && beneficiaries.length > 0 ? beneficiaries.map(b => (
                                     <div key={b.id} className="flex items-center space-x-2 space-x-reverse">
-                                        <Checkbox id={`cb-${b.id}`} />
-                                        <Label htmlFor={`cb-${b.id}`} className="font-normal">{b.name}</Label>
+                                        <Checkbox
+                                            id={`cb-${course.id}-${b.id}`}
+                                            checked={selectedBeneficiaries[course.id]?.has(b.id) || false}
+                                            onCheckedChange={() => toggleBeneficiary(course.id, b.id)}
+                                        />
+                                        <Label htmlFor={`cb-${course.id}-${b.id}`} className="font-normal">{b.name}</Label>
                                     </div>
                                 )) : (
                                     <p className="text-sm text-muted-foreground">لا يوجد مستفيدون في منظمتك.</p>
@@ -121,7 +151,9 @@ export default function OrgCoursesPage() {
                                 </div>
                             </div>
                             <DialogFooter>
-                                <Button onClick={() => handleAssign(course.title)} disabled={!beneficiaries || beneficiaries.length === 0}>تأكيد التعيين</Button>
+                                <Button onClick={() => handleAssign(course.id, course.title)} disabled={assigning || !beneficiaries || beneficiaries.length === 0}>
+                                    {assigning ? "جاري التعيين..." : "تأكيد التعيين"}
+                                </Button>
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>

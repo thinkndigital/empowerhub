@@ -105,6 +105,7 @@ export default function OrgCoachesPage() {
                     email: values.email,
                     role: 'coach',
                     organizationId: userProfile.organizationId,
+                    expertise: values.expertise,
                 }),
             });
             const data = await res.json();

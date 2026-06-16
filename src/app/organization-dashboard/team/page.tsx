@@ -82,21 +82,27 @@ export default function TeamPage() {
         defaultValues: { name: "", email: "" },
     });
 
-    function onSubmit(values: z.infer<typeof formSchema>) {
-        if(!firestore || !ORG_ID) return;
-        const newMemberData = { ...values, organizationId: ORG_ID, status: "نشط" };
-        const usersCollection = collection(firestore, "users");
-
-        addDoc(usersCollection, newMemberData)
-            .then(() => {
-                toast({ title: "تم بنجاح!", description: `تمت إضافة "${values.name}" إلى فريق العمل.` });
-                form.reset();
-                setIsAddDialogOpen(false);
-            })
-            .catch(err => {
-                toast({ variant: "destructive", title: "خطأ!", description: "فشلت إضافة العضو." });
-                errorEmitter.emit('permission-error', new FirestorePermissionError({ path: usersCollection.path, operation: 'create', requestResourceData: newMemberData }));
+    async function onSubmit(values: z.infer<typeof formSchema>) {
+        if (!ORG_ID) return;
+        try {
+            const res = await fetch('/api/create-user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: values.name,
+                    email: values.email,
+                    role: values.role || 'team_member',
+                    organizationId: ORG_ID,
+                }),
             });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error);
+            toast({ title: "تم بنجاح!", description: `تمت إضافة "${values.name}". كلمة المرور: EmpowerHub@2024` });
+            form.reset();
+            setIsAddDialogOpen(false);
+        } catch (err: any) {
+            toast({ variant: "destructive", title: "خطأ!", description: err.message });
+        }
     }
     
     const handleExport = () => {

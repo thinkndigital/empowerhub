@@ -110,6 +110,7 @@ export default function OrgMentorsPage() {
                     email: values.email,
                     role: 'mentor',
                     organizationId: userProfile.organizationId,
+                    expertise: values.expertise,
                 }),
             });
             const data = await res.json();

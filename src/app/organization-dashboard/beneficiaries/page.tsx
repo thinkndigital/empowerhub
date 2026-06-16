@@ -316,7 +316,7 @@ export default function BeneficiariesPage() {
                                 )}/>
                                  <DialogFooter>
                                     <DialogClose asChild><Button variant="ghost">إلغاء</Button></DialogClose>
-                                    <Button type="submit">إرسال دعوة</Button>
+                                    <Button type="submit" disabled={isCreating}>{isCreating ? "جاري الإضافة..." : "إرسال دعوة"}</Button>
                                  </DialogFooter>
                             </form>
                         </Form>

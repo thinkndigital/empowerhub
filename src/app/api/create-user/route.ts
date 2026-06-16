@@ -4,7 +4,7 @@ import { adminAuth, adminDb } from '@/lib/firebase-admin';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { name, email, password = 'EmpowerHub@2024', role, organizationId, category } = body;
+    const { name, email, password = 'EmpowerHub@2024', role, organizationId, category, expertise } = body;
 
     if (!name || !email || !role) {
       return NextResponse.json({ error: 'name, email, and role are required' }, { status: 400 });
@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
 
     if (organizationId) userData.organizationId = organizationId;
     if (category) userData.category = category;
+    if (expertise) userData.expertise = expertise;
 
     await adminDb.collection('users').doc(userRecord.uid).set(userData);
 
