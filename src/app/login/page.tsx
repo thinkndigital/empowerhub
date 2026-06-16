@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 
 import { getAuth, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
+
 import { useFirebaseApp } from '@/firebase/provider';
 
 const formSchema = z.object({
@@ -113,29 +114,24 @@ export default function LoginPage() {
           const userDocRef = doc(firestore, 'users', user.uid);
           const userDoc = await getDoc(userDocRef);
 
+          let userData: any;
           if (userDoc.exists()) {
-              const userData = userDoc.data();
-              const role = userData?.role;
-              toast({
-                  title: "تم تسجيل الدخول بنجاح!",
-                  description: `مرحباً بعودتك، ${userData?.name || 'المستخدم'}!`,
-              });
-              if (role) {
-                const dashboardUrl = getDashboardLink(role);
-                router.push(dashboardUrl);
-              } else {
-                 // Even if role is missing, we can default to the beneficiary dashboard
-                 toast({
-                    variant: "destructive",
-                    title: "الدور غير محدد",
-                    description: "لم يتم تحديد دور لهذا الحساب. يتم توجيهك إلى لوحة التحكم الافتراضية."
-                 });
-                 router.push('/dashboard');
-              }
+              userData = userDoc.data();
           } else {
-              await auth.signOut();
-              throw new Error("لم يتم العثور على ملف تعريف المستخدم.");
+              // No Firestore doc yet — create one with default role
+              userData = {
+                  id: user.uid,
+                  name: user.displayName || user.email?.split('@')[0] || 'مستخدم',
+                  email: user.email || '',
+                  role: 'beneficiary',
+                  status: 'نشط',
+                  createdAt: new Date().toISOString(),
+              };
+              await setDoc(userDocRef, userData);
           }
+
+          toast({ title: "تم تسجيل الدخول بنجاح!", description: `مرحباً بعودتك، ${userData?.name}!` });
+          router.push(getDashboardLink(userData?.role || 'beneficiary'));
 
       } catch (error: any) {
           console.error("Login error", error);
