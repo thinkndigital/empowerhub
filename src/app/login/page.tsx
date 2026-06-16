@@ -3,7 +3,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -16,7 +16,7 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Logo } from '@/components/logo';
 import { useToast } from "@/hooks/use-toast";
 
-import { getAuth, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { getAuth, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, getRedirectResult, signInWithRedirect } from "firebase/auth";
 import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
 
 import { useFirebaseApp } from '@/firebase/provider';
@@ -32,6 +32,15 @@ export default function LoginPage() {
   const router = useRouter();
   const app = useFirebaseApp();
   const [isLoading, setIsLoading] = useState(false);
+
+  // Handle redirect result after Google sign-in redirect
+  useEffect(() => {
+    if (!app) return;
+    const auth = getAuth(app);
+    getRedirectResult(auth).then(result => {
+      if (result?.user) handleGoogleUser(result.user);
+    }).catch(() => {});
+  }, [app]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -54,41 +63,53 @@ export default function LoginPage() {
     }
   };
 
+  async function handleGoogleUser(user: any) {
+    if (!app) return;
+    const firestore = getFirestore(app);
+    const userDocRef = doc(firestore, 'users', user.uid);
+    const userDoc = await getDoc(userDocRef);
+    if (userDoc.exists()) {
+      const userData = userDoc.data();
+      toast({ title: "تم تسجيل الدخول!", description: `مرحباً ${userData?.name || user.displayName}!` });
+      router.push(getDashboardLink(userData?.role));
+    } else {
+      await setDoc(userDocRef, {
+        id: user.uid,
+        name: user.displayName || '',
+        email: user.email || '',
+        role: 'beneficiary',
+        status: 'نشط',
+        createdAt: new Date().toISOString(),
+      });
+      toast({ title: "تم إنشاء حسابك!", description: "مرحباً بك في EmpowerHub" });
+      router.push('/dashboard');
+    }
+  }
+
   async function handleGoogleSignIn() {
     if (!app) return;
     setIsLoading(true);
     try {
       const auth = getAuth(app);
-      const firestore = getFirestore(app);
       const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-
-      const userDocRef = doc(firestore, 'users', user.uid);
-      const userDoc = await getDoc(userDocRef);
-
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        toast({ title: "تم تسجيل الدخول!", description: `مرحباً ${userData?.name || user.displayName}!` });
-        router.push(getDashboardLink(userData?.role));
-      } else {
-        // New Google user — create profile as beneficiary
-        await setDoc(userDocRef, {
-          id: user.uid,
-          name: user.displayName || '',
-          email: user.email || '',
-          role: 'beneficiary',
-          status: 'نشط',
-          createdAt: new Date().toISOString(),
-        });
-        toast({ title: "تم إنشاء حسابك!", description: "مرحباً بك في EmpowerHub" });
-        router.push('/dashboard');
+      // Try popup first, fall back to redirect
+      try {
+        const result = await signInWithPopup(auth, provider);
+        await handleGoogleUser(result.user);
+      } catch (popupError: any) {
+        if (popupError.code === 'auth/popup-blocked' || popupError.code === 'auth/popup-closed-by-user') {
+          // Fallback to redirect
+          await signInWithRedirect(auth, provider);
+        } else {
+          throw popupError;
+        }
       }
     } catch (error: any) {
-      if (error.code !== 'auth/popup-closed-by-user') {
-        toast({ variant: "destructive", title: "حدث خطأ", description: "فشل تسجيل الدخول بـ Google." });
-      }
-    } finally {
+      console.error('Google sign-in error:', error.code, error.message);
+      const msg = error.code === 'auth/unauthorized-domain'
+        ? 'النطاق غير مصرح به في Firebase. تحقق من Authorized domains.'
+        : error.message || 'فشل تسجيل الدخول بـ Google.';
+      toast({ variant: "destructive", title: "خطأ Google", description: msg });
       setIsLoading(false);
     }
   }
