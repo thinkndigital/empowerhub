@@ -10,15 +10,15 @@ import * as z from 'zod';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Logo } from '@/components/logo';
 import { useToast } from "@/hooks/use-toast";
 
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
-import { useFirebaseApp, useAuth, useFirestore } from '@/firebase/provider';
+import { doc, setDoc, collection, addDoc } from "firebase/firestore";
+import { useAuth, useFirestore } from '@/firebase/provider';
 
 
 const formSchema = z.object({
@@ -26,6 +26,15 @@ const formSchema = z.object({
     email: z.string().email({ message: "الرجاء إدخال بريد إلكتروني صحيح." }),
     password: z.string().min(6, { message: "يجب أن تكون كلمة المرور 6 أحرف على الأقل." }),
     role: z.string({ required_error: "الرجاء اختيار دور." }),
+    organizationName: z.string().optional(),
+}).refine((data) => {
+    if (data.role === 'organization') {
+        return data.organizationName && data.organizationName.length >= 2;
+    }
+    return true;
+}, {
+    message: "يجب إدخال اسم المنظمة (حرفان على الأقل).",
+    path: ["organizationName"],
 });
 
 function RegisterForm() {
@@ -45,30 +54,25 @@ function RegisterForm() {
             name: "",
             email: "",
             password: "",
-            role: roleFromQuery && ["beneficiary", "coach", "mentor", "organization"].includes(roleFromQuery) ? roleFromQuery : "beneficiary",
+            role: roleFromQuery && ["beneficiary", "organization"].includes(roleFromQuery) ? roleFromQuery : "beneficiary",
+            organizationName: "",
         },
     });
 
+    const selectedRole = form.watch("role");
+
     useEffect(() => {
         const role = searchParams.get('role');
-        if (role) {
-            form.setValue('role', role);
-        }
+        if (role) form.setValue('role', role);
     }, [searchParams, form]);
-    
+
     const getDashboardLink = (role: string) => {
         switch (role) {
-            case 'organization':
-                return '/organization-dashboard';
-            case 'admin':
-                return '/admin-dashboard';
-            case 'mentor':
-                return '/mentor-dashboard';
-            case 'coach':
-                return '/coach-dashboard';
-            case 'beneficiary':
-            default:
-                return '/dashboard';
+            case 'organization': return '/organization-dashboard';
+            case 'admin': return '/admin-dashboard';
+            case 'mentor': return '/mentor-dashboard';
+            case 'coach': return '/coach-dashboard';
+            default: return '/dashboard';
         }
     };
 
@@ -76,40 +80,57 @@ function RegisterForm() {
         setIsLoading(true);
         try {
             if (!auth || !firestore) throw new Error("الخدمة غير متاحة مؤقتاً، حاول مرة أخرى.");
+
             const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
             const user = userCredential.user;
 
-            await setDoc(doc(firestore, "users", user.uid), {
+            let organizationId: string | undefined;
+
+            // If registering as organization admin, create the org document first
+            if (values.role === 'organization') {
+                const orgRef = doc(collection(firestore, 'organizations'));
+                organizationId = orgRef.id;
+                await setDoc(orgRef, {
+                    id: organizationId,
+                    name: values.organizationName || values.name,
+                    adminId: user.uid,
+                    status: 'نشطة',
+                    createdAt: new Date().toISOString(),
+                    primaryColor: '#2563eb',
+                });
+            }
+
+            // Create user document in Firestore
+            const userData: Record<string, any> = {
+                id: user.uid,
                 name: values.name,
                 email: values.email,
                 role: values.role,
-                status: "نشط",
+                status: 'نشط',
+                progress: 0,
                 createdAt: new Date().toISOString(),
-                id: user.uid,
-            });
+            };
+
+            if (organizationId) userData.organizationId = organizationId;
+
+            await setDoc(doc(firestore, "users", user.uid), userData);
 
             toast({
                 title: "تم إنشاء الحساب بنجاح!",
                 description: "تم تسجيل دخولك تلقائيًا.",
             });
 
-            const dashboardUrl = getDashboardLink(values.role);
-            router.push(dashboardUrl);
+            router.push(getDashboardLink(values.role));
 
         } catch (error: any) {
             console.error("Registration error", error);
-            const errorCode = error.code;
             let errorMessage = "فشل إنشاء الحساب. الرجاء المحاولة مرة أخرى.";
-            if (errorCode === 'auth/email-already-in-use') {
+            if (error.code === 'auth/email-already-in-use') {
                 errorMessage = "هذا البريد الإلكتروني مستخدم بالفعل.";
-            } else if (errorCode === 'auth/weak-password') {
+            } else if (error.code === 'auth/weak-password') {
                 errorMessage = "كلمة المرور ضعيفة جدًا.";
             }
-            toast({
-                variant: "destructive",
-                title: "حدث خطأ",
-                description: errorMessage,
-            });
+            toast({ variant: "destructive", title: "حدث خطأ", description: errorMessage });
         } finally {
             setIsLoading(false);
         }
@@ -125,7 +146,7 @@ function RegisterForm() {
                         </Link>
                         <h1 className="text-3xl font-bold">إنشاء حساب جديد</h1>
                         <p className="text-balance text-muted-foreground">
-                            انضم إلى آلاف المستفيدين على منصة EmpowerHub
+                            انضم إلى منصة EmpowerHub
                         </p>
                     </div>
 
@@ -144,7 +165,7 @@ function RegisterForm() {
                                     </FormItem>
                                 )}
                             />
-                             <FormField
+                            <FormField
                                 control={form.control}
                                 name="email"
                                 render={({ field }) => (
@@ -157,7 +178,7 @@ function RegisterForm() {
                                     </FormItem>
                                 )}
                             />
-                             <FormField
+                            <FormField
                                 control={form.control}
                                 name="password"
                                 render={({ field }) => (
@@ -170,29 +191,50 @@ function RegisterForm() {
                                     </FormItem>
                                 )}
                             />
-                             <FormField
+                            <FormField
                                 control={form.control}
                                 name="role"
                                 render={({ field }) => (
                                     <FormItem className="text-right">
-                                        <FormLabel>الانضمام كـ</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!!roleFromQuery}>
+                                        <FormLabel>نوع الحساب</FormLabel>
+                                        <Select onValueChange={field.onChange} value={field.value} disabled={!!roleFromQuery}>
                                             <FormControl>
                                                 <SelectTrigger>
-                                                    <SelectValue placeholder="اختر دورًا لحسابك" />
+                                                    <SelectValue placeholder="اختر نوع حسابك" />
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
                                                 <SelectItem value="beneficiary">مستفيد</SelectItem>
-                                                <SelectItem value="coach">مدرب</SelectItem>
-                                                <SelectItem value="mentor">مرشد</SelectItem>
                                                 <SelectItem value="organization">مدير منظمة</SelectItem>
                                             </SelectContent>
                                         </Select>
+                                        <FormDescription className="text-xs">
+                                            المرشدون والمدربون يُضافون من قبل مدير المنظمة.
+                                        </FormDescription>
                                         <FormMessage />
                                     </FormItem>
                                 )}
                             />
+
+                            {selectedRole === 'organization' && (
+                                <FormField
+                                    control={form.control}
+                                    name="organizationName"
+                                    render={({ field }) => (
+                                        <FormItem className="text-right">
+                                            <FormLabel>اسم المنظمة</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="مثال: مؤسسة الأمل" {...field} />
+                                            </FormControl>
+                                            <FormDescription className="text-xs">
+                                                سيتم إنشاء حساب منظمتك تلقائياً.
+                                            </FormDescription>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            )}
+
                             <Button type="submit" className="w-full shadow-md" disabled={isLoading}>
                                 {isLoading ? 'جاري إنشاء الحساب...' : 'إنشاء حساب مجاناً'}
                             </Button>
@@ -228,7 +270,7 @@ function RegisterForm() {
                 <div className="absolute bottom-10 right-10 text-white max-w-xs">
                     <h2 className="text-2xl font-bold mb-2">ابدأ رحلتك نحو النجاح</h2>
                     <p className="text-white/80 text-sm leading-relaxed">
-                        انضم إلى آلاف المستفيدين الذين غيّروا حياتهم من خلال منصة EmpowerHub
+                        انضم إلى منصة EmpowerHub وابدأ التغيير اليوم
                     </p>
                 </div>
             </div>
