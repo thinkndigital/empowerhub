@@ -123,11 +123,10 @@ function useFirebaseContext() {
   return context;
 }
 
-/** Hook to access Firebase Auth instance. */
-export const useAuth = (): Auth => {
+/** Hook to access Firebase Auth instance. Returns null if not ready yet. */
+export const useAuth = (): Auth | null => {
     const { auth } = useFirebaseContext();
-    if (!auth) throw new Error("Auth service is not available. Check your Firebase setup.");
-    return auth;
+    return auth || null;
 };
 
 /** Hook to access Firestore instance. It may be null if the service is unavailable. */
