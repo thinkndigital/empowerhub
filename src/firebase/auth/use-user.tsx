@@ -24,6 +24,7 @@ export function useUser() {
   const auth = useAuth();
   const firestore = useFirestore();
   const [user, setUser] = useState<User | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -31,6 +32,7 @@ export function useUser() {
     if (!auth) return;
     const unsubscribeAuth = onAuthStateChanged(auth, (authUser) => {
       setUser(authUser);
+      setAuthChecked(true);
       if (!authUser) {
         setUserProfile(null);
         setLoading(false);
@@ -40,8 +42,12 @@ export function useUser() {
   }, [auth]);
 
   useEffect(() => {
+    // Wait until auth state is confirmed before acting
+    if (!authChecked) return;
+
     if (!user || !firestore) {
-      if (!user) setLoading(false);
+      // User not logged in, or firestore unavailable — stop loading
+      setLoading(false);
       return;
     }
 
@@ -65,7 +71,7 @@ export function useUser() {
     );
 
     return () => unsubscribeProfile();
-  }, [user, firestore]);
+  }, [user, firestore, authChecked]);
 
   return { user, userProfile, loading };
 }
