@@ -16,8 +16,11 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { signOut } from "firebase/auth";
-import { useMemo } from "react";
-import { useAuth } from "@/firebase/provider";
+import { doc } from "firebase/firestore";
+import { useMemo, useEffect } from "react";
+import { useAuth, useFirestore, useMemoFirebase } from "@/firebase/provider";
+import { useDoc } from "@/firebase/firestore/use-doc";
+import Image from "next/image";
 
 import {
   SidebarProvider,
@@ -81,6 +84,35 @@ export default function DashboardLayout({
   }), []);
 
   const userProfile = (authUser && realUserProfile) ? realUserProfile : demoUserProfile;
+  const firestore = useFirestore();
+
+  const orgRef = useMemoFirebase(() => {
+    if (!firestore || !userProfile?.organizationId) return null;
+    return doc(firestore, 'organizations', userProfile.organizationId);
+  }, [firestore, userProfile?.organizationId]);
+  const { data: organization } = useDoc<any>(orgRef);
+
+  useEffect(() => {
+    if (!organization?.primaryColor) return;
+    const hex = organization.primaryColor.replace(/^#/, '');
+    let r = parseInt(hex.substring(0, 2), 16);
+    let g = parseInt(hex.substring(2, 4), 16);
+    let b = parseInt(hex.substring(4, 6), 16);
+    r /= 255; g /= 255; b /= 255;
+    let cmin = Math.min(r, g, b), cmax = Math.max(r, g, b), delta = cmax - cmin, h = 0, s = 0, l = 0;
+    l = (cmax + cmin) / 2;
+    if (delta !== 0) {
+      s = l > 0.5 ? delta / (2 - cmax - cmin) : delta / (cmax + cmin);
+      if (cmax === r) h = (g - b) / delta + (g < b ? 6 : 0);
+      else if (cmax === g) h = (b - r) / delta + 2;
+      else h = (r - g) / delta + 4;
+      h = Math.round(h * 60);
+    }
+    if (h < 0) h += 360;
+    s = Math.round(s * 100);
+    l = Math.round(l * 100);
+    document.documentElement.style.setProperty('--primary', `${h} ${s}% ${l}%`);
+  }, [organization?.primaryColor]);
 
   if (loading) {
     return (
@@ -100,9 +132,11 @@ export default function DashboardLayout({
     <SidebarProvider>
       <Sidebar side="right">
         <SidebarHeader>
-          <div className="flex items-center gap-2 p-2">
-            <Logo />
-            <span className="text-lg font-semibold">EmpowerHub</span>
+          <div className="flex flex-col items-center text-center gap-2 p-2">
+            {organization?.logoUrl
+              ? <Image src={organization.logoUrl} alt="شعار المنظمة" width={64} height={64} className="h-16 w-16 object-contain" />
+              : <Logo className="h-12 w-12" />}
+            <span className="text-lg font-semibold">{organization?.name || 'EmpowerHub'}</span>
           </div>
         </SidebarHeader>
         <SidebarContent>

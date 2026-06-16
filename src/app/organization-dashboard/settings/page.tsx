@@ -11,6 +11,10 @@ import { useToast } from "@/hooks/use-toast";
 import { Palette, Save, BookOpen, Users } from "lucide-react";
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import { useFirestore, useStorage } from "@/firebase/provider";
+import { useUser } from "@/firebase/auth/use-user";
+import { doc, updateDoc, getDoc } from "firebase/firestore";
+import { ref, uploadString, getDownloadURL } from "firebase/storage";
 
 const settingsSchema = z.object({
   name: z.string().min(2, { message: "يجب أن يكون اسم المنظمة حرفين على الأقل." }),
@@ -20,234 +24,274 @@ const settingsSchema = z.object({
   mentorshipSessionPrice: z.coerce.number().min(0, { message: "يجب أن يكون السعر 0 أو أكثر." }),
 });
 
+const hexToHsl = (hex: string): string => {
+  hex = hex.replace(/^#/, '');
+  let r = parseInt(hex.substring(0, 2), 16);
+  let g = parseInt(hex.substring(2, 4), 16);
+  let b = parseInt(hex.substring(4, 6), 16);
+  r /= 255; g /= 255; b /= 255;
+  let cmin = Math.min(r, g, b), cmax = Math.max(r, g, b), delta = cmax - cmin, h = 0, s = 0, l = 0;
+  l = (cmax + cmin) / 2;
+  if (delta !== 0) {
+    s = l > 0.5 ? delta / (2 - cmax - cmin) : delta / (cmax + cmin);
+    switch (cmax) {
+      case r: h = (g - b) / delta + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / delta + 2; break;
+      case b: h = (r - g) / delta + 4; break;
+    }
+    h = Math.round(h * 60);
+  }
+  if (h < 0) h += 360;
+  s = Math.round(s * 100);
+  l = Math.round(l * 100);
+  return `${h} ${s}% ${l}%`;
+};
+
 export default function OrgSettingsPage() {
-    const { toast } = useToast();
-    const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const { toast } = useToast();
+  const firestore = useFirestore();
+  const storage = useStorage();
+  const { userProfile } = useUser();
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
-    const form = useForm<z.infer<typeof settingsSchema>>({
-        resolver: zodResolver(settingsSchema),
-        defaultValues: {
-            name: "EmpowerHub",
-            primaryColor: "#2563eb",
-            courseSessionPrice: 50,
-            mentorshipSessionPrice: 30,
-        },
+  const form = useForm<z.infer<typeof settingsSchema>>({
+    resolver: zodResolver(settingsSchema),
+    defaultValues: {
+      name: "EmpowerHub",
+      primaryColor: "#2563eb",
+      courseSessionPrice: 50,
+      mentorshipSessionPrice: 30,
+    },
+  });
+
+  // Load from Firestore on mount
+  useEffect(() => {
+    if (!firestore || !userProfile?.organizationId) return;
+    const orgRef = doc(firestore, 'organizations', userProfile.organizationId);
+    getDoc(orgRef).then(snap => {
+      if (!snap.exists()) return;
+      const data = snap.data();
+      if (data.name) form.setValue('name', data.name);
+      if (data.primaryColor) form.setValue('primaryColor', data.primaryColor);
+      if (data.logoUrl) setLogoPreview(data.logoUrl);
+      if (data.courseSessionPrice != null) form.setValue('courseSessionPrice', data.courseSessionPrice);
+      if (data.mentorshipSessionPrice != null) form.setValue('mentorshipSessionPrice', data.mentorshipSessionPrice);
+    }).catch(() => {
+      // Fallback to localStorage
+      const savedName = localStorage.getItem('orgName');
+      const savedColor = localStorage.getItem('orgPrimaryColor');
+      const savedLogo = localStorage.getItem('orgLogo');
+      if (savedName) form.setValue('name', savedName);
+      if (savedColor) form.setValue('primaryColor', savedColor);
+      if (savedLogo) setLogoPreview(savedLogo);
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [firestore, userProfile?.organizationId]);
 
-    useEffect(() => {
-        const savedName = localStorage.getItem('orgName');
-        const savedColor = localStorage.getItem('orgPrimaryColor');
-        const savedLogo = localStorage.getItem('orgLogo');
-        if (savedName) {
-            form.setValue('name', savedName);
-        }
-        if (savedColor) {
-            form.setValue('primaryColor', savedColor);
-        }
-        if (savedLogo) {
-            setLogoPreview(savedLogo);
-        }
-    }, [form]);
+  const primaryColor = form.watch("primaryColor");
 
-    const primaryColor = form.watch("primaryColor");
+  useEffect(() => {
+    if (primaryColor && /^#[0-9a-fA-F]{6}$/.test(primaryColor)) {
+      document.documentElement.style.setProperty('--primary', hexToHsl(primaryColor));
+    }
+  }, [primaryColor]);
 
-    useEffect(() => {
-        if (primaryColor && /^#[0-9a-fA-F]{6}$/.test(primaryColor)) {
-            const hexToHsl = (hex: string): string => {
-                hex = hex.replace(/^#/, '');
-                let r = parseInt(hex.substring(0, 2), 16);
-                let g = parseInt(hex.substring(2, 4), 16);
-                let b = parseInt(hex.substring(4, 6), 16);
-                r /= 255; g /= 255; b /= 255;
-                let cmin = Math.min(r, g, b), cmax = Math.max(r, g, b), delta = cmax - cmin, h = 0, s = 0, l = 0;
-                l = (cmax + cmin) / 2;
-                if (delta !== 0) {
-                    s = l > 0.5 ? delta / (2 - cmax - cmin) : delta / (cmax + cmin);
-                    switch (cmax) {
-                        case r: h = (g - b) / delta + (g < b ? 6 : 0); break;
-                        case g: h = (b - r) / delta + 2; break;
-                        case b: h = (r - g) / delta + 4; break;
-                    }
-                    h = Math.round(h * 60);
-                }
-                if (h < 0) h += 360;
-                s = Math.round(s * 100);
-                l = Math.round(l * 100);
-                return `${h} ${s}% ${l}%`;
-            };
-            document.documentElement.style.setProperty('--primary', hexToHsl(primaryColor));
-        }
-    }, [primaryColor]);
-
-
-    function onSubmit(values: z.infer<typeof settingsSchema>) {
-        localStorage.setItem('orgName', values.name);
-        localStorage.setItem('orgPrimaryColor', values.primaryColor);
-
-        if (values.logo && values.logo.length > 0) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                if (e.target?.result) {
-                    const dataUrl = e.target.result as string;
-                    localStorage.setItem('orgLogo', dataUrl);
-                    window.dispatchEvent(new Event('org-settings-change'));
-                }
-            };
-            reader.readAsDataURL(values.logo[0]);
-        } else {
-             window.dispatchEvent(new Event('org-settings-change'));
-        }
-
-        toast({
-            title: "تم حفظ الإعدادات",
-            description: "تم تحديث إعدادات المظهر والتسعير لمنظمتك.",
-        });
+  async function onSubmit(values: z.infer<typeof settingsSchema>) {
+    if (!firestore || !userProfile?.organizationId) {
+      toast({ variant: "destructive", title: "خطأ", description: "لم يتم تحديد المنظمة." });
+      return;
     }
 
-    const handleLogoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const files = event.target.files;
-        if (files && files[0]) {
-            const file = files[0];
-            form.setValue('logo', files);
-            setLogoPreview(URL.createObjectURL(file));
-        }
-    };
+    setIsSaving(true);
+    try {
+      const orgRef = doc(firestore, 'organizations', userProfile.organizationId);
+      const updateData: Record<string, any> = {
+        name: values.name,
+        primaryColor: values.primaryColor,
+        courseSessionPrice: values.courseSessionPrice,
+        mentorshipSessionPrice: values.mentorshipSessionPrice,
+      };
+
+      // Upload logo if provided
+      if (values.logo && values.logo.length > 0 && storage) {
+        const file = values.logo[0] as File;
+        const reader = new FileReader();
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          reader.onload = (e) => resolve(e.target?.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+
+        const logoRef = ref(storage, `org-logos/${userProfile.organizationId}/logo`);
+        await uploadString(logoRef, dataUrl, 'data_url');
+        const downloadUrl = await getDownloadURL(logoRef);
+        updateData.logoUrl = downloadUrl;
+        setLogoPreview(downloadUrl);
+        localStorage.setItem('orgLogo', downloadUrl);
+      }
+
+      await updateDoc(orgRef, updateData);
+
+      // Also save to localStorage as cache
+      localStorage.setItem('orgName', values.name);
+      localStorage.setItem('orgPrimaryColor', values.primaryColor);
+
+      window.dispatchEvent(new Event('org-settings-change'));
+
+      toast({
+        title: "تم حفظ الإعدادات",
+        description: "تم تحديث إعدادات المنظمة وستنعكس على جميع الأقسام.",
+      });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "فشل الحفظ", description: err.message });
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  const handleLogoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files && files[0]) {
+      const file = files[0];
+      form.setValue('logo', files);
+      setLogoPreview(URL.createObjectURL(file));
+    }
+  };
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       <div>
-          <h1 className="text-lg font-semibold md:text-2xl">إعدادات المنظمة</h1>
-          <p className="text-muted-foreground">إدارة تفاصيل منظمتك، المظهر، وإعدادات الحساب.</p>
+        <h1 className="text-lg font-semibold md:text-2xl">إعدادات المنظمة</h1>
+        <p className="text-muted-foreground">إدارة تفاصيل منظمتك، المظهر، وإعدادات الحساب.</p>
       </div>
 
-       <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Palette className="h-5 w-5" />
-                            تخصيص المظهر
-                        </CardTitle>
-                        <CardDescription>
-                            قم بتخصيص مظهر المنصة ليتناسب مع هوية منظمتك.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                         <FormField
-                            control={form.control}
-                            name="name"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>اسم المنظمة</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="اسم منظمتك" {...field} />
-                                    </FormControl>
-                                    <FormDescription>
-                                        سيظهر هذا الاسم في رأس الشريط الجانبي.
-                                    </FormDescription>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="primaryColor"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>اللون الأساسي</FormLabel>
-                                    <div className="flex items-center gap-2">
-                                        <FormControl>
-                                            <Input type="color" className="w-12 h-10 p-1" {...field} />
-                                        </FormControl>
-                                        <FormControl>
-                                            <Input className="w-40" {...field} />
-                                        </FormControl>
-                                    </div>
-                                    <FormDescription>
-                                        اختر اللون الذي يمثل هوية منظمتك.
-                                    </FormDescription>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="logo"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>شعار المنظمة</FormLabel>
-                                    <FormControl>
-                                        <Input type="file" accept="image/png, image/jpeg, image/svg+xml" onChange={handleLogoChange} />
-                                    </FormControl>
-                                    {logoPreview && (
-                                        <div className="mt-4">
-                                            <p className="text-sm text-muted-foreground">معاينة الشعار:</p>
-                                            <Image src={logoPreview} alt="معاينة الشعار" width={80} height={80} className="rounded-md border p-2 mt-2 object-contain" />
-                                        </div>
-                                    )}
-                                    <FormDescription>
-                                        ارفع شعار منظمتك (يفضل أن يكون بصيغة SVG أو PNG).
-                                    </FormDescription>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                    </CardContent>
-                </Card>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Palette className="h-5 w-5" />
+                تخصيص المظهر
+              </CardTitle>
+              <CardDescription>
+                قم بتخصيص مظهر المنصة ليتناسب مع هوية منظمتك — ستنعكس التغييرات على جميع أقسام المنظمة.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>اسم المنظمة</FormLabel>
+                    <FormControl>
+                      <Input placeholder="اسم منظمتك" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      سيظهر هذا الاسم في رأس الشريط الجانبي لجميع أعضاء المنظمة.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="primaryColor"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>اللون الأساسي</FormLabel>
+                    <div className="flex items-center gap-2">
+                      <FormControl>
+                        <Input type="color" className="w-12 h-10 p-1" {...field} />
+                      </FormControl>
+                      <FormControl>
+                        <Input className="w-40" {...field} />
+                      </FormControl>
+                    </div>
+                    <FormDescription>
+                      اختر اللون الذي يمثل هوية منظمتك — سينعكس فوراً على جميع الأقسام.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="logo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>شعار المنظمة</FormLabel>
+                    <FormControl>
+                      <Input type="file" accept="image/png, image/jpeg, image/svg+xml" onChange={handleLogoChange} />
+                    </FormControl>
+                    {logoPreview && (
+                      <div className="mt-4">
+                        <p className="text-sm text-muted-foreground">معاينة الشعار:</p>
+                        <Image src={logoPreview} alt="معاينة الشعار" width={80} height={80} className="rounded-md border p-2 mt-2 object-contain" />
+                      </div>
+                    )}
+                    <FormDescription>
+                      ارفع شعار منظمتك (يفضل أن يكون بصيغة SVG أو PNG). سيظهر في الشريط الجانبي.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            تسعير الخدمات
-                        </CardTitle>
-                        <CardDescription>
-                            تحديد أسعار الجلسات بالدينار الأردني (د.أ) التي يقدمها المدربون والمرشدون.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        <FormField
-                            control={form.control}
-                            name="courseSessionPrice"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel className="flex items-center gap-2"><BookOpen className="h-4 w-4" /> سعر جلسة التدريب (لكل شخص)</FormLabel>
-                                    <FormControl>
-                                        <Input type="number" step="0.5" min="0" placeholder="50" {...field} />
-                                    </FormControl>
-                                    <FormDescription>
-                                        المبلغ المحتسب لكل مستفيد عن كل جلسة تدريب فردية.
-                                    </FormDescription>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="mentorshipSessionPrice"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel className="flex items-center gap-2"><Users className="h-4 w-4" /> سعر جلسة الإرشاد (لكل شخص)</FormLabel>
-                                    <FormControl>
-                                        <Input type="number" step="0.5" min="0" placeholder="30" {...field} />
-                                    </FormControl>
-                                    <FormDescription>
-                                    المبلغ المحتسب لكل مستفيد عن كل جلسة إرشاد.
-                                    </FormDescription>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                    </CardContent>
-                </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>تسعير الخدمات</CardTitle>
+              <CardDescription>
+                تحديد أسعار الجلسات بالدينار الأردني (د.أ) التي يقدمها المدربون والمرشدون.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <FormField
+                control={form.control}
+                name="courseSessionPrice"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2"><BookOpen className="h-4 w-4" /> سعر جلسة التدريب (لكل شخص)</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.5" min="0" placeholder="50" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      المبلغ المحتسب لكل مستفيد عن كل جلسة تدريب فردية.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="mentorshipSessionPrice"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2"><Users className="h-4 w-4" /> سعر جلسة الإرشاد (لكل شخص)</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.5" min="0" placeholder="30" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      المبلغ المحتسب لكل مستفيد عن كل جلسة إرشاد.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
 
-                <div>
-                    <Button type="submit">
-                        <Save className="ml-2 h-4 w-4" />
-                        حفظ الإعدادات
-                    </Button>
-                </div>
-            </form>
-        </Form>
+          <div>
+            <Button type="submit" disabled={isSaving}>
+              <Save className="ml-2 h-4 w-4" />
+              {isSaving ? "جاري الحفظ..." : "حفظ الإعدادات"}
+            </Button>
+          </div>
+        </form>
+      </Form>
     </div>
   );
 }
