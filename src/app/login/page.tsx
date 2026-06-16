@@ -49,10 +49,10 @@ export default function LoginPage() {
   };
 
   async function handleUserProfile(uid: string, displayName: string | null, email: string | null) {
-    // If Firestore not ready yet, still allow login and redirect to default dashboard
+    // If Firestore not ready, still allow login — /redirect page will handle role routing
     if (!firestore) {
       toast({ title: "تم تسجيل الدخول!", description: `مرحباً!` });
-      router.push('/dashboard');
+      router.push('/redirect');
       return;
     }
     try {
@@ -74,11 +74,10 @@ export default function LoginPage() {
         await setDoc(userDocRef, userData);
       }
       toast({ title: "تم تسجيل الدخول!", description: `مرحباً ${userData.name}!` });
-      router.push(getDashboardLink(userData.role));
+      router.push('/redirect');
     } catch {
-      // If Firestore read fails, redirect to dashboard anyway
       toast({ title: "تم تسجيل الدخول!", description: `مرحباً!` });
-      router.push('/dashboard');
+      router.push('/redirect');
     }
   }
 

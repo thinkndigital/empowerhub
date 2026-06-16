@@ -136,7 +136,7 @@ function RegisterForm() {
                 description: "مرحباً بك في EmpowerHub!",
             });
 
-            router.push(getDashboardLink(values.role));
+            router.push('/redirect');
 
         } catch (error: any) {
             console.error("Registration error", error);
