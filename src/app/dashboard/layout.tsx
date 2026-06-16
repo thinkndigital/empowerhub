@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { doc } from "firebase/firestore";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAuth, useFirestore, useMemoFirebase } from "@/firebase/provider";
 import { useDoc } from "@/firebase/firestore/use-doc";
 import Image from "next/image";
@@ -78,6 +78,14 @@ export default function DashboardLayout({
   const userProfile = realUserProfile ?? null;
   const firestore = useFirestore();
 
+  // Fallback: if profile doesn't load within 5s for an authenticated user, unblock UI
+  const [profileTimedOut, setProfileTimedOut] = useState(false);
+  useEffect(() => {
+    if (!authUser || userProfile) { setProfileTimedOut(false); return; }
+    const t = setTimeout(() => setProfileTimedOut(true), 5000);
+    return () => clearTimeout(t);
+  }, [authUser, userProfile]);
+
   const orgRef = useMemoFirebase(() => {
     if (!firestore || !userProfile?.organizationId) return null;
     return doc(firestore, 'organizations', userProfile.organizationId);
@@ -106,8 +114,8 @@ export default function DashboardLayout({
     document.documentElement.style.setProperty('--primary', `${h} ${s}% ${l}%`);
   }, [organization?.primaryColor]);
 
-  // Show loading while auth initializes OR while authenticated user's profile is loading
-  if (loading || (authUser && !userProfile)) {
+  // Show loading while auth initializes OR while authenticated user's profile is loading (max 5s)
+  if (loading || (authUser && !userProfile && !profileTimedOut)) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
