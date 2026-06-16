@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
-import { getFirestore, doc, setDoc } from "firebase/firestore";
-import { useFirebaseApp } from "@/firebase/provider";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { doc, setDoc } from "firebase/firestore";
+import { useAuth, useFirestore } from "@/firebase/provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,7 +13,8 @@ import { CheckCircle2, Shield, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 
 export default function SetupPage() {
-  const app = useFirebaseApp();
+  const auth = useAuth();
+  const firestore = useFirestore();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -23,14 +24,11 @@ export default function SetupPage() {
 
   const handleSetup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!app) return;
+    if (!auth || !firestore) { setError("الخدمة غير متاحة مؤقتاً."); return; }
     setLoading(true);
     setError("");
 
     try {
-      const auth = getAuth(app);
-      const firestore = getFirestore(app);
-
       const cred = await createUserWithEmailAndPassword(auth, email, password);
       const uid = cred.user.uid;
 

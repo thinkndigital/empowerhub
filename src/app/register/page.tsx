@@ -16,9 +16,9 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Logo } from '@/components/logo';
 import { useToast } from "@/hooks/use-toast";
 
-import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
-import { getFirestore, doc, setDoc } from "firebase/firestore";
-import { useFirebaseApp } from '@/firebase/provider';
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { doc, setDoc } from "firebase/firestore";
+import { useFirebaseApp, useAuth, useFirestore } from '@/firebase/provider';
 
 
 const formSchema = z.object({
@@ -33,7 +33,8 @@ function RegisterForm() {
     const { toast } = useToast();
     const router = useRouter();
     const searchParams = useSearchParams();
-    const app = useFirebaseApp();
+    const auth = useAuth();
+    const firestore = useFirestore();
     const [isLoading, setIsLoading] = useState(false);
 
     const roleFromQuery = searchParams.get('role');
@@ -74,10 +75,7 @@ function RegisterForm() {
     async function onSubmit(values: z.infer<typeof formSchema>) {
         setIsLoading(true);
         try {
-            if (!app) throw new Error("Firebase app is not initialized.");
-            const auth = getAuth(app);
-            const firestore = getFirestore(app);
-
+            if (!auth || !firestore) throw new Error("الخدمة غير متاحة مؤقتاً، حاول مرة أخرى.");
             const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
             const user = userCredential.user;
 
