@@ -35,14 +35,6 @@ const formSchema = z.object({
 }, {
     message: "يجب إدخال اسم المنظمة (حرفان على الأقل).",
     path: ["organizationName"],
-}).refine((data) => {
-    if (data.role === 'mentor' || data.role === 'coach') {
-        return data.orgInviteCode && data.orgInviteCode.length >= 4;
-    }
-    return true;
-}, {
-    message: "يجب إدخال كود دعوة المنظمة.",
-    path: ["orgInviteCode"],
 });
 
 function RegisterForm() {
@@ -219,7 +211,7 @@ function RegisterForm() {
                                         </Select>
                                         <FormDescription className="text-xs">
                                             {(selectedRole === 'mentor' || selectedRole === 'coach')
-                                                ? 'ستحتاج إلى كود دعوة من المنظمة التي تنتمي إليها.'
+                                                ? 'يمكنك إدخال كود دعوة المنظمة إن وجد (اختياري).'
                                                 : 'اختر دورك على المنصة.'}
                                         </FormDescription>
                                         <FormMessage />
@@ -252,12 +244,12 @@ function RegisterForm() {
                                     name="orgInviteCode"
                                     render={({ field }) => (
                                         <FormItem className="text-right">
-                                            <FormLabel>كود دعوة المنظمة</FormLabel>
+                                            <FormLabel>كود دعوة المنظمة <span className="text-muted-foreground font-normal">(اختياري)</span></FormLabel>
                                             <FormControl>
-                                                <Input dir="ltr" placeholder="أدخل كود الدعوة" {...field} />
+                                                <Input dir="ltr" placeholder="أدخل كود الدعوة إن وجد" {...field} />
                                             </FormControl>
                                             <FormDescription className="text-xs">
-                                                احصل على كود الدعوة من مدير المنظمة التي تنتمي إليها.
+                                                إذا انتميت لمنظمة، أدخل الكود لربط حسابك بها.
                                             </FormDescription>
                                             <FormMessage />
                                         </FormItem>
