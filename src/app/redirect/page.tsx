@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/firebase/auth/use-user";
 import { Logo } from "@/components/logo";
@@ -23,7 +23,7 @@ export default function AuthRedirectPage() {
     if (loading) return;
     if (!user) { router.replace("/login"); return; }
 
-    // Check sessionStorage first (set right after registration — instant)
+    // sessionStorage: set right after registration — instant
     const pendingRole = sessionStorage.getItem("pending_role");
     const pendingUid  = sessionStorage.getItem("pending_uid");
     if (pendingRole && pendingUid && pendingUid === user.uid) {
