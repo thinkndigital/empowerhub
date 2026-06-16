@@ -21,6 +21,44 @@ export default function AuthRedirectPage() {
   const router = useRouter();
   const { user, userProfile, loading } = useUser();
   const firestore = useFirestore();
+  const [waited, setWaited] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setWaited(true), 5000);
+    return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    if (loading && !waited) return;
+    if (!user) { router.replace("/login"); return; }
+
+    // Check sessionStorage first (set right after registration)
+    const pendingRole = sessionStorage.getItem("pending_role");
+    const pendingUid  = sessionStorage.getItem("pending_uid");
+
+    if (pendingRole && pendingUid && pendingUid === user.uid) {
+      if (firestore) {
+        const data: Record<string, any> = {
+          id: user.uid,
+          name:  sessionStorage.getItem("pending_name")  || "",
+          email: sessionStorage.getItem("pending_email") || "",
+          role:  pendingRole,
+          status: "نشط", progress: 0,
+          createdAt: new Date().toISOString(),
+        };
+        const orgId = sessionStorage.getItem("pending_org_id");
+        if (orgId) data.organizationId = orgId;
+        setDoc(doc(firestore, "users", user.uid), data, { merge: true }).catch(console.error);
+      }
+      ["pending_role","pending_uid","pending_name","pending_email","pending_org_id"]
+        .forEach(k => sessionStorage.removeItem(k));
+      router.replace(getRoleDashboard(pendingRole));
+      return;
+    }
+
+    if (!userProfile && !waited) return;
+    router.replace(getRoleDashboard(userProfile?.role));
+  }, [loading, user, userProfile, waited, firestore, router]);
 
   return (
     <div className="flex h-screen w-full items-center justify-center bg-background">
