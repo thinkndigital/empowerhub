@@ -83,27 +83,52 @@ function RegisterForm() {
     async function onSubmit(values: z.infer<typeof formSchema>) {
         setIsLoading(true);
         try {
-            const res = await fetch('/api/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    name: values.name,
-                    email: values.email,
-                    password: values.password,
-                    role: values.role,
-                    organizationName: values.organizationName,
-                    orgInviteCode: values.orgInviteCode,
-                }),
-            });
+            // Abort if API takes more than 15 seconds
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-            const data = await res.json();
+            let res: Response;
+            try {
+                res = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: values.name,
+                        email: values.email,
+                        password: values.password,
+                        role: values.role,
+                        organizationName: values.organizationName,
+                        orgInviteCode: values.orgInviteCode,
+                    }),
+                    signal: controller.signal,
+                });
+            } catch (fetchError: any) {
+                clearTimeout(timeoutId);
+                if (fetchError.name === 'AbortError') {
+                    throw new Error('انتهت مهلة الطلب. تحقق من اتصالك بالإنترنت وحاول مرة أخرى.');
+                }
+                throw fetchError;
+            }
+            clearTimeout(timeoutId);
+
+            let data: any = {};
+            try {
+                data = await res.json();
+            } catch {
+                if (!res.ok) throw new Error(`فشل الطلب (${res.status})`);
+            }
 
             if (!res.ok) {
                 throw new Error(data.error || 'فشل إنشاء الحساب.');
             }
 
+            // Sign in after successful registration
             if (auth) {
-                await signInWithEmailAndPassword(auth, values.email, values.password);
+                try {
+                    await signInWithEmailAndPassword(auth, values.email, values.password);
+                } catch {
+                    // Sign-in failed but account was created — redirect anyway
+                }
             }
 
             toast({
@@ -115,15 +140,11 @@ function RegisterForm() {
 
         } catch (error: any) {
             console.error("Registration error", error);
-            let errorMessage = "فشل إنشاء الحساب. الرجاء المحاولة مرة أخرى.";
-            if (error.message?.includes('مستخدم')) {
-                errorMessage = error.message;
-            } else if (error.code === 'auth/email-already-in-use') {
+            let errorMessage = error.message || "فشل إنشاء الحساب. الرجاء المحاولة مرة أخرى.";
+            if (error.code === 'auth/email-already-in-use') {
                 errorMessage = "هذا البريد الإلكتروني مستخدم بالفعل.";
             } else if (error.code === 'auth/weak-password') {
                 errorMessage = "كلمة المرور ضعيفة جدًا (6 أحرف على الأقل).";
-            } else if (error.message) {
-                errorMessage = error.message;
             }
             toast({ variant: "destructive", title: "حدث خطأ", description: errorMessage });
         } finally {

@@ -79,11 +79,17 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('Register error:', error);
+    console.error('Register error:', error?.code, error?.message);
     if (error.code === 'auth/email-already-exists') {
       return NextResponse.json(
         { error: 'هذا البريد الإلكتروني مستخدم بالفعل.' },
         { status: 400 }
+      );
+    }
+    if (error.code === 'app/no-app' || error.message?.includes('credential') || error.message?.includes('UNAUTHENTICATED')) {
+      return NextResponse.json(
+        { error: 'خطأ في إعدادات الخادم. تواصل مع الدعم الفني.' },
+        { status: 503 }
       );
     }
     return NextResponse.json(
