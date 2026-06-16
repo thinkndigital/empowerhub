@@ -2,7 +2,6 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions
     function isSignedIn() {
       return request.auth != null;
     }
@@ -15,39 +14,30 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    function isAdmin() {
-      return isSignedIn() && getUserData().role == 'admin';
+    function hasRole(role) {
+      return isSignedIn() && getUserData().role == role;
     }
 
-    function isOrganization() {
-      return isSignedIn() && getUserData().role == 'organization';
-    }
-
-    function isMentor() {
-      return isSignedIn() && getUserData().role == 'mentor';
-    }
-
-    function isCoach() {
-      return isSignedIn() && getUserData().role == 'coach';
-    }
-
-    function isBeneficiary() {
-      return isSignedIn() && getUserData().role == 'beneficiary';
-    }
-
-    function isAdminOrOrg() {
-      return isAdmin() || isOrganization();
-    }
+    function isAdmin() { return hasRole('admin'); }
+    function isOrganization() { return hasRole('organization'); }
+    function isMentor() { return hasRole('mentor'); }
+    function isCoach() { return hasRole('coach'); }
+    function isBeneficiary() { return hasRole('beneficiary'); }
+    function isStaff() { return isAdmin() || isOrganization() || isMentor() || isCoach(); }
 
     // =====================
     // USERS COLLECTION
     // =====================
     match /users/{userId} {
-      // Users can read their own profile; admins and org managers can read all
-      allow get: if isOwner(userId) || isAdmin() || isOrganization();
-      allow list: if isAdmin() || isOrganization();
+      // Any signed-in user can read user profiles (needed for mentor/coach lists, chat, etc.)
+      allow read: if isSignedIn();
+
+      // Users can create their own profile on registration
       allow create: if isOwner(userId);
-      allow update: if isOwner(userId) || isAdmin();
+
+      // Users can update their own profile; org admins and mentors can update assigned users
+      allow update: if isOwner(userId) || isAdmin() || isOrganization() || isMentor();
+
       allow delete: if isAdmin();
     }
 
@@ -55,9 +45,15 @@ service cloud.firestore {
     // ORGANIZATIONS COLLECTION
     // =====================
     match /organizations/{orgId} {
+      // Any signed-in user can read org data (needed for branding/theming)
       allow read: if isSignedIn();
-      allow create: if isAdmin();
-      allow update: if isAdmin() || (isOrganization() && getUserData().organizationId == orgId);
+
+      // Any signed-in user can create an org (for self-registration as org admin)
+      allow create: if isSignedIn();
+
+      // Only admin or the org's own manager can update
+      allow update: if isAdmin() || isOrganization();
+
       allow delete: if isAdmin();
     }
 
@@ -65,38 +61,26 @@ service cloud.firestore {
     // COURSES COLLECTION
     // =====================
     match /courses/{courseId} {
-      // Any signed-in user can read published courses
-      allow get: if isSignedIn();
-      allow list: if isSignedIn();
-      // Only admins, org managers, and coaches can create/edit
+      allow read: if isSignedIn();
       allow create: if isAdmin() || isOrganization() || isCoach();
       allow update: if isAdmin() || isOrganization() || isCoach();
       allow delete: if isAdmin() || isOrganization();
-    }
 
-    // Course modules
-    match /courses/{courseId}/modules/{moduleId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin() || isOrganization() || isCoach();
+      match /modules/{moduleId} {
+        allow read: if isSignedIn();
+        allow write: if isAdmin() || isOrganization() || isCoach();
+      }
     }
 
     // =====================
-    // SESSIONS COLLECTION (mentorship sessions)
+    // SESSIONS COLLECTION
     // =====================
     match /sessions/{sessionId} {
-      // Participants and admins can read
-      allow get: if isSignedIn() && (
-        isAdmin() ||
-        isOrganization() ||
-        request.auth.uid == resource.data.hostId ||
-        request.auth.uid in resource.data.attendees
-      );
-      allow list: if isSignedIn();
-      // Mentors, admins, org can create sessions
+      allow read: if isSignedIn();
       allow create: if isSignedIn() && (isAdmin() || isOrganization() || isMentor());
       allow update: if isSignedIn() && (
-        isAdmin() ||
-        isOrganization() ||
+        isAdmin() || isOrganization() ||
+        request.auth.uid == resource.data.mentorId ||
         request.auth.uid == resource.data.hostId
       );
       allow delete: if isAdmin() || isOrganization();
@@ -106,17 +90,18 @@ service cloud.firestore {
     // PRODUCTS COLLECTION
     // =====================
     match /products/{productId} {
-      // Public can view products
       allow read: if true;
-      // Only the product owner, admin, or org can write
       allow create: if isSignedIn();
       allow update: if isSignedIn() && (
-        isAdmin() ||
-        isOrganization() ||
-        request.auth.uid == resource.data.beneficiaryId
+        isAdmin() || isOrganization() ||
+        request.auth.uid == resource.data.beneficiaryId ||
+        request.auth.uid == resource.data.ownerId
       );
       allow delete: if isAdmin() || isOrganization() || (
-        isSignedIn() && request.auth.uid == resource.data.beneficiaryId
+        isSignedIn() && (
+          request.auth.uid == resource.data.beneficiaryId ||
+          request.auth.uid == resource.data.ownerId
+        )
       );
     }
 
@@ -127,28 +112,28 @@ service cloud.firestore {
       allow read: if true;
       allow create: if isSignedIn();
       allow update: if isSignedIn() && (
-        isAdmin() ||
-        isOrganization() ||
-        request.auth.uid == resource.data.beneficiaryId
+        isAdmin() || isOrganization() ||
+        request.auth.uid == resource.data.beneficiaryId ||
+        request.auth.uid == resource.data.ownerId
       );
-      allow delete: if isAdmin() || (isSignedIn() && request.auth.uid == resource.data.beneficiaryId);
+      allow delete: if isAdmin() || (
+        isSignedIn() && (
+          request.auth.uid == resource.data.beneficiaryId ||
+          request.auth.uid == resource.data.ownerId
+        )
+      );
     }
 
     // =====================
     // ORDERS COLLECTION
     // =====================
     match /orders/{orderId} {
-      allow read: if isSignedIn() && (
-        isAdmin() ||
-        isOrganization() ||
-        request.auth.uid == resource.data.beneficiaryId ||
-        request.auth.uid == resource.data.customerId
-      );
-      allow list: if isSignedIn();
+      allow read: if isSignedIn();
       allow create: if isSignedIn();
       allow update: if isSignedIn() && (
-        isAdmin() ||
-        request.auth.uid == resource.data.beneficiaryId
+        isAdmin() || isOrganization() ||
+        request.auth.uid == resource.data.beneficiaryId ||
+        request.auth.uid == resource.data.customerId
       );
       allow delete: if isAdmin();
     }
@@ -163,15 +148,17 @@ service cloud.firestore {
       );
       allow list: if isSignedIn();
       allow create: if isSignedIn();
-      allow update: if isSignedIn() && request.auth.uid in resource.data.participants;
+      allow update: if isSignedIn() && (
+        isAdmin() || request.auth.uid in resource.data.participants
+      );
       allow delete: if isAdmin();
-    }
 
-    match /conversations/{convId}/messages/{msgId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && request.auth.uid == resource.data.senderId;
-      allow delete: if isAdmin();
+      match /messages/{msgId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn();
+        allow update: if isSignedIn() && request.auth.uid == resource.data.senderId;
+        allow delete: if isAdmin();
+      }
     }
 
     // =====================
@@ -179,13 +166,16 @@ service cloud.firestore {
     // =====================
     match /notifications/{notifId} {
       allow read: if isSignedIn() && (
-        isAdmin() ||
-        request.auth.uid == resource.data.userId
+        isAdmin() || request.auth.uid == resource.data.userId
       );
       allow list: if isSignedIn();
       allow create: if isSignedIn();
-      allow update: if isSignedIn() && request.auth.uid == resource.data.userId;
-      allow delete: if isSignedIn() && (isAdmin() || request.auth.uid == resource.data.userId);
+      allow update: if isSignedIn() && (
+        isAdmin() || request.auth.uid == resource.data.userId
+      );
+      allow delete: if isSignedIn() && (
+        isAdmin() || request.auth.uid == resource.data.userId
+      );
     }
 
     // =====================
@@ -194,7 +184,7 @@ service cloud.firestore {
     match /evaluations/{evalId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn();
-      allow update: if isAdmin();
+      allow update: if isAdmin() || isOrganization();
       allow delete: if isAdmin();
     }
 
