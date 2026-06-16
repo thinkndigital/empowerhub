@@ -3,12 +3,7 @@
 import React, { useState, useEffect, type ReactNode } from 'react';
 import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
 import { getAuth, type Auth } from 'firebase/auth';
-import {
-  getFirestore,
-  initializeFirestore,
-  memoryLocalCache,
-  type Firestore,
-} from 'firebase/firestore';
+import { getFirestore, type Firestore } from 'firebase/firestore';
 import { getStorage, type FirebaseStorage } from 'firebase/storage';
 import { firebaseConfig } from './config';
 import { FirebaseProvider } from '@/firebase/provider';
@@ -25,6 +20,7 @@ interface Services {
 
 export function FirebaseClientProvider({ children }: { children: ReactNode }) {
   const [services, setServices] = useState<Services | null>(null);
+  const [isSDKLoading, setIsSDKLoading] = useState(true);
 
   useEffect(() => {
     try {
@@ -33,15 +29,9 @@ export function FirebaseClientProvider({ children }: { children: ReactNode }) {
 
       let firestore: Firestore | null = null;
       try {
-        // Try to get existing Firestore instance first
         firestore = getFirestore(app);
-      } catch {
-        try {
-          // Initialize fresh if not yet started
-          firestore = initializeFirestore(app, { localCache: memoryLocalCache() });
-        } catch (e) {
-          console.error('[FB] Firestore init failed:', e);
-        }
+      } catch (e) {
+        console.error('[FB] Firestore init failed:', e);
       }
 
       let storage: FirebaseStorage | null = null;
@@ -54,8 +44,8 @@ export function FirebaseClientProvider({ children }: { children: ReactNode }) {
       setServices({ app, auth, firestore, storage });
     } catch (e) {
       console.error('[FB] Firebase init failed:', e);
-      // Unblock loading even on failure
-      setServices(null as any);
+    } finally {
+      setIsSDKLoading(false);
     }
   }, []);
 
@@ -65,7 +55,7 @@ export function FirebaseClientProvider({ children }: { children: ReactNode }) {
       auth={services?.auth ?? null}
       firestore={services?.firestore ?? null}
       storage={services?.storage ?? null}
-      isInitializing={services === null}
+      isInitializing={isSDKLoading}
     >
       {children}
     </FirebaseProvider>

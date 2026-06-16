@@ -73,21 +73,18 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
 }) => {
   const [userAuthState, setUserAuthState] = useState<UserAuthState>({
     user: null,
-    // Keep loading true only while Firebase SDK is still initializing.
-    // Once we know there's no auth (isInitializing=false, auth=null), stop loading.
-    isUserLoading: isInitializing,
+    isUserLoading: true, // always start as loading until auth is confirmed
     userError: null,
   });
 
   // Effect to subscribe to Firebase auth state changes
   useEffect(() => {
     if (!auth) {
-      // Firebase SDK not ready yet, or no Auth service — stop loading
-      setUserAuthState({
-        user: null,
-        isUserLoading: false,
-        userError: null,
-      });
+      if (!isInitializing) {
+        // Firebase is done loading but no auth service — treat as logged out
+        setUserAuthState({ user: null, isUserLoading: false, userError: null });
+      }
+      // If still initializing, keep isUserLoading=true and wait
       return;
     }
 
@@ -121,7 +118,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       unsubscribe();
       clearTimeout(timeout);
     };
-  }, [auth]);
+  }, [auth, isInitializing]);
 
   // Memoize the context value
   const contextValue = useMemo((): FirebaseContextState => {
