@@ -2,7 +2,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
-  transpilePackages: ['firebase'],
   typescript: {
     ignoreBuildErrors: false,
   },
