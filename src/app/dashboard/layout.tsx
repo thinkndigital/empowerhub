@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { doc } from "firebase/firestore";
-import { useMemo, useEffect } from "react";
+import { useEffect } from "react";
 import { useAuth, useFirestore, useMemoFirebase } from "@/firebase/provider";
 import { useDoc } from "@/firebase/firestore/use-doc";
 import Image from "next/image";
@@ -75,15 +75,7 @@ export default function DashboardLayout({
     router.push("/login");
   };
 
-  const demoUserProfile = useMemo<UserProfile>(() => ({
-    id: 'demo-beneficiary',
-    name: 'مستفيد تجريبي',
-    email: 'beneficiary@example.com',
-    role: 'beneficiary',
-    avatarUrl: `https://picsum.photos/seed/demo-beneficiary/40/40`,
-  }), []);
-
-  const userProfile = (authUser && realUserProfile) ? realUserProfile : demoUserProfile;
+  const userProfile = realUserProfile ?? null;
   const firestore = useFirestore();
 
   const orgRef = useMemoFirebase(() => {
@@ -114,7 +106,8 @@ export default function DashboardLayout({
     document.documentElement.style.setProperty('--primary', `${h} ${s}% ${l}%`);
   }, [organization?.primaryColor]);
 
-  if (loading) {
+  // Show loading while auth initializes OR while authenticated user's profile is loading
+  if (loading || (authUser && !userProfile)) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
@@ -125,8 +118,8 @@ export default function DashboardLayout({
     );
   }
 
-  const displayName = userProfile.name || 'مستفيد';
-  const displayEmail = userProfile.email || 'لا يوجد بريد إلكتروني';
+  const displayName = userProfile?.name || authUser?.displayName || 'مستفيد';
+  const displayEmail = userProfile?.email || authUser?.email || 'لا يوجد بريد إلكتروني';
 
   return (
     <SidebarProvider>
@@ -194,7 +187,7 @@ export default function DashboardLayout({
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0">
                 <Avatar>
-                  <AvatarImage src={userProfile.avatarUrl} alt={displayName} />
+                  <AvatarImage src={userProfile?.avatarUrl} alt={displayName} />
                   <AvatarFallback>{displayName.charAt(0)}</AvatarFallback>
                 </Avatar>
               </Button>
