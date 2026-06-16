@@ -7,31 +7,38 @@ import { Logo } from "@/components/logo";
 
 export default function AuthRedirectPage() {
   const router = useRouter();
-  const { userProfile, loading } = useUser();
+  const { user, userProfile, loading } = useUser();
   const [waited, setWaited] = useState(false);
 
-  // Give Firestore up to 6 seconds to load user profile before giving up
+  // Wait up to 6 seconds for Firestore profile to load
   useEffect(() => {
     const t = setTimeout(() => setWaited(true), 6000);
     return () => clearTimeout(t);
   }, []);
 
   useEffect(() => {
+    // Still waiting for auth to initialize
     if (loading && !waited) return;
 
-    if (!userProfile) {
+    // Not authenticated at all
+    if (!user) {
       router.replace("/login");
       return;
     }
 
-    switch (userProfile.role) {
+    // Authenticated but profile still loading — wait for timeout
+    if (!userProfile && !waited) return;
+
+    // Route based on role (fall back to /dashboard if role unknown)
+    const role = userProfile?.role;
+    switch (role) {
       case "organization": router.replace("/organization-dashboard"); break;
       case "mentor":       router.replace("/mentor-dashboard"); break;
       case "coach":        router.replace("/coach-dashboard"); break;
       case "admin":        router.replace("/admin-dashboard"); break;
       default:             router.replace("/dashboard"); break;
     }
-  }, [loading, userProfile, waited, router]);
+  }, [loading, user, userProfile, waited, router]);
 
   return (
     <div className="flex h-screen w-full items-center justify-center bg-background">
