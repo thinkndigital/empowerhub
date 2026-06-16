@@ -2,16 +2,53 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Logo } from '@/components/logo';
 import {
   ArrowLeft, BookOpen, Users, Store, Building, GraduationCap,
   UserCheck, CheckCircle, TrendingUp, Award, Globe, ChevronDown,
-  Star, BarChart3, Shield, Zap
+  Star, BarChart3, Shield, Zap, MessageSquare, Phone, Mail
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { useFirestore } from '@/firebase/provider';
+import { collection, query, where, limit, getDocs, getCountFromServer } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface MentorUser {
+  id: string;
+  displayName?: string;
+  name?: string;
+  bio?: string;
+  description?: string;
+  specializations?: string[];
+}
+
+interface Product {
+  id: string;
+  name?: string;
+  price?: number;
+  category?: string;
+  imageUrl?: string;
+  image?: string;
+  whatsapp?: string;
+  store?: { phone?: string };
+}
+
+interface LiveStats {
+  totalUsers: number;
+  beneficiaries: number;
+  organizations: number;
+  products: number;
+}
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
 
 const FeatureCard = ({ icon, title, description, color }: {
   icon: React.ReactNode, title: string, description: string, color: string
@@ -91,8 +128,192 @@ const TestimonialCard = ({ name, role, text, stars }: {
   </Card>
 );
 
+const ShimmerCard = () => (
+  <Card className="border-0 shadow-md bg-card animate-pulse">
+    <CardContent className="pt-6 pb-6 flex flex-col items-center gap-3">
+      <div className="h-16 w-16 rounded-full bg-muted" />
+      <div className="h-4 w-32 rounded bg-muted" />
+      <div className="h-3 w-48 rounded bg-muted" />
+      <div className="h-3 w-40 rounded bg-muted" />
+      <div className="flex gap-2 mt-2">
+        <div className="h-5 w-16 rounded-full bg-muted" />
+        <div className="h-5 w-16 rounded-full bg-muted" />
+      </div>
+    </CardContent>
+  </Card>
+);
+
+const MentorCard = ({ mentor }: { mentor: MentorUser }) => {
+  const name = mentor.displayName || mentor.name || 'بدون اسم';
+  const bio = mentor.bio || mentor.description || '';
+  const specializations = mentor.specializations || [];
+  return (
+    <Card className="card-hover border-0 shadow-md bg-card flex flex-col">
+      <CardContent className="pt-6 flex flex-col items-center text-center gap-3 flex-grow">
+        <div className="h-16 w-16 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-2xl">
+          {name[0]}
+        </div>
+        <div>
+          <h3 className="font-bold text-base">{name}</h3>
+          {bio && (
+            <p className="text-sm text-muted-foreground mt-1 leading-relaxed line-clamp-2">{bio}</p>
+          )}
+        </div>
+        {specializations.length > 0 && (
+          <div className="flex flex-wrap gap-1 justify-center">
+            {specializations.slice(0, 3).map((s, i) => (
+              <Badge key={i} variant="secondary" className="text-xs">{s}</Badge>
+            ))}
+          </div>
+        )}
+      </CardContent>
+      <CardFooter>
+        <Button variant="outline" className="w-full">تواصل</Button>
+      </CardFooter>
+    </Card>
+  );
+};
+
+const ProductCard = ({ product }: { product: Product }) => {
+  const name = product.name || 'منتج';
+  const imageUrl = product.imageUrl || product.image || '';
+  const whatsapp = product.whatsapp || product.store?.phone || '';
+  const waLink = whatsapp
+    ? `https://wa.me/${whatsapp.replace(/\D/g, '')}`
+    : 'https://wa.me/';
+
+  return (
+    <Card className="card-hover border-0 shadow-md bg-card flex flex-col overflow-hidden">
+      <div className="relative h-40 w-full bg-muted">
+        {imageUrl ? (
+          <Image src={imageUrl} alt={name} fill className="object-cover" />
+        ) : (
+          <div className="h-full w-full flex items-center justify-center text-muted-foreground">
+            <Store className="h-10 w-10 opacity-30" />
+          </div>
+        )}
+        {product.category && (
+          <Badge className="absolute top-2 right-2 bg-primary/90 text-primary-foreground text-xs">
+            {product.category}
+          </Badge>
+        )}
+      </div>
+      <CardContent className="pt-4 flex flex-col gap-1 flex-grow">
+        <h3 className="font-bold text-sm line-clamp-2">{name}</h3>
+        {product.price != null && (
+          <p className="text-primary font-semibold text-sm">{product.price} ر.س</p>
+        )}
+      </CardContent>
+      <CardFooter className="pt-0">
+        <Button
+          asChild
+          className="w-full text-white font-semibold"
+          style={{ backgroundColor: '#25D366' }}
+        >
+          <a href={waLink} target="_blank" rel="noopener noreferrer">
+            <MessageSquare className="h-4 w-4 ml-2" />
+            تواصل عبر واتساب
+          </a>
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+};
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
+
 export default function LandingPage() {
   const heroImage = PlaceHolderImages.find((image) => image.id === 'register-background');
+  const db = useFirestore();
+  const { toast } = useToast();
+
+  const [stats, setStats] = useState<LiveStats>({ totalUsers: 0, beneficiaries: 0, organizations: 0, products: 0 });
+  const [mentors, setMentors] = useState<MentorUser[]>([]);
+  const [coaches, setCoaches] = useState<MentorUser[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loadingMentors, setLoadingMentors] = useState(true);
+  const [loadingCoaches, setLoadingCoaches] = useState(true);
+  const [loadingProducts, setLoadingProducts] = useState(true);
+
+  // Contact form state
+  const [contactName, setContactName] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactMessage, setContactMessage] = useState('');
+
+  useEffect(() => {
+    if (!db) return;
+
+    // Fetch live stats
+    (async () => {
+      try {
+        const usersRef = collection(db, 'users');
+        const [totalSnap, benefSnap, orgSnap] = await Promise.all([
+          getCountFromServer(usersRef),
+          getCountFromServer(query(usersRef, where('role', '==', 'beneficiary'))),
+          getCountFromServer(query(usersRef, where('role', '==', 'organization'))),
+        ]);
+        const productsRef = collection(db, 'products');
+        const prodSnap = await getCountFromServer(productsRef);
+        setStats({
+          totalUsers: totalSnap.data().count,
+          beneficiaries: benefSnap.data().count,
+          organizations: orgSnap.data().count,
+          products: prodSnap.data().count,
+        });
+      } catch {
+        // keep defaults on error
+      }
+    })();
+
+    // Fetch mentors
+    (async () => {
+      try {
+        const q = query(collection(db, 'users'), where('role', '==', 'mentor'), limit(4));
+        const snap = await getDocs(q);
+        setMentors(snap.docs.map(d => ({ id: d.id, ...d.data() } as MentorUser)));
+      } catch {
+        // keep empty
+      } finally {
+        setLoadingMentors(false);
+      }
+    })();
+
+    // Fetch coaches
+    (async () => {
+      try {
+        const q = query(collection(db, 'users'), where('role', '==', 'coach'), limit(4));
+        const snap = await getDocs(q);
+        setCoaches(snap.docs.map(d => ({ id: d.id, ...d.data() } as MentorUser)));
+      } catch {
+        // keep empty
+      } finally {
+        setLoadingCoaches(false);
+      }
+    })();
+
+    // Fetch products
+    (async () => {
+      try {
+        const q = query(collection(db, 'products'), limit(6));
+        const snap = await getDocs(q);
+        setProducts(snap.docs.map(d => ({ id: d.id, ...d.data() } as Product)));
+      } catch {
+        // keep empty
+      } finally {
+        setLoadingProducts(false);
+      }
+    })();
+  }, [db]);
+
+  const handleContactSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    toast({ title: 'شكراً لتواصلك! سنرد عليك قريباً.' });
+    setContactName('');
+    setContactEmail('');
+    setContactMessage('');
+  };
+
+  const formatCount = (n: number) => (n > 0 ? n.toLocaleString('ar-SA') + '+' : '...');
 
   return (
     <div className="bg-background text-foreground" dir="rtl">
@@ -183,13 +404,21 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Stats Section */}
+        {/* Stats Section — live from Firestore */}
         <section id="stats" className="py-16 bg-card border-y">
           <div className="container px-4 md:px-6">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-              <StatCard number="2,500+" label="مستفيد نشط" icon={<Users className="h-6 w-6" />} />
+              <StatCard
+                number={stats.beneficiaries > 0 ? formatCount(stats.beneficiaries) : '2,500+'}
+                label="مستفيد نشط"
+                icon={<Users className="h-6 w-6" />}
+              />
               <StatCard number="150+" label="دورة تدريبية" icon={<BookOpen className="h-6 w-6" />} />
-              <StatCard number="80+" label="مرشد ومدرب" icon={<GraduationCap className="h-6 w-6" />} />
+              <StatCard
+                number={stats.totalUsers > 0 ? formatCount(stats.totalUsers) : '80+'}
+                label="مرشد ومدرب"
+                icon={<GraduationCap className="h-6 w-6" />}
+              />
               <StatCard number="95%" label="نسبة الرضا" icon={<Award className="h-6 w-6" />} />
             </div>
           </div>
@@ -312,6 +541,68 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* Featured Mentors Section */}
+        <section id="mentors" className="py-16 md:py-24 bg-muted/40">
+          <div className="container px-4 md:px-6">
+            <div className="text-center mb-14">
+              <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">مرشدون</Badge>
+              <h2 className="text-3xl font-bold tracking-tight">مرشدون متميزون</h2>
+              <p className="mt-3 text-lg text-muted-foreground">
+                تواصل مع نخبة من المرشدين المتخصصين الذين يساعدونك في رحلتك نحو النجاح.
+              </p>
+            </div>
+            {loadingMentors ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {[...Array(4)].map((_, i) => <ShimmerCard key={i} />)}
+              </div>
+            ) : mentors.length === 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {[...Array(4)].map((_, i) => <ShimmerCard key={i} />)}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {mentors.map(m => <MentorCard key={m.id} mentor={m} />)}
+              </div>
+            )}
+            <div className="text-center mt-10">
+              <Button variant="outline" asChild>
+                <Link href="/register?role=mentor">انضم كمرشد</Link>
+              </Button>
+            </div>
+          </div>
+        </section>
+
+        {/* Featured Trainers (Coaches) Section */}
+        <section id="coaches" className="py-16 md:py-24">
+          <div className="container px-4 md:px-6">
+            <div className="text-center mb-14">
+              <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">مدربون</Badge>
+              <h2 className="text-3xl font-bold tracking-tight">مدربون متميزون</h2>
+              <p className="mt-3 text-lg text-muted-foreground">
+                تعلم من أفضل المدربين في مختلف المجالات وطور مهاراتك معهم.
+              </p>
+            </div>
+            {loadingCoaches ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {[...Array(4)].map((_, i) => <ShimmerCard key={i} />)}
+              </div>
+            ) : coaches.length === 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {[...Array(4)].map((_, i) => <ShimmerCard key={i} />)}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {coaches.map(c => <MentorCard key={c.id} mentor={c} />)}
+              </div>
+            )}
+            <div className="text-center mt-10">
+              <Button variant="outline" asChild>
+                <Link href="/register?role=coach">انضم كمدرب</Link>
+              </Button>
+            </div>
+          </div>
+        </section>
+
         {/* Testimonials */}
         <section className="py-16 md:py-24 bg-muted/40">
           <div className="container px-4 md:px-6">
@@ -338,6 +629,163 @@ export default function LandingPage() {
                 text="ساعدتنا المنصة في إدارة 200 مستفيد بكل احترافية. التقارير التفصيلية مكّنتنا من قياس أثر برامجنا بشكل دقيق."
                 stars={5}
               />
+            </div>
+          </div>
+        </section>
+
+        {/* Marketplace Preview Section */}
+        <section id="marketplace" className="py-16 md:py-24">
+          <div className="container px-4 md:px-6">
+            <div className="text-center mb-14">
+              <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">المتجر</Badge>
+              <h2 className="text-3xl font-bold tracking-tight">منتجات من مجتمعنا</h2>
+              <p className="mt-3 text-lg text-muted-foreground">
+                اكتشف منتجات متنوعة من رواد الأعمال في منصتنا وادعم مشاريعهم.
+              </p>
+            </div>
+            {loadingProducts ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[...Array(6)].map((_, i) => (
+                  <Card key={i} className="border-0 shadow-md bg-card animate-pulse overflow-hidden">
+                    <div className="h-40 bg-muted w-full" />
+                    <CardContent className="pt-4 flex flex-col gap-2">
+                      <div className="h-4 w-3/4 rounded bg-muted" />
+                      <div className="h-3 w-1/3 rounded bg-muted" />
+                    </CardContent>
+                    <CardFooter>
+                      <div className="h-9 w-full rounded bg-muted" />
+                    </CardFooter>
+                  </Card>
+                ))}
+              </div>
+            ) : products.length === 0 ? (
+              <div className="text-center py-16 text-muted-foreground">
+                <Store className="h-16 w-16 mx-auto mb-4 opacity-20" />
+                <p className="text-lg">لا توجد منتجات بعد. كن أول من يضيف منتجه!</p>
+                <Button asChild className="mt-6">
+                  <Link href="/register">ابدأ الآن</Link>
+                </Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {products.map(p => <ProductCard key={p.id} product={p} />)}
+              </div>
+            )}
+            <div className="text-center mt-10">
+              <Button asChild size="lg">
+                <Link href="/market">
+                  تصفح جميع المنتجات
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </section>
+
+        {/* Contact Section */}
+        <section id="contact" className="py-16 md:py-24 bg-muted/40">
+          <div className="container px-4 md:px-6">
+            <div className="text-center mb-14">
+              <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">تواصل</Badge>
+              <h2 className="text-3xl font-bold tracking-tight">تواصل معنا</h2>
+              <p className="mt-3 text-lg text-muted-foreground">
+                نحن هنا للإجابة على استفساراتك ومساعدتك في كل خطوة.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
+              {/* Contact info */}
+              <div className="flex flex-col gap-4">
+                <Card className="border-0 shadow-md bg-card">
+                  <CardContent className="pt-6 flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
+                      <Phone className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-sm">الهاتف</p>
+                      <p className="text-muted-foreground text-sm" dir="ltr">+966 XX XXX XXXX</p>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="border-0 shadow-md bg-card">
+                  <CardContent className="pt-6 flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
+                      <Mail className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-sm">البريد الإلكتروني</p>
+                      <p className="text-muted-foreground text-sm" dir="ltr">info@empowerhub.com</p>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="border-0 shadow-md bg-card">
+                  <CardContent className="pt-6 flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#25D366' }}>
+                      <MessageSquare className="h-5 w-5 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-sm">واتساب</p>
+                      <p className="text-muted-foreground text-sm mb-3" dir="ltr">+966 XX XXX XXXX</p>
+                      <Button
+                        asChild
+                        className="text-white text-sm px-4 py-2 h-auto"
+                        style={{ backgroundColor: '#25D366' }}
+                      >
+                        <a href="https://wa.me/966XXXXXXXXX" target="_blank" rel="noopener noreferrer">
+                          <MessageSquare className="h-4 w-4 ml-1" />
+                          تواصل عبر واتساب
+                        </a>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Contact form */}
+              <Card className="border-0 shadow-md bg-card">
+                <CardHeader>
+                  <CardTitle className="text-xl">أرسل لنا رسالة</CardTitle>
+                  <CardDescription>سنرد عليك في أقرب وقت ممكن</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleContactSubmit} className="flex flex-col gap-4">
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">الاسم</label>
+                      <Input
+                        placeholder="اسمك الكريم"
+                        value={contactName}
+                        onChange={e => setContactName(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">البريد الإلكتروني</label>
+                      <Input
+                        type="email"
+                        placeholder="example@email.com"
+                        value={contactEmail}
+                        onChange={e => setContactEmail(e.target.value)}
+                        required
+                        dir="ltr"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">رسالتك</label>
+                      <Textarea
+                        placeholder="اكتب رسالتك هنا..."
+                        rows={5}
+                        value={contactMessage}
+                        onChange={e => setContactMessage(e.target.value)}
+                        required
+                        className="resize-none"
+                      />
+                    </div>
+                    <Button type="submit" className="w-full mt-2" size="lg">
+                      <Mail className="h-4 w-4 ml-2" />
+                      إرسال الرسالة
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </section>
@@ -393,7 +841,7 @@ export default function LandingPage() {
               <div className="flex flex-col gap-2 text-sm text-muted-foreground">
                 <Link href="#" className="hover:text-primary transition-colors">سياسة الخصوصية</Link>
                 <Link href="#" className="hover:text-primary transition-colors">شروط الاستخدام</Link>
-                <Link href="#" className="hover:text-primary transition-colors">تواصل معنا</Link>
+                <Link href="#contact" className="hover:text-primary transition-colors">تواصل معنا</Link>
               </div>
             </div>
           </div>

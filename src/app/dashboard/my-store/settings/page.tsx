@@ -16,7 +16,7 @@ import { useFirestore, useStorage } from "@/firebase/provider";
 import { collection, query, where, getDocs, addDoc, updateDoc, doc, limit } from "firebase/firestore";
 import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Save, Building, Facebook, Instagram, Twitter } from "lucide-react";
+import { Save, Building, Facebook, Instagram, Twitter, MessageCircle } from "lucide-react";
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
@@ -24,8 +24,10 @@ const storeSettingsSchema = z.object({
   name: z.string().min(2, { message: "يجب أن يكون اسم المتجر حرفين على الأقل." }),
   description: z.string().optional(),
   logoUrl: z.string().url().optional().or(z.literal('')),
+  coverUrl: z.string().url().optional().or(z.literal('')),
   location: z.string().optional(),
   phone: z.string().optional(),
+  whatsapp: z.string().optional(),
   socials: z.object({
     facebook: z.string().url().optional().or(z.literal('')),
     instagram: z.string().url().optional().or(z.literal('')),
@@ -47,6 +49,8 @@ export default function StoreSettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
 
   const form = useForm<StoreSettingsFormValues>({
     resolver: zodResolver(storeSettingsSchema),
@@ -54,8 +58,10 @@ export default function StoreSettingsPage() {
       name: "",
       description: "",
       logoUrl: "",
+      coverUrl: "",
       location: "",
       phone: "",
+      whatsapp: "",
       socials: { facebook: "", instagram: "", twitter: "" },
     },
   });
@@ -79,9 +85,8 @@ export default function StoreSettingsPage() {
           const data = { id: doc.id, ...doc.data() } as StoreDocument;
           setStoreDoc(data);
           form.reset(data);
-          if (data.logoUrl) {
-            setLogoPreview(data.logoUrl);
-          }
+          if (data.logoUrl) setLogoPreview(data.logoUrl);
+          if ((data as any).coverUrl) setCoverPreview((data as any).coverUrl);
         }
       } catch (error) {
         console.error("Error fetching store data:", error);
@@ -98,9 +103,17 @@ export default function StoreSettingsPage() {
     if (file) {
       setLogoFile(file);
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setLogoPreview(reader.result as string);
-      };
+      reader.onloadend = () => setLogoPreview(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleCoverChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setCoverFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => setCoverPreview(reader.result as string);
       reader.readAsDataURL(file);
     }
   };
@@ -110,6 +123,7 @@ export default function StoreSettingsPage() {
     
     setIsSaving(true);
     let finalLogoUrl = storeDoc?.logoUrl || "";
+    let finalCoverUrl = (storeDoc as any)?.coverUrl || "";
 
     try {
       if (logoFile) {
@@ -119,9 +133,17 @@ export default function StoreSettingsPage() {
         finalLogoUrl = await getDownloadURL(snapshot.ref);
       }
 
-      const storeData = { 
-        ...values, 
+      if (coverFile) {
+        const uniqueFileName = `${authUser.uid}/${Date.now()}-cover-${coverFile.name}`;
+        const imageRef = storageRef(storage, `store-covers/${uniqueFileName}`);
+        const snapshot = await uploadBytes(imageRef, coverFile);
+        finalCoverUrl = await getDownloadURL(snapshot.ref);
+      }
+
+      const storeData = {
+        ...values,
         logoUrl: finalLogoUrl,
+        coverUrl: finalCoverUrl,
         beneficiaryId: authUser.uid,
         beneficiaryName: userProfile.name,
         organizationId: userProfile.organizationId || ""
@@ -195,6 +217,16 @@ export default function StoreSettingsPage() {
                         )}
                         <FormMessage />
                     </FormItem>
+                    <FormItem>
+                        <FormLabel>صورة الغلاف</FormLabel>
+                        <FormControl>
+                            <Input type="file" accept="image/png, image/jpeg, image/gif" onChange={handleCoverChange} />
+                        </FormControl>
+                        {coverPreview && (
+                            <div className="mt-2"><Image src={coverPreview} alt="غلاف" width={300} height={100} className="rounded-md object-cover border w-full max-h-32" /></div>
+                        )}
+                        <FormMessage />
+                    </FormItem>
                 </CardContent>
             </Card>
 
@@ -208,6 +240,9 @@ export default function StoreSettingsPage() {
                     )}/>
                      <FormField control={form.control} name="phone" render={({ field }) => (
                         <FormItem><FormLabel>رقم الهاتف للتواصل</FormLabel><FormControl><Input dir="ltr" placeholder="+962 7..." {...field} /></FormControl><FormMessage /></FormItem>
+                    )}/>
+                     <FormField control={form.control} name="whatsapp" render={({ field }) => (
+                        <FormItem><FormLabel className="flex items-center gap-2"><MessageCircle className="h-4 w-4 text-green-500" /> رقم واتساب</FormLabel><FormControl><Input dir="ltr" placeholder="+966 5XX XXX XXXX" {...field} /></FormControl><FormMessage /></FormItem>
                     )}/>
                 </CardContent>
             </Card>

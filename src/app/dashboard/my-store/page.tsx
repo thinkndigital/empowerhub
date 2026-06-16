@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Package, DollarSign, Users, ShoppingCart, PlusCircle, MoreVertical, MoreHorizontal, MapPin, Trash2, Edit, Upload, Settings, Truck, CheckCircle, XCircle } from "lucide-react";
+import { Package, DollarSign, Users, ShoppingCart, PlusCircle, MoreVertical, MoreHorizontal, MapPin, Trash2, Edit, Upload, Settings, Truck, CheckCircle, XCircle, Tag } from "lucide-react";
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
@@ -13,7 +13,8 @@ import { ar } from "date-fns/locale";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -492,6 +493,25 @@ export default function MyStorePage() {
                 </div>
                 <FormField control={form.control} name="stock" render={({ field }) => (
                     <FormItem><FormLabel>الكمية في المخزون</FormLabel><FormControl><Input type="number" placeholder="25" {...field} /></FormControl><FormMessage /></FormItem>
+                )}/>
+                <FormField control={form.control} name="category" render={({ field }) => (
+                    <FormItem>
+                        <FormLabel className="flex items-center gap-2"><Tag className="h-4 w-4" /> التصنيف</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl><SelectTrigger><SelectValue placeholder="اختر تصنيف..." /></SelectTrigger></FormControl>
+                            <SelectContent>
+                                <SelectItem value="handmade">مصنوعات يدوية</SelectItem>
+                                <SelectItem value="food">طعام ومشروبات</SelectItem>
+                                <SelectItem value="clothing">ملابس وأزياء</SelectItem>
+                                <SelectItem value="crafts">حرف يدوية</SelectItem>
+                                <SelectItem value="services">خدمات</SelectItem>
+                                <SelectItem value="agriculture">منتجات زراعية</SelectItem>
+                                <SelectItem value="home">منزل وديكور</SelectItem>
+                                <SelectItem value="other">أخرى</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
                 )}/>
                 <DialogFooter className="sticky bottom-0 bg-background pt-4">
                     <DialogClose asChild><Button variant="ghost">إلغاء</Button></DialogClose>

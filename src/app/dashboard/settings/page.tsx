@@ -1,5 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,14 +12,35 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useUser } from "@/firebase/auth/use-user";
-import { User, Bell, Shield, Palette, Globe, Upload } from "lucide-react";
+import { useFirestore, useMemoFirebase } from "@/firebase/provider";
+import { doc, updateDoc } from "firebase/firestore";
+import { User, Bell, Shield, Palette, Globe, Upload, Save, BookOpen, Briefcase, Target } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+
+const profileSchema = z.object({
+  name: z.string().min(2, { message: "يجب أن يكون الاسم حرفين على الأقل." }),
+  phone: z.string().optional(),
+  idNumber: z.string().optional(),
+  gender: z.string().optional(),
+  dateOfBirth: z.string().optional(),
+  address: z.string().optional(),
+  educationLevel: z.string().optional(),
+  employmentStatus: z.string().optional(),
+  skills: z.string().optional(),
+  goals: z.string().optional(),
+});
+
+type ProfileFormValues = z.infer<typeof profileSchema>;
 
 export default function SettingsPage() {
-  const { userProfile } = useUser();
+  const { userProfile, user: authUser } = useUser();
   const { toast } = useToast();
+  const firestore = useFirestore();
+  const [isSaving, setIsSaving] = useState(false);
   const [notifications, setNotifications] = useState({
     email: true, sessions: true, courses: false, store: true,
   });
@@ -23,9 +48,56 @@ export default function SettingsPage() {
   const name = userProfile?.name || "مستفيد تجريبي";
   const email = userProfile?.email || "user@example.com";
 
-  const handleSave = () => {
-    toast({ title: "تم الحفظ!", description: "تم حفظ إعداداتك بنجاح." });
-  };
+  const form = useForm<ProfileFormValues>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
+      name: "",
+      phone: "",
+      idNumber: "",
+      gender: "",
+      dateOfBirth: "",
+      address: "",
+      educationLevel: "",
+      employmentStatus: "",
+      skills: "",
+      goals: "",
+    },
+  });
+
+  const userRef = useMemoFirebase(() => {
+    if (!firestore || !authUser) return null;
+    return doc(firestore, "users", authUser.uid);
+  }, [firestore, authUser]);
+
+  useEffect(() => {
+    if (userProfile) {
+      form.reset({
+        name: userProfile.name || "",
+        phone: (userProfile as any).phone || "",
+        idNumber: (userProfile as any).idNumber || "",
+        gender: (userProfile as any).gender || "",
+        dateOfBirth: (userProfile as any).dateOfBirth || "",
+        address: (userProfile as any).address || "",
+        educationLevel: (userProfile as any).educationLevel || "",
+        employmentStatus: (userProfile as any).employmentStatus || "",
+        skills: (userProfile as any).skills || "",
+        goals: (userProfile as any).goals || "",
+      });
+    }
+  }, [userProfile, form]);
+
+  async function onSubmitProfile(values: ProfileFormValues) {
+    if (!userRef) return;
+    setIsSaving(true);
+    try {
+      await updateDoc(userRef, values);
+      toast({ title: "تم الحفظ!", description: "تم تحديث ملفك الشخصي بنجاح." });
+    } catch (err) {
+      toast({ variant: "destructive", title: "خطأ", description: "فشل حفظ البيانات." });
+    } finally {
+      setIsSaving(false);
+    }
+  }
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -35,52 +107,180 @@ export default function SettingsPage() {
       </div>
 
       {/* Profile */}
-      <Card className="border-0 shadow-sm">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <User className="h-4 w-4 text-primary" />
-            الملف الشخصي
-          </CardTitle>
-          <CardDescription>معلوماتك الأساسية المعروضة على المنصة</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-5">
-          <div className="flex items-center gap-4">
-            <Avatar className="h-20 w-20 border-2 border-primary/20">
-              <AvatarImage src={userProfile?.avatarUrl} />
-              <AvatarFallback className="text-xl bg-primary/10 text-primary">{name[0]}</AvatarFallback>
-            </Avatar>
-            <div>
-              <Button variant="outline" size="sm" className="gap-2">
-                <Upload className="h-4 w-4" />
-                تغيير الصورة
-              </Button>
-              <p className="text-xs text-muted-foreground mt-1">PNG، JPG — حد أقصى 2MB</p>
-            </div>
-          </div>
-          <Separator />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>الاسم الكامل</Label>
-              <Input defaultValue={name} />
-            </div>
-            <div className="space-y-2">
-              <Label>البريد الإلكتروني</Label>
-              <Input defaultValue={email} dir="ltr" type="email" />
-            </div>
-            <div className="space-y-2">
-              <Label>رقم الهاتف</Label>
-              <Input placeholder="+966 5XX XXX XXXX" dir="ltr" type="tel" />
-            </div>
-            <div className="space-y-2">
-              <Label>المدينة</Label>
-              <Input placeholder="الرياض" />
-            </div>
-          </div>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmitProfile)} className="space-y-6">
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <User className="h-4 w-4 text-primary" />
+                المعلومات الأساسية
+              </CardTitle>
+              <CardDescription>معلوماتك الأساسية المعروضة على المنصة</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div className="flex items-center gap-4">
+                <Avatar className="h-20 w-20 border-2 border-primary/20">
+                  <AvatarImage src={(userProfile as any)?.avatarUrl} />
+                  <AvatarFallback className="text-xl bg-primary/10 text-primary">{name[0]}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <Button variant="outline" size="sm" className="gap-2" type="button">
+                    <Upload className="h-4 w-4" />
+                    تغيير الصورة
+                  </Button>
+                  <p className="text-xs text-muted-foreground mt-1">PNG، JPG — حد أقصى 2MB</p>
+                </div>
+              </div>
+              <Separator />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField control={form.control} name="name" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>الاسم الكامل</FormLabel>
+                    <FormControl><Input {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <div className="space-y-2">
+                  <Label>البريد الإلكتروني</Label>
+                  <Input defaultValue={email} dir="ltr" type="email" disabled className="opacity-60" />
+                </div>
+                <FormField control={form.control} name="phone" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>رقم الهاتف</FormLabel>
+                    <FormControl><Input placeholder="+966 5XX XXX XXXX" dir="ltr" type="tel" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="idNumber" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>رقم الهوية الوطنية</FormLabel>
+                    <FormControl><Input placeholder="10XXXXXXXX" dir="ltr" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="gender" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>الجنس</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger><SelectValue placeholder="اختر..." /></SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="male">ذكر</SelectItem>
+                        <SelectItem value="female">أنثى</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="dateOfBirth" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>تاريخ الميلاد</FormLabel>
+                    <FormControl><Input type="date" dir="ltr" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="address" render={({ field }) => (
+                  <FormItem className="sm:col-span-2">
+                    <FormLabel>العنوان</FormLabel>
+                    <FormControl><Input placeholder="المدينة، الحي، الشارع..." {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Education & Employment */}
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <BookOpen className="h-4 w-4 text-primary" />
+                التعليم والعمل
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField control={form.control} name="educationLevel" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>المستوى التعليمي</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger><SelectValue placeholder="اختر..." /></SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="primary">ابتدائي</SelectItem>
+                        <SelectItem value="intermediate">متوسط</SelectItem>
+                        <SelectItem value="secondary">ثانوي</SelectItem>
+                        <SelectItem value="diploma">دبلوم</SelectItem>
+                        <SelectItem value="bachelor">بكالوريوس</SelectItem>
+                        <SelectItem value="master">ماجستير</SelectItem>
+                        <SelectItem value="phd">دكتوراه</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="employmentStatus" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>الحالة الوظيفية</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger><SelectValue placeholder="اختر..." /></SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="employed">موظف</SelectItem>
+                        <SelectItem value="self_employed">عمل حر</SelectItem>
+                        <SelectItem value="unemployed">باحث عن عمل</SelectItem>
+                        <SelectItem value="student">طالب</SelectItem>
+                        <SelectItem value="retired">متقاعد</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Skills & Goals */}
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Target className="h-4 w-4 text-primary" />
+                المهارات والأهداف
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <FormField control={form.control} name="skills" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>المهارات (افصل بينها بفاصلة)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="مثال: تصميم جرافيك، تسويق رقمي، خياطة..." {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="goals" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>الأهداف والطموحات</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="ما هي أهدافك التي تسعى لتحقيقها من خلال المنصة؟" rows={3} {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+            </CardContent>
+          </Card>
+
           <div className="flex justify-end">
-            <Button onClick={handleSave} className="shadow-md">حفظ التغييرات</Button>
+            <Button type="submit" disabled={isSaving} className="shadow-md">
+              <Save className="ml-2 h-4 w-4" />
+              {isSaving ? "جاري الحفظ..." : "حفظ التغييرات"}
+            </Button>
           </div>
-        </CardContent>
-      </Card>
+        </form>
+      </Form>
 
       {/* Notifications */}
       <Card className="border-0 shadow-sm">
@@ -139,11 +339,11 @@ export default function SettingsPage() {
             </div>
             <div className="flex items-center gap-2">
               <Badge variant="secondary" className="text-xs">غير مفعّل</Badge>
-              <Button size="sm" variant="outline" onClick={() => toast({ title: "قريباً", description: "هذه الميزة ستتوفر قريباً." })}>تفعيل</Button>
+              <Button size="sm" variant="outline" type="button" onClick={() => toast({ title: "قريباً", description: "هذه الميزة ستتوفر قريباً." })}>تفعيل</Button>
             </div>
           </div>
           <div className="flex justify-end">
-            <Button onClick={handleSave} className="shadow-md">تحديث كلمة المرور</Button>
+            <Button className="shadow-md" type="button" onClick={() => toast({ title: "تم التحديث!", description: "تم تحديث كلمة المرور بنجاح." })}>تحديث كلمة المرور</Button>
           </div>
         </CardContent>
       </Card>
