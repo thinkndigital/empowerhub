@@ -9,6 +9,7 @@ import { BookMarked, PlayCircle, BookHeart, Clock, BarChart3, CheckCircle2, Sear
 import { useCollection } from "@/firebase/firestore/use-collection";
 import { collection, query, where } from "firebase/firestore";
 import { useFirestore, useMemoFirebase } from "@/firebase/provider";
+import { useUser } from "@/firebase/auth/use-user";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { useState, useMemo } from "react";
@@ -18,17 +19,17 @@ type Course = {
   title: string;
   description?: string;
   category?: string;
-  status: "منشورة" | "مسودة";
+  status: string;
 };
 
-const demoProgress: { [key: string]: number } = {
-  "mod-001": 100,
-  "mod-002": 100,
-  "mod-003": 35,
-  "mod-004": 0,
+type CourseProgress = {
+  id: string;
+  userId: string;
+  courseId: string;
+  progress: number;
 };
 
-const EmptyState = ({ title, description }: { title: string, description: string }) => (
+const EmptyState = ({ title, description }: { title: string; description: string }) => (
   <div className="col-span-full flex flex-col items-center justify-center text-center p-12 bg-muted/40 rounded-xl border border-dashed border-border">
     <div className="p-4 bg-primary/10 rounded-full mb-4">
       <BookHeart className="h-10 w-10 text-primary" />
@@ -38,27 +39,20 @@ const EmptyState = ({ title, description }: { title: string, description: string
   </div>
 );
 
-const CourseCard = ({ course, progress, completed = false }: { course: Course, progress: number, completed?: boolean }) => (
-  <Card className={`card-hover flex flex-col border-0 shadow-sm ${completed ? 'bg-muted/30' : 'bg-card'}`}>
+const CourseCard = ({ course, progress, completed = false }: { course: Course; progress: number; completed?: boolean }) => (
+  <Card className={`card-hover flex flex-col border-0 shadow-sm ${completed ? "bg-muted/30" : "bg-card"}`}>
     <CardHeader>
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2">
-          <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ${completed ? 'bg-primary/10' : 'bg-primary'}`}>
-            {completed
-              ? <CheckCircle2 className="h-5 w-5 text-primary" />
-              : <PlayCircle className="h-5 w-5 text-white" />
-            }
+          <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ${completed ? "bg-primary/10" : "bg-primary"}`}>
+            {completed ? <CheckCircle2 className="h-5 w-5 text-primary" /> : <PlayCircle className="h-5 w-5 text-white" />}
           </div>
           <CardTitle className="text-base leading-snug">{course.title}</CardTitle>
         </div>
-        {course.category && (
-          <Badge variant="outline" className="text-xs shrink-0">{course.category}</Badge>
-        )}
+        {course.category && <Badge variant="outline" className="text-xs shrink-0">{course.category}</Badge>}
       </div>
       {course.description && (
-        <CardDescription className="text-sm leading-relaxed line-clamp-2 pr-12">
-          {course.description}
-        </CardDescription>
+        <CardDescription className="text-sm leading-relaxed line-clamp-2 pr-12">{course.description}</CardDescription>
       )}
     </CardHeader>
     <CardContent className="flex-grow">
@@ -70,8 +64,7 @@ const CourseCard = ({ course, progress, completed = false }: { course: Course, p
         <Progress value={progress} className="h-2" />
         {!completed && progress > 0 && (
           <p className="text-xs text-primary flex items-center gap-1">
-            <Clock className="h-3 w-3" />
-            جارٍ — تبقى {100 - progress}% للإكمال
+            <Clock className="h-3 w-3" />جارٍ — تبقى {100 - progress}% للإكمال
           </p>
         )}
       </div>
@@ -83,52 +76,64 @@ const CourseCard = ({ course, progress, completed = false }: { course: Course, p
             ? <><BookMarked className="ml-2 h-4 w-4" />مراجعة الدورة</>
             : progress > 0
               ? <><PlayCircle className="ml-2 h-4 w-4" />متابعة الدورة</>
-              : <><PlayCircle className="ml-2 h-4 w-4" />ابدأ الدورة</>
-          }
+              : <><PlayCircle className="ml-2 h-4 w-4" />ابدأ الدورة</>}
         </Link>
       </Button>
     </CardFooter>
   </Card>
 );
 
+const SkeletonCard = () => (
+  <Card className="border-0 shadow-sm">
+    <CardContent className="p-6 space-y-3">
+      <Skeleton className="h-5 w-3/4" />
+      <Skeleton className="h-4 w-full" />
+      <Skeleton className="h-2 w-full mt-2" />
+      <Skeleton className="h-10 w-full mt-2" />
+    </CardContent>
+  </Card>
+);
+
 export default function TrainingPage() {
   const firestore = useFirestore();
+  const { user: authUser, userProfile } = useUser();
   const [search, setSearch] = useState("");
 
   const coursesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, "courses"), where("status", "==", "منشورة"));
-  }, [firestore]);
+    if (!firestore || !(userProfile as any)?.organizationId) return null;
+    return query(collection(firestore, "courses"), where("organizationId", "==", (userProfile as any).organizationId));
+  }, [firestore, (userProfile as any)?.organizationId]);
+  const { data: courses, isLoading: coursesLoading } = useCollection<Course>(coursesQuery);
 
-  const { data: courses, isLoading: loading } = useCollection<Course>(coursesQuery);
+  const progressQuery = useMemoFirebase(() => {
+    if (!firestore || !authUser) return null;
+    return query(collection(firestore, "courseProgress"), where("userId", "==", authUser.uid));
+  }, [firestore, authUser]);
+  const { data: progressDocs, isLoading: progressLoading } = useCollection<CourseProgress>(progressQuery);
+
+  const progressMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    progressDocs?.forEach(p => { map[p.courseId] = p.progress; });
+    return map;
+  }, [progressDocs]);
+
+  const loading = coursesLoading || progressLoading;
 
   const filtered = useMemo(() => {
     if (!courses) return [];
     return courses.filter(c =>
-      !search || c.title.toLowerCase().includes(search.toLowerCase()) || c.category?.toLowerCase().includes(search.toLowerCase())
+      !search || c.title.toLowerCase().includes(search.toLowerCase()) || (c.category || "").toLowerCase().includes(search.toLowerCase())
     );
   }, [courses, search]);
 
-  const inProgress  = filtered.filter(c => (demoProgress[c.id] || 0) > 0 && (demoProgress[c.id] || 0) < 100);
-  const notStarted  = filtered.filter(c => (demoProgress[c.id] || 0) === 0);
-  const completedC  = filtered.filter(c => (demoProgress[c.id] || 0) === 100);
-  const totalCourses    = (courses || []).length;
-  const totalCompleted  = (courses || []).filter(c => (demoProgress[c.id] || 0) === 100).length;
-
-  const SkeletonCard = () => (
-    <Card className="border-0 shadow-sm">
-      <CardContent className="p-6 space-y-3">
-        <Skeleton className="h-5 w-3/4" />
-        <Skeleton className="h-4 w-full" />
-        <Skeleton className="h-2 w-full mt-2" />
-        <Skeleton className="h-10 w-full mt-2" />
-      </CardContent>
-    </Card>
-  );
+  const inProgress = filtered.filter(c => (progressMap[c.id] || 0) > 0 && (progressMap[c.id] || 0) < 100);
+  const notStarted = filtered.filter(c => !progressMap[c.id] || progressMap[c.id] === 0);
+  const completedC = filtered.filter(c => (progressMap[c.id] || 0) >= 100);
+  const totalCourses = (courses || []).length;
+  const totalCompleted = (courses || []).filter(c => (progressMap[c.id] || 0) >= 100).length;
 
   return (
     <div className="space-y-8">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">الدورات التدريبية</h1>
@@ -142,7 +147,6 @@ export default function TrainingPage() {
         </div>
       </div>
 
-      {/* Overall Progress Banner */}
       {!loading && totalCourses > 0 && (
         <Card className="border-0 shadow-sm bg-gradient-to-l from-primary/5 to-accent/5">
           <CardContent className="pt-5 pb-5">
@@ -160,34 +164,26 @@ export default function TrainingPage() {
         </Card>
       )}
 
-      {/* In Progress */}
       {(loading || inProgress.length > 0) && (
         <section>
-          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <PlayCircle className="h-5 w-5 text-accent" />جارية
-          </h2>
+          <h2 className="text-xl font-bold mb-4 flex items-center gap-2"><PlayCircle className="h-5 w-5 text-accent" />جارية</h2>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {loading ? [...Array(2)].map((_, i) => <SkeletonCard key={i} />) : inProgress.map(c => <CourseCard key={c.id} course={c} progress={demoProgress[c.id] || 0} />)}
+            {loading ? [...Array(2)].map((_, i) => <SkeletonCard key={i} />) : inProgress.map(c => <CourseCard key={c.id} course={c} progress={progressMap[c.id] || 0} />)}
           </div>
         </section>
       )}
 
-      {/* Not Started */}
       <section>
-        <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-          <BookHeart className="h-5 w-5 text-primary" />الدورات المتاحة
-        </h2>
+        <h2 className="text-xl font-bold mb-4 flex items-center gap-2"><BookHeart className="h-5 w-5 text-primary" />الدورات المتاحة</h2>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {loading
             ? [...Array(3)].map((_, i) => <SkeletonCard key={i} />)
             : notStarted.length > 0
               ? notStarted.map(c => <CourseCard key={c.id} course={c} progress={0} />)
-              : <EmptyState title="لا توجد دورات متاحة" description="لم يتم تعيين أي دورات لك بعد. تواصل مع مدير منظمتك." />
-          }
+              : <EmptyState title="لا توجد دورات متاحة" description="لم يتم تعيين أي دورات لك بعد. تواصل مع مدير منظمتك." />}
         </div>
       </section>
 
-      {/* Completed */}
       {(loading || completedC.length > 0) && (
         <section>
           <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
@@ -195,10 +191,7 @@ export default function TrainingPage() {
             {completedC.length > 0 && <Badge className="bg-primary/10 text-primary border-primary/20">{completedC.length}</Badge>}
           </h2>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {loading
-              ? [...Array(1)].map((_, i) => <SkeletonCard key={i} />)
-              : completedC.map(c => <CourseCard key={c.id} course={c} progress={100} completed />)
-            }
+            {loading ? <SkeletonCard /> : completedC.map(c => <CourseCard key={c.id} course={c} progress={100} completed />)}
           </div>
         </section>
       )}
