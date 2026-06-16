@@ -38,8 +38,8 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // 3. If registering as mentor/coach, validate invite code and link to org
-    if ((role === 'mentor' || role === 'coach') && orgInviteCode) {
+    // 3. If registering as mentor/coach with a non-empty invite code, validate and link to org
+    if ((role === 'mentor' || role === 'coach') && orgInviteCode && orgInviteCode.trim()) {
       const orgsSnapshot = await adminDb.collection('organizations')
         .where('inviteCode', '==', orgInviteCode.trim().toUpperCase())
         .limit(1)
