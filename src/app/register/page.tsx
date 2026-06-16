@@ -136,15 +136,12 @@ function RegisterForm() {
             }
 
             // Store role in sessionStorage so /redirect can use it immediately
-            // even if Firestore hasn't propagated yet
             if (signedInUid) {
                 sessionStorage.setItem('pending_role', values.role);
                 sessionStorage.setItem('pending_uid', signedInUid);
                 sessionStorage.setItem('pending_name', values.name);
                 sessionStorage.setItem('pending_email', values.email);
-                if (data.organizationId) {
-                    sessionStorage.setItem('pending_org_id', data.organizationId);
-                }
+                if (data.organizationId) sessionStorage.setItem('pending_org_id', data.organizationId);
             }
 
             // Write Firestore profile from client side as well (in case server-side write failed)
