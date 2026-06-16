@@ -17,7 +17,8 @@ import { Logo } from '@/components/logo';
 import { useToast } from "@/hooks/use-toast";
 
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { useAuth } from '@/firebase/provider';
+import { doc, setDoc } from "firebase/firestore";
+import { useAuth, useFirestore } from '@/firebase/provider';
 
 
 const formSchema = z.object({
@@ -43,6 +44,7 @@ function RegisterForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const auth = useAuth();
+    const firestore = useFirestore();
     const [isLoading, setIsLoading] = useState(false);
 
     const roleFromQuery = searchParams.get('role');
@@ -123,11 +125,31 @@ function RegisterForm() {
             }
 
             // Sign in after successful registration
+            let signedInUid: string | null = data.uid || null;
             if (auth) {
                 try {
-                    await signInWithEmailAndPassword(auth, values.email, values.password);
+                    const cred = await signInWithEmailAndPassword(auth, values.email, values.password);
+                    signedInUid = cred.user.uid;
                 } catch {
                     // Sign-in failed but account was created — redirect anyway
+                }
+            }
+
+            // Write Firestore profile from client side as well (in case server-side write failed)
+            if (firestore && signedInUid) {
+                try {
+                    await setDoc(doc(firestore, 'users', signedInUid), {
+                        id: signedInUid,
+                        name: values.name,
+                        email: values.email,
+                        role: values.role,
+                        status: 'نشط',
+                        progress: 0,
+                        createdAt: new Date().toISOString(),
+                        ...(data.organizationId ? { organizationId: data.organizationId } : {}),
+                    }, { merge: true });
+                } catch (e) {
+                    console.error('Client profile write failed:', e);
                 }
             }
 
