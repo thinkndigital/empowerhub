@@ -29,7 +29,7 @@ export function FirebaseClientProvider({ children }: { children: ReactNode }) {
       ([
         { initializeApp, getApps, getApp },
         { getAuth },
-        { getFirestore },
+        { getFirestore, initializeFirestore, memoryLocalCache },
         { getStorage },
         { firebaseConfig },
       ]) => {
@@ -37,7 +37,14 @@ export function FirebaseClientProvider({ children }: { children: ReactNode }) {
         const auth = getAuth(app);
 
         let firestore: Firestore | null = null;
-        try { firestore = getFirestore(app); } catch (e) { console.error('[FB] Firestore:', e); }
+        try {
+          // initializeFirestore first; if already initialized, fall back to getFirestore
+          try {
+            firestore = initializeFirestore(app, { localCache: memoryLocalCache() });
+          } catch {
+            firestore = getFirestore(app);
+          }
+        } catch (e) { console.error('[FB] Firestore:', e); }
 
         let storage: FirebaseStorage | null = null;
         try { storage = getStorage(app); } catch (e) { console.warn('[FB] Storage:', e); }
