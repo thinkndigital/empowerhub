@@ -24,6 +24,7 @@ export async function POST(req: NextRequest) {
       email,
       role,
       status: 'نشط',
+      progress: 0,
       createdAt: new Date().toISOString(),
     };
 
