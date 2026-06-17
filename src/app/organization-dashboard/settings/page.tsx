@@ -9,12 +9,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Palette, Save, BookOpen, Users, Copy, Key } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
-import { useFirestore, useStorage } from "@/firebase/provider";
 import { useUser } from "@/firebase/auth/use-user";
-import { doc, updateDoc, getDoc } from "firebase/firestore";
-import { ref, uploadString, getDownloadURL } from "firebase/storage";
 
 const settingsSchema = z.object({
   name: z.string().min(2, { message: "يجب أن يكون اسم المنظمة حرفين على الأقل." }),
@@ -49,9 +46,7 @@ const hexToHsl = (hex: string): string => {
 
 export default function OrgSettingsPage() {
   const { toast } = useToast();
-  const firestore = useFirestore();
-  const storage = useStorage();
-  const { userProfile } = useUser();
+  const { user, userProfile } = useUser();
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [inviteCode, setInviteCode] = useState<string | null>(null);
@@ -66,20 +61,24 @@ export default function OrgSettingsPage() {
     },
   });
 
-  // Load from Firestore on mount
-  useEffect(() => {
-    if (!firestore || !userProfile?.organizationId) return;
-    const orgRef = doc(firestore, 'organizations', userProfile.organizationId);
-    getDoc(orgRef).then(snap => {
-      if (!snap.exists()) return;
-      const data = snap.data();
+  const fetchSettings = useCallback(async () => {
+    if (!user) return;
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch('/api/org/settings', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Failed to fetch settings');
+      const json = await res.json();
+      const data = json.org;
+      if (!data) return;
       if (data.name) form.setValue('name', data.name);
       if (data.primaryColor) form.setValue('primaryColor', data.primaryColor);
       if (data.logoUrl) setLogoPreview(data.logoUrl);
       if (data.courseSessionPrice != null) form.setValue('courseSessionPrice', data.courseSessionPrice);
       if (data.mentorshipSessionPrice != null) form.setValue('mentorshipSessionPrice', data.mentorshipSessionPrice);
       if (data.inviteCode) setInviteCode(data.inviteCode);
-    }).catch(() => {
+    } catch {
       // Fallback to localStorage
       const savedName = localStorage.getItem('orgName');
       const savedColor = localStorage.getItem('orgPrimaryColor');
@@ -87,9 +86,13 @@ export default function OrgSettingsPage() {
       if (savedName) form.setValue('name', savedName);
       if (savedColor) form.setValue('primaryColor', savedColor);
       if (savedLogo) setLogoPreview(savedLogo);
-    });
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [firestore, userProfile?.organizationId]);
+  }, [user]);
+
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
 
   const primaryColor = form.watch("primaryColor");
 
@@ -100,14 +103,14 @@ export default function OrgSettingsPage() {
   }, [primaryColor]);
 
   async function onSubmit(values: z.infer<typeof settingsSchema>) {
-    if (!firestore || !userProfile?.organizationId) {
+    if (!user) {
       toast({ variant: "destructive", title: "خطأ", description: "لم يتم تحديد المنظمة." });
       return;
     }
 
     setIsSaving(true);
     try {
-      const orgRef = doc(firestore, 'organizations', userProfile.organizationId);
+      const token = await user.getIdToken();
       const updateData: Record<string, any> = {
         name: values.name,
         primaryColor: values.primaryColor,
@@ -115,8 +118,8 @@ export default function OrgSettingsPage() {
         mentorshipSessionPrice: values.mentorshipSessionPrice,
       };
 
-      // Upload logo if provided
-      if (values.logo && values.logo.length > 0 && storage) {
+      // Upload logo if provided (convert to base64 and send to separate upload endpoint if needed)
+      if (values.logo && values.logo.length > 0) {
         const file = values.logo[0] as File;
         const reader = new FileReader();
         const dataUrl = await new Promise<string>((resolve, reject) => {
@@ -124,16 +127,24 @@ export default function OrgSettingsPage() {
           reader.onerror = reject;
           reader.readAsDataURL(file);
         });
-
-        const logoRef = ref(storage, `org-logos/${userProfile.organizationId}/logo`);
-        await uploadString(logoRef, dataUrl, 'data_url');
-        const downloadUrl = await getDownloadURL(logoRef);
-        updateData.logoUrl = downloadUrl;
-        setLogoPreview(downloadUrl);
-        localStorage.setItem('orgLogo', downloadUrl);
+        // Store logo as data URL for now (or handle via a separate upload API)
+        updateData.logoUrl = dataUrl;
+        setLogoPreview(dataUrl);
+        localStorage.setItem('orgLogo', dataUrl);
       }
 
-      await updateDoc(orgRef, updateData);
+      const res = await fetch('/api/org/settings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(updateData),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to save');
+      }
 
       // Also save to localStorage as cache
       localStorage.setItem('orgName', values.name);

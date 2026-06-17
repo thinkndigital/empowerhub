@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import { Bar, BarChart, CartesianGrid, Line, LineChart, XAxis, YAxis, Tooltip } from "recharts"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart"
@@ -14,10 +14,7 @@ import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import { useFirestore, useMemoFirebase } from "@/firebase/provider"
-import { useUser, type UserProfile } from "@/firebase/auth/use-user"
-import { useCollection } from "@/firebase/firestore/use-collection"
-import { collection, query, where, orderBy } from "firebase/firestore"
+import { useUser } from "@/firebase/auth/use-user"
 import { format, subMonths, startOfMonth } from "date-fns"
 import { ar } from "date-fns/locale"
 
@@ -25,63 +22,71 @@ const engagementConfig = { active: { label: "المستفيدون النشطون
 const completionConfig = { "معدل الإكمال": { label: "معدل الإكمال", color: "hsl(var(--chart-2))" } }
 
 type Session = { id: string; date: string; status: string; hostId: string; attendees: string[] };
+type Beneficiary = { id: string; name?: string; progress?: number; createdAt?: string };
+
+type ReportsData = {
+  beneficiaries: Beneficiary[];
+  mentorsCount: number;
+  sessions: Session[];
+};
 
 export default function OrgReportsPage() {
   const { toast } = useToast();
-  const firestore = useFirestore();
-  const { userProfile } = useUser();
-  const orgId = (userProfile as any)?.organizationId;
+  const { user } = useUser();
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [exportOptions, setExportOptions] = useState({ summary: true, progress: true, engagement: true });
+  const [data, setData] = useState<ReportsData | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const beneficiariesQuery = useMemoFirebase(() => {
-    if (!firestore || !orgId) return null;
-    return query(collection(firestore, "users"), where("organizationId", "==", orgId), where("role", "==", "beneficiary"));
-  }, [firestore, orgId]);
-  const { data: beneficiaries, isLoading: benefLoading } = useCollection<UserProfile>(beneficiariesQuery);
+  const fetchReports = useCallback(async () => {
+    if (!user) return;
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch('/api/org/reports', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Failed to fetch reports');
+      const json = await res.json();
+      setData(json);
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
 
-  const mentorsQuery = useMemoFirebase(() => {
-    if (!firestore || !orgId) return null;
-    return query(collection(firestore, "users"), where("organizationId", "==", orgId), where("role", "==", "mentor"));
-  }, [firestore, orgId]);
-  const { data: mentors, isLoading: mentorsLoading } = useCollection<UserProfile>(mentorsQuery);
+  useEffect(() => {
+    fetchReports();
+  }, [fetchReports]);
 
-  const sessionsQuery = useMemoFirebase(() => {
-    if (!firestore || !orgId) return null;
-    return query(collection(firestore, "sessions"), where("organizationId", "==", orgId));
-  }, [firestore, orgId]);
-  const { data: sessions, isLoading: sessLoading } = useCollection<Session>(sessionsQuery);
-
-  const loading = benefLoading || mentorsLoading || sessLoading;
+  const beneficiaries = data?.beneficiaries ?? [];
+  const sessions = data?.sessions ?? [];
 
   const stats = useMemo(() => {
-    const total = beneficiaries?.length || 0;
-    const active = beneficiaries?.filter(b => (b as any).progress > 0).length || 0;
+    const total = beneficiaries.length;
+    const active = beneficiaries.filter(b => (b.progress ?? 0) > 0).length;
     const avgProgress = total > 0
-      ? Math.round(beneficiaries!.reduce((s, b) => s + ((b as any).progress || 0), 0) / total)
+      ? Math.round(beneficiaries.reduce((s, b) => s + (b.progress || 0), 0) / total)
       : 0;
-    const completed = beneficiaries?.filter(b => (b as any).progress >= 100).length || 0;
+    const completed = beneficiaries.filter(b => (b.progress ?? 0) >= 100).length;
     const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
-    const totalSessions = sessions?.filter(s => s.status === 'completed').length || 0;
+    const totalSessions = sessions.filter(s => s.status === 'completed').length;
     return { total, active, avgProgress, completed, completionRate, totalSessions };
   }, [beneficiaries, sessions]);
 
   const engagementData = useMemo(() => {
-    if (!beneficiaries) return [];
     return Array.from({ length: 6 }, (_, i) => {
       const d = subMonths(new Date(), 5 - i);
-      const start = startOfMonth(d).getTime();
       const end = new Date(d.getFullYear(), d.getMonth() + 1, 0).getTime();
       const activeInMonth = beneficiaries.filter(b => {
-        const created = new Date((b as any).createdAt || '').getTime();
-        return created <= end && (b as any).progress > 0;
+        const created = new Date(b.createdAt || '').getTime();
+        return created <= end && (b.progress ?? 0) > 0;
       }).length;
       return { month: format(d, 'MMM', { locale: ar }), active: activeInMonth };
     });
   }, [beneficiaries]);
 
   const progressDistribution = useMemo(() => {
-    if (!beneficiaries) return [];
     const ranges = [
       { name: "0-25%", min: 0, max: 25 },
       { name: "26-50%", min: 26, max: 50 },
@@ -91,7 +96,7 @@ export default function OrgReportsPage() {
     return ranges.map(r => ({
       name: r.name,
       "معدل الإكمال": beneficiaries.filter(b => {
-        const p = (b as any).progress || 0;
+        const p = b.progress || 0;
         return p >= r.min && p <= r.max;
       }).length,
     }));
@@ -178,7 +183,7 @@ export default function OrgReportsPage() {
                   <div className="text-sm text-muted-foreground mt-1">مستفيد تمكّن</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-3xl font-extrabold text-primary">{mentors?.length || 0}</div>
+                  <div className="text-3xl font-extrabold text-primary">{data?.mentorsCount || 0}</div>
                   <div className="text-sm text-muted-foreground mt-1">مرشد متطوع</div>
                 </div>
                 <div className="text-center">
@@ -196,22 +201,22 @@ export default function OrgReportsPage() {
       </Card>
 
       {/* Beneficiary Progress List */}
-      {!loading && beneficiaries && beneficiaries.length > 0 && (
+      {!loading && beneficiaries.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><TrendingUp className="h-5 w-5" /> تقدم المستفيدين</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 max-h-64 overflow-y-auto">
-            {[...beneficiaries].sort((a, b) => ((b as any).progress || 0) - ((a as any).progress || 0)).map(b => (
+            {[...beneficiaries].sort((a, b) => (b.progress || 0) - (a.progress || 0)).map(b => (
               <div key={b.id}>
                 <div className="flex justify-between text-sm mb-1">
                   <span className="font-medium">{b.name}</span>
                   <div className="flex items-center gap-2">
-                    {(b as any).progress >= 100 && <CheckCircle className="h-4 w-4 text-green-500" />}
-                    <span className="text-muted-foreground">{(b as any).progress || 0}%</span>
+                    {(b.progress ?? 0) >= 100 && <CheckCircle className="h-4 w-4 text-green-500" />}
+                    <span className="text-muted-foreground">{b.progress || 0}%</span>
                   </div>
                 </div>
-                <Progress value={(b as any).progress || 0} className="h-2" />
+                <Progress value={b.progress || 0} className="h-2" />
               </div>
             ))}
           </CardContent>

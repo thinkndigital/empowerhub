@@ -1,8 +1,6 @@
 "use client";
 
-import { collection, query, where } from "firebase/firestore";
-import { useFirestore, useMemoFirebase } from "@/firebase/provider";
-import { useCollection } from "@/firebase/firestore/use-collection";
+import { useState, useEffect, useCallback } from "react";
 import { useUser } from "@/firebase/auth/use-user";
 import {
   Table,
@@ -27,20 +25,30 @@ interface Course {
 }
 
 export default function OrgCoursesPage() {
-  const { userProfile } = useUser();
-  const firestore = useFirestore();
+  const { user } = useUser();
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const orgId = userProfile?.organizationId ?? "";
+  const fetchCourses = useCallback(async () => {
+    if (!user) return;
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch('/api/org/courses', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Failed to fetch courses');
+      const json = await res.json();
+      setCourses(json.courses || []);
+    } catch {
+      // ignore
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user]);
 
-  const coursesQuery = useMemoFirebase(() => {
-    if (!firestore || !orgId) return null;
-    return query(
-      collection(firestore, "courses"),
-      where("organizationId", "==", orgId)
-    );
-  }, [firestore, orgId]);
-
-  const { data: courses, isLoading } = useCollection<Course>(coursesQuery);
+  useEffect(() => {
+    fetchCourses();
+  }, [fetchCourses]);
 
   return (
     <div className="space-y-6" dir="rtl">

@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { MoreHorizontal, PlusCircle, Download, Edit, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -41,15 +41,10 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useCollection } from "@/firebase/firestore/use-collection";
-import { collection, query, where, addDoc, doc, deleteDoc } from "firebase/firestore";
-import { useFirestore, useMemoFirebase } from "@/firebase/provider";
-import { useUser, type UserProfile } from "@/firebase/auth/use-user";
+import { useUser } from "@/firebase/auth/use-user";
 import { Skeleton } from "@/components/ui/skeleton";
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
 
-
+type TeamMember = { id: string; name?: string; email?: string; role?: string; status?: string; avatarUrl?: string };
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "يجب أن يكون الاسم حرفين على الأقل." }),
@@ -65,17 +60,32 @@ const roleMap: { [key: string]: string } = {
 export default function TeamPage() {
     const { toast } = useToast();
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-    const [memberToDelete, setMemberToDelete] = useState<UserProfile | null>(null);
-    const firestore = useFirestore();
-    const { userProfile } = useUser();
+    const [memberToDelete, setMemberToDelete] = useState<TeamMember | null>(null);
+    const { user, userProfile } = useUser();
     const ORG_ID = userProfile?.organizationId;
+    const [team, setTeam] = useState<TeamMember[]>([]);
+    const [loading, setLoading] = useState(true);
 
-    const teamQuery = useMemoFirebase(() => {
-        if (!firestore || !ORG_ID) return null;
-        return query(collection(firestore, "users"), where("organizationId", "==", ORG_ID), where("role", "in", ["organization", "team_member"]));
-    }, [firestore, ORG_ID]);
+    const fetchTeam = useCallback(async () => {
+        if (!user) return;
+        try {
+            const token = await user.getIdToken();
+            const res = await fetch('/api/org/team', {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            if (!res.ok) throw new Error('Failed to fetch team');
+            const json = await res.json();
+            setTeam(json.team || []);
+        } catch {
+            // ignore
+        } finally {
+            setLoading(false);
+        }
+    }, [user]);
 
-    const { data: team, isLoading: loading } = useCollection<UserProfile>(teamQuery);
+    useEffect(() => {
+        fetchTeam();
+    }, [fetchTeam]);
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -100,28 +110,33 @@ export default function TeamPage() {
             toast({ title: "تم بنجاح!", description: `تمت إضافة "${values.name}". كلمة المرور: EmpowerHub@2024` });
             form.reset();
             setIsAddDialogOpen(false);
+            fetchTeam();
         } catch (err: any) {
             toast({ variant: "destructive", title: "خطأ!", description: err.message });
         }
     }
-    
+
     const handleExport = () => {
         toast({ title: "جاري تصدير قائمة الفريق...", description: "سيتم تنزيل ملف CSV قريبًا." });
     }
 
-    const handleDelete = () => {
-        if (!memberToDelete || !firestore) return;
-        const memberRef = doc(firestore, 'users', memberToDelete.id);
-        deleteDoc(memberRef)
-            .then(() => {
-                toast({ variant: "destructive", title: "تمت الإزالة!", description: `تمت إزالة "${memberToDelete.name}" من الفريق.` });
-                setMemberToDelete(null);
-            })
-            .catch(err => {
-                toast({ variant: "destructive", title: "خطأ!", description: "فشلت إزالة العضو." });
-                errorEmitter.emit('permission-error', new FirestorePermissionError({ path: memberRef.path, operation: 'delete' }));
-                setMemberToDelete(null);
+    const handleDelete = async () => {
+        if (!memberToDelete || !user) return;
+        try {
+            const token = await user.getIdToken();
+            const res = await fetch('/api/org/team', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ memberId: memberToDelete.id }),
             });
+            if (!res.ok) throw new Error('Failed to delete');
+            toast({ variant: "destructive", title: "تمت الإزالة!", description: `تمت إزالة "${memberToDelete.name}" من الفريق.` });
+            setMemberToDelete(null);
+            fetchTeam();
+        } catch {
+            toast({ variant: "destructive", title: "خطأ!", description: "فشلت إزالة العضو." });
+            setMemberToDelete(null);
+        }
     }
 
   return (
@@ -209,7 +224,7 @@ export default function TeamPage() {
                     <TableCell><Skeleton className="h-8 w-8" /></TableCell>
                 </TableRow>
             ))}
-            {!loading && team?.map((user) => {
+            {!loading && team.map((user) => {
               const userName = user.name || 'عضو فريق بلا اسم';
               return (
               <TableRow key={user.id}>
@@ -252,7 +267,7 @@ export default function TeamPage() {
                 </TableCell>
               </TableRow>
             )})}
-            {!loading && (!team || team.length === 0) && (
+            {!loading && team.length === 0 && (
               <TableRow>
                 <TableCell colSpan={5} className="text-center h-24">لا يوجد أعضاء في الفريق.</TableCell>
               </TableRow>

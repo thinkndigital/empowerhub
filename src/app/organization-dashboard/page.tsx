@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, UserCheck, BarChart3, DollarSign, TrendingUp, BookOpen, ArrowUpRight, GraduationCap, Store } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -8,10 +8,16 @@ import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
-import { useUser, type UserProfile } from "@/firebase/auth/use-user";
-import { useFirestore, useMemoFirebase } from "@/firebase/provider";
-import { useCollection } from "@/firebase/firestore/use-collection";
-import { collection, query, where } from "firebase/firestore";
+import { useUser } from "@/firebase/auth/use-user";
+
+type Beneficiary = { id: string; name?: string; progress?: number; status?: string };
+type StatsData = {
+  beneficiariesCount: number;
+  mentorsCount: number;
+  coachesCount: number;
+  avgProgress: number;
+  beneficiaries: Beneficiary[];
+};
 
 const StatCard = ({
   title, value, sub, icon, trend, color, loading
@@ -40,43 +46,43 @@ const StatCard = ({
 );
 
 export default function OrganizationDashboardPage() {
-  const { userProfile } = useUser();
-  const firestore = useFirestore();
-  const orgId = userProfile?.organizationId;
+  const { user, userProfile } = useUser();
+  const [data, setData] = useState<StatsData | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const beneficiariesQuery = useMemoFirebase(() => {
-    if (!firestore || !orgId) return null;
-    return query(collection(firestore, "users"), where("role", "==", "beneficiary"), where("organizationId", "==", orgId));
-  }, [firestore, orgId]);
-  const { data: beneficiaries, isLoading: bLoading } = useCollection<UserProfile>(beneficiariesQuery);
+  const fetchStats = useCallback(async () => {
+    if (!user) return;
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch('/api/org/stats', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Failed to fetch stats');
+      const json = await res.json();
+      setData(json);
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
 
-  const mentorsQuery = useMemoFirebase(() => {
-    if (!firestore || !orgId) return null;
-    return query(collection(firestore, "users"), where("role", "==", "mentor"), where("organizationId", "==", orgId));
-  }, [firestore, orgId]);
-  const { data: mentors, isLoading: mLoading } = useCollection<UserProfile>(mentorsQuery);
-
-  const coachesQuery = useMemoFirebase(() => {
-    if (!firestore || !orgId) return null;
-    return query(collection(firestore, "users"), where("role", "==", "coach"), where("organizationId", "==", orgId));
-  }, [firestore, orgId]);
-  const { data: coaches, isLoading: cLoading } = useCollection<UserProfile>(coachesQuery);
-
-  const loading = bLoading || mLoading || cLoading;
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
 
   const stats = useMemo(() => {
-    const total = beneficiaries?.length ?? 0;
-    const active = beneficiaries?.filter(b => b.status === 'نشط').length ?? 0;
-    const avgProgress = total > 0
-      ? Math.round(beneficiaries!.reduce((sum, b) => sum + (b.progress ?? 0), 0) / total)
-      : 0;
-    const completed = beneficiaries?.filter(b => b.progress === 100).length ?? 0;
+    const beneficiaries = data?.beneficiaries ?? [];
+    const total = beneficiaries.length;
+    const active = beneficiaries.filter(b => b.status === 'نشط').length;
+    const avgProgress = data?.avgProgress ?? 0;
+    const completed = beneficiaries.filter(b => b.progress === 100).length;
     return { total, active, avgProgress, completed };
-  }, [beneficiaries]);
+  }, [data]);
 
   const topBeneficiaries = useMemo(() =>
-    [...(beneficiaries ?? [])].sort((a, b) => (b.progress ?? 0) - (a.progress ?? 0)).slice(0, 5),
-    [beneficiaries]
+    [...(data?.beneficiaries ?? [])].sort((a, b) => (b.progress ?? 0) - (a.progress ?? 0)).slice(0, 5),
+    [data]
   );
 
   return (
@@ -127,7 +133,7 @@ export default function OrganizationDashboardPage() {
                 <Link href="/organization-dashboard/beneficiaries" className="text-primary underline">أضف مستفيداً</Link>
               </div>
             )}
-            {!loading && topBeneficiaries.map((b, i) => {
+            {!loading && topBeneficiaries.map((b) => {
               const statusLabel = b.progress === 100 ? 'مكتمل' : (b.progress ?? 0) > 0 ? 'نشط' : 'جديد';
               return (
                 <div key={b.id} className="space-y-1.5">
@@ -160,9 +166,9 @@ export default function OrganizationDashboardPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               {[
-                { label: "المستفيدون", value: loading ? '...' : String(beneficiaries?.length ?? 0), icon: <Users className="h-4 w-4 text-primary" /> },
-                { label: "المرشدون", value: loading ? '...' : String(mentors?.length ?? 0), icon: <GraduationCap className="h-4 w-4 text-accent" /> },
-                { label: "المدربون", value: loading ? '...' : String(coaches?.length ?? 0), icon: <BookOpen className="h-4 w-4 text-purple-500" /> },
+                { label: "المستفيدون", value: loading ? '...' : String(data?.beneficiariesCount ?? 0), icon: <Users className="h-4 w-4 text-primary" /> },
+                { label: "المرشدون", value: loading ? '...' : String(data?.mentorsCount ?? 0), icon: <GraduationCap className="h-4 w-4 text-accent" /> },
+                { label: "المدربون", value: loading ? '...' : String(data?.coachesCount ?? 0), icon: <BookOpen className="h-4 w-4 text-purple-500" /> },
                 { label: "معدل الإكمال", value: loading ? '...' : `${stats.avgProgress}%`, icon: <TrendingUp className="h-4 w-4 text-amber-500" /> },
               ].map((item, i) => (
                 <div key={i} className="flex items-center justify-between py-1.5 border-b last:border-0">

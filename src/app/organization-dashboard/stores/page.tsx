@@ -1,16 +1,13 @@
 
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import Link from "next/link";
 import { DollarSign, Package, Users, BarChart } from "lucide-react";
 import { slugify } from "@/lib/utils";
-import { useCollection } from "@/firebase/firestore/use-collection";
-import { collection, query, where } from "firebase/firestore";
-import { useFirestore, useMemoFirebase } from "@/firebase/provider";
 import { useUser } from "@/firebase/auth/use-user";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -18,40 +15,50 @@ type Store = { id: string; beneficiaryId: string; name?: string; logoUrl?: strin
 type Product = { id: string; beneficiaryId: string }
 type Order = { id: string; beneficiaryId: string; status?: string; price?: number }
 
+type StoresData = {
+  stores: Store[];
+  products: Product[];
+  orders: Order[];
+};
+
 export default function OrgStoresPage() {
-  const firestore = useFirestore();
-  const { userProfile, loading: userLoading } = useUser();
-  const orgId = (userProfile as any)?.organizationId;
+  const { user, loading: userLoading } = useUser();
+  const [data, setData] = useState<StoresData | null>(null);
+  const [storesLoading, setStoresLoading] = useState(true);
 
-  const storesQuery = useMemoFirebase(() => {
-    if (!firestore || !orgId) return null;
-    return query(collection(firestore, "stores"), where("organizationId", "==", orgId));
-  }, [firestore, orgId]);
-  const { data: stores, isLoading: storesLoading } = useCollection<Store>(storesQuery);
+  const fetchStores = useCallback(async () => {
+    if (!user) return;
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch('/api/org/stores', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Failed to fetch stores');
+      const json = await res.json();
+      setData(json);
+    } catch {
+      // ignore
+    } finally {
+      setStoresLoading(false);
+    }
+  }, [user]);
 
-  // Get all beneficiary IDs for this org's stores to fetch products/orders
-  const beneficiaryIds = useMemo(() => Array.from(new Set((stores || []).map(s => s.beneficiaryId))), [stores]);
+  useEffect(() => {
+    fetchStores();
+  }, [fetchStores]);
 
-  const productsQuery = useMemoFirebase(() => {
-    if (!firestore || !orgId) return null;
-    return query(collection(firestore, "products"), where("organizationId", "==", orgId));
-  }, [firestore, orgId]);
-  const { data: products } = useCollection<Product>(productsQuery);
-
-  const ordersQuery = useMemoFirebase(() => {
-    if (!firestore || !orgId) return null;
-    return query(collection(firestore, "orders"), where("organizationId", "==", orgId));
-  }, [firestore, orgId]);
-  const { data: orders } = useCollection<Order>(ordersQuery);
+  const stores = data?.stores ?? [];
+  const products = data?.products ?? [];
+  const orders = data?.orders ?? [];
 
   // Per-store computed stats
   const storeStats = useMemo(() => {
     const map: Record<string, { revenue: number; products: number; orders: number }> = {};
-    (products || []).forEach(p => {
+    products.forEach(p => {
       if (!map[p.beneficiaryId]) map[p.beneficiaryId] = { revenue: 0, products: 0, orders: 0 };
       map[p.beneficiaryId].products++;
     });
-    (orders || []).forEach(o => {
+    orders.forEach(o => {
       if (!map[o.beneficiaryId]) map[o.beneficiaryId] = { revenue: 0, products: 0, orders: 0 };
       map[o.beneficiaryId].orders++;
       if (o.status === 'delivered') map[o.beneficiaryId].revenue += o.price || 0;
@@ -78,7 +85,7 @@ export default function OrgStoresPage() {
             </div>
           </Card>
         ))}
-        {!loading && stores?.map(store => {
+        {!loading && stores.map(store => {
           const storeName = store.name || "متجر غير مسمى";
           const s = storeStats[store.beneficiaryId] || { revenue: 0, products: 0, orders: 0 };
           return (
@@ -119,7 +126,7 @@ export default function OrgStoresPage() {
             </Card>
           );
         })}
-        {!loading && (!stores || stores.length === 0) && (
+        {!loading && stores.length === 0 && (
           <div className="col-span-full text-center py-12">
             <p className="text-muted-foreground">لا توجد متاجر لعرضها.</p>
           </div>
