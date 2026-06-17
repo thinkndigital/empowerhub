@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -11,15 +11,11 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { useDoc } from "@/firebase/firestore/use-doc";
-import { doc, updateDoc } from "firebase/firestore";
-import { useFirestore, useMemoFirebase } from "@/firebase/provider";
+import { useUser } from "@/firebase/auth/use-user";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Save, Trash2, PlusCircle, ArrowRight, BookCheck } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import Link from "next/link";
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -122,14 +118,22 @@ const AssessmentBuilder = ({ control, name, title }: { control: any, name: "preA
 
 export default function CourseEditPage({ params }: { params: { courseId: string } }) {
   const { toast } = useToast();
-  const firestore = useFirestore();
+  const { user: authUser } = useUser();
+  const [course, setCourse] = useState<CourseDataFromDB | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const courseRef = useMemoFirebase(() => {
-    if (!firestore || !params.courseId) return null;
-    return doc(firestore, "courses", params.courseId);
-  }, [firestore, params.courseId]);
+  const fetchCourse = useCallback(async () => {
+    if (!authUser) return;
+    setLoading(true);
+    try {
+      const token = await authUser.getIdToken();
+      const res = await fetch(`/api/courses/${params.courseId}`, { headers: { authorization: `Bearer ${token}` } });
+      const json = await res.json();
+      setCourse(json.course);
+    } catch { /* silent */ } finally { setLoading(false); }
+  }, [authUser, params.courseId]);
 
-  const { data: course, isLoading: loading } = useDoc<CourseDataFromDB>(courseRef);
+  useEffect(() => { fetchCourse(); }, [fetchCourse]);
 
   const form = useForm<CourseEditFormValues>({
     resolver: zodResolver(courseEditSchema),
@@ -172,7 +176,7 @@ export default function CourseEditPage({ params }: { params: { courseId: string 
   }, [course, form]);
 
   async function onSubmit(values: CourseEditFormValues) {
-    if (!courseRef) return;
+    if (!authUser) return;
     
     // Convert options back to a simple string array
     const dataToUpdate = {
@@ -188,26 +192,17 @@ export default function CourseEditPage({ params }: { params: { courseId: string 
     }
 
 
-    updateDoc(courseRef, dataToUpdate)
-    .then(() => {
-        toast({
-            title: "تم الحفظ بنجاح",
-            description: `تم تحديث تفاصيل دورة "${values.title}".`,
-        });
-    })
-    .catch((serverError) => {
-        toast({
-            variant: "destructive",
-            title: "حدث خطأ!",
-            description: "لم نتمكن من حفظ التغييرات. الرجاء المحاولة مرة أخرى.",
-        });
-        const permissionError = new FirestorePermissionError({
-            path: courseRef.path,
-            operation: 'update',
-            requestResourceData: dataToUpdate,
-        });
-        errorEmitter.emit('permission-error', permissionError);
-    });
+    try {
+      const token = await authUser!.getIdToken();
+      await fetch(`/api/courses/${params.courseId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify(dataToUpdate),
+      });
+      toast({ title: "تم الحفظ بنجاح", description: `تم تحديث تفاصيل دورة "${values.title}".` });
+    } catch {
+      toast({ variant: "destructive", title: "حدث خطأ!", description: "لم نتمكن من حفظ التغييرات." });
+    }
   }
 
   if (loading) {

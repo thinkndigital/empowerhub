@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -10,14 +10,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Banknote, Save, Wallet, User, BookOpen, Award } from 'lucide-react';
-import { useFirestore, useMemoFirebase } from '@/firebase/provider';
-import { useUser, type UserProfile } from '@/firebase/auth/use-user';
-import { useDoc } from '@/firebase/firestore/use-doc';
-import { doc, updateDoc } from 'firebase/firestore';
+import { Banknote, Save, Wallet, User, BookOpen } from 'lucide-react';
+import { useUser } from '@/firebase/auth/use-user';
 import { Skeleton } from '@/components/ui/skeleton';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
 import { Separator } from '@/components/ui/separator';
 
 const mentorProfileSchema = z.object({
@@ -40,7 +35,8 @@ const payoutSchema = z.object({
 type MentorProfileValues = z.infer<typeof mentorProfileSchema>;
 type PayoutInfo = z.infer<typeof payoutSchema>;
 
-type MentorProfile = UserProfile & {
+type MentorProfile = {
+  id?: string; name?: string; email?: string; avatarUrl?: string;
   bio?: string;
   specializations?: string;
   certifications?: string;
@@ -55,15 +51,21 @@ type MentorProfile = UserProfile & {
 
 export default function MentorSettingsPage() {
   const { toast } = useToast();
-  const firestore = useFirestore();
   const { user: authUser } = useUser();
+  const [profile, setProfile] = useState<MentorProfile | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const userRef = useMemoFirebase(() => {
-    if (!firestore || !authUser) return null;
-    return doc(firestore, 'users', authUser.uid);
-  }, [firestore, authUser]);
+  const fetchProfile = useCallback(async () => {
+    if (!authUser) return;
+    setLoading(true);
+    try {
+      const token = await authUser.getIdToken();
+      const res = await fetch('/api/user/profile', { headers: { authorization: `Bearer ${token}` } });
+      setProfile((await res.json()).profile);
+    } catch { /* silent */ } finally { setLoading(false); }
+  }, [authUser]);
 
-  const { data: user, isLoading: loading } = useDoc<MentorProfile>(userRef);
+  useEffect(() => { fetchProfile(); }, [fetchProfile]);
 
   const profileForm = useForm<MentorProfileValues>({
     resolver: zodResolver(mentorProfileSchema),
@@ -89,40 +91,38 @@ export default function MentorSettingsPage() {
   });
 
   useEffect(() => {
-    if (user) {
+    if (profile) {
       profileForm.reset({
-        name: user.name || '',
-        bio: user.bio || '',
-        specializations: user.specializations || '',
-        certifications: user.certifications || '',
-        phone: user.phone || '',
-        linkedIn: user.linkedIn || '',
-        yearsOfExperience: user.yearsOfExperience || 0,
+        name: profile.name || '',
+        bio: profile.bio || '',
+        specializations: profile.specializations || '',
+        certifications: profile.certifications || '',
+        phone: profile.phone || '',
+        linkedIn: profile.linkedIn || '',
+        yearsOfExperience: profile.yearsOfExperience || 0,
       });
-      if (user.wallet?.payoutInfo) {
-        payoutForm.reset(user.wallet.payoutInfo);
+      if (profile.wallet?.payoutInfo) {
+        payoutForm.reset(profile.wallet.payoutInfo);
       }
     }
-  }, [user, profileForm, payoutForm]);
+  }, [profile, profileForm, payoutForm]);
 
   async function onSubmitProfile(values: MentorProfileValues) {
-    if (!userRef) return;
-    updateDoc(userRef, values)
-      .then(() => toast({ title: 'تم حفظ الملف الشخصي', description: 'تم تحديث معلوماتك بنجاح.' }))
-      .catch(() => {
-        toast({ variant: 'destructive', title: 'خطأ!', description: 'فشلت عملية الحفظ.' });
-        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: userRef.path, operation: 'update' }));
-      });
+    if (!authUser) return;
+    try {
+      const token = await authUser.getIdToken();
+      await fetch('/api/user/profile', { method: 'PUT', headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify(values) });
+      toast({ title: 'تم حفظ الملف الشخصي', description: 'تم تحديث معلوماتك بنجاح.' });
+    } catch { toast({ variant: 'destructive', title: 'خطأ!', description: 'فشلت عملية الحفظ.' }); }
   }
 
   async function onSubmitPayout(values: PayoutInfo) {
-    if (!userRef) return;
-    updateDoc(userRef, { 'wallet.payoutInfo': values })
-      .then(() => toast({ title: 'تم حفظ الإعدادات', description: 'تم تحديث معلومات الدفع بنجاح.' }))
-      .catch(() => {
-        toast({ variant: 'destructive', title: 'خطأ!', description: 'فشلت عملية الحفظ.' });
-        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: userRef.path, operation: 'update' }));
-      });
+    if (!authUser) return;
+    try {
+      const token = await authUser.getIdToken();
+      await fetch('/api/user/profile', { method: 'PUT', headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify({ wallet: { payoutInfo: values } }) });
+      toast({ title: 'تم حفظ الإعدادات', description: 'تم تحديث معلومات الدفع بنجاح.' });
+    } catch { toast({ variant: 'destructive', title: 'خطأ!', description: 'فشلت عملية الحفظ.' }); }
   }
 
   return (
@@ -208,7 +208,7 @@ export default function MentorSettingsPage() {
         </CardHeader>
         <CardContent>
           {loading ? <Skeleton className="h-10 w-32" /> :
-            <p className="text-3xl font-bold">{(user?.wallet?.balance || 0).toFixed(2)} د.أ</p>
+            <p className="text-3xl font-bold">{(profile?.wallet?.balance || 0).toFixed(2)} د.أ</p>
           }
           <p className="text-xs text-muted-foreground mt-1">سيتم تحويل الرصيد إلى حسابك البنكي في بداية كل شهر.</p>
         </CardContent>

@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import { Bar, BarChart, CartesianGrid, Line, LineChart, XAxis, YAxis, Tooltip } from "recharts"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart"
@@ -11,10 +11,7 @@ import { useToast } from "@/hooks/use-toast"
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
-import { useFirestore, useMemoFirebase } from "@/firebase/provider"
-import { useUser, type UserProfile } from "@/firebase/auth/use-user"
-import { useCollection } from "@/firebase/firestore/use-collection"
-import { collection, query, where, orderBy } from "firebase/firestore"
+import { useUser } from "@/firebase/auth/use-user"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Progress } from "@/components/ui/progress"
 import { format, subMonths, startOfMonth } from "date-fns"
@@ -23,28 +20,33 @@ import { ar } from "date-fns/locale"
 const progressConfig = { progress: { label: "التقدم", color: "hsl(var(--chart-1))" } }
 const sessionFrequencyConfig = { sessions: { label: "عدد الجلسات", color: "hsl(var(--chart-2))" } }
 
+type Beneficiary = { id: string; name?: string; progress?: number };
 type Session = { id: string; date: string; status: string; attendees: string[]; duration?: number };
 
 export default function CoachAnalyticsPage() {
   const { toast } = useToast();
-  const firestore = useFirestore();
   const { user: authUser } = useUser();
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [exportOptions, setExportOptions] = useState({ summary: true, progress: true, frequency: true });
+  const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>([]);
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const beneficiariesQuery = useMemoFirebase(() => {
-    if (!firestore || !authUser) return null;
-    return query(collection(firestore, "users"), where("coachId", "==", authUser.uid));
-  }, [firestore, authUser]);
-  const { data: beneficiaries, isLoading: benefLoading } = useCollection<UserProfile>(beneficiariesQuery);
+  const fetchData = useCallback(async () => {
+    if (!authUser) return;
+    setLoading(true);
+    try {
+      const token = await authUser.getIdToken();
+      const [bRes, sRes] = await Promise.all([
+        fetch(`/api/org/users?role=beneficiary&scope=all&coachId=${authUser.uid}`, { headers: { authorization: `Bearer ${token}` } }),
+        fetch('/api/sessions', { headers: { authorization: `Bearer ${token}` } }),
+      ]);
+      setBeneficiaries((await bRes.json()).users || []);
+      setSessions((await sRes.json()).sessions || []);
+    } catch { /* silent */ } finally { setLoading(false); }
+  }, [authUser]);
 
-  const sessionsQuery = useMemoFirebase(() => {
-    if (!firestore || !authUser) return null;
-    return query(collection(firestore, "sessions"), where("hostId", "==", authUser.uid), orderBy("date", "desc"));
-  }, [firestore, authUser]);
-  const { data: sessions, isLoading: sessLoading } = useCollection<Session>(sessionsQuery);
-
-  const loading = benefLoading || sessLoading;
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   const stats = useMemo(() => {
     const totalBeneficiaries = beneficiaries?.length || 0;

@@ -61,14 +61,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
-import { useCollection } from "@/firebase/firestore/use-collection";
-import { collection, query, addDoc, doc, updateDoc, deleteDoc } from "firebase/firestore";
-import { useFirestore, useMemoFirebase } from "@/firebase/provider";
+import { useState, useEffect, useCallback } from "react";
 import { useUser } from "@/firebase/auth/use-user";
 import { Skeleton } from "@/components/ui/skeleton";
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
 import { cn } from "@/lib/utils";
 
 
@@ -100,15 +95,21 @@ export default function CoachCoursesPage() {
     const [isAddCourseDialogOpen, setIsAddCourseDialogOpen] = useState(false);
     const [sessionCourse, setSessionCourse] = useState<Course | null>(null);
     const [courseToDelete, setCourseToDelete] = useState<Course | null>(null);
-    const firestore = useFirestore();
     const { user: authUser } = useUser();
+    const [courses, setCourses] = useState<Course[]>([]);
+    const [loading, setLoading] = useState(true);
 
-    const coursesQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
-        return query(collection(firestore, "courses"));
-    }, [firestore]);
+    const fetchCourses = useCallback(async () => {
+        if (!authUser) return;
+        setLoading(true);
+        try {
+            const token = await authUser.getIdToken();
+            const res = await fetch('/api/courses', { headers: { authorization: `Bearer ${token}` } });
+            setCourses((await res.json()).courses || []);
+        } catch { /* silent */ } finally { setLoading(false); }
+    }, [authUser]);
 
-    const { data: courses, isLoading: loading } = useCollection<Course>(coursesQuery);
+    useEffect(() => { fetchCourses(); }, [fetchCourses]);
 
     const addCourseForm = useForm<z.infer<typeof addCourseFormSchema>>({
         resolver: zodResolver(addCourseFormSchema),
@@ -123,50 +124,31 @@ export default function CoachCoursesPage() {
     });
 
     async function onAddCourseSubmit(values: z.infer<typeof addCourseFormSchema>) {
-        if (!firestore) return;
-
-        const newCourseData = { ...values, status: "مسودة" as const };
-        const coursesCollection = collection(firestore, "courses");
-        
-        addDoc(coursesCollection, newCourseData)
-          .then(() => {
-              toast({ title: "تم بنجاح!", description: `تمت إضافة دورة "${values.title}" كمسودة.` });
-              addCourseForm.reset();
-              setIsAddCourseDialogOpen(false);
-          })
-          .catch((serverError) => {
-            const permissionError = new FirestorePermissionError({ path: coursesCollection.path, operation: 'create', requestResourceData: newCourseData });
-            errorEmitter.emit('permission-error', permissionError);
-             toast({ variant: "destructive", title: "حدث خطأ!", description: "لم نتمكن من إضافة الدورة." });
-          });
+        if (!authUser) return;
+        try {
+            const token = await authUser.getIdToken();
+            const res = await fetch('/api/courses', { method: 'POST', headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify(values) });
+            if (!res.ok) throw new Error((await res.json()).error);
+            toast({ title: "تم بنجاح!", description: `تمت إضافة دورة "${values.title}" كمسودة.` });
+            addCourseForm.reset();
+            setIsAddCourseDialogOpen(false);
+            fetchCourses();
+        } catch { toast({ variant: "destructive", title: "حدث خطأ!", description: "لم نتمكن من إضافة الدورة." }); }
     }
 
     async function onAddSessionSubmit(values: z.infer<typeof addSessionFormSchema>) {
-      if (!firestore || !sessionCourse || !authUser) return;
-
-      const newSessionData = {
-        ...values,
-        date: values.date.toISOString(),
-        hostId: authUser.uid,
-        attendees: [], // Initially empty
-        status: "scheduled" as const,
-        cost: 0, // Assuming sessions scheduled this way are part of the course
-        courseId: sessionCourse.id, // Link to the course
-        meetLink: values.meetLink || "",
-      }
-      
-      const sessionsCollection = collection(firestore, "sessions");
-
-      addDoc(sessionsCollection, newSessionData)
-        .then(() => {
-          toast({ title: "تمت الجدولة!", description: `تمت جدولة جلسة "${values.title}" لدورة "${sessionCourse.title}".`});
-          addSessionForm.reset();
-          setSessionCourse(null);
-        })
-        .catch((err) => {
-          toast({ variant: "destructive", title: "خطأ!", description: "فشل جدولة الجلسة." });
-          errorEmitter.emit('permission-error', new FirestorePermissionError({ path: sessionsCollection.path, operation: 'create', requestResourceData: newSessionData }));
-        });
+        if (!authUser || !sessionCourse) return;
+        try {
+            const token = await authUser.getIdToken();
+            await fetch('/api/sessions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
+                body: JSON.stringify({ ...values, date: values.date.toISOString(), attendees: [], status: 'scheduled', courseId: sessionCourse.id, meetLink: values.meetLink || '' }),
+            });
+            toast({ title: "تمت الجدولة!", description: `تمت جدولة جلسة "${values.title}".` });
+            addSessionForm.reset();
+            setSessionCourse(null);
+        } catch { toast({ variant: "destructive", title: "خطأ!", description: "فشل جدولة الجلسة." }); }
     }
 
     const handleExport = () => {
@@ -174,38 +156,27 @@ export default function CoachCoursesPage() {
     }
 
     async function handlePublish(course: Course) {
-        if (!firestore) return;
-        const courseRef = doc(firestore, "courses", course.id);
+        if (!authUser) return;
         const newStatus = course.status === "منشورة" ? "مسودة" : "منشورة";
-        
-        updateDoc(courseRef, { status: newStatus })
-        .then(() => {
-            toast({
-                title: newStatus === "منشورة" ? "تم النشر!" : "تم الإلغاء!",
-                description: `تم تحديث حالة دورة "${course.title}".`,
-            });
-        }).catch((err) => {
-             toast({ variant: "destructive", title: "خطأ!", description: "فشلت عملية التحديث."});
-             const permissionError = new FirestorePermissionError({ path: courseRef.path, operation: 'update', requestResourceData: { status: newStatus } });
-             errorEmitter.emit('permission-error', permissionError);
-        });
+        try {
+            const token = await authUser.getIdToken();
+            await fetch('/api/courses', { method: 'PUT', headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify({ id: course.id, status: newStatus }) });
+            toast({ title: newStatus === "منشورة" ? "تم النشر!" : "تم الإلغاء!", description: `تم تحديث حالة دورة "${course.title}".` });
+            fetchCourses();
+        } catch { toast({ variant: "destructive", title: "خطأ!", description: "فشلت عملية التحديث." }); }
     }
 
     async function handleDelete() {
-        if (!firestore || !courseToDelete) return;
-        const courseRef = doc(firestore, "courses", courseToDelete.id);
-        
-        deleteDoc(courseRef)
-        .then(() => {
-            toast({ variant: "destructive", title: "تم الحذف!", description: "تم حذف الدورة بنجاح." });
+        if (!authUser || !courseToDelete) return;
+        try {
+            const token = await authUser.getIdToken();
+            await fetch(`/api/courses?id=${courseToDelete.id}`, { method: 'DELETE', headers: { authorization: `Bearer ${token}` } });
+            toast({ title: "تم الحذف!", description: `تم حذف دورة "${courseToDelete.title}".` });
             setCourseToDelete(null);
-        }).catch((err) => {
-            toast({ variant: "destructive", title: "خطأ!", description: "فشلت عملية الحذف."});
-            const permissionError = new FirestorePermissionError({ path: courseRef.path, operation: 'delete' });
-            errorEmitter.emit('permission-error', permissionError);
-            setCourseToDelete(null);
-        });
+            fetchCourses();
+        } catch { toast({ variant: "destructive", title: "خطأ!", description: "فشل حذف الدورة." }); }
     }
+
 
 
   return (
