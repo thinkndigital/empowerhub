@@ -15,7 +15,7 @@ export function useOrgGroups() {
   const [isLoading, setIsLoading] = useState(true);
 
   const fetch_ = useCallback(async () => {
-    if (!user || !userProfile?.organizationId) return;
+    if (!user) return;
     setIsLoading(true);
     try {
       const token = await user.getIdToken();

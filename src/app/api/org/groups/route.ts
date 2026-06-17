@@ -5,7 +5,12 @@ export async function GET(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
     const decoded = await adminAuth.verifyIdToken(token);
-    const orgId = decoded.organizationId as string;
+    // Get orgId from token claim or from user document
+    let orgId = decoded.organizationId as string | undefined;
+    if (!orgId) {
+      const userDoc = await adminDb.collection('users').doc(decoded.uid).get();
+      orgId = userDoc.data()?.organizationId;
+    }
     if (!orgId) return NextResponse.json({ groups: [] });
 
     const snap = await adminDb.collection('groups').where('orgId', '==', orgId).get();

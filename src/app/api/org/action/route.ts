@@ -9,7 +9,11 @@ export async function POST(req: NextRequest) {
     if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const decoded = await adminAuth.verifyIdToken(token);
-    const orgId = decoded.organizationId as string | undefined;
+    let orgId = decoded.organizationId as string | undefined;
+    if (!orgId) {
+      const userDoc = await adminDb.collection('users').doc(decoded.uid).get();
+      orgId = userDoc.data()?.organizationId;
+    }
     if (!orgId) return NextResponse.json({ error: 'Not an org' }, { status: 403 });
 
     const body = await req.json();

@@ -5,7 +5,11 @@ export async function GET(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
     const decoded = await adminAuth.verifyIdToken(token);
-    const orgId = decoded.organizationId as string;
+    let orgId = decoded.organizationId as string | undefined;
+    if (!orgId) {
+      const userDoc = await adminDb.collection('users').doc(decoded.uid).get();
+      orgId = userDoc.data()?.organizationId;
+    }
     if (!orgId) return NextResponse.json({ error: 'Not an org' }, { status: 403 });
     const snap = await adminDb.collection('organizations').doc(orgId).get();
     return NextResponse.json({ org: snap.exists ? { id: snap.id, ...snap.data() } : null });
@@ -18,7 +22,11 @@ export async function PUT(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
     const decoded = await adminAuth.verifyIdToken(token);
-    const orgId = decoded.organizationId as string;
+    let orgId = decoded.organizationId as string | undefined;
+    if (!orgId) {
+      const userDoc = await adminDb.collection('users').doc(decoded.uid).get();
+      orgId = userDoc.data()?.organizationId;
+    }
     if (!orgId) return NextResponse.json({ error: 'Not an org' }, { status: 403 });
     const body = await req.json();
     await adminDb.collection('organizations').doc(orgId).update(body);
