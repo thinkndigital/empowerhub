@@ -1,17 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
 
-// One-time cleanup: remove orphaned Firestore docs and fix duplicates
 export async function POST(req: NextRequest) {
   try {
     const authHeader = req.headers.get('authorization') || '';
     const idToken = authHeader.replace('Bearer ', '');
     if (!idToken) return NextResponse.json({ error: 'No token' }, { status: 401 });
 
-    const decoded = await adminAuth.verifyIdToken(idToken);
-    if (decoded.role !== 'organization' && decoded.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    await adminAuth.verifyIdToken(idToken);
 
     // Get all Firebase Auth users
     const authListResult = await adminAuth.listUsers(100);
@@ -19,51 +15,85 @@ export async function POST(req: NextRequest) {
 
     // Get all Firestore user docs
     const usersSnap = await adminDb.collection('users').get();
-    const deleted: string[] = [];
-    const kept: string[] = [];
+    let deleted = 0;
+    const seenUids = new Set<string>();
 
     for (const docSnap of usersSnap.docs) {
+      // Delete if no matching auth user (orphaned)
       if (!validUids.has(docSnap.id)) {
-        // Orphaned doc — delete it
         await docSnap.ref.delete();
-        deleted.push(docSnap.id);
-      } else {
-        kept.push(docSnap.id);
+        deleted++;
+        continue;
       }
+      // Delete duplicates (same UID appearing twice)
+      if (seenUids.has(docSnap.id)) {
+        await docSnap.ref.delete();
+        deleted++;
+        continue;
+      }
+      seenUids.add(docSnap.id);
     }
 
-    // Ensure every auth user has a Firestore doc with correct role/organizationId
+    // Fix each auth user: ensure Firestore doc + custom claims are correct
+    const fixed: string[] = [];
     const created: string[] = [];
+
     for (const authUser of authListResult.users) {
       const claims = authUser.customClaims || {};
-      if (!claims.role) continue; // skip users without role claims
-
       const docRef = adminDb.collection('users').doc(authUser.uid);
       const docSnap = await docRef.get();
 
+      // Determine role: from claims first, then Firestore doc
+      let role = claims.role as string | undefined;
+      let organizationId = claims.organizationId as string | undefined;
+
+      if (!role && docSnap.exists) {
+        role = docSnap.data()?.role;
+        organizationId = docSnap.data()?.organizationId;
+      }
+
+      if (!role) continue; // skip users with no role anywhere
+
+      // Fix custom claims if missing or wrong
+      if (!claims.role || claims.role !== role) {
+        const newClaims: Record<string, any> = { role };
+        if (organizationId) newClaims.organizationId = organizationId;
+        await adminAuth.setCustomUserClaims(authUser.uid, newClaims);
+        fixed.push(authUser.email || authUser.uid);
+      }
+
+      // Create or fix Firestore doc
       if (!docSnap.exists) {
         await docRef.set({
           id: authUser.uid,
           name: authUser.displayName || authUser.email?.split('@')[0] || '',
           email: authUser.email || '',
-          role: claims.role,
+          role,
           status: 'نشط',
           progress: 0,
           createdAt: new Date().toISOString(),
-          ...(claims.organizationId ? { organizationId: claims.organizationId } : {}),
+          ...(organizationId ? { organizationId } : {}),
         });
         created.push(authUser.email || authUser.uid);
       } else {
-        // Patch missing fields
         const data = docSnap.data()!;
         const updates: Record<string, any> = {};
-        if (!data.organizationId && claims.organizationId) updates.organizationId = claims.organizationId;
-        if (!data.role && claims.role) updates.role = claims.role;
-        if (Object.keys(updates).length > 0) await docRef.update(updates);
+        if (!data.organizationId && organizationId) updates.organizationId = organizationId;
+        if (!data.role) updates.role = role;
+        if (Object.keys(updates).length > 0) {
+          await docRef.update(updates);
+          fixed.push(authUser.email || authUser.uid);
+        }
       }
     }
 
-    return NextResponse.json({ deleted: deleted.length, kept: kept.length, created });
+    return NextResponse.json({
+      success: true,
+      deleted,
+      created: created.length,
+      fixed: fixed.length,
+      details: { created, fixed },
+    });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }

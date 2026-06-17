@@ -8,6 +8,30 @@ export default function DebugPage() {
   const { user, userProfile, loading } = useUser();
   const [dbData, setDbData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [cleaning, setCleaning] = useState(false);
+  const [cleanResult, setCleanResult] = useState<any>(null);
+
+  async function runCleanup() {
+    if (!user) return;
+    setCleaning(true);
+    try {
+      const token = await user.getIdToken(true);
+      const res = await fetch("/api/cleanup-users", {
+        method: "POST",
+        headers: { authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      setCleanResult(data);
+      // Refresh debug data
+      const token2 = await user.getIdToken();
+      const res2 = await fetch("/api/debug-db", { headers: { authorization: `Bearer ${token2}` } });
+      setDbData(await res2.json());
+    } catch (e: any) {
+      setCleanResult({ error: e.message });
+    } finally {
+      setCleaning(false);
+    }
+  }
 
   useEffect(() => {
     if (!user) return;
@@ -32,6 +56,21 @@ export default function DebugPage() {
           <p>Profile role: <strong>{userProfile.role}</strong></p>
           <p>Profile orgId: <strong>{userProfile.organizationId || "NONE"}</strong></p>
         </>}
+      </div>
+
+      <div className="mb-6">
+        <button
+          onClick={runCleanup}
+          disabled={cleaning}
+          className="px-4 py-2 bg-red-600 text-white rounded font-bold hover:bg-red-700 disabled:opacity-50"
+        >
+          {cleaning ? "⏳ جاري التنظيف..." : "🧹 تنظيف البيانات المكررة وإصلاح الـ Claims"}
+        </button>
+        {cleanResult && (
+          <div className="mt-2 p-3 bg-yellow-50 rounded text-sm">
+            <pre>{JSON.stringify(cleanResult, null, 2)}</pre>
+          </div>
+        )}
       </div>
 
       {error && <div className="mb-4 p-4 bg-red-50 text-red-700 rounded">{error}</div>}
