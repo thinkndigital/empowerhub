@@ -33,6 +33,28 @@ export async function GET(req: NextRequest) {
       } catch {}
     }
 
+    // 4. Ensure Firestore user doc exists (create if missing)
+    try {
+      const userDocRef = adminDb.collection('users').doc(decoded.uid);
+      const userDoc = await userDocRef.get();
+      if (!userDoc.exists) {
+        const authUser = await adminAuth.getUser(decoded.uid);
+        await userDocRef.set({
+          id: decoded.uid,
+          name: authUser.displayName || authUser.email?.split('@')[0] || '',
+          email: authUser.email || '',
+          role: role || 'beneficiary',
+          status: 'نشط',
+          progress: 0,
+          createdAt: new Date().toISOString(),
+          ...(organizationId ? { organizationId } : {}),
+        });
+      } else if (!userDoc.data()?.organizationId && organizationId) {
+        // Doc exists but missing organizationId — patch it
+        await userDocRef.update({ organizationId });
+      }
+    } catch {}
+
     return NextResponse.json({ role: role || 'beneficiary', organizationId });
   } catch (e: any) {
     return NextResponse.json({ role: 'beneficiary' });

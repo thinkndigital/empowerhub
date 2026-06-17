@@ -65,11 +65,38 @@ export function useUser() {
     const userDocRef = doc(firestore, 'users', user.uid);
     const unsubscribeProfile = onSnapshot(
       userDocRef,
-      (snapshot) => {
+      async (snapshot) => {
         if (snapshot.exists()) {
-          setUserProfile({ id: snapshot.id, ...snapshot.data() } as UserProfile);
+          const data = snapshot.data();
+          // If Firestore doc is missing organizationId, pull from token claims
+          if (!data.organizationId) {
+            try {
+              const tokenResult = await user.getIdTokenResult();
+              if (tokenResult.claims.organizationId) {
+                data.organizationId = tokenResult.claims.organizationId as string;
+              }
+            } catch {}
+          }
+          setUserProfile({ id: snapshot.id, ...data } as UserProfile);
         } else {
-          setUserProfile(null);
+          // Doc doesn't exist — build minimal profile from token claims
+          try {
+            const tokenResult = await user.getIdTokenResult();
+            const claims = tokenResult.claims;
+            if (claims.role) {
+              setUserProfile({
+                id: user.uid,
+                name: user.displayName || user.email?.split('@')[0] || '',
+                email: user.email || '',
+                role: claims.role as string,
+                organizationId: claims.organizationId as string | undefined,
+              } as UserProfile);
+            } else {
+              setUserProfile(null);
+            }
+          } catch {
+            setUserProfile(null);
+          }
         }
         setProfileLoading(false);
       },
