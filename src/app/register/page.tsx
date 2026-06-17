@@ -48,15 +48,19 @@ function RegisterForm() {
     const [isLoading, setIsLoading] = useState(false);
 
     const roleFromQuery = searchParams.get('role');
+    const orgInviteParam = searchParams.get('orgInvite');
+    const emailFromQuery = searchParams.get('email');
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
             name: "",
-            email: "",
+            email: emailFromQuery || "",
             password: "",
             role: roleFromQuery && ["beneficiary", "organization", "mentor", "coach"].includes(roleFromQuery)
                 ? roleFromQuery
+                : orgInviteParam
+                ? "beneficiary"
                 : "beneficiary",
             organizationName: "",
             orgInviteCode: "",
@@ -132,6 +136,19 @@ function RegisterForm() {
                     signedInUid = cred.user.uid;
                 } catch {
                     // Sign-in failed but account was created — redirect anyway
+                }
+            }
+
+            // If the user arrived via an org invite link, link them to the org
+            if (orgInviteParam && signedInUid) {
+                try {
+                    await fetch('/api/accept-org-invite', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ inviteCode: orgInviteParam, uid: signedInUid, email: values.email }),
+                    });
+                } catch {
+                    // Non-fatal: org linking can be retried later
                 }
             }
 
