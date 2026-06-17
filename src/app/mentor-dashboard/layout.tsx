@@ -52,6 +52,7 @@ const menuItems = [
   { href: "/mentor-dashboard/sessions", label: "الجلسات", icon: Calendar },
   { href: "/mentor-dashboard/analytics", label: "التحليلات", icon: BarChart3 },
   { href: "/mentor-dashboard/messages", label: "الرسائل", icon: MessageSquare },
+  { href: "/mentor-dashboard/invitations", label: "الدعوات", icon: Bell },
 ];
 
 

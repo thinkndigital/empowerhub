@@ -52,6 +52,7 @@ const menuItems = [
   { href: "/coach-dashboard/sessions", label: "الجلسات", icon: CalendarDays },
   { href: "/coach-dashboard/analytics", label: "التحليلات", icon: BarChartHorizontal },
   { href: "/coach-dashboard/messages", label: "الرسائل", icon: MessageSquare },
+  { href: "/coach-dashboard/invitations", label: "الدعوات", icon: Bell },
 ];
 
 
