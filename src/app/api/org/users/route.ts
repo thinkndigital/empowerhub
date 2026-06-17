@@ -9,12 +9,16 @@ export async function GET(req: NextRequest) {
 
     const decoded = await adminAuth.verifyIdToken(token);
     const orgId = decoded.organizationId as string | undefined;
-    if (!orgId) return NextResponse.json({ error: 'Not an org' }, { status: 403 });
 
     const role = req.nextUrl.searchParams.get('role') || 'beneficiary';
     const scope = req.nextUrl.searchParams.get('scope') || 'all'; // 'org' | 'all'
     const mentorId = req.nextUrl.searchParams.get('mentorId');
     const coachId = req.nextUrl.searchParams.get('coachId');
+
+    // mentorId/coachId queries are allowed without orgId (mentor/coach fetching own beneficiaries)
+    if (!mentorId && !coachId && !orgId) {
+      return NextResponse.json({ error: 'Not an org' }, { status: 403 });
+    }
 
     let snap;
     if (mentorId) {

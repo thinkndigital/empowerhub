@@ -1,25 +1,18 @@
 'use client';
 
-import { useMemo } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Users, Calendar, Star, DollarSign, ArrowUpRight, MessageSquare, Clock, CheckCircle2 } from "lucide-react";
-import { useFirestore, useMemoFirebase } from '@/firebase/provider';
 import { useUser, type UserProfile } from '@/firebase/auth/use-user';
-import { useDoc } from '@/firebase/firestore/use-doc';
-import { useCollection } from '@/firebase/firestore/use-collection';
-import { collection, doc, query, where, orderBy } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
-import { format, isPast, parseISO } from "date-fns";
-import { ar } from "date-fns/locale";
 
-type MentorProfile = UserProfile & { wallet?: { balance?: number } };
 type Session = { id: string; title: string; date: string; status: string; attendees: string[] };
-type Beneficiary = UserProfile & { progress?: number };
+type Beneficiary = { id: string; name?: string; progress?: number };
 
 const StatCard = ({ title, value, sub, icon, trend, color, loading }: {
   title: string, value: string | React.ReactNode, sub: string, icon: React.ReactNode, trend?: string, color: string, loading?: boolean
@@ -40,33 +33,32 @@ const StatCard = ({ title, value, sub, icon, trend, color, loading }: {
 );
 
 export default function MentorDashboardPage() {
-  const firestore = useFirestore();
   const { user: authUser } = useUser();
+  const [beneficiaries, setBeneficiaries] = useState<Beneficiary[] | null>(null);
+  const [benefLoading, setBenefLoading] = useState(true);
 
-  const userRef = useMemoFirebase(() => {
-    if (!firestore || !authUser) return null;
-    return doc(firestore, 'users', authUser.uid);
-  }, [firestore, authUser]);
-  const { data: user, isLoading: userLoading } = useDoc<MentorProfile>(userRef);
+  const fetchBeneficiaries = useCallback(async () => {
+    if (!authUser) return;
+    setBenefLoading(true);
+    try {
+      const token = await authUser.getIdToken();
+      const res = await fetch(`/api/org/users?role=beneficiary&scope=all&mentorId=${authUser.uid}`, {
+        headers: { authorization: `Bearer ${token}` },
+      });
+      const json = await res.json();
+      setBeneficiaries(json.users || []);
+    } catch {
+      setBeneficiaries([]);
+    } finally {
+      setBenefLoading(false);
+    }
+  }, [authUser]);
 
-  const beneficiariesQuery = useMemoFirebase(() => {
-    if (!firestore || !authUser) return null;
-    return query(collection(firestore, "users"), where("mentorId", "==", authUser.uid));
-  }, [firestore, authUser]);
-  const { data: beneficiaries, isLoading: benefLoading } = useCollection<Beneficiary>(beneficiariesQuery);
+  useEffect(() => { fetchBeneficiaries(); }, [fetchBeneficiaries]);
 
-  const sessionsQuery = useMemoFirebase(() => {
-    if (!firestore || !authUser) return null;
-    return query(collection(firestore, "sessions"), where("hostId", "==", authUser.uid), orderBy("date", "asc"));
-  }, [firestore, authUser]);
-  const { data: sessions, isLoading: sessLoading } = useCollection<Session>(sessionsQuery);
-
-  const upcomingSessions = useMemo(() => {
-    if (!sessions) return [];
-    return sessions.filter(s => s.status === 'scheduled' && !isPast(parseISO(s.date))).slice(0, 3);
-  }, [sessions]);
-
-  const loading = userLoading || benefLoading || sessLoading;
+  const upcomingSessions: Session[] = [];
+  const sessLoading = false;
+  const loading = benefLoading;
 
   return (
     <>
@@ -107,11 +99,10 @@ export default function MentorDashboardPage() {
         />
         <StatCard
           title="إجمالي الأرباح"
-          value={`${((user as any)?.wallet?.balance || 0).toFixed(2)} د.أ`}
+          value="0.00 د.أ"
           sub="رصيد المحفظة"
           icon={<DollarSign className="h-5 w-5 text-white" />}
           color="bg-purple-500"
-          loading={userLoading}
         />
       </div>
 
@@ -130,23 +121,7 @@ export default function MentorDashboardPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
-            {sessLoading && [...Array(2)].map((_, i) => <Skeleton key={i} className="h-14 w-full" />)}
-            {!sessLoading && upcomingSessions.map(s => (
-              <div key={s.id} className="flex items-center gap-3 p-3 rounded-lg bg-muted/40 hover:bg-muted/70 transition-colors">
-                <div className="h-9 w-9 rounded-lg bg-primary/10 flex flex-col items-center justify-center shrink-0">
-                  <span className="text-xs font-bold text-primary leading-none">{format(parseISO(s.date), 'd')}</span>
-                  <span className="text-xs text-muted-foreground leading-none">{format(parseISO(s.date), 'MMM', { locale: ar })}</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm truncate">{s.title}</p>
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
-                    <Clock className="h-3 w-3" />
-                    <span>{format(parseISO(s.date), 'p', { locale: ar })}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-            {!sessLoading && upcomingSessions.length === 0 && (
+            {upcomingSessions.length === 0 && (
               <p className="text-sm text-muted-foreground text-center py-4">لا توجد جلسات قادمة. <Link href="/mentor-dashboard/sessions" className="text-primary underline">جدولة جلسة</Link></p>
             )}
           </CardContent>
