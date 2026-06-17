@@ -95,8 +95,8 @@ export function NotificationBell() {
                 {notifications && notifications.length > 5 && (
                     <>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="justify-center text-primary cursor-pointer">
-                            عرض كل الإشعارات
+                        <DropdownMenuItem asChild className="justify-center text-primary cursor-pointer">
+                            <Link href="/notifications">عرض كل الإشعارات</Link>
                         </DropdownMenuItem>
                     </>
                 )}
