@@ -4,6 +4,7 @@ import { useState, useMemo, useRef } from "react";
 import {
   MoreHorizontal, PlusCircle, Users, Search, UserPlus, Mail, Upload, Loader2,
 } from "lucide-react";
+import type { User } from "firebase/auth";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -34,48 +35,46 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/firebase/auth/use-user";
-import { useFirestore, useMemoFirebase } from "@/firebase/provider";
-import { useCollection } from "@/firebase/firestore/use-collection";
-import {
-  collection, query, where, doc, updateDoc, addDoc, serverTimestamp,
-} from "firebase/firestore";
-import type { UserProfile } from "@/firebase/auth/use-user";
+import { useOrgUsers } from "@/hooks/use-org-users";
+import { useOrgGroups } from "@/hooks/use-org-groups";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type RawBeneficiary = UserProfile & {
+type OrgUser = {
+  id: string;
+  name?: string;
+  email?: string;
+  role?: string;
+  organizationId?: string;
+  avatarUrl?: string;
+  status?: string;
   progress?: number;
   groupId?: string;
 };
 
-type Beneficiary = RawBeneficiary & {
-  status: "نشط" | "مكتمل" | "جديد";
-};
-
-type Group = {
+type OrgGroup = {
   id: string;
-  orgId: string;
   name: string;
-  memberIds: string[];
-  createdAt: unknown;
-};
-
-type OrgInvitation = {
-  id: string;
   orgId: string;
-  targetEmail: string;
-  targetRole: string;
-  groupName?: string;
-  status: "pending" | "accepted" | "rejected";
-  createdAt: unknown;
+  memberIds: string[];
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function derivedStatus(progress = 0): Beneficiary["status"] {
+function derivedStatus(progress = 0): string {
   if (progress >= 100) return "مكتمل";
   if (progress > 0) return "نشط";
   return "جديد";
+}
+
+async function apiAction(user: User, body: object) {
+  const token = await user.getIdToken();
+  const res = await fetch("/api/org/action", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", authorization: `Bearer ${token}` },
+    body: JSON.stringify(body),
+  });
+  return res.json();
 }
 
 function SkeletonRows({ cols }: { cols: number }) {
@@ -96,74 +95,41 @@ function SkeletonRows({ cols }: { cols: number }) {
 
 export default function BeneficiariesPage() {
   const { toast } = useToast();
-  const { userProfile } = useUser();
-  const firestore = useFirestore();
+  const { user, userProfile } = useUser();
   const orgId = userProfile?.organizationId || "";
 
-  // ── Tab 1: org beneficiaries ──
-  const orgBeneficiariesQuery = useMemoFirebase(() => {
-    if (!firestore || !orgId) return null;
-    return query(
-      collection(firestore, "users"),
-      where("role", "==", "beneficiary"),
-      where("organizationId", "==", orgId),
-    );
-  }, [firestore, orgId]);
-  const { data: rawOrgBeneficiaries, isLoading: orgLoading } =
-    useCollection<RawBeneficiary>(orgBeneficiariesQuery);
+  // ── Data hooks ──
+  const {
+    data: orgUsers,
+    isLoading: orgLoading,
+    refetch: refetchOrg,
+  } = useOrgUsers("beneficiary", "org");
 
-  // ── Tab 2: all beneficiaries ──
-  const allBeneficiariesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, "users"), where("role", "==", "beneficiary"));
-  }, [firestore]);
-  const { data: allBeneficiaries, isLoading: allLoading } =
-    useCollection<RawBeneficiary>(allBeneficiariesQuery);
+  const {
+    data: allUsers,
+    isLoading: allLoading,
+    refetch: refetchAll,
+  } = useOrgUsers("beneficiary", "all");
 
-  // ── Tab 3: invitations ──
-  const invitationsQuery = useMemoFirebase(() => {
-    if (!firestore || !orgId) return null;
-    return query(
-      collection(firestore, "orgInvitations"),
-      where("orgId", "==", orgId),
-      where("targetRole", "==", "beneficiary"),
-      where("status", "==", "pending"),
-    );
-  }, [firestore, orgId]);
-  const { data: invitations, isLoading: invitationsLoading } =
-    useCollection<OrgInvitation>(invitationsQuery);
-
-  // ── Groups ──
-  const groupsQuery = useMemoFirebase(() => {
-    if (!firestore || !orgId) return null;
-    return query(collection(firestore, "groups"), where("orgId", "==", orgId));
-  }, [firestore, orgId]);
-  const { data: groups, isLoading: groupsLoading } =
-    useCollection<Group>(groupsQuery);
+  const {
+    data: groups,
+    isLoading: groupsLoading,
+    refetch: refetchGroups,
+  } = useOrgGroups();
 
   // ── Derived data ──
-  const orgBeneficiaries: Beneficiary[] = useMemo(() => {
-    if (!rawOrgBeneficiaries) return [];
-    return rawOrgBeneficiaries.map((u) => ({
-      ...u,
-      progress: u.progress ?? 0,
-      status: derivedStatus(u.progress),
-    }));
-  }, [rawOrgBeneficiaries]);
+  const orgUserIds = useMemo(() => new Set((orgUsers ?? []).map((u) => u.id)), [orgUsers]);
 
-  const explorerBeneficiaries: Beneficiary[] = useMemo(() => {
-    if (!allBeneficiaries) return [];
-    const orgIds = new Set(rawOrgBeneficiaries?.map((u) => u.id) ?? []);
-    return allBeneficiaries
-      .filter((u) => !orgIds.has(u.id))
-      .map((u) => ({ ...u, progress: u.progress ?? 0, status: derivedStatus(u.progress) }));
-  }, [allBeneficiaries, rawOrgBeneficiaries]);
+  const explorerUsers = useMemo(
+    () => (allUsers ?? []).filter((u) => !orgUserIds.has(u.id)),
+    [allUsers, orgUserIds],
+  );
 
   // ── UI state ──
   const [groupFilter, setGroupFilter] = useState("الكل");
   const [searchQuery, setSearchQuery] = useState("");
-  const [removeBeneficiary, setRemoveBeneficiary] = useState<Beneficiary | null>(null);
-  const [assignGroupTarget, setAssignGroupTarget] = useState<Beneficiary | null>(null);
+  const [removeTarget, setRemoveTarget] = useState<OrgUser | null>(null);
+  const [assignGroupTarget, setAssignGroupTarget] = useState<OrgUser | null>(null);
   const [assignGroupId, setAssignGroupId] = useState("");
   const [newGroupName, setNewGroupName] = useState("");
   const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
@@ -175,89 +141,88 @@ export default function BeneficiariesPage() {
   const [csvImporting, setCsvImporting] = useState(false);
   const [csvResult, setCsvResult] = useState<{ success: number; error: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [addingBeneficiary, setAddingBeneficiary] = useState<string | null>(null);
+  const [addingUserId, setAddingUserId] = useState<string | null>(null);
+  const [assigningGroup, setAssigningGroup] = useState(false);
+  const [removingUser, setRemovingUser] = useState(false);
 
-  // ── Filtered org beneficiaries ──
-  const filteredOrgBeneficiaries = useMemo(() => {
-    if (groupFilter === "الكل") return orgBeneficiaries;
-    const group = groups?.find((g) => g.id === groupFilter);
-    if (!group) return orgBeneficiaries;
-    return orgBeneficiaries.filter((b) => group.memberIds.includes(b.id));
-  }, [orgBeneficiaries, groupFilter, groups]);
+  // ── Filtered org users ──
+  const filteredOrgUsers = useMemo(() => {
+    const list = orgUsers ?? [];
+    if (groupFilter === "الكل") return list;
+    const group = (groups ?? []).find((g) => g.id === groupFilter);
+    if (!group) return list;
+    return list.filter((u) => group.memberIds.includes(u.id));
+  }, [orgUsers, groupFilter, groups]);
 
-  // ── Filtered explorer beneficiaries ──
-  const filteredExplorerBeneficiaries = useMemo(() => {
-    if (!searchQuery.trim()) return explorerBeneficiaries;
+  // ── Filtered explorer users ──
+  const filteredExplorerUsers = useMemo(() => {
+    if (!searchQuery.trim()) return explorerUsers;
     const q = searchQuery.toLowerCase();
-    return explorerBeneficiaries.filter(
-      (b) =>
-        b.name?.toLowerCase().includes(q) ||
-        b.email?.toLowerCase().includes(q),
+    return explorerUsers.filter(
+      (u) =>
+        u.name?.toLowerCase().includes(q) ||
+        u.email?.toLowerCase().includes(q),
     );
-  }, [explorerBeneficiaries, searchQuery]);
+  }, [explorerUsers, searchQuery]);
 
   // ── Actions ──
   async function handleRemove() {
-    if (!firestore || !removeBeneficiary) return;
+    if (!user || !removeTarget) return;
+    setRemovingUser(true);
     try {
-      await updateDoc(doc(firestore, "users", removeBeneficiary.id), {
-        organizationId: "",
-        groupId: "",
-      });
-      toast({ title: "تمت الإزالة", description: `تمت إزالة ${removeBeneficiary.name} من المنظمة.` });
+      await apiAction(user, { action: "removeFromOrg", userId: removeTarget.id });
+      toast({ title: "تمت الإزالة", description: `تمت إزالة ${removeTarget.name} من المنظمة.` });
+      refetchOrg();
+      refetchAll();
     } catch {
       toast({ variant: "destructive", title: "خطأ", description: "فشلت عملية الإزالة." });
     } finally {
-      setRemoveBeneficiary(null);
+      setRemovingUser(false);
+      setRemoveTarget(null);
     }
   }
 
-  async function handleAddToOrg(beneficiary: Beneficiary) {
-    if (!firestore) return;
-    setAddingBeneficiary(beneficiary.id);
+  async function handleAddToOrg(u: OrgUser) {
+    if (!user) return;
+    setAddingUserId(u.id);
     try {
-      await updateDoc(doc(firestore, "users", beneficiary.id), { organizationId: orgId });
-      toast({ title: "تمت الإضافة", description: `تم إضافة ${beneficiary.name} إلى منظمتك.` });
+      await apiAction(user, { action: "addToOrg", userId: u.id });
+      toast({ title: "تمت الإضافة", description: `تم إضافة ${u.name} إلى منظمتك.` });
+      refetchOrg();
+      refetchAll();
     } catch {
       toast({ variant: "destructive", title: "خطأ", description: "فشل إضافة المستفيد." });
     } finally {
-      setAddingBeneficiary(null);
+      setAddingUserId(null);
     }
   }
 
   async function handleAssignGroup() {
-    if (!firestore || !assignGroupTarget || !assignGroupId) return;
+    if (!user || !assignGroupTarget || !assignGroupId) return;
+    setAssigningGroup(true);
     try {
-      // Update user's groupId
-      await updateDoc(doc(firestore, "users", assignGroupTarget.id), { groupId: assignGroupId });
-      // Update group's memberIds
-      const group = groups?.find((g) => g.id === assignGroupId);
-      if (group) {
-        const newMemberIds = Array.from(new Set([...group.memberIds, assignGroupTarget.id]));
-        await updateDoc(doc(firestore, "groups", assignGroupId), { memberIds: newMemberIds });
-      }
+      await apiAction(user, { action: "assignGroup", userId: assignGroupTarget.id, groupId: assignGroupId });
       toast({ title: "تم التعيين", description: `تم تعيين ${assignGroupTarget.name} للمجموعة.` });
+      refetchOrg();
+      refetchGroups();
     } catch {
       toast({ variant: "destructive", title: "خطأ", description: "فشل تعيين المجموعة." });
     } finally {
+      setAssigningGroup(false);
       setAssignGroupTarget(null);
       setAssignGroupId("");
     }
   }
 
   async function handleCreateGroup() {
-    if (!firestore || !newGroupName.trim()) return;
+    if (!user || !newGroupName.trim()) return;
     setIsCreatingGroup(true);
     try {
-      await addDoc(collection(firestore, "groups"), {
-        orgId,
-        name: newGroupName.trim(),
-        memberIds: [],
-        createdAt: serverTimestamp(),
-      });
+      await apiAction(user, { action: "createGroup", name: newGroupName.trim() });
       toast({ title: "تم إنشاء المجموعة", description: `تم إنشاء مجموعة "${newGroupName}".` });
       setNewGroupName("");
       setIsCreateGroupOpen(false);
+      refetchGroups();
     } catch {
       toast({ variant: "destructive", title: "خطأ", description: "فشل إنشاء المجموعة." });
     } finally {
@@ -294,7 +259,6 @@ export default function BeneficiariesPage() {
       const text = ev.target?.result as string;
       const lines = text.split("\n").filter((l) => l.trim());
       const rows: { name: string; email: string }[] = [];
-      // Skip header
       for (let i = 1; i < lines.length; i++) {
         const cols = lines[i].split(",").map((c) => c.trim().replace(/^"|"$/g, ""));
         if (cols[0] && cols[1]) {
@@ -317,7 +281,7 @@ export default function BeneficiariesPage() {
         const res = await fetch("/api/invite-beneficiary", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: row.email, orgId, groupName: undefined }),
+          body: JSON.stringify({ email: row.email, orgId }),
         });
         if (res.ok) success++;
         else error++;
@@ -335,8 +299,10 @@ export default function BeneficiariesPage() {
 
   const groupName = (id?: string) => {
     if (!id) return null;
-    return groups?.find((g) => g.id === id)?.name ?? null;
+    return (groups ?? []).find((g) => g.id === id)?.name ?? null;
   };
+
+  // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
     <div dir="rtl" className="space-y-6">
@@ -369,7 +335,7 @@ export default function BeneficiariesPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="الكل">الكل</SelectItem>
-                    {groups?.map((g) => (
+                    {(groups ?? []).map((g) => (
                       <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
                     ))}
                   </SelectContent>
@@ -390,78 +356,82 @@ export default function BeneficiariesPage() {
                 </TableHeader>
                 <TableBody>
                   {orgLoading && <SkeletonRows cols={6} />}
-                  {!orgLoading && filteredOrgBeneficiaries.length === 0 && (
+                  {!orgLoading && filteredOrgUsers.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
                         لا يوجد مستفيدون في منظمتك حتى الآن.
                       </TableCell>
                     </TableRow>
                   )}
-                  {!orgLoading && filteredOrgBeneficiaries.map((b) => (
-                    <TableRow key={b.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={b.avatarUrl || ""} alt={b.name || ""} />
-                            <AvatarFallback>{(b.name || "م").charAt(0)}</AvatarFallback>
-                          </Avatar>
-                          <span className="font-medium">{b.name || "بلا اسم"}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">{b.email || "-"}</TableCell>
-                      <TableCell>
-                        {groupName(b.groupId) ? (
-                          <Badge variant="outline">{groupName(b.groupId)}</Badge>
-                        ) : (
-                          <span className="text-muted-foreground text-xs">غير محدد</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            b.status === "نشط" ? "default"
-                            : b.status === "مكتمل" ? "outline"
-                            : "secondary"
-                          }
-                        >
-                          {b.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Progress value={b.progress} className="h-2 w-20" />
-                          <span className="text-xs text-muted-foreground">{b.progress}%</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button size="icon" variant="ghost">
-                              <MoreHorizontal className="h-4 w-4" />
-                              <span className="sr-only">قائمة</span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
-                            <DropdownMenuItem
-                              onSelect={() => {
-                                setAssignGroupTarget(b);
-                                setAssignGroupId(b.groupId || "");
-                              }}
-                            >
-                              تعيين لمجموعة
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-red-500"
-                              onSelect={() => setRemoveBeneficiary(b)}
-                            >
-                              إزالة من المنظمة
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {!orgLoading && filteredOrgUsers.map((u) => {
+                    const progress = u.progress ?? 0;
+                    const status = derivedStatus(progress);
+                    return (
+                      <TableRow key={u.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={u.avatarUrl || ""} alt={u.name || ""} />
+                              <AvatarFallback>{(u.name || "م").charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            <span className="font-medium">{u.name || "بلا اسم"}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">{u.email || "-"}</TableCell>
+                        <TableCell>
+                          {groupName(u.groupId) ? (
+                            <Badge variant="outline">{groupName(u.groupId)}</Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">غير محدد</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              status === "نشط" ? "default"
+                              : status === "مكتمل" ? "outline"
+                              : "secondary"
+                            }
+                          >
+                            {status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Progress value={progress} className="h-2 w-20" />
+                            <span className="text-xs text-muted-foreground">{progress}%</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button size="icon" variant="ghost">
+                                <MoreHorizontal className="h-4 w-4" />
+                                <span className="sr-only">قائمة</span>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
+                              <DropdownMenuItem
+                                onSelect={() => {
+                                  setAssignGroupTarget(u);
+                                  setAssignGroupId(u.groupId || "");
+                                }}
+                              >
+                                تعيين لمجموعة
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="text-red-500"
+                                onSelect={() => setRemoveTarget(u)}
+                              >
+                                إزالة من المنظمة
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </CardContent>
@@ -501,33 +471,33 @@ export default function BeneficiariesPage() {
                 </TableHeader>
                 <TableBody>
                   {allLoading && <SkeletonRows cols={3} />}
-                  {!allLoading && filteredExplorerBeneficiaries.length === 0 && (
+                  {!allLoading && filteredExplorerUsers.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={3} className="text-center h-24 text-muted-foreground">
                         لا توجد نتائج. جرّب كلمة بحث أخرى.
                       </TableCell>
                     </TableRow>
                   )}
-                  {!allLoading && filteredExplorerBeneficiaries.map((b) => (
-                    <TableRow key={b.id}>
+                  {!allLoading && filteredExplorerUsers.map((u) => (
+                    <TableRow key={u.id}>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Avatar className="h-8 w-8">
-                            <AvatarImage src={b.avatarUrl || ""} alt={b.name || ""} />
-                            <AvatarFallback>{(b.name || "م").charAt(0)}</AvatarFallback>
+                            <AvatarImage src={u.avatarUrl || ""} alt={u.name || ""} />
+                            <AvatarFallback>{(u.name || "م").charAt(0)}</AvatarFallback>
                           </Avatar>
-                          <span className="font-medium">{b.name || "بلا اسم"}</span>
+                          <span className="font-medium">{u.name || "بلا اسم"}</span>
                         </div>
                       </TableCell>
-                      <TableCell className="hidden md:table-cell">{b.email || "-"}</TableCell>
+                      <TableCell className="hidden md:table-cell">{u.email || "-"}</TableCell>
                       <TableCell>
                         <Button
                           size="sm"
                           variant="outline"
-                          disabled={addingBeneficiary === b.id}
-                          onClick={() => handleAddToOrg(b)}
+                          disabled={addingUserId === u.id}
+                          onClick={() => handleAddToOrg(u)}
                         >
-                          {addingBeneficiary === b.id ? (
+                          {addingUserId === u.id ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
                           ) : (
                             <>
@@ -555,7 +525,7 @@ export default function BeneficiariesPage() {
               </CardTitle>
               <CardDescription>أرسل دعوة بالبريد الإلكتروني لمستفيد جديد للانضمام لمنظمتك.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent>
               <form onSubmit={handleSendInvite} className="flex flex-wrap gap-3 items-end">
                 <div className="space-y-1.5 flex-1 min-w-[200px]">
                   <Label htmlFor="invite-email">البريد الإلكتروني</Label>
@@ -582,40 +552,6 @@ export default function BeneficiariesPage() {
                   {isSendingInvite ? <Loader2 className="h-4 w-4 animate-spin" /> : "إرسال الدعوة"}
                 </Button>
               </form>
-
-              <div className="mt-6">
-                <h3 className="font-medium mb-2">الدعوات المعلقة</h3>
-                {invitationsLoading && (
-                  <div className="space-y-2">
-                    {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}
-                  </div>
-                )}
-                {!invitationsLoading && (!invitations || invitations.length === 0) && (
-                  <p className="text-muted-foreground text-sm">لا توجد دعوات معلقة.</p>
-                )}
-                {!invitationsLoading && invitations && invitations.length > 0 && (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>البريد الإلكتروني</TableHead>
-                        <TableHead>المجموعة</TableHead>
-                        <TableHead>الحالة</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {invitations.map((inv) => (
-                        <TableRow key={inv.id}>
-                          <TableCell dir="ltr">{inv.targetEmail}</TableCell>
-                          <TableCell>{inv.groupName || "-"}</TableCell>
-                          <TableCell>
-                            <Badge variant="secondary">معلقة</Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                )}
-              </div>
             </CardContent>
           </Card>
 
@@ -709,14 +645,14 @@ export default function BeneficiariesPage() {
                   {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
                 </div>
               )}
-              {!groupsLoading && (!groups || groups.length === 0) && (
+              {!groupsLoading && (groups ?? []).length === 0 && (
                 <p className="text-muted-foreground text-sm text-center py-6">
                   لا توجد مجموعات حتى الآن. أنشئ مجموعتك الأولى.
                 </p>
               )}
-              {!groupsLoading && groups && groups.length > 0 && (
+              {!groupsLoading && (groups ?? []).length > 0 && (
                 <div className="space-y-3">
-                  {groups.map((g) => (
+                  {(groups ?? []).map((g) => (
                     <div
                       key={g.id}
                       className="flex items-center justify-between rounded-lg border p-3"
@@ -736,19 +672,21 @@ export default function BeneficiariesPage() {
 
       {/* Remove beneficiary */}
       <AlertDialog
-        open={!!removeBeneficiary}
-        onOpenChange={(open) => !open && setRemoveBeneficiary(null)}
+        open={!!removeTarget}
+        onOpenChange={(open) => !open && setRemoveTarget(null)}
       >
         <AlertDialogContent dir="rtl">
           <AlertDialogHeader>
             <AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle>
             <AlertDialogDescription>
-              سيتم إزالة "{removeBeneficiary?.name}" من منظمتك. يمكنه إعادة الانضمام لاحقاً.
+              سيتم إزالة "{removeTarget?.name}" من منظمتك. يمكنه إعادة الانضمام لاحقاً.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>إلغاء</AlertDialogCancel>
-            <AlertDialogAction onClick={handleRemove}>نعم، إزالة</AlertDialogAction>
+            <AlertDialogAction onClick={handleRemove} disabled={removingUser}>
+              {removingUser ? <Loader2 className="h-4 w-4 animate-spin" /> : "نعم، إزالة"}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -772,7 +710,7 @@ export default function BeneficiariesPage() {
                 <SelectValue placeholder="اختر مجموعة" />
               </SelectTrigger>
               <SelectContent>
-                {groups?.map((g) => (
+                {(groups ?? []).map((g) => (
                   <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
                 ))}
               </SelectContent>
@@ -782,8 +720,8 @@ export default function BeneficiariesPage() {
             <DialogClose asChild>
               <Button variant="ghost">إلغاء</Button>
             </DialogClose>
-            <Button onClick={handleAssignGroup} disabled={!assignGroupId}>
-              حفظ
+            <Button onClick={handleAssignGroup} disabled={!assignGroupId || assigningGroup}>
+              {assigningGroup ? <Loader2 className="h-4 w-4 animate-spin" /> : "حفظ"}
             </Button>
           </DialogFooter>
         </DialogContent>
