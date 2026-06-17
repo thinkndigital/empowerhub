@@ -312,7 +312,7 @@ export default function BeneficiariesPage() {
       </div>
 
       <Tabs defaultValue="org" dir="rtl">
-        <TabsList className="mb-4">
+        <TabsList className="mb-4 w-full justify-start">
           <TabsTrigger value="org">مستفيدو منظمتي</TabsTrigger>
           <TabsTrigger value="explore">استكشاف المستفيدين</TabsTrigger>
           <TabsTrigger value="invite">دعوة ومجموعات</TabsTrigger>
