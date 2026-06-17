@@ -5,10 +5,28 @@ export async function GET(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
     const decoded = await adminAuth.verifyIdToken(token);
-    const snap = await adminDb.collection('sessions')
-      .where('hostId', '==', decoded.uid)
-      .orderBy('date', 'desc')
-      .get();
+    const scope = req.nextUrl.searchParams.get('scope');
+
+    let snap;
+    if (scope === 'all') {
+      // Org sees all sessions for their org
+      const userSnap = await adminDb.collection('users').doc(decoded.uid).get();
+      const role = userSnap.data()?.role;
+      const orgId = userSnap.data()?.organizationId || (decoded as any).organizationId;
+      if (role !== 'organization' || !orgId) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+      snap = await adminDb.collection('sessions')
+        .where('organizationId', '==', orgId)
+        .orderBy('date', 'desc')
+        .get();
+    } else {
+      snap = await adminDb.collection('sessions')
+        .where('hostId', '==', decoded.uid)
+        .orderBy('date', 'desc')
+        .get();
+    }
+
     const sessions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     return NextResponse.json({ sessions });
   } catch (e: any) {

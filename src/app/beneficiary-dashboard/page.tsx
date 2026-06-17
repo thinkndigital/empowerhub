@@ -21,15 +21,32 @@ export default function BeneficiaryDashboardPage() {
   const { user: authUser, userProfile } = useUser();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [upcomingSessions, setUpcomingSessions] = useState<number | null>(null);
+  const [enrolledCourses, setEnrolledCourses] = useState<number | null>(null);
 
   const fetchProfile = useCallback(async () => {
     if (!authUser) return;
     setLoading(true);
     try {
       const token = await authUser.getIdToken();
-      const res = await fetch('/api/user/profile', { headers: { authorization: `Bearer ${token}` } });
-      const json = await res.json();
+      const [profileRes, sessionsRes, coursesRes] = await Promise.all([
+        fetch('/api/user/profile', { headers: { authorization: `Bearer ${token}` } }),
+        fetch('/api/beneficiary/sessions', { headers: { authorization: `Bearer ${token}` } }).catch(() => null),
+        fetch('/api/courses', { headers: { authorization: `Bearer ${token}` } }).catch(() => null),
+      ]);
+      const json = await profileRes.json();
       setProfile(json.profile);
+
+      if (sessionsRes && sessionsRes.ok) {
+        const s = await sessionsRes.json();
+        const now = new Date().toISOString();
+        const upcoming = (s.sessions || []).filter((sess: any) => sess.date >= now).length;
+        setUpcomingSessions(upcoming);
+      }
+      if (coursesRes && coursesRes.ok) {
+        const c = await coursesRes.json();
+        setEnrolledCourses((c.courses || c.enrolled || []).length);
+      }
     } catch { /* silent */ } finally { setLoading(false); }
   }, [authUser]);
 
@@ -52,8 +69,8 @@ export default function BeneficiaryDashboardPage() {
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         {[
           { title: "تقدمي العام", value: loading ? "..." : `${progress}%`, sub: "نسبة الإنجاز", icon: <TrendingUp className="h-5 w-5 text-white" />, color: "bg-primary" },
-          { title: "الدورات", value: "—", sub: "دورة مسجلة", icon: <BookOpen className="h-5 w-5 text-white" />, color: "bg-accent" },
-          { title: "الجلسات", value: "—", sub: "جلسة قادمة", icon: <Calendar className="h-5 w-5 text-white" />, color: "bg-amber-500" },
+          { title: "الدورات", value: loading ? "..." : (enrolledCourses !== null ? String(enrolledCourses) : "—"), sub: "دورة مسجلة", icon: <BookOpen className="h-5 w-5 text-white" />, color: "bg-accent" },
+          { title: "الجلسات", value: loading ? "..." : (upcomingSessions !== null ? String(upcomingSessions) : "—"), sub: "جلسة قادمة", icon: <Calendar className="h-5 w-5 text-white" />, color: "bg-amber-500" },
           { title: "المجموعة", value: loading ? "..." : (profile?.groupId ? "مُنضم" : "—"), sub: "حالة المجموعة", icon: <Users className="h-5 w-5 text-white" />, color: "bg-purple-500" },
         ].map((s, i) => (
           <Card key={i} className="border-0 shadow-sm">

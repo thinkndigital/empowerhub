@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
-import { Download, Users, Activity, BarChart3, TrendingUp, Target, Award, CheckCircle } from "lucide-react"
+import { Download, Users, Activity, BarChart3, TrendingUp, Target, Award, CheckCircle, BookUser, Star } from "lucide-react"
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
@@ -24,6 +24,8 @@ const completionConfig = { "معدل الإكمال": { label: "معدل الإ�
 type Session = { id: string; date: string; status: string; hostId: string; attendees: string[] };
 type Beneficiary = { id: string; name?: string; progress?: number; createdAt?: string };
 
+type MentoringBeneficiary = { id: string; mentorId?: string; coachId?: string };
+
 type ReportsData = {
   beneficiaries: Beneficiary[];
   mentorsCount: number;
@@ -37,17 +39,27 @@ export default function OrgReportsPage() {
   const [exportOptions, setExportOptions] = useState({ summary: true, progress: true, engagement: true });
   const [data, setData] = useState<ReportsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [mentoringBeneficiaries, setMentoringBeneficiaries] = useState<MentoringBeneficiary[]>([]);
+  const [mentoringSessionsData, setMentoringSessionsData] = useState<Session[]>([]);
 
   const fetchReports = useCallback(async () => {
     if (!user) return;
     try {
       const token = await user.getIdToken();
-      const res = await fetch('/api/org/reports', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error('Failed to fetch reports');
-      const json = await res.json();
-      setData(json);
+      const [reportsRes, sessionsRes, beneficiariesRes] = await Promise.all([
+        fetch('/api/org/reports', { headers: { Authorization: `Bearer ${token}` } }),
+        fetch('/api/sessions?scope=all', { headers: { Authorization: `Bearer ${token}` } }),
+        fetch('/api/org/users?role=beneficiary', { headers: { Authorization: `Bearer ${token}` } }),
+      ]);
+      if (reportsRes.ok) setData(await reportsRes.json());
+      if (sessionsRes.ok) {
+        const s = await sessionsRes.json();
+        setMentoringSessionsData(s.sessions || []);
+      }
+      if (beneficiariesRes.ok) {
+        const b = await beneficiariesRes.json();
+        setMentoringBeneficiaries(b.users || b.beneficiaries || []);
+      }
     } catch {
       // ignore
     } finally {
@@ -222,6 +234,93 @@ export default function OrgReportsPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Mentoring Overview */}
+      {(() => {
+        const now = new Date();
+        const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+        const sessionsThisMonth = mentoringSessionsData.filter(s => s.date >= thisMonthStart);
+        const completedThisMonth = sessionsThisMonth.filter(s => s.status === 'completed').length;
+        const completionRate = sessionsThisMonth.length > 0 ? Math.round((completedThisMonth / sessionsThisMonth.length) * 100) : 0;
+
+        // Top mentors by session count
+        const mentorCounts: Record<string, number> = {};
+        mentoringSessionsData.forEach(s => {
+          if (s.hostId) mentorCounts[s.hostId] = (mentorCounts[s.hostId] || 0) + 1;
+        });
+        const topMentors = Object.entries(mentorCounts)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 5);
+
+        const totalBeneficiaries = mentoringBeneficiaries.length;
+        const withMentor = mentoringBeneficiaries.filter(b => b.mentorId).length;
+        const withCoach = mentoringBeneficiaries.filter(b => b.coachId).length;
+        const mentorCoverage = totalBeneficiaries > 0 ? Math.round((withMentor / totalBeneficiaries) * 100) : 0;
+        const coachCoverage = totalBeneficiaries > 0 ? Math.round((withCoach / totalBeneficiaries) * 100) : 0;
+
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><BookUser className="h-5 w-5" /> متابعة الإرشاد</CardTitle>
+              <CardDescription>نظرة عامة على جلسات الإرشاد وتغطية المرشدين والمدربين.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {loading ? <Skeleton className="h-32 w-full" /> : (
+                <>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div className="text-center p-3 bg-muted/40 rounded-lg">
+                      <div className="text-2xl font-bold text-primary">{sessionsThisMonth.length}</div>
+                      <div className="text-xs text-muted-foreground mt-1">جلسات هذا الشهر</div>
+                    </div>
+                    <div className="text-center p-3 bg-muted/40 rounded-lg">
+                      <div className="text-2xl font-bold text-green-600">{completionRate}%</div>
+                      <div className="text-xs text-muted-foreground mt-1">معدل الإكمال</div>
+                    </div>
+                    <div className="text-center p-3 bg-muted/40 rounded-lg col-span-2 md:col-span-1">
+                      <div className="text-2xl font-bold text-amber-600">{topMentors.length}</div>
+                      <div className="text-xs text-muted-foreground mt-1">مرشدون نشطون</div>
+                    </div>
+                  </div>
+
+                  {topMentors.length > 0 && (
+                    <div>
+                      <p className="text-sm font-medium mb-2 flex items-center gap-1"><Star className="h-4 w-4 text-amber-500" /> أكثر المرشدين نشاطاً</p>
+                      <div className="space-y-2">
+                        {topMentors.map(([hostId, count]) => (
+                          <div key={hostId} className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground font-mono text-xs">{hostId.slice(0, 8)}…</span>
+                            <Badge variant="secondary">{count} جلسة</Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div>
+                    <p className="text-sm font-medium mb-3">تغطية الإرشاد</p>
+                    <div className="space-y-3">
+                      <div>
+                        <div className="flex justify-between text-xs mb-1">
+                          <span>لديهم مرشد</span>
+                          <span>{withMentor} / {totalBeneficiaries} ({mentorCoverage}%)</span>
+                        </div>
+                        <Progress value={mentorCoverage} className="h-2" />
+                      </div>
+                      <div>
+                        <div className="flex justify-between text-xs mb-1">
+                          <span>لديهم مدرب</span>
+                          <span>{withCoach} / {totalBeneficiaries} ({coachCoverage}%)</span>
+                        </div>
+                        <Progress value={coachCoverage} className="h-2" />
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card>

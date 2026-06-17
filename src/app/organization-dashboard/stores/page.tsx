@@ -1,137 +1,187 @@
-
 "use client";
 
-import { useMemo, useState, useEffect, useCallback } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { useState, useEffect, useCallback } from "react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import Image from "next/image";
-import Link from "next/link";
-import { DollarSign, Package, Users, BarChart } from "lucide-react";
-import { slugify } from "@/lib/utils";
-import { useUser } from "@/firebase/auth/use-user";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
+import { useUser } from "@/firebase/auth/use-user";
+import { CheckCircle, XCircle, Package } from "lucide-react";
 
-type Store = { id: string; beneficiaryId: string; name?: string; logoUrl?: string; beneficiaryName?: string; organizationId?: string }
-type Product = { id: string; beneficiaryId: string }
-type Order = { id: string; beneficiaryId: string; status?: string; price?: number }
-
-type StoresData = {
-  stores: Store[];
-  products: Product[];
-  orders: Order[];
+type Product = {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  category: string;
+  userId: string;
+  userName: string;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
 };
+
+type FilterTab = 'all' | 'pending' | 'approved';
+
+const statusConfig: Record<string, { label: string; variant: "secondary" | "default" | "destructive" }> = {
+  pending:  { label: "قيد المراجعة", variant: "secondary" },
+  approved: { label: "مُعتمد",       variant: "default"   },
+  rejected: { label: "مرفوض",        variant: "destructive" },
+};
+
+const tabs: { key: FilterTab; label: string }[] = [
+  { key: 'all',      label: 'جميع المنتجات' },
+  { key: 'pending',  label: 'قيد المراجعة'  },
+  { key: 'approved', label: 'مُعتمد'        },
+];
 
 export default function OrgStoresPage() {
   const { user, loading: userLoading } = useUser();
-  const [data, setData] = useState<StoresData | null>(null);
-  const [storesLoading, setStoresLoading] = useState(true);
+  const { toast } = useToast();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<FilterTab>('all');
+  const [updating, setUpdating] = useState<string | null>(null);
 
-  const fetchStores = useCallback(async () => {
+  const fetchProducts = useCallback(async () => {
     if (!user) return;
+    setLoading(true);
     try {
       const token = await user.getIdToken();
-      const res = await fetch('/api/org/stores', {
+      const res = await fetch('/api/store/products?scope=all', {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error('Failed to fetch stores');
+      if (!res.ok) throw new Error('فشل تحميل المنتجات');
       const json = await res.json();
-      setData(json);
-    } catch {
-      // ignore
+      setProducts(json.products || []);
+    } catch (e: any) {
+      toast({ title: "خطأ", description: e.message, variant: "destructive" });
     } finally {
-      setStoresLoading(false);
+      setLoading(false);
     }
-  }, [user]);
+  }, [user, toast]);
 
-  useEffect(() => {
-    fetchStores();
-  }, [fetchStores]);
+  useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
-  const stores = data?.stores ?? [];
-  const products = data?.products ?? [];
-  const orders = data?.orders ?? [];
+  const updateStatus = async (id: string, status: 'approved' | 'rejected') => {
+    if (!user) return;
+    setUpdating(id);
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch('/api/store/products', {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'فشل تحديث الحالة');
+      }
+      toast({ title: status === 'approved' ? "تمت الموافقة" : "تم الرفض" });
+      setProducts(prev => prev.map(p => p.id === id ? { ...p, status } : p));
+    } catch (e: any) {
+      toast({ title: "خطأ", description: e.message, variant: "destructive" });
+    } finally {
+      setUpdating(null);
+    }
+  };
 
-  // Per-store computed stats
-  const storeStats = useMemo(() => {
-    const map: Record<string, { revenue: number; products: number; orders: number }> = {};
-    products.forEach(p => {
-      if (!map[p.beneficiaryId]) map[p.beneficiaryId] = { revenue: 0, products: 0, orders: 0 };
-      map[p.beneficiaryId].products++;
-    });
-    orders.forEach(o => {
-      if (!map[o.beneficiaryId]) map[o.beneficiaryId] = { revenue: 0, products: 0, orders: 0 };
-      map[o.beneficiaryId].orders++;
-      if (o.status === 'delivered') map[o.beneficiaryId].revenue += o.price || 0;
-    });
-    return map;
-  }, [products, orders]);
+  const filteredProducts = products.filter(p => {
+    if (activeTab === 'all') return true;
+    return p.status === activeTab;
+  });
 
-  const loading = userLoading || storesLoading;
+  const isLoading = userLoading || loading;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6" dir="rtl">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">متاجر المستفيدين</h1>
-        <p className="text-muted-foreground">مراقبة أداء المتاجر التي يديرها المستفيدون في منظمتك.</p>
+        <h1 className="text-2xl font-bold tracking-tight">منتجات المستفيدين</h1>
+        <p className="text-muted-foreground text-sm">راجع وأدر المنتجات المقدمة من المستفيدين في منظمتك.</p>
       </div>
-      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
-        {loading && [...Array(2)].map((_, i) => (
-          <Card key={i} className="flex flex-col md:flex-row">
-            <div className="md:w-1/3"><Skeleton className="aspect-square h-full w-full" /></div>
-            <div className="md:w-2/3 flex flex-col p-6 space-y-3">
-              <Skeleton className="h-6 w-3/4" /><Skeleton className="h-4 w-1/2" />
-              <div className="grid grid-cols-3 gap-4 mt-2"><Skeleton className="h-12" /><Skeleton className="h-12" /><Skeleton className="h-12" /></div>
-              <Skeleton className="h-10 w-full mt-2" />
-            </div>
-          </Card>
+
+      {/* Tabs */}
+      <div className="flex gap-2 border-b">
+        {tabs.map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === tab.key
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            {tab.label}
+            {tab.key !== 'all' && (
+              <span className="mr-2 text-xs bg-muted rounded-full px-1.5 py-0.5">
+                {products.filter(p => p.status === tab.key).length}
+              </span>
+            )}
+          </button>
         ))}
-        {!loading && stores.map(store => {
-          const storeName = store.name || "متجر غير مسمى";
-          const s = storeStats[store.beneficiaryId] || { revenue: 0, products: 0, orders: 0 };
-          return (
-            <Card key={store.id} className="flex flex-col md:flex-row">
-              <div className="md:w-1/3">
-                <Image src={store.logoUrl || `https://picsum.photos/seed/${store.id}/400/400`} alt={storeName} width={400} height={400} className="rounded-t-lg md:rounded-r-lg md:rounded-l-none object-cover h-full" />
-              </div>
-              <div className="md:w-2/3 flex flex-col">
-                <CardHeader>
-                  <CardTitle>{storeName}</CardTitle>
-                  <CardDescription>المستفيد: {store.beneficiaryName || store.beneficiaryId}</CardDescription>
-                </CardHeader>
-                <CardContent className="grid grid-cols-3 gap-4 text-sm">
-                  <div className="flex flex-col items-center gap-1">
-                    <DollarSign className="h-5 w-5 text-muted-foreground" />
-                    <span className="font-semibold">{s.revenue.toFixed(0)} د.أ</span>
-                    <span className="text-xs text-muted-foreground">الإيرادات</span>
-                  </div>
-                  <div className="flex flex-col items-center gap-1">
-                    <Package className="h-5 w-5 text-muted-foreground" />
-                    <span className="font-semibold">{s.products}</span>
-                    <span className="text-xs text-muted-foreground">منتج</span>
-                  </div>
-                  <div className="flex flex-col items-center gap-1">
-                    <Users className="h-5 w-5 text-muted-foreground" />
-                    <span className="font-semibold">{s.orders}</span>
-                    <span className="text-xs text-muted-foreground">طلب</span>
-                  </div>
-                </CardContent>
-                <CardFooter className="mt-auto">
-                  <Button variant="outline" className="w-full" asChild>
-                    <Link href={`/stores/${slugify(storeName)}`}>
-                      <BarChart className="ml-2 h-4 w-4" />عرض المتجر
-                    </Link>
-                  </Button>
-                </CardFooter>
-              </div>
-            </Card>
-          );
-        })}
-        {!loading && stores.length === 0 && (
-          <div className="col-span-full text-center py-12">
-            <p className="text-muted-foreground">لا توجد متاجر لعرضها.</p>
-          </div>
-        )}
       </div>
+
+      {/* Products grid */}
+      {isLoading && (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-56 rounded-lg" />)}
+        </div>
+      )}
+
+      {!isLoading && filteredProducts.length === 0 && (
+        <div className="text-center py-16 space-y-3">
+          <Package className="h-12 w-12 mx-auto text-muted-foreground" />
+          <p className="text-muted-foreground">لا توجد منتجات في هذا القسم.</p>
+        </div>
+      )}
+
+      {!isLoading && filteredProducts.length > 0 && (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {filteredProducts.map(product => {
+            const cfg = statusConfig[product.status] || statusConfig.pending;
+            const isPending = product.status === 'pending';
+            return (
+              <Card key={product.id} className="border-0 shadow-sm flex flex-col">
+                <CardHeader className="pb-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <CardTitle className="text-base leading-snug">{product.name}</CardTitle>
+                    <Badge variant={cfg.variant} className="shrink-0 text-xs">{cfg.label}</Badge>
+                  </div>
+                  <CardDescription className="text-xs">
+                    {product.category} — {product.userName || 'مستفيد'}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex-1 space-y-2">
+                  <p className="text-sm text-muted-foreground line-clamp-3">{product.description}</p>
+                  <p className="text-lg font-bold text-primary">{product.price.toFixed(2)} د.أ</p>
+                </CardContent>
+                {isPending && (
+                  <CardFooter className="gap-2 pt-0">
+                    <Button
+                      size="sm"
+                      className="flex-1"
+                      disabled={updating === product.id}
+                      onClick={() => updateStatus(product.id, 'approved')}
+                    >
+                      <CheckCircle className="h-4 w-4 ml-1" /> موافقة
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      className="flex-1"
+                      disabled={updating === product.id}
+                      onClick={() => updateStatus(product.id, 'rejected')}
+                    >
+                      <XCircle className="h-4 w-4 ml-1" /> رفض
+                    </Button>
+                  </CardFooter>
+                )}
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
