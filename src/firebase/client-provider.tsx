@@ -5,8 +5,6 @@ import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
 import { getAuth, type Auth } from 'firebase/auth';
 import {
   getFirestore,
-  initializeFirestore,
-  memoryLocalCache,
   type Firestore,
 } from 'firebase/firestore';
 import { getStorage, type FirebaseStorage } from 'firebase/storage';
@@ -34,15 +32,9 @@ export function FirebaseClientProvider({ children }: { children: ReactNode }) {
 
       let firestore: Firestore | null = null;
       try {
-        // initializeFirestore must be called before getFirestore if we want custom settings
-        firestore = initializeFirestore(app, { localCache: memoryLocalCache() });
-      } catch {
-        try {
-          // Already initialized — just get the existing instance
-          firestore = getFirestore(app);
-        } catch (e) {
-          console.error('[FB] Firestore init failed:', e);
-        }
+        firestore = getFirestore(app);
+      } catch (e) {
+        console.error('[FB] Firestore init failed:', e);
       }
 
       let storage: FirebaseStorage | null = null;
