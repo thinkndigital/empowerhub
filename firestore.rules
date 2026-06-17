@@ -2,210 +2,256 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function isSignedIn() {
-      return request.auth != null;
-    }
+    // ── helpers ──────────────────────────────────────────────────────────────
+    function signedIn() { return request.auth != null; }
+    function uid()      { return request.auth.uid; }
 
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
+    // Read role directly from JWT custom claims (no extra Firestore read → no recursion)
+    function role()     { return request.auth.token.get('role', ''); }
+    function orgId()    { return request.auth.token.get('organizationId', ''); }
 
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
+    function isAdmin()        { return role() == 'admin'; }
+    function isOrg()          { return role() == 'organization'; }
+    function isMentor()       { return role() == 'mentor'; }
+    function isCoach()        { return role() == 'coach'; }
+    function isBeneficiary()  { return role() == 'beneficiary'; }
+    function isStaff()        { return isAdmin() || isOrg() || isMentor() || isCoach(); }
 
-    function hasRole(role) {
-      return isSignedIn() && getUserData().role == role;
-    }
-
-    function isAdmin() { return hasRole('admin'); }
-    function isOrganization() { return hasRole('organization'); }
-    function isMentor() { return hasRole('mentor'); }
-    function isCoach() { return hasRole('coach'); }
-    function isBeneficiary() { return hasRole('beneficiary'); }
-    function isStaff() { return isAdmin() || isOrganization() || isMentor() || isCoach(); }
-
-    // =====================
-    // USERS COLLECTION
-    // =====================
+    // ── users ─────────────────────────────────────────────────────────────────
     match /users/{userId} {
-      // Any signed-in user can read user profiles (needed for mentor/coach lists, chat, etc.)
-      allow read: if isSignedIn();
+      // Everyone signed-in can read profiles (needed for listings, chat, dashboards)
+      allow read: if signedIn();
 
-      // Users can create their own profile on registration
-      allow create: if isOwner(userId);
+      // Own registration / login profile creation
+      allow create: if signedIn() && uid() == userId;
 
-      // Users can update their own profile; org admins and mentors can update assigned users
-      allow update: if isOwner(userId) || isAdmin() || isOrganization() || isMentor();
-
-      allow delete: if isAdmin();
-    }
-
-    // =====================
-    // ORGANIZATIONS COLLECTION
-    // =====================
-    match /organizations/{orgId} {
-      // Any signed-in user can read org data (needed for branding/theming)
-      allow read: if isSignedIn();
-
-      // Any signed-in user can create an org (for self-registration as org admin)
-      allow create: if isSignedIn();
-
-      // Only admin or the org's own manager can update
-      allow update: if isAdmin() || isOrganization();
+      // Own profile edits, admins, org admins, mentors, coaches can edit their users
+      allow update: if signedIn() && (
+        uid() == userId ||
+        isAdmin() ||
+        isOrg() ||
+        isMentor() ||
+        isCoach()
+      );
 
       allow delete: if isAdmin();
     }
 
-    // =====================
-    // COURSES COLLECTION
-    // =====================
+    // ── organizations ─────────────────────────────────────────────────────────
+    match /organizations/{organizationId} {
+      allow read: if signedIn();
+
+      // Any signed-in user can create (org admin self-registers)
+      allow create: if signedIn();
+
+      // Org admin (their token orgId matches doc) or platform admin
+      allow update: if signedIn() && (
+        isAdmin() ||
+        (isOrg() && orgId() == organizationId)
+      );
+
+      allow delete: if isAdmin();
+    }
+
+    // ── courses ───────────────────────────────────────────────────────────────
     match /courses/{courseId} {
-      allow read: if isSignedIn();
-      allow create: if isAdmin() || isOrganization() || isCoach();
-      allow update: if isAdmin() || isOrganization() || isCoach();
-      allow delete: if isAdmin() || isOrganization();
+      allow read: if signedIn();
 
+      allow create: if signedIn() && (isAdmin() || isOrg() || isCoach());
+
+      allow update: if signedIn() && (
+        isAdmin() ||
+        isOrg() ||
+        (isCoach() && resource.data.createdBy == uid())
+      );
+
+      allow delete: if signedIn() && (
+        isAdmin() ||
+        isOrg() ||
+        (isCoach() && resource.data.createdBy == uid())
+      );
+
+      // course modules sub-collection
       match /modules/{moduleId} {
-        allow read: if isSignedIn();
-        allow write: if isAdmin() || isOrganization() || isCoach();
+        allow read: if signedIn();
+        allow write: if signedIn() && (isAdmin() || isOrg() || isCoach());
       }
     }
 
-    // =====================
-    // SESSIONS COLLECTION
-    // =====================
-    match /sessions/{sessionId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn() && (isAdmin() || isOrganization() || isMentor());
-      allow update: if isSignedIn() && (
-        isAdmin() || isOrganization() ||
-        request.auth.uid == resource.data.mentorId ||
-        request.auth.uid == resource.data.hostId
+    // ── courseProgress ────────────────────────────────────────────────────────
+    match /courseProgress/{progressId} {
+      allow read: if signedIn() && (
+        isAdmin() || isOrg() || isMentor() || isCoach() ||
+        resource.data.userId == uid()
       );
-      allow delete: if isAdmin() || isOrganization();
-    }
-
-    // =====================
-    // PRODUCTS COLLECTION
-    // =====================
-    match /products/{productId} {
-      allow read: if true;
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && (
-        isAdmin() || isOrganization() ||
-        request.auth.uid == resource.data.beneficiaryId ||
-        request.auth.uid == resource.data.ownerId
-      );
-      allow delete: if isAdmin() || isOrganization() || (
-        isSignedIn() && (
-          request.auth.uid == resource.data.beneficiaryId ||
-          request.auth.uid == resource.data.ownerId
-        )
-      );
-    }
-
-    // =====================
-    // STORES COLLECTION
-    // =====================
-    match /stores/{storeId} {
-      allow read: if true;
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && (
-        isAdmin() || isOrganization() ||
-        request.auth.uid == resource.data.beneficiaryId ||
-        request.auth.uid == resource.data.ownerId
-      );
-      allow delete: if isAdmin() || (
-        isSignedIn() && (
-          request.auth.uid == resource.data.beneficiaryId ||
-          request.auth.uid == resource.data.ownerId
-        )
-      );
-    }
-
-    // =====================
-    // ORDERS COLLECTION
-    // =====================
-    match /orders/{orderId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && (
-        isAdmin() || isOrganization() ||
-        request.auth.uid == resource.data.beneficiaryId ||
-        request.auth.uid == resource.data.customerId
+      allow create: if signedIn();
+      allow update: if signedIn() && (
+        isAdmin() || resource.data.userId == uid()
       );
       allow delete: if isAdmin();
     }
 
-    // =====================
-    // CONVERSATIONS / MESSAGES
-    // =====================
+    // ── sessions ──────────────────────────────────────────────────────────────
+    match /sessions/{sessionId} {
+      allow read: if signedIn();
+
+      allow create: if signedIn() && (isAdmin() || isOrg() || isMentor() || isCoach());
+
+      allow update: if signedIn() && (
+        isAdmin() ||
+        isOrg() ||
+        resource.data.hostId == uid() ||
+        resource.data.mentorId == uid()
+      );
+
+      allow delete: if isAdmin() || isOrg();
+    }
+
+    // ── products ──────────────────────────────────────────────────────────────
+    match /products/{productId} {
+      // Public marketplace — anyone can read
+      allow read: if true;
+
+      allow create: if signedIn();
+
+      allow update: if signedIn() && (
+        isAdmin() ||
+        isOrg() ||
+        resource.data.beneficiaryId == uid() ||
+        resource.data.ownerId == uid()
+      );
+
+      allow delete: if signedIn() && (
+        isAdmin() ||
+        isOrg() ||
+        resource.data.beneficiaryId == uid() ||
+        resource.data.ownerId == uid()
+      );
+    }
+
+    // ── stores ────────────────────────────────────────────────────────────────
+    match /stores/{storeId} {
+      allow read: if true;
+
+      allow create: if signedIn();
+
+      allow update: if signedIn() && (
+        isAdmin() ||
+        isOrg() ||
+        resource.data.beneficiaryId == uid() ||
+        resource.data.ownerId == uid()
+      );
+
+      allow delete: if signedIn() && (
+        isAdmin() ||
+        isOrg() ||
+        resource.data.beneficiaryId == uid() ||
+        resource.data.ownerId == uid()
+      );
+    }
+
+    // ── orders ────────────────────────────────────────────────────────────────
+    match /orders/{orderId} {
+      allow read: if signedIn();
+      allow create: if signedIn();
+
+      allow update: if signedIn() && (
+        isAdmin() ||
+        isOrg() ||
+        resource.data.beneficiaryId == uid() ||
+        resource.data.customerId == uid()
+      );
+
+      allow delete: if isAdmin();
+    }
+
+    // ── conversations & messages ───────────────────────────────────────────────
     match /conversations/{convId} {
-      allow read: if isSignedIn() && (
+      allow read: if signedIn() && (
         isAdmin() ||
         request.auth.uid in resource.data.participants
       );
-      allow list: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && (
-        isAdmin() || request.auth.uid in resource.data.participants
+      allow list: if signedIn();
+      allow create: if signedIn();
+      allow update: if signedIn() && (
+        isAdmin() ||
+        request.auth.uid in resource.data.participants
       );
       allow delete: if isAdmin();
 
       match /messages/{msgId} {
-        allow read: if isSignedIn();
-        allow create: if isSignedIn();
-        allow update: if isSignedIn() && request.auth.uid == resource.data.senderId;
+        allow read: if signedIn();
+        allow create: if signedIn();
+        allow update: if signedIn() && resource.data.senderId == uid();
         allow delete: if isAdmin();
       }
     }
 
-    // =====================
-    // NOTIFICATIONS
-    // =====================
+    // ── notifications ─────────────────────────────────────────────────────────
     match /notifications/{notifId} {
-      allow read: if isSignedIn() && (
-        isAdmin() || request.auth.uid == resource.data.userId
+      // Each user reads their own; admins read all
+      allow read: if signedIn() && (
+        isAdmin() ||
+        resource.data.userId == uid()
       );
-      allow list: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && (
-        isAdmin() || request.auth.uid == resource.data.userId
+      allow list: if signedIn();
+      allow create: if signedIn();
+      allow update: if signedIn() && (
+        isAdmin() ||
+        resource.data.userId == uid()
       );
-      allow delete: if isSignedIn() && (
-        isAdmin() || request.auth.uid == resource.data.userId
+      allow delete: if signedIn() && (
+        isAdmin() ||
+        resource.data.userId == uid()
       );
     }
 
-    // =====================
-    // EVALUATIONS
-    // =====================
+    // ── orgInvitations ────────────────────────────────────────────────────────
+    match /orgInvitations/{inviteId} {
+      allow read: if signedIn();
+      allow list: if signedIn();
+
+      // Org admins (and platform admins) create invitations
+      allow create: if signedIn() && (isAdmin() || isOrg());
+
+      // Target user accepts/rejects; org admin or platform admin can also update
+      allow update: if signedIn() && (
+        isAdmin() ||
+        isOrg() ||
+        resource.data.targetUid == uid()
+      );
+
+      allow delete: if signedIn() && (isAdmin() || isOrg());
+    }
+
+    // ── groups ────────────────────────────────────────────────────────────────
+    match /groups/{groupId} {
+      allow read: if signedIn();
+      allow list: if signedIn();
+      allow create: if signedIn() && (isAdmin() || isOrg());
+      allow update: if signedIn() && (isAdmin() || isOrg());
+      allow delete: if signedIn() && (isAdmin() || isOrg());
+    }
+
+    // ── evaluations ───────────────────────────────────────────────────────────
     match /evaluations/{evalId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isAdmin() || isOrganization();
+      allow read: if signedIn();
+      allow create: if signedIn();
+      allow update: if isAdmin() || isOrg();
       allow delete: if isAdmin();
     }
 
-    // =====================
-    // ORG INVITATIONS
-    // =====================
-    match /orgInvitations/{inviteId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn() && (isAdmin() || isOrganization());
-      allow update: if isSignedIn();
-      allow delete: if isAdmin() || isOrganization();
+    // ── contactRequests ───────────────────────────────────────────────────────
+    match /contactRequests/{reqId} {
+      allow create: if signedIn();
+      allow read: if signedIn() && (isAdmin() || isOrg());
+      allow update, delete: if isAdmin();
     }
 
-    // =====================
-    // GROUPS
-    // =====================
-    match /groups/{groupId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn() && (isAdmin() || isOrganization());
-      allow update: if isSignedIn() && (isAdmin() || isOrganization());
-      allow delete: if isAdmin() || isOrganization();
+    // ── settings (platform-wide) ──────────────────────────────────────────────
+    match /settings/{docId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
     }
 
   }
