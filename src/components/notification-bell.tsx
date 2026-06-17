@@ -1,106 +1,137 @@
-"use client";
+'use client';
 
-import { useState, useMemo } from 'react';
-import Link from 'next/link';
-import { useUser } from '@/firebase/auth/use-user';
-import { useFirestore, useMemoFirebase } from '@/firebase/provider';
-import { useCollection } from '@/firebase/firestore/use-collection';
-import { collection, query, where, orderBy, doc, writeBatch } from 'firebase/firestore';
+import { useState, useEffect, useCallback } from 'react';
 import { Bell, BellRing } from 'lucide-react';
-import { Button } from './ui/button';
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuItem } from './ui/dropdown-menu';
-import { Badge } from './ui/badge';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { useUser } from '@/firebase/auth/use-user';
 import { formatDistanceToNow } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
-type Notification = {
-    id: string;
-    title: string;
-    description: string;
-    link: string;
-    isRead: boolean;
-    createdAt: any; // Firestore Timestamp
+interface Notification {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  read: boolean;
+  createdAt: string;
+  link: string;
 }
 
 export function NotificationBell() {
-    const { user: authUser } = useUser();
-    const firestore = useFirestore();
-    const [isOpen, setIsOpen] = useState(false);
+  const { user } = useUser();
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState(false);
 
-    const notificationsQuery = useMemoFirebase(() => {
-        if (!authUser || !firestore) return null;
-        return query(
-            collection(firestore, "notifications"), 
-            where("userId", "==", authUser.uid), 
-            orderBy("createdAt", "desc")
-        );
-    }, [authUser, firestore]);
-
-    const { data: notifications } = useCollection<Notification>(notificationsQuery);
-
-    const unreadCount = useMemo(() => {
-        return notifications?.filter(n => !n.isRead).length || 0;
-    }, [notifications]);
-
-    const handleOpenChange = async (open: boolean) => {
-        setIsOpen(open);
-        if (open || !notifications || unreadCount === 0 || !firestore) return;
-
-        // Mark all as read when dropdown is closed
-        const batch = writeBatch(firestore);
-        notifications.forEach(n => {
-            if (!n.isRead) {
-                const notifRef = doc(firestore, 'notifications', n.id);
-                batch.update(notifRef, { isRead: true });
-            }
-        });
-        await batch.commit().catch(console.error);
+  const fetchNotifications = useCallback(async () => {
+    if (!user) return;
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch('/api/notifications', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setNotifications(data.notifications || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch notifications:', err);
+    } finally {
+      setLoading(false);
     }
+  }, [user]);
 
-    return (
-        <DropdownMenu open={isOpen} onOpenChange={handleOpenChange}>
-            <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" className="h-8 w-8 relative">
-                    {unreadCount > 0 ? <BellRing className="h-4 w-4" /> : <Bell className="h-4 w-4" />}
-                    <span className="sr-only">الإشعارات</span>
-                    {unreadCount > 0 && (
-                         <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-xs text-destructive-foreground">{unreadCount}</span>
-                    )}
-                </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-80" align="end">
-                <DropdownMenuLabel>
-                    <div className="flex items-center justify-between">
-                        <p className="font-semibold">الإشعارات</p>
-                        {unreadCount > 0 && <Badge>{unreadCount} جديد</Badge>}
-                    </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {notifications && notifications.length > 0 ? (
-                    notifications.slice(0, 5).map(n => (
-                         <DropdownMenuItem key={n.id} asChild className="flex flex-col items-start gap-1 p-3 cursor-pointer">
-                            <Link href={n.link || '#'}>
-                                <div className='flex justify-between w-full'>
-                                    <p className="font-medium">{n.title}</p>
-                                    {n.createdAt && <p className='text-xs text-muted-foreground'>{formatDistanceToNow(n.createdAt.toDate(), { addSuffix: true, locale: ar })}</p>}
-                                </div>
-                                <p className="text-xs text-muted-foreground w-full">{n.description}</p>
-                            </Link>
-                        </DropdownMenuItem>
-                    ))
-                ) : (
-                     <DropdownMenuItem className="justify-center" disabled>لا توجد إشعارات</DropdownMenuItem>
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, [fetchNotifications]);
+
+  const markAllRead = async () => {
+    if (!user) return;
+    try {
+      const token = await user.getIdToken();
+      await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ all: true }),
+      });
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    } catch (err) {
+      console.error('Failed to mark all read:', err);
+    }
+  };
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  return (
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" className="relative">
+          {unreadCount > 0 ? (
+            <BellRing className="h-5 w-5" />
+          ) : (
+            <Bell className="h-5 w-5" />
+          )}
+          {unreadCount > 0 && (
+            <Badge
+              className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
+              variant="destructive"
+            >
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </Badge>
+          )}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-80">
+        <DropdownMenuLabel className="flex items-center justify-between">
+          <span>الإشعارات</span>
+          {unreadCount > 0 && (
+            <Button variant="ghost" size="sm" onClick={markAllRead} className="text-xs h-6">
+              تحديد الكل كمقروء
+            </Button>
+          )}
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {loading ? (
+          <div className="p-4 text-center text-sm text-muted-foreground">جارٍ التحميل...</div>
+        ) : notifications.length === 0 ? (
+          <div className="p-4 text-center text-sm text-muted-foreground">لا توجد إشعارات</div>
+        ) : (
+          notifications.slice(0, 10).map((notification) => (
+            <DropdownMenuItem
+              key={notification.id}
+              className={`flex flex-col items-start gap-1 p-3 cursor-pointer ${!notification.read ? 'bg-blue-50 dark:bg-blue-950/20' : ''}`}
+              onClick={() => {
+                if (notification.link) window.location.href = notification.link;
+              }}
+            >
+              <div className="flex items-center justify-between w-full">
+                <span className="font-medium text-sm">{notification.title}</span>
+                {!notification.read && (
+                  <span className="h-2 w-2 rounded-full bg-blue-500 flex-shrink-0" />
                 )}
-                
-                {notifications && notifications.length > 5 && (
-                    <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem asChild className="justify-center text-primary cursor-pointer">
-                            <Link href="/notifications">عرض كل الإشعارات</Link>
-                        </DropdownMenuItem>
-                    </>
-                )}
-            </DropdownMenuContent>
-        </DropdownMenu>
-    );
+              </div>
+              <span className="text-xs text-muted-foreground line-clamp-2">{notification.body}</span>
+              <span className="text-xs text-muted-foreground">
+                {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true, locale: ar })}
+              </span>
+            </DropdownMenuItem>
+          ))
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 }

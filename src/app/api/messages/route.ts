@@ -2,89 +2,104 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 
-/**
- * GET /api/messages
- * Returns all conversations for the authenticated user,
- * each enriched with the other participant's profile.
- */
 export async function GET(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
     const decoded = await adminAuth.verifyIdToken(token);
     const uid = decoded.uid;
 
-    const snap = await adminDb
-      .collection('conversations')
+    const snapshot = await adminDb
+      .collection('messages')
       .where('participants', 'array-contains', uid)
-      .orderBy('lastUpdated', 'desc')
+      .orderBy('updatedAt', 'desc')
       .get();
 
     const conversations = await Promise.all(
-      snap.docs.map(async (d) => {
-        const data = d.data();
-        const otherUserId = (data.participants as string[]).find((p) => p !== uid);
-        let otherUser: Record<string, unknown> = { id: otherUserId };
+      snapshot.docs.map(async (doc) => {
+        const data = doc.data();
+        const otherUserId = (data.participants as string[]).find((p: string) => p !== uid) || '';
+        let otherUser = { id: otherUserId, name: 'مستخدم', role: '' };
         if (otherUserId) {
-          const userSnap = await adminDb.collection('users').doc(otherUserId).get();
-          if (userSnap.exists) {
-            otherUser = { id: userSnap.id, ...userSnap.data() };
+          const userDoc = await adminDb.collection('users').doc(otherUserId).get();
+          if (userDoc.exists) {
+            const userData = userDoc.data()!;
+            otherUser = { id: otherUserId, name: userData.name || userData.displayName || 'مستخدم', role: userData.role || '' };
           }
         }
-        return { id: d.id, ...data, otherUser };
+        return {
+          id: doc.id,
+          participants: data.participants,
+          lastMessage: data.lastMessage || '',
+          updatedAt: data.updatedAt?.toDate?.()?.toISOString?.() || new Date().toISOString(),
+          unreadCount: data.unreadCount?.[uid] || 0,
+          otherUser,
+        };
       })
     );
 
     return NextResponse.json({ conversations });
-  } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : 'Unknown error';
-    return NextResponse.json({ error: message }, { status: 500 });
+  } catch (error) {
+    console.error('GET /api/messages error:', error);
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 }
 
-/**
- * POST /api/messages
- * Body: { otherUserId: string }
- * Finds an existing conversation or creates a new one.
- * Returns the conversation id.
- */
 export async function POST(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
     const decoded = await adminAuth.verifyIdToken(token);
     const uid = decoded.uid;
 
-    const body = await req.json();
-    const { otherUserId } = body as { otherUserId: string };
-
-    if (!otherUserId) {
-      return NextResponse.json({ error: 'otherUserId is required' }, { status: 400 });
+    const { toUserId, content } = await req.json();
+    if (!toUserId || !content) {
+      return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
     }
 
-    // Check for existing conversation between these two participants
-    const existing = await adminDb
-      .collection('conversations')
+    // Find existing conversation
+    const snapshot = await adminDb
+      .collection('messages')
       .where('participants', 'array-contains', uid)
       .get();
 
-    const existingConvo = existing.docs.find((d) => {
-      const participants = d.data().participants as string[];
-      return participants.includes(otherUserId);
-    });
-
-    if (existingConvo) {
-      return NextResponse.json({ conversationId: existingConvo.id });
+    let convId: string | null = null;
+    for (const doc of snapshot.docs) {
+      const data = doc.data();
+      if ((data.participants as string[]).includes(toUserId)) {
+        convId = doc.id;
+        break;
+      }
     }
 
-    // Create new conversation
-    const newConvo = await adminDb.collection('conversations').add({
-      participants: [uid, otherUserId],
-      lastMessage: '',
-      lastUpdated: FieldValue.serverTimestamp(),
+    const now = FieldValue.serverTimestamp();
+
+    if (!convId) {
+      // Create new conversation
+      const convRef = await adminDb.collection('messages').add({
+        participants: [uid, toUserId],
+        lastMessage: content,
+        updatedAt: now,
+        unreadCount: { [toUserId]: 1, [uid]: 0 },
+      });
+      convId = convRef.id;
+    } else {
+      // Update existing
+      await adminDb.collection('messages').doc(convId).update({
+        lastMessage: content,
+        updatedAt: now,
+        [`unreadCount.${toUserId}`]: FieldValue.increment(1),
+      });
+    }
+
+    // Add message to subcollection
+    const msgRef = await adminDb.collection('messages').doc(convId).collection('msgs').add({
+      senderId: uid,
+      content,
+      createdAt: now,
     });
 
-    return NextResponse.json({ conversationId: newConvo.id }, { status: 201 });
-  } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : 'Unknown error';
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ conversationId: convId, messageId: msgRef.id });
+  } catch (error) {
+    console.error('POST /api/messages error:', error);
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 }
