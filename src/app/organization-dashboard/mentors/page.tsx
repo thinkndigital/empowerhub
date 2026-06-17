@@ -1,18 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import {
-  collection,
-  query,
-  where,
-  addDoc,
-  updateDoc,
-  doc,
-  serverTimestamp,
-} from "firebase/firestore";
-import { useFirestore, useMemoFirebase } from "@/firebase/provider";
-import { useCollection } from "@/firebase/firestore/use-collection";
+import type { User } from "firebase/auth";
 import { useUser } from "@/firebase/auth/use-user";
+import { useOrgUsers } from "@/hooks/use-org-users";
+import type { OrgUser } from "@/hooks/use-org-users";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
@@ -30,87 +22,46 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { UserX, Send } from "lucide-react";
 
-interface MentorUser {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  organizationId?: string;
-  expertise?: string;
-  avatarUrl?: string;
-  status?: string;
-}
-
-interface OrgInvitation {
-  id: string;
-  orgId: string;
-  orgName: string;
-  targetUid: string;
-  targetName: string;
-  targetRole: string;
-  status: "pending" | "accepted" | "rejected";
-  createdAt: unknown;
+async function apiAction(user: User, body: object) {
+  const token = await user.getIdToken();
+  const res = await fetch("/api/org/action", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
+  });
+  return res.json();
 }
 
 export default function OrgMentorsPage() {
-  const { userProfile } = useUser();
-  const firestore = useFirestore();
+  const { user, userProfile } = useUser();
   const { toast } = useToast();
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
+  const [sentInvites, setSentInvites] = useState<Set<string>>(new Set());
 
   const orgId = userProfile?.organizationId ?? "";
-  const orgName = userProfile?.name ?? "";
 
-  // Tab 1: mentors in org
-  const orgMentorsQuery = useMemoFirebase(() => {
-    if (!firestore || !orgId) return null;
-    return query(
-      collection(firestore, "users"),
-      where("role", "==", "mentor"),
-      where("organizationId", "==", orgId)
-    );
-  }, [firestore, orgId]);
-  const { data: orgMentors, isLoading: loadingOrgMentors } =
-    useCollection<MentorUser>(orgMentorsQuery);
+  const { data: orgMentors, isLoading: loadingOrgMentors, refetch: refetchOrg } =
+    useOrgUsers("mentor", "org");
 
-  // Tab 2: all mentors (filter out org ones in render)
-  const allMentorsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(
-      collection(firestore, "users"),
-      where("role", "==", "mentor")
-    );
-  }, [firestore]);
   const { data: allMentors, isLoading: loadingAllMentors } =
-    useCollection<MentorUser>(allMentorsQuery);
+    useOrgUsers("mentor", "all");
 
-  // Pending invitations for this org
-  const pendingInvitesQuery = useMemoFirebase(() => {
-    if (!firestore || !orgId) return null;
-    return query(
-      collection(firestore, "orgInvitations"),
-      where("orgId", "==", orgId),
-      where("targetRole", "==", "mentor"),
-      where("status", "==", "pending")
-    );
-  }, [firestore, orgId]);
-  const { data: pendingInvites } =
-    useCollection<OrgInvitation>(pendingInvitesQuery);
-
-  const pendingUids = new Set((pendingInvites ?? []).map((inv) => inv.targetUid));
   const orgMentorIds = new Set((orgMentors ?? []).map((m) => m.id));
   const availableMentors = (allMentors ?? []).filter(
     (m) => !orgMentorIds.has(m.id)
   );
 
   const handleRemove = async (mentorId: string) => {
-    if (!firestore) return;
+    if (!user) return;
     setLoadingAction(mentorId);
     try {
-      await updateDoc(doc(firestore, "users", mentorId), {
-        organizationId: null,
-      });
+      const result = await apiAction(user, { action: "removeFromOrg", userId: mentorId });
+      if (result.error) throw new Error(result.error);
       toast({ title: "تمت الإزالة", description: "تم إزالة المرشد من المنظمة." });
+      refetchOrg();
     } catch {
       toast({ title: "خطأ", description: "فشل في إزالة المرشد.", variant: "destructive" });
     } finally {
@@ -118,27 +69,18 @@ export default function OrgMentorsPage() {
     }
   };
 
-  const handleInvite = async (mentor: MentorUser) => {
-    if (!firestore || !orgId) return;
+  const handleInvite = async (mentor: OrgUser) => {
+    if (!user || !orgId) return;
     setLoadingAction(mentor.id);
     try {
-      await addDoc(collection(firestore, "orgInvitations"), {
-        orgId,
-        orgName,
+      const result = await apiAction(user, {
+        action: "invite",
         targetUid: mentor.id,
-        targetName: mentor.name,
+        targetName: mentor.name ?? "",
         targetRole: "mentor",
-        status: "pending",
-        createdAt: serverTimestamp(),
       });
-      await addDoc(collection(firestore, "notifications"), {
-        userId: mentor.id,
-        title: "دعوة من منظمة",
-        body: `منظمة ${orgName} تدعوك للانضمام إليها`,
-        read: false,
-        createdAt: serverTimestamp(),
-        link: "/mentor-dashboard/invitations",
-      });
+      if (result.error) throw new Error(result.error);
+      setSentInvites((prev) => new Set(prev).add(mentor.id));
       toast({ title: "تم الإرسال", description: "تم إرسال الدعوة للمرشد." });
     } catch {
       toast({ title: "خطأ", description: "فشل في إرسال الدعوة.", variant: "destructive" });
@@ -204,7 +146,13 @@ export default function OrgMentorsPage() {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>{mentor.expertise ?? "—"}</TableCell>
+                    <TableCell>
+                      {mentor.expertise ? (
+                        <Badge variant="outline">{mentor.expertise}</Badge>
+                      ) : (
+                        "—"
+                      )}
+                    </TableCell>
                     <TableCell>
                       <Badge
                         variant={
@@ -247,7 +195,7 @@ export default function OrgMentorsPage() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {availableMentors.map((mentor) => {
-                const isPending = pendingUids.has(mentor.id);
+                const isSent = sentInvites.has(mentor.id);
                 return (
                   <Card key={mentor.id}>
                     <CardContent className="pt-6 flex flex-col items-center gap-3 text-center">
@@ -263,7 +211,7 @@ export default function OrgMentorsPage() {
                           {mentor.expertise ?? "لا يوجد تخصص محدد"}
                         </p>
                       </div>
-                      {isPending ? (
+                      {isSent ? (
                         <Button variant="outline" size="sm" disabled>
                           تم الإرسال
                         </Button>

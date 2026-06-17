@@ -43,6 +43,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true });
     }
 
+    if (action === 'invite') {
+      const orgSnap = await adminDb.collection('organizations').doc(orgId).get();
+      const orgName = orgSnap.data()?.name || '';
+      await adminDb.collection('orgInvitations').add({
+        orgId,
+        orgName,
+        targetUid: body.targetUid,
+        targetName: body.targetName,
+        targetRole: body.targetRole,
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+      });
+      await adminDb.collection('notifications').add({
+        userId: body.targetUid,
+        title: 'دعوة من منظمة',
+        description: `دعتك منظمة ${orgName} للانضمام إليها`,
+        link: `/${body.targetRole}-dashboard/invitations`,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      });
+      return NextResponse.json({ success: true });
+    }
+
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });

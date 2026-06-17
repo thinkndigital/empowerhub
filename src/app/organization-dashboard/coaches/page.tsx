@@ -1,18 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import {
-  collection,
-  query,
-  where,
-  addDoc,
-  updateDoc,
-  doc,
-  serverTimestamp,
-} from "firebase/firestore";
-import { useFirestore, useMemoFirebase } from "@/firebase/provider";
-import { useCollection } from "@/firebase/firestore/use-collection";
+import type { User } from "firebase/auth";
 import { useUser } from "@/firebase/auth/use-user";
+import { useOrgUsers } from "@/hooks/use-org-users";
+import type { OrgUser } from "@/hooks/use-org-users";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
@@ -30,87 +22,46 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { UserX, Send } from "lucide-react";
 
-interface CoachUser {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  organizationId?: string;
-  expertise?: string;
-  avatarUrl?: string;
-  status?: string;
-}
-
-interface OrgInvitation {
-  id: string;
-  orgId: string;
-  orgName: string;
-  targetUid: string;
-  targetName: string;
-  targetRole: string;
-  status: "pending" | "accepted" | "rejected";
-  createdAt: unknown;
+async function apiAction(user: User, body: object) {
+  const token = await user.getIdToken();
+  const res = await fetch("/api/org/action", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
+  });
+  return res.json();
 }
 
 export default function OrgCoachesPage() {
-  const { userProfile } = useUser();
-  const firestore = useFirestore();
+  const { user, userProfile } = useUser();
   const { toast } = useToast();
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
+  const [sentInvites, setSentInvites] = useState<Set<string>>(new Set());
 
   const orgId = userProfile?.organizationId ?? "";
-  const orgName = userProfile?.name ?? "";
 
-  // Tab 1: coaches in org
-  const orgCoachesQuery = useMemoFirebase(() => {
-    if (!firestore || !orgId) return null;
-    return query(
-      collection(firestore, "users"),
-      where("role", "==", "coach"),
-      where("organizationId", "==", orgId)
-    );
-  }, [firestore, orgId]);
-  const { data: orgCoaches, isLoading: loadingOrgCoaches } =
-    useCollection<CoachUser>(orgCoachesQuery);
+  const { data: orgCoaches, isLoading: loadingOrgCoaches, refetch: refetchOrg } =
+    useOrgUsers("coach", "org");
 
-  // Tab 2: all coaches
-  const allCoachesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(
-      collection(firestore, "users"),
-      where("role", "==", "coach")
-    );
-  }, [firestore]);
   const { data: allCoaches, isLoading: loadingAllCoaches } =
-    useCollection<CoachUser>(allCoachesQuery);
+    useOrgUsers("coach", "all");
 
-  // Pending invitations for this org
-  const pendingInvitesQuery = useMemoFirebase(() => {
-    if (!firestore || !orgId) return null;
-    return query(
-      collection(firestore, "orgInvitations"),
-      where("orgId", "==", orgId),
-      where("targetRole", "==", "coach"),
-      where("status", "==", "pending")
-    );
-  }, [firestore, orgId]);
-  const { data: pendingInvites } =
-    useCollection<OrgInvitation>(pendingInvitesQuery);
-
-  const pendingUids = new Set((pendingInvites ?? []).map((inv) => inv.targetUid));
   const orgCoachIds = new Set((orgCoaches ?? []).map((c) => c.id));
   const availableCoaches = (allCoaches ?? []).filter(
     (c) => !orgCoachIds.has(c.id)
   );
 
   const handleRemove = async (coachId: string) => {
-    if (!firestore) return;
+    if (!user) return;
     setLoadingAction(coachId);
     try {
-      await updateDoc(doc(firestore, "users", coachId), {
-        organizationId: null,
-      });
+      const result = await apiAction(user, { action: "removeFromOrg", userId: coachId });
+      if (result.error) throw new Error(result.error);
       toast({ title: "تمت الإزالة", description: "تم إزالة المدرب من المنظمة." });
+      refetchOrg();
     } catch {
       toast({ title: "خطأ", description: "فشل في إزالة المدرب.", variant: "destructive" });
     } finally {
@@ -118,27 +69,18 @@ export default function OrgCoachesPage() {
     }
   };
 
-  const handleInvite = async (coach: CoachUser) => {
-    if (!firestore || !orgId) return;
+  const handleInvite = async (coach: OrgUser) => {
+    if (!user || !orgId) return;
     setLoadingAction(coach.id);
     try {
-      await addDoc(collection(firestore, "orgInvitations"), {
-        orgId,
-        orgName,
+      const result = await apiAction(user, {
+        action: "invite",
         targetUid: coach.id,
-        targetName: coach.name,
+        targetName: coach.name ?? "",
         targetRole: "coach",
-        status: "pending",
-        createdAt: serverTimestamp(),
       });
-      await addDoc(collection(firestore, "notifications"), {
-        userId: coach.id,
-        title: "دعوة من منظمة",
-        body: `منظمة ${orgName} تدعوك للانضمام إليها`,
-        read: false,
-        createdAt: serverTimestamp(),
-        link: "/coach-dashboard/invitations",
-      });
+      if (result.error) throw new Error(result.error);
+      setSentInvites((prev) => new Set(prev).add(coach.id));
       toast({ title: "تم الإرسال", description: "تم إرسال الدعوة للمدرب." });
     } catch {
       toast({ title: "خطأ", description: "فشل في إرسال الدعوة.", variant: "destructive" });
@@ -204,7 +146,13 @@ export default function OrgCoachesPage() {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>{coach.expertise ?? "—"}</TableCell>
+                    <TableCell>
+                      {coach.expertise ? (
+                        <Badge variant="outline">{coach.expertise}</Badge>
+                      ) : (
+                        "—"
+                      )}
+                    </TableCell>
                     <TableCell>
                       <Badge
                         variant={
@@ -247,7 +195,7 @@ export default function OrgCoachesPage() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {availableCoaches.map((coach) => {
-                const isPending = pendingUids.has(coach.id);
+                const isSent = sentInvites.has(coach.id);
                 return (
                   <Card key={coach.id}>
                     <CardContent className="pt-6 flex flex-col items-center gap-3 text-center">
@@ -263,7 +211,7 @@ export default function OrgCoachesPage() {
                           {coach.expertise ?? "لا يوجد تخصص محدد"}
                         </p>
                       </div>
-                      {isPending ? (
+                      {isSent ? (
                         <Button variant="outline" size="sm" disabled>
                           تم الإرسال
                         </Button>
