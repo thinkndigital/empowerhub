@@ -1,23 +1,17 @@
 'use client';
 
-import { useMemo } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Users, Activity, CheckCircle, DollarSign, ArrowUpRight, BookOpen, PlayCircle, PlusCircle, BarChart3, CalendarDays } from "lucide-react";
-import { useFirestore, useMemoFirebase } from '@/firebase/provider';
 import { useUser, type UserProfile } from '@/firebase/auth/use-user';
-import { useDoc } from '@/firebase/firestore/use-doc';
-import { useCollection } from '@/firebase/firestore/use-collection';
-import { collection, doc, query, where, orderBy } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
-import { isPast, parseISO } from "date-fns";
 
-type CoachProfile = UserProfile & { wallet?: { balance?: number } };
 type Course = { id: string; title?: string; enrolledCount?: number; completionRate?: number; status?: string };
-type Session = { id: string; status: string; date: string };
+type Beneficiary = { id: string; name?: string; progress?: number };
 
 const StatCard = ({ title, value, sub, icon, trend, color, loading }: {
   title: string, value: string | React.ReactNode, sub: string, icon: React.ReactNode, trend?: string, color: string, loading?: boolean
@@ -38,44 +32,40 @@ const StatCard = ({ title, value, sub, icon, trend, color, loading }: {
 );
 
 export default function CoachDashboardPage() {
-  const firestore = useFirestore();
   const { user: authUser } = useUser();
+  const [myBeneficiaries, setMyBeneficiaries] = useState<Beneficiary[] | null>(null);
+  const [benefLoading, setBenefLoading] = useState(true);
 
-  const userRef = useMemoFirebase(() => {
-    if (!firestore || !authUser) return null;
-    return doc(firestore, 'users', authUser.uid);
-  }, [firestore, authUser]);
-  const { data: user, isLoading: userLoading } = useDoc<CoachProfile>(userRef);
+  const fetchBeneficiaries = useCallback(async () => {
+    if (!authUser) return;
+    setBenefLoading(true);
+    try {
+      const token = await authUser.getIdToken();
+      const res = await fetch(`/api/org/users?role=beneficiary&scope=all&coachId=${authUser.uid}`, {
+        headers: { authorization: `Bearer ${token}` },
+      });
+      const json = await res.json();
+      setMyBeneficiaries(json.users || []);
+    } catch {
+      setMyBeneficiaries([]);
+    } finally {
+      setBenefLoading(false);
+    }
+  }, [authUser]);
 
-  const coursesQuery = useMemoFirebase(() => {
-    if (!firestore || !authUser) return null;
-    return query(collection(firestore, "courses"), where("createdBy", "==", authUser.uid));
-  }, [firestore, authUser]);
-  const { data: courses, isLoading: coursesLoading } = useCollection<Course>(coursesQuery);
+  useEffect(() => { fetchBeneficiaries(); }, [fetchBeneficiaries]);
 
-  const sessionsQuery = useMemoFirebase(() => {
-    if (!firestore || !authUser) return null;
-    return query(collection(firestore, "sessions"), where("hostId", "==", authUser.uid), orderBy("date", "desc"));
-  }, [firestore, authUser]);
-  const { data: sessions, isLoading: sessLoading } = useCollection<Session>(sessionsQuery);
+  const courses: Course[] = [];
+  const coursesLoading = false;
+  const sessions: { id: string; status: string; date: string }[] = [];
+  const sessLoading = false;
 
-  const beneficiariesQuery = useMemoFirebase(() => {
-    if (!firestore || !authUser) return null;
-    return query(collection(firestore, "users"), where("coachId", "==", authUser.uid));
-  }, [firestore, authUser]);
-  const { data: myBeneficiaries, isLoading: benefLoading } = useCollection<{ id: string; name?: string; progress?: number }>(beneficiariesQuery);
-
-  const stats = useMemo(() => {
-    const totalEnrolled = courses?.reduce((sum, c) => sum + (c.enrolledCount || 0), 0) || 0;
-    const publishedCourses = courses?.filter(c => c.status === 'published' || c.status === 'منشورة').length || 0;
-    const avgCompletion = courses && courses.length > 0
-      ? Math.round(courses.reduce((sum, c) => sum + (c.completionRate || 0), 0) / courses.length)
-      : 0;
-    const upcomingSessions = sessions?.filter(s => s.status === 'scheduled' && !isPast(parseISO(s.date))).length || 0;
-    return { totalEnrolled, publishedCourses, avgCompletion, upcomingSessions };
-  }, [courses, sessions]);
-
-  const loading = coursesLoading || sessLoading;
+  const stats = useMemo(() => ({
+    totalEnrolled: 0,
+    publishedCourses: 0,
+    avgCompletion: 0,
+    upcomingSessions: 0,
+  }), []);
 
   return (
     <>
@@ -114,11 +104,10 @@ export default function CoachDashboardPage() {
         />
         <StatCard
           title="إجمالي الأرباح"
-          value={`${((user as any)?.wallet?.balance || 0).toFixed(2)} د.أ`}
+          value="0.00 د.أ"
           sub="رصيد المحفظة"
           icon={<DollarSign className="h-5 w-5 text-white" />}
           color="bg-amber-500"
-          loading={userLoading}
         />
       </div>
 
