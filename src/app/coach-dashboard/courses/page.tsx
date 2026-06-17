@@ -4,7 +4,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { MoreHorizontal, PlusCircle, Download, Edit, Video, Trash2, Check, X, Calendar as CalendarIcon } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Download, Edit, Video, Trash2, Check, X, Calendar as CalendarIcon, UserPlus } from "lucide-react";
 import Link from 'next/link';
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
@@ -60,6 +60,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect, useCallback } from "react";
 import { useUser } from "@/firebase/auth/use-user";
@@ -73,7 +74,10 @@ type Course = {
   category?: string;
   description?: string;
   status?: "منشورة" | "مسودة";
+  enrolledCount?: number;
 };
+
+type Beneficiary = { id: string; name?: string };
 
 
 const addCourseFormSchema = z.object({
@@ -95,6 +99,10 @@ export default function CoachCoursesPage() {
     const [isAddCourseDialogOpen, setIsAddCourseDialogOpen] = useState(false);
     const [sessionCourse, setSessionCourse] = useState<Course | null>(null);
     const [courseToDelete, setCourseToDelete] = useState<Course | null>(null);
+    const [enrollCourse, setEnrollCourse] = useState<Course | null>(null);
+    const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>([]);
+    const [selectedBeneficiaryId, setSelectedBeneficiaryId] = useState<string>('');
+    const [enrolling, setEnrolling] = useState(false);
     const { user: authUser } = useUser();
     const [courses, setCourses] = useState<Course[]>([]);
     const [loading, setLoading] = useState(true);
@@ -111,11 +119,26 @@ export default function CoachCoursesPage() {
 
     useEffect(() => { fetchCourses(); }, [fetchCourses]);
 
+    // Fetch beneficiaries when enroll dialog opens
+    useEffect(() => {
+        if (!enrollCourse || !authUser) return;
+        (async () => {
+            try {
+                const token = await authUser.getIdToken();
+                const res = await fetch(`/api/org/users?role=beneficiary&coachId=${authUser.uid}`, {
+                    headers: { authorization: `Bearer ${token}` },
+                });
+                const json = await res.json();
+                setBeneficiaries(json.users || []);
+            } catch { /* silent */ }
+        })();
+    }, [enrollCourse, authUser]);
+
     const addCourseForm = useForm<z.infer<typeof addCourseFormSchema>>({
         resolver: zodResolver(addCourseFormSchema),
         defaultValues: { title: "", category: "", description: "" },
     });
-    
+
     const addSessionForm = useForm<z.infer<typeof addSessionFormSchema>>({
         resolver: zodResolver(addSessionFormSchema),
         defaultValues: {
@@ -175,6 +198,28 @@ export default function CoachCoursesPage() {
             setCourseToDelete(null);
             fetchCourses();
         } catch { toast({ variant: "destructive", title: "خطأ!", description: "فشل حذف الدورة." }); }
+    }
+
+    async function handleEnrollBeneficiary() {
+        if (!authUser || !enrollCourse || !selectedBeneficiaryId) return;
+        setEnrolling(true);
+        try {
+            const token = await authUser.getIdToken();
+            const res = await fetch(`/api/courses/${enrollCourse.id}/enroll`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
+                body: JSON.stringify({ beneficiaryId: selectedBeneficiaryId }),
+            });
+            if (!res.ok) throw new Error((await res.json()).error);
+            toast({ title: "تم التسجيل!", description: "تم تسجيل المستفيد في الدورة بنجاح." });
+            setEnrollCourse(null);
+            setSelectedBeneficiaryId('');
+            fetchCourses();
+        } catch (e: any) {
+            toast({ variant: "destructive", title: "خطأ!", description: e.message || "فشل تسجيل المستفيد." });
+        } finally {
+            setEnrolling(false);
+        }
     }
 
 
@@ -237,6 +282,7 @@ export default function CoachCoursesPage() {
             <TableRow>
               <TableHead>عنوان الدورة</TableHead>
               <TableHead className="hidden md:table-cell">الفئة</TableHead>
+              <TableHead className="text-center">المسجلون</TableHead>
               <TableHead className="text-center">الحالة</TableHead>
               <TableHead>
                 <span className="sr-only">الإجراءات</span>
@@ -248,6 +294,7 @@ export default function CoachCoursesPage() {
                 <TableRow key={i}>
                     <TableCell><Skeleton className="h-4 w-[250px]" /></TableCell>
                     <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-[100px]" /></TableCell>
+                    <TableCell className="text-center"><Skeleton className="h-6 w-[40px] mx-auto" /></TableCell>
                     <TableCell className="text-center"><Skeleton className="h-6 w-[60px] mx-auto" /></TableCell>
                     <TableCell><Skeleton className="h-8 w-8" /></TableCell>
                 </TableRow>
@@ -257,40 +304,58 @@ export default function CoachCoursesPage() {
                 <TableCell className="font-medium">{course.title}</TableCell>
                  <TableCell className="hidden md:table-cell">{course.category || 'غير مصنف'}</TableCell>
                 <TableCell className="text-center">
+                  <Badge variant="outline">{course.enrolledCount ?? 0}</Badge>
+                </TableCell>
+                <TableCell className="text-center">
                   <Badge variant={course.status === "منشورة" ? "default" : "secondary"}>
                     {course.status || 'مسودة'}
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button aria-haspopup="true" size="icon" variant="ghost">
-                        <MoreHorizontal className="h-4 w-4" />
-                        <span className="sr-only">قائمة</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
-                      <DropdownMenuItem asChild>
-                         <Link href={`/coach-dashboard/courses/${course.id}`}>
-                            <Edit className="ml-2 h-4 w-4" />
-                            تحرير المحتوى
-                         </Link>
-                      </DropdownMenuItem>
-                       <DropdownMenuItem onClick={() => handlePublish(course)}>
-                         {course.status === "منشورة" ? <X className="ml-2 h-4 w-4" /> : <Check className="ml-2 h-4 w-4" />}
-                         {course.status === "منشورة" ? 'إلغاء النشر' : 'نشر الدورة'}
-                       </DropdownMenuItem>
-                       <DropdownMenuItem onSelect={() => setSessionCourse(course)}>
-                            <Video className="ml-2 h-4 w-4" />
-                            إضافة جلسة مباشرة
-                       </DropdownMenuItem>
-                      <DropdownMenuItem className="text-red-500" onSelect={(e) => { e.preventDefault(); setCourseToDelete(course); }}>
-                        <Trash2 className="ml-2 h-4 w-4" />
-                        حذف الدورة
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="hidden sm:flex"
+                      onClick={() => { setEnrollCourse(course); setSelectedBeneficiaryId(''); }}
+                    >
+                      <UserPlus className="ml-1 h-4 w-4" />
+                      تسجيل مستفيد
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button aria-haspopup="true" size="icon" variant="ghost">
+                          <MoreHorizontal className="h-4 w-4" />
+                          <span className="sr-only">قائمة</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
+                        <DropdownMenuItem asChild>
+                           <Link href={`/coach-dashboard/courses/${course.id}`}>
+                              <Edit className="ml-2 h-4 w-4" />
+                              تحرير المحتوى
+                           </Link>
+                        </DropdownMenuItem>
+                         <DropdownMenuItem onClick={() => handlePublish(course)}>
+                           {course.status === "منشورة" ? <X className="ml-2 h-4 w-4" /> : <Check className="ml-2 h-4 w-4" />}
+                           {course.status === "منشورة" ? 'إلغاء النشر' : 'نشر الدورة'}
+                         </DropdownMenuItem>
+                         <DropdownMenuItem onSelect={() => setSessionCourse(course)}>
+                              <Video className="ml-2 h-4 w-4" />
+                              إضافة جلسة مباشرة
+                         </DropdownMenuItem>
+                         <DropdownMenuItem onSelect={() => { setEnrollCourse(course); setSelectedBeneficiaryId(''); }} className="sm:hidden">
+                              <UserPlus className="ml-2 h-4 w-4" />
+                              تسجيل مستفيد
+                         </DropdownMenuItem>
+                        <DropdownMenuItem className="text-red-500" onSelect={(e) => { e.preventDefault(); setCourseToDelete(course); }}>
+                          <Trash2 className="ml-2 h-4 w-4" />
+                          حذف الدورة
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
@@ -298,6 +363,37 @@ export default function CoachCoursesPage() {
         </Table>
       </CardContent>
     </Card>
+
+    {/* Enroll Beneficiary Dialog */}
+    <Dialog open={!!enrollCourse} onOpenChange={(open) => !open && setEnrollCourse(null)}>
+      <DialogContent dir="rtl">
+        <DialogHeader>
+          <DialogTitle>تسجيل مستفيد في الدورة</DialogTitle>
+          <DialogDescription>اختر مستفيداً لتسجيله في دورة "{enrollCourse?.title}".</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <Select value={selectedBeneficiaryId} onValueChange={setSelectedBeneficiaryId}>
+            <SelectTrigger>
+              <SelectValue placeholder="اختر مستفيداً" />
+            </SelectTrigger>
+            <SelectContent>
+              {beneficiaries.length === 0
+                ? <SelectItem value="none" disabled>لا يوجد مستفيدون</SelectItem>
+                : beneficiaries.map(b => (
+                  <SelectItem key={b.id} value={b.id}>{b.name || b.id}</SelectItem>
+                ))
+              }
+            </SelectContent>
+          </Select>
+        </div>
+        <DialogFooter>
+          <DialogClose asChild><Button variant="ghost">إلغاء</Button></DialogClose>
+          <Button onClick={handleEnrollBeneficiary} disabled={!selectedBeneficiaryId || enrolling}>
+            {enrolling ? 'جاري التسجيل...' : 'تأكيد التسجيل'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
 
     <Dialog open={!!sessionCourse} onOpenChange={(isOpen) => !isOpen && setSessionCourse(null)}>
       <DialogContent dir="rtl" onPointerDownOutside={(e) => { if (e.target instanceof Element && e.target.closest('.rdp')) { e.preventDefault(); } }}>
@@ -377,4 +473,4 @@ export default function CoachCoursesPage() {
   );
 }
 
-    
+
