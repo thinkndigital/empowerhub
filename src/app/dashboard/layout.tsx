@@ -130,7 +130,7 @@ export default function DashboardLayout({
   const displayEmail = userProfile?.email || authUser?.email || 'لا يوجد بريد إلكتروني';
 
   return (
-    <SidebarProvider>
+    <SidebarProvider dir="rtl">
       <Sidebar side="right">
         <SidebarHeader>
           <div className="flex flex-col items-center text-center gap-2 p-2">

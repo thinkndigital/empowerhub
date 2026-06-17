@@ -1,17 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import {
-  collection,
-  query,
-  where,
-  addDoc,
-  updateDoc,
-  doc,
-  serverTimestamp,
-} from "firebase/firestore";
-import { useFirestore, useMemoFirebase } from "@/firebase/provider";
-import { useCollection } from "@/firebase/firestore/use-collection";
+import { useState, useEffect, useCallback } from "react";
 import { useUser } from "@/firebase/auth/use-user";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,213 +17,140 @@ interface OrgInvitation {
   targetName: string;
   targetRole: string;
   status: "pending" | "accepted" | "rejected";
-  createdAt: { toDate?: () => Date } | null;
+  createdAt: string;
 }
 
-function formatDate(val: OrgInvitation["createdAt"]): string {
-  if (!val) return "—";
-  const d = typeof val.toDate === "function" ? val.toDate() : new Date();
-  return d.toLocaleDateString("ar-SA", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-}
-
-const statusLabel: Record<OrgInvitation["status"], string> = {
-  pending: "قيد الانتظار",
-  accepted: "مقبولة",
-  rejected: "مرفوضة",
-};
-
-const statusVariant: Record<
-  OrgInvitation["status"],
-  "default" | "secondary" | "destructive"
-> = {
-  pending: "secondary",
-  accepted: "default",
-  rejected: "destructive",
+const statusLabel = { pending: "قيد الانتظار", accepted: "مقبولة", rejected: "مرفوضة" };
+const statusVariant: Record<string, "default" | "secondary" | "destructive"> = {
+  pending: "secondary", accepted: "default", rejected: "destructive",
 };
 
 export default function CoachInvitationsPage() {
-  const { user: authUser, userProfile } = useUser();
-  const firestore = useFirestore();
+  const { user } = useUser();
   const { toast } = useToast();
-  const [loadingAction, setLoadingAction] = useState<string | null>(null);
+  const [invitations, setInvitations] = useState<OrgInvitation[] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [acting, setActing] = useState<string | null>(null);
 
-  const uid = authUser?.uid ?? "";
-
-  const invitationsQuery = useMemoFirebase(() => {
-    if (!firestore || !uid) return null;
-    return query(
-      collection(firestore, "orgInvitations"),
-      where("targetUid", "==", uid)
-    );
-  }, [firestore, uid]);
-
-  const { data: invitations, isLoading } =
-    useCollection<OrgInvitation>(invitationsQuery);
-
-  const pending = (invitations ?? []).filter((i) => i.status === "pending");
-  const history = (invitations ?? []).filter((i) => i.status !== "pending");
-
-  const handleAccept = async (inv: OrgInvitation) => {
-    if (!firestore || !uid) return;
-    setLoadingAction(inv.id);
+  const fetchInvitations = useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
     try {
-      await updateDoc(doc(firestore, "orgInvitations", inv.id), {
-        status: "accepted",
+      const token = await user.getIdToken();
+      const res = await fetch("/api/org/invitations", {
+        headers: { authorization: `Bearer ${token}` },
       });
-      if (uid) {
-        await updateDoc(doc(firestore, "users", uid), {
-          organizationId: inv.orgId,
-        });
-      }
-      await addDoc(collection(firestore, "notifications"), {
-        userId: inv.orgId,
-        title: "قبول دعوة",
-        body: `${userProfile?.name ?? "مدرب"} قبل دعوتك للانضمام إلى المنظمة`,
-        read: false,
-        createdAt: serverTimestamp(),
-        link: "/organization-dashboard/coaches",
-      });
-      toast({ title: "تم القبول", description: "انضممت إلى المنظمة بنجاح." });
+      const json = await res.json();
+      setInvitations(json.invitations || []);
     } catch {
-      toast({ title: "خطأ", description: "فشل في قبول الدعوة.", variant: "destructive" });
+      setInvitations([]);
     } finally {
-      setLoadingAction(null);
+      setLoading(false);
     }
-  };
+  }, [user]);
 
-  const handleReject = async (inv: OrgInvitation) => {
-    if (!firestore) return;
-    setLoadingAction(inv.id);
+  useEffect(() => { fetchInvitations(); }, [fetchInvitations]);
+
+  async function handleAction(inviteId: string, action: "accept" | "reject") {
+    if (!user) return;
+    setActing(inviteId + action);
     try {
-      await updateDoc(doc(firestore, "orgInvitations", inv.id), {
-        status: "rejected",
+      const token = await user.getIdToken();
+      const res = await fetch("/api/org/invitations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", authorization: `Bearer ${token}` },
+        body: JSON.stringify({ inviteId, action }),
       });
-      await addDoc(collection(firestore, "notifications"), {
-        userId: inv.orgId,
-        title: "رفض دعوة",
-        body: `${userProfile?.name ?? "مدرب"} رفض دعوتك للانضمام إلى المنظمة`,
-        read: false,
-        createdAt: serverTimestamp(),
-        link: "/organization-dashboard/coaches",
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      toast({
+        title: action === "accept" ? "تم قبول الدعوة" : "تم رفض الدعوة",
+        description: action === "accept" ? "تم ربط حسابك بالمنظمة بنجاح." : "تم رفض الدعوة.",
       });
-      toast({ title: "تم الرفض", description: "تم رفض الدعوة." });
-    } catch {
-      toast({ title: "خطأ", description: "فشل في رفض الدعوة.", variant: "destructive" });
+      fetchInvitations();
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "خطأ", description: e.message });
     } finally {
-      setLoadingAction(null);
+      setActing(null);
     }
-  };
+  }
+
+  const pending = invitations?.filter(i => i.status === "pending") ?? [];
+  const history = invitations?.filter(i => i.status !== "pending") ?? [];
 
   return (
-    <div className="space-y-8" dir="rtl">
+    <div className="space-y-6" dir="rtl">
       <div>
-        <h1 className="text-2xl font-bold">الدعوات</h1>
-        <p className="text-muted-foreground">
-          دعوات المنظمات لانضمامك كمدرب
-        </p>
+        <h1 className="text-2xl font-bold flex items-center gap-2">
+          <Bell className="h-6 w-6" /> الدعوات
+        </h1>
+        <p className="text-muted-foreground text-sm mt-1">دعوات المنظمات للانضمام إليها</p>
       </div>
 
       {/* Pending */}
-      <section className="space-y-4">
-        <h2 className="text-lg font-semibold flex items-center gap-2">
-          <Bell className="h-5 w-5" />
-          الدعوات المعلقة
-        </h2>
-
-        {isLoading ? (
-          <div className="space-y-3">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="h-24 w-full rounded-xl" />
-            ))}
-          </div>
-        ) : pending.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center text-muted-foreground">
-              لا توجد دعوات معلقة
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-3">
-            {pending.map((inv) => (
-              <Card key={inv.id}>
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base">{inv.orgName}</CardTitle>
-                    <Badge variant="secondary">قيد الانتظار</Badge>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">الدعوات المعلّقة ({loading ? "..." : pending.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="space-y-3">
+              {[1,2].map(i => <Skeleton key={i} className="h-16 w-full" />)}
+            </div>
+          ) : pending.length === 0 ? (
+            <p className="text-muted-foreground text-sm text-center py-6">لا توجد دعوات معلّقة</p>
+          ) : (
+            <div className="space-y-3">
+              {pending.map(inv => (
+                <div key={inv.id} className="flex items-center justify-between p-4 border rounded-lg bg-card">
+                  <div>
+                    <p className="font-semibold">{inv.orgName || "منظمة"}</p>
+                    <p className="text-xs text-muted-foreground">{inv.createdAt ? new Date(inv.createdAt).toLocaleDateString("ar-SA") : ""}</p>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    تاريخ الإرسال: {formatDate(inv.createdAt)}
-                  </p>
                   <div className="flex gap-2">
                     <Button
                       size="sm"
-                      disabled={loadingAction === inv.id}
-                      onClick={() => handleAccept(inv)}
+                      onClick={() => handleAction(inv.id, "accept")}
+                      disabled={!!acting}
                     >
                       <CheckCircle className="h-4 w-4 ml-1" />
                       قبول
                     </Button>
                     <Button
                       size="sm"
-                      variant="destructive"
-                      disabled={loadingAction === inv.id}
-                      onClick={() => handleReject(inv)}
+                      variant="outline"
+                      onClick={() => handleAction(inv.id, "reject")}
+                      disabled={!!acting}
                     >
                       <XCircle className="h-4 w-4 ml-1" />
                       رفض
                     </Button>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-      </section>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* History */}
-      <section className="space-y-4">
-        <h2 className="text-lg font-semibold">سجل الدعوات</h2>
-
-        {isLoading ? (
-          <div className="space-y-3">
-            {Array.from({ length: 2 }).map((_, i) => (
-              <Skeleton key={i} className="h-20 w-full rounded-xl" />
-            ))}
-          </div>
-        ) : history.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center text-muted-foreground">
-              لا يوجد سجل دعوات
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-3">
-            {history.map((inv) => (
-              <Card key={inv.id}>
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base">{inv.orgName}</CardTitle>
-                    <Badge variant={statusVariant[inv.status]}>
-                      {statusLabel[inv.status]}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    تاريخ الإرسال: {formatDate(inv.createdAt)}
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-      </section>
+      {history.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">السجل</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {history.map(inv => (
+                <div key={inv.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <p className="font-medium">{inv.orgName || "منظمة"}</p>
+                  <Badge variant={statusVariant[inv.status]}>{statusLabel[inv.status]}</Badge>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
