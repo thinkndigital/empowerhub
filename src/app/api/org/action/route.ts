@@ -66,6 +66,39 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true });
     }
 
+    if (action === 'assignMentor') {
+      // body.userId = beneficiary, body.mentorId = mentor's uid
+      await adminDb.collection('users').doc(body.userId).update({ mentorId: body.mentorId });
+      // Notify mentor
+      const benefSnap = await adminDb.collection('users').doc(body.userId).get();
+      const benefName = benefSnap.data()?.name || 'مستفيد';
+      await adminDb.collection('notifications').add({
+        userId: body.mentorId,
+        title: 'تم تعيينك مرشداً',
+        description: `تم تعيينك مرشداً للمستفيد ${benefName}`,
+        link: '/mentor-dashboard',
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      });
+      return NextResponse.json({ success: true });
+    }
+
+    if (action === 'assignCoach') {
+      // body.userId = beneficiary, body.coachId = coach's uid
+      await adminDb.collection('users').doc(body.userId).update({ coachId: body.coachId });
+      const benefSnap2 = await adminDb.collection('users').doc(body.userId).get();
+      const benefName2 = benefSnap2.data()?.name || 'مستفيد';
+      await adminDb.collection('notifications').add({
+        userId: body.coachId,
+        title: 'تم تعيينك مدرباً',
+        description: `تم تعيينك مدرباً للمستفيد ${benefName2}`,
+        link: '/coach-dashboard',
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      });
+      return NextResponse.json({ success: true });
+    }
+
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });

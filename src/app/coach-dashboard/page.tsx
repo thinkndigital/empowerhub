@@ -59,6 +59,12 @@ export default function CoachDashboardPage() {
   }, [firestore, authUser]);
   const { data: sessions, isLoading: sessLoading } = useCollection<Session>(sessionsQuery);
 
+  const beneficiariesQuery = useMemoFirebase(() => {
+    if (!firestore || !authUser) return null;
+    return query(collection(firestore, "users"), where("coachId", "==", authUser.uid));
+  }, [firestore, authUser]);
+  const { data: myBeneficiaries, isLoading: benefLoading } = useCollection<{ id: string; name?: string; progress?: number }>(beneficiariesQuery);
+
   const stats = useMemo(() => {
     const totalEnrolled = courses?.reduce((sum, c) => sum + (c.enrolledCount || 0), 0) || 0;
     const publishedCourses = courses?.filter(c => c.status === 'published' || c.status === 'منشورة').length || 0;
@@ -164,6 +170,34 @@ export default function CoachDashboardPage() {
 
         {/* Sidebar */}
         <div className="space-y-4">
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">مستفيدوني</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {benefLoading && [...Array(3)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+              {!benefLoading && (myBeneficiaries || []).slice(0, 4).map((b: any) => (
+                <div key={b.id} className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+                    <span className="text-xs font-bold text-primary">{(b.name || '?')[0]}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{b.name || 'بلا اسم'}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <Progress value={b.progress || 0} className="h-1.5 flex-1" />
+                      <span className="text-xs text-muted-foreground shrink-0">{b.progress || 0}%</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {!benefLoading && (!myBeneficiaries || myBeneficiaries.length === 0) && (
+                <p className="text-sm text-muted-foreground text-center py-2">لا يوجد مستفيدون بعد.</p>
+              )}
+            </CardContent>
+          </Card>
+
           <Card className="border-0 shadow-sm">
             <CardHeader className="pb-3">
               <CardTitle className="text-base">ملخص الأداء</CardTitle>

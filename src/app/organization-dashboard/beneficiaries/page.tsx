@@ -50,6 +50,8 @@ type OrgUser = {
   status?: string;
   progress?: number;
   groupId?: string;
+  mentorId?: string;
+  coachId?: string;
 };
 
 type OrgGroup = {
@@ -117,6 +119,9 @@ export default function BeneficiariesPage() {
     refetch: refetchGroups,
   } = useOrgGroups();
 
+  const { data: orgMentors } = useOrgUsers('mentor', 'org');
+  const { data: orgCoaches } = useOrgUsers('coach', 'org');
+
   // ── Derived data ──
   const orgUserIds = useMemo(() => new Set((orgUsers ?? []).map((u) => u.id)), [orgUsers]);
 
@@ -144,6 +149,10 @@ export default function BeneficiariesPage() {
   const [addingUserId, setAddingUserId] = useState<string | null>(null);
   const [assigningGroup, setAssigningGroup] = useState(false);
   const [removingUser, setRemovingUser] = useState(false);
+  const [assignMentorTarget, setAssignMentorTarget] = useState<OrgUser | null>(null);
+  const [assignMentorId, setAssignMentorId] = useState('');
+  const [assignCoachTarget, setAssignCoachTarget] = useState<OrgUser | null>(null);
+  const [assignCoachId, setAssignCoachId] = useState('');
 
   // ── Filtered org users ──
   const filteredOrgUsers = useMemo(() => {
@@ -297,9 +306,35 @@ export default function BeneficiariesPage() {
     });
   }
 
+  async function handleAssignMentor() {
+    if (!user || !assignMentorTarget || !assignMentorId) return;
+    await apiAction(user, { action: 'assignMentor', userId: assignMentorTarget.id, mentorId: assignMentorId });
+    toast({ title: 'تم التعيين', description: 'تم تعيين المرشد للمستفيد.' });
+    setAssignMentorTarget(null); setAssignMentorId('');
+    refetchOrg();
+  }
+
+  async function handleAssignCoach() {
+    if (!user || !assignCoachTarget || !assignCoachId) return;
+    await apiAction(user, { action: 'assignCoach', userId: assignCoachTarget.id, coachId: assignCoachId });
+    toast({ title: 'تم التعيين', description: 'تم تعيين المدرب للمستفيد.' });
+    setAssignCoachTarget(null); setAssignCoachId('');
+    refetchOrg();
+  }
+
   const groupName = (id?: string) => {
     if (!id) return null;
     return (groups ?? []).find((g) => g.id === id)?.name ?? null;
+  };
+
+  const mentorName = (id?: string) => {
+    if (!id) return null;
+    return (orgMentors ?? []).find((m) => m.id === id)?.name ?? null;
+  };
+
+  const coachName = (id?: string) => {
+    if (!id) return null;
+    return (orgCoaches ?? []).find((c) => c.id === id)?.name ?? null;
   };
 
   // ─── Render ───────────────────────────────────────────────────────────────
@@ -374,7 +409,19 @@ export default function BeneficiariesPage() {
                               <AvatarImage src={u.avatarUrl || ""} alt={u.name || ""} />
                               <AvatarFallback>{(u.name || "م").charAt(0)}</AvatarFallback>
                             </Avatar>
-                            <span className="font-medium">{u.name || "بلا اسم"}</span>
+                            <div>
+                              <span className="font-medium">{u.name || "بلا اسم"}</span>
+                              {(mentorName(u.mentorId) || coachName(u.coachId)) && (
+                                <div className="flex gap-2 mt-0.5">
+                                  {mentorName(u.mentorId) && (
+                                    <span className="text-xs text-muted-foreground">مرشد: {mentorName(u.mentorId)}</span>
+                                  )}
+                                  {coachName(u.coachId) && (
+                                    <span className="text-xs text-muted-foreground">مدرب: {coachName(u.coachId)}</span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell className="hidden md:table-cell">{u.email || "-"}</TableCell>
@@ -419,6 +466,12 @@ export default function BeneficiariesPage() {
                                 }}
                               >
                                 تعيين لمجموعة
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onSelect={() => { setAssignMentorTarget(u); setAssignMentorId(''); }}>
+                                تعيين مرشد
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onSelect={() => { setAssignCoachTarget(u); setAssignCoachId(''); }}>
+                                تعيين مدرب
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 className="text-red-500"
@@ -749,6 +802,68 @@ export default function BeneficiariesPage() {
             </DialogClose>
             <Button onClick={handleCreateGroup} disabled={isCreatingGroup || !newGroupName.trim()}>
               {isCreatingGroup ? <Loader2 className="h-4 w-4 animate-spin" /> : "إنشاء"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign mentor */}
+      <Dialog open={!!assignMentorTarget} onOpenChange={(open) => !open && setAssignMentorTarget(null)}>
+        <DialogContent dir="rtl">
+          <DialogHeader>
+            <DialogTitle>تعيين مرشد</DialogTitle>
+            <DialogDescription>اختر مرشداً لتعيينه للمستفيد {assignMentorTarget?.name}.</DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-3">
+            <Label>المرشد</Label>
+            <Select value={assignMentorId} onValueChange={setAssignMentorId}>
+              <SelectTrigger>
+                <SelectValue placeholder="اختر مرشداً" />
+              </SelectTrigger>
+              <SelectContent>
+                {(orgMentors ?? []).map((m) => (
+                  <SelectItem key={m.id} value={m.id}>{m.name || m.email || m.id}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="ghost">إلغاء</Button>
+            </DialogClose>
+            <Button onClick={handleAssignMentor} disabled={!assignMentorId}>
+              تعيين
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign coach */}
+      <Dialog open={!!assignCoachTarget} onOpenChange={(open) => !open && setAssignCoachTarget(null)}>
+        <DialogContent dir="rtl">
+          <DialogHeader>
+            <DialogTitle>تعيين مدرب</DialogTitle>
+            <DialogDescription>اختر مدرباً لتعيينه للمستفيد {assignCoachTarget?.name}.</DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-3">
+            <Label>المدرب</Label>
+            <Select value={assignCoachId} onValueChange={setAssignCoachId}>
+              <SelectTrigger>
+                <SelectValue placeholder="اختر مدرباً" />
+              </SelectTrigger>
+              <SelectContent>
+                {(orgCoaches ?? []).map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.name || c.email || c.id}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="ghost">إلغاء</Button>
+            </DialogClose>
+            <Button onClick={handleAssignCoach} disabled={!assignCoachId}>
+              تعيين
             </Button>
           </DialogFooter>
         </DialogContent>

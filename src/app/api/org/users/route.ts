@@ -13,9 +13,15 @@ export async function GET(req: NextRequest) {
 
     const role = req.nextUrl.searchParams.get('role') || 'beneficiary';
     const scope = req.nextUrl.searchParams.get('scope') || 'all'; // 'org' | 'all'
+    const mentorId = req.nextUrl.searchParams.get('mentorId');
+    const coachId = req.nextUrl.searchParams.get('coachId');
 
     let snap;
-    if (scope === 'org') {
+    if (mentorId) {
+      snap = await adminDb.collection('users').where('role', '==', 'beneficiary').where('mentorId', '==', mentorId).get();
+    } else if (coachId) {
+      snap = await adminDb.collection('users').where('role', '==', 'beneficiary').where('coachId', '==', coachId).get();
+    } else if (scope === 'org') {
       snap = await adminDb.collection('users')
         .where('role', '==', role)
         .where('organizationId', '==', orgId)

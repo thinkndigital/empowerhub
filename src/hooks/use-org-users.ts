@@ -13,6 +13,8 @@ export type OrgUser = {
   status?: string;
   progress?: number;
   groupId?: string;
+  mentorId?: string;
+  coachId?: string;
 };
 
 export function useOrgUsers(role: 'beneficiary' | 'mentor' | 'coach', scope: 'org' | 'all') {
