@@ -5,8 +5,26 @@ export async function GET(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
     const decoded = await adminAuth.verifyIdToken(token);
-    const snap = await adminDb.collection('courses').where('createdBy', '==', decoded.uid).get();
-    const courses = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    // Support fetching all published courses (for beneficiaries) or own courses
+    const allParam = req.nextUrl.searchParams.get('all');
+    let snap;
+    if (allParam === 'true') {
+      snap = await adminDb.collection('courses').where('status', '==', 'منشورة').get();
+    } else {
+      snap = await adminDb.collection('courses').where('createdBy', '==', decoded.uid).get();
+    }
+
+    const courses = await Promise.all(snap.docs.map(async (d) => {
+      const enrollSnap = await adminDb.collection('courses').doc(d.id).collection('enrollments').get();
+      const enrollments = enrollSnap.docs.map(e => ({
+        userId: e.id,
+        enrolledAt: e.data().enrolledAt,
+        progress: e.data().progress ?? 0,
+      }));
+      return { id: d.id, ...d.data(), enrolledCount: enrollments.length, enrollments };
+    }));
+
     return NextResponse.json({ courses });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });

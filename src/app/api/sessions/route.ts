@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 
 export async function GET(req: NextRequest) {
   try {
@@ -44,6 +45,47 @@ export async function POST(req: NextRequest) {
       hostId: decoded.uid,
       createdAt: new Date().toISOString(),
     });
+
+    const now = FieldValue.serverTimestamp();
+    const attendees: string[] = Array.isArray(body.attendees) ? body.attendees : [];
+    const sessionTitle: string = body.title || 'جلسة جديدة';
+
+    // Notify each attendee
+    const attendeeNotifications = attendees.map((attendeeId: string) =>
+      adminDb.collection('notifications').add({
+        userId: attendeeId,
+        type: 'session_invite',
+        title: 'دعوة جلسة جديدة',
+        body: `تمت دعوتك لجلسة: ${sessionTitle}`,
+        link: '/beneficiary-dashboard/sessions',
+        read: false,
+        createdAt: now,
+      })
+    );
+
+    // Notify org users with the same orgId
+    const orgId = decoded.organizationId as string | undefined;
+    let orgNotifications: Promise<unknown>[] = [];
+    if (orgId) {
+      const orgUsersSnap = await adminDb.collection('users')
+        .where('role', '==', 'organization')
+        .where('organizationId', '==', orgId)
+        .get();
+      orgNotifications = orgUsersSnap.docs.map((d) =>
+        adminDb.collection('notifications').add({
+          userId: d.id,
+          type: 'session_created',
+          title: 'جلسة جديدة في منظمتك',
+          body: `تم إنشاء جلسة جديدة: ${sessionTitle}`,
+          link: '/organization-dashboard/sessions',
+          read: false,
+          createdAt: now,
+        })
+      );
+    }
+
+    await Promise.all([...attendeeNotifications, ...orgNotifications]);
+
     return NextResponse.json({ id: ref.id });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
