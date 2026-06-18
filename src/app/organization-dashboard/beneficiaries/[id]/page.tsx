@@ -9,16 +9,22 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ArrowRight, BookOpen, Calendar, UserCheck, TrendingUp } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, isValid } from "date-fns";
 import { ar } from "date-fns/locale";
 
 type Profile = {
   id: string; name?: string; email?: string; progress?: number; status?: string;
   mentorId?: string; mentorName?: string; coachId?: string; coachName?: string;
   groupId?: string; phone?: string;
-  sessions?: { id: string; title?: string; date: string; status: string }[];
-  enrolledCourses?: { id: string; title: string; progress: number }[];
+  sessions?: { id: string; title?: string; date?: string; status: string }[];
+  enrolledCourses?: { id: string; title: string; progress: number; enrolledAt?: string }[];
 };
+
+function safeFormat(dateStr?: string) {
+  if (!dateStr) return null;
+  try { const d = parseISO(dateStr); return isValid(d) ? format(d, "d MMM yyyy", { locale: ar }) : null; }
+  catch { return null; }
+}
 
 export default function BeneficiaryProfilePage() {
   const { user: authUser } = useUser();
@@ -117,7 +123,10 @@ export default function BeneficiaryProfilePage() {
                     <div className="space-y-3">
                       {profile!.enrolledCourses!.map(c => (
                         <div key={c.id} className="flex items-center justify-between gap-4 p-3 rounded-lg border">
-                          <p className="text-sm font-medium">{c.title}</p>
+                          <div>
+                            <p className="text-sm font-medium">{c.title}</p>
+                            {c.enrolledAt && <p className="text-xs text-muted-foreground mt-0.5">تسجيل: {safeFormat(c.enrolledAt)}</p>}
+                          </div>
                           <div className="flex items-center gap-2 shrink-0">
                             <Progress value={c.progress} className="h-1.5 w-20" />
                             <span className="text-xs text-muted-foreground">{c.progress}%</span>
@@ -138,14 +147,14 @@ export default function BeneficiaryProfilePage() {
                   ) : (
                     <div className="space-y-2">
                       {profile!.sessions!.slice(0, 5).map(s => (
-                        <div key={s.id} className="flex items-center justify-between p-2 rounded border text-sm">
-                          <p className="font-medium">{s.title || "جلسة"}</p>
-                          <div className="flex items-center gap-2">
-                            <span className="text-muted-foreground text-xs">{s.date ? format(parseISO(s.date), "d MMM yyyy", { locale: ar }) : ""}</span>
-                            <Badge variant={s.status === 'completed' ? 'default' : s.status === 'cancelled' ? 'destructive' : 'secondary'} className="text-xs">
-                              {s.status === 'completed' ? 'مكتملة' : s.status === 'cancelled' ? 'ملغاة' : 'مجدولة'}
-                            </Badge>
+                        <div key={s.id} className="flex items-center justify-between p-2.5 rounded border">
+                          <div>
+                            <p className="text-sm font-medium">{s.title || "جلسة"}</p>
+                            {s.date && <p className="text-xs text-muted-foreground mt-0.5">{safeFormat(s.date)}</p>}
                           </div>
+                          <Badge variant={s.status === 'completed' ? 'default' : s.status === 'cancelled' ? 'destructive' : 'secondary'} className="text-xs gap-1">
+                            {s.status === 'completed' ? 'مكتملة' : s.status === 'cancelled' ? 'ملغاة' : 'مجدولة'}
+                          </Badge>
                         </div>
                       ))}
                     </div>

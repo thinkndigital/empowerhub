@@ -8,11 +8,31 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ArrowRight, Users, Calendar } from "lucide-react";
+import { ArrowRight, Users, Calendar, CheckCircle, Clock, XCircle } from "lucide-react";
+import { format, parseISO, isValid } from "date-fns";
+import { ar } from "date-fns/locale";
 
-type MentorProfile = { id: string; name?: string; email?: string; bio?: string; specializations?: string; role?: string };
 type Beneficiary = { id: string; name?: string; progress?: number };
-type Session = { id: string; title?: string; date: string; status: string };
+type Session = { id: string; title?: string; date?: string; status?: string; attendees?: string[] };
+type MentorProfile = {
+  id: string; name?: string; email?: string; bio?: string; specializations?: string;
+  sessions?: Session[];
+};
+
+function formatDate(dateStr?: string) {
+  if (!dateStr) return "—";
+  try {
+    const d = parseISO(dateStr);
+    if (!isValid(d)) return dateStr;
+    return format(d, "d MMM yyyy", { locale: ar });
+  } catch { return dateStr; }
+}
+
+function SessionBadge({ status }: { status?: string }) {
+  if (status === 'completed') return <Badge className="gap-1 bg-green-600 text-white"><CheckCircle className="h-3 w-3" />مكتملة</Badge>;
+  if (status === 'cancelled') return <Badge variant="destructive" className="gap-1"><XCircle className="h-3 w-3" />ملغاة</Badge>;
+  return <Badge variant="secondary" className="gap-1"><Clock className="h-3 w-3" />مجدولة</Badge>;
+}
 
 export default function MentorProfilePage() {
   const { user: authUser } = useUser();
@@ -20,27 +40,25 @@ export default function MentorProfilePage() {
   const router = useRouter();
   const [profile, setProfile] = useState<MentorProfile | null>(null);
   const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>([]);
-  const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
     if (!authUser) return;
     const token = await authUser.getIdToken();
-    const [pRes, bRes, sRes] = await Promise.all([
+    const [pRes, bRes] = await Promise.all([
       fetch(`/api/org/user-profile?userId=${params.id}`, { headers: { authorization: `Bearer ${token}` } }),
       fetch(`/api/org/users?role=beneficiary&mentorId=${params.id}`, { headers: { authorization: `Bearer ${token}` } }),
-      fetch(`/api/sessions?hostId=${params.id}`, { headers: { authorization: `Bearer ${token}` } }),
     ]);
     const pData = await pRes.json();
     const bData = await bRes.json();
-    const sData = await sRes.json();
     setProfile(pData.profile);
     setBeneficiaries(bData.users || []);
-    setSessions(sData.sessions || []);
     setLoading(false);
   }, [authUser, params.id]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  const sessions = profile?.sessions ?? [];
 
   return (
     <div className="space-y-6" dir="rtl">
@@ -58,7 +76,9 @@ export default function MentorProfilePage() {
             <CardHeader><CardTitle className="text-base">المعلومات</CardTitle></CardHeader>
             <CardContent className="space-y-3">
               <div className="flex flex-col items-center gap-2 pb-3 border-b">
-                <Avatar className="h-16 w-16"><AvatarFallback className="text-xl bg-primary/10 text-primary">{(profile?.name || 'م').charAt(0)}</AvatarFallback></Avatar>
+                <Avatar className="h-16 w-16">
+                  <AvatarFallback className="text-xl bg-primary/10 text-primary">{(profile?.name || 'م').charAt(0)}</AvatarFallback>
+                </Avatar>
                 <p className="font-semibold">{profile?.name}</p>
                 <p className="text-sm text-muted-foreground">{profile?.email}</p>
                 <Badge>مرشد</Badge>
@@ -78,14 +98,19 @@ export default function MentorProfilePage() {
             <Card>
               <CardHeader><CardTitle className="text-base flex items-center gap-2"><Users className="h-4 w-4" />المستفيدون ({beneficiaries.length})</CardTitle></CardHeader>
               <CardContent>
-                {beneficiaries.length === 0 ? <p className="text-muted-foreground text-sm">لا يوجد مستفيدون معينون.</p> : (
+                {beneficiaries.length === 0 ? <p className="text-muted-foreground text-sm">لا يوجد مستفيدون.</p> : (
                   <div className="space-y-2">
                     {beneficiaries.map(b => (
-                      <div key={b.id} className="flex items-center justify-between p-2 border rounded-lg">
-                        <span className="text-sm font-medium">{b.name || b.id}</span>
+                      <div key={b.id} className="flex items-center justify-between p-2.5 border rounded-lg">
                         <div className="flex items-center gap-2">
-                          <Progress value={b.progress ?? 0} className="h-1.5 w-16" />
-                          <span className="text-xs text-muted-foreground">{b.progress ?? 0}%</span>
+                          <Avatar className="h-7 w-7">
+                            <AvatarFallback className="text-xs">{(b.name || 'م').charAt(0)}</AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm font-medium">{b.name || b.id}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Progress value={b.progress ?? 0} className="h-1.5 w-20" />
+                          <span className="text-xs text-muted-foreground w-8">{b.progress ?? 0}%</span>
                         </div>
                       </div>
                     ))}
@@ -93,15 +118,19 @@ export default function MentorProfilePage() {
                 )}
               </CardContent>
             </Card>
+
             <Card>
               <CardHeader><CardTitle className="text-base flex items-center gap-2"><Calendar className="h-4 w-4" />الجلسات ({sessions.length})</CardTitle></CardHeader>
               <CardContent>
                 {sessions.length === 0 ? <p className="text-muted-foreground text-sm">لا توجد جلسات.</p> : (
                   <div className="space-y-2">
-                    {sessions.slice(0, 5).map(s => (
-                      <div key={s.id} className="flex items-center justify-between p-2 border rounded text-sm">
-                        <span>{s.title || "جلسة"}</span>
-                        <Badge variant={s.status === 'completed' ? 'default' : 'secondary'}>{s.status === 'completed' ? 'مكتملة' : 'مجدولة'}</Badge>
+                    {sessions.map(s => (
+                      <div key={s.id} className="flex items-center justify-between p-2.5 border rounded-lg">
+                        <div>
+                          <p className="text-sm font-medium">{s.title || "جلسة"}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{formatDate(s.date)}</p>
+                        </div>
+                        <SessionBadge status={s.status} />
                       </div>
                     ))}
                   </div>

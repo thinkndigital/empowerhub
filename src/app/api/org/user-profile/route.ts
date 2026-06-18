@@ -4,7 +4,7 @@ import { adminAuth, adminDb } from '@/lib/firebase-admin';
 export async function GET(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    await adminAuth.verifyIdToken(token); // caller must be authenticated
+    await adminAuth.verifyIdToken(token);
     const userId = req.nextUrl.searchParams.get('userId');
     if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 });
 
@@ -12,34 +12,68 @@ export async function GET(req: NextRequest) {
     if (!userDoc.exists) return NextResponse.json({ error: 'User not found' }, { status: 404 });
     const userData = userDoc.data()!;
 
-    // Get mentor name
+    // Mentor name
     let mentorName = '';
     if (userData.mentorId) {
       const mDoc = await adminDb.collection('users').doc(userData.mentorId).get();
       mentorName = mDoc.data()?.name || '';
     }
-    // Get coach name
+    // Coach name
     let coachName = '';
     if (userData.coachId) {
       const cDoc = await adminDb.collection('users').doc(userData.coachId).get();
       coachName = cDoc.data()?.name || '';
     }
-    // Get sessions (as attendee)
-    const sessionsSnap = await adminDb.collection('sessions')
-      .where('attendees', 'array-contains', userId).get();
-    const sessions = sessionsSnap.docs
-      .map(d => ({ id: d.id, ...d.data() }))
-      .sort((a: any, b: any) => (b.date || '').localeCompare(a.date || ''))
-      .slice(0, 10);
 
-    // Get enrolled courses
+    // Sessions as attendee OR as host
+    const [attendeeSnap, hostSnap] = await Promise.all([
+      adminDb.collection('sessions').where('attendees', 'array-contains', userId).get(),
+      adminDb.collection('sessions').where('hostId', '==', userId).get(),
+    ]);
+    const sessionMap = new Map<string, any>();
+    for (const d of [...attendeeSnap.docs, ...hostSnap.docs]) {
+      if (!sessionMap.has(d.id)) sessionMap.set(d.id, { id: d.id, ...d.data() });
+    }
+    const sessions = Array.from(sessionMap.values())
+      .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+
+    // Enrolled courses (for beneficiaries)
     const coursesSnap = await adminDb.collection('courses').get();
     const enrolledCourses: any[] = [];
     for (const cDoc of coursesSnap.docs) {
-      const enrollment = await adminDb.collection('courses').doc(cDoc.id).collection('enrollments').doc(userId).get();
+      const enrollment = await adminDb.collection('courses').doc(cDoc.id)
+        .collection('enrollments').doc(userId).get();
       if (enrollment.exists) {
-        enrolledCourses.push({ id: cDoc.id, title: cDoc.data().title, progress: enrollment.data()?.progress ?? 0 });
+        enrolledCourses.push({
+          id: cDoc.id,
+          title: cDoc.data().title,
+          progress: enrollment.data()?.progress ?? 0,
+          enrolledAt: enrollment.data()?.enrolledAt || enrollment.data()?.createdAt || null,
+        });
       }
+    }
+
+    // Courses created by this user (for coaches), with enrollments + beneficiary names
+    const createdCoursesSnap = await adminDb.collection('courses').where('createdBy', '==', userId).get();
+    const createdCourses: any[] = [];
+    for (const cDoc of createdCoursesSnap.docs) {
+      const enrollSnap = await adminDb.collection('courses').doc(cDoc.id).collection('enrollments').get();
+      const enrollments: any[] = [];
+      for (const e of enrollSnap.docs) {
+        const uDoc = await adminDb.collection('users').doc(e.id).get();
+        enrollments.push({
+          userId: e.id,
+          name: uDoc.data()?.name || e.id,
+          progress: e.data().progress ?? 0,
+          enrolledAt: e.data().enrolledAt || e.data().createdAt || null,
+        });
+      }
+      createdCourses.push({
+        id: cDoc.id,
+        title: cDoc.data().title,
+        status: cDoc.data().status,
+        enrollments,
+      });
     }
 
     return NextResponse.json({
@@ -50,6 +84,7 @@ export async function GET(req: NextRequest) {
         coachName,
         sessions,
         enrolledCourses,
+        createdCourses,
       }
     });
   } catch (e: any) {
