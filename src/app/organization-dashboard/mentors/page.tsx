@@ -21,7 +21,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { UserX, Send } from "lucide-react";
+import { UserX, Send, Eye } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 async function apiAction(user: User, body: object) {
   const token = await user.getIdToken();
@@ -39,6 +40,7 @@ async function apiAction(user: User, body: object) {
 export default function OrgMentorsPage() {
   const { user, userProfile } = useUser();
   const { toast } = useToast();
+  const router = useRouter();
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [sentInvites, setSentInvites] = useState<Set<string>>(new Set());
 
@@ -164,15 +166,25 @@ export default function OrgMentorsPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        disabled={loadingAction === mentor.id}
-                        onClick={() => handleRemove(mentor.id)}
-                      >
-                        <UserX className="h-4 w-4 ml-1" />
-                        إزالة
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => router.push(`/organization-dashboard/mentors/${mentor.id}`)}
+                        >
+                          <Eye className="h-4 w-4 ml-1" />
+                          عرض
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          disabled={loadingAction === mentor.id}
+                          onClick={() => handleRemove(mentor.id)}
+                        >
+                          <UserX className="h-4 w-4 ml-1" />
+                          إزالة
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
