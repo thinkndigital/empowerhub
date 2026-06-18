@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import type { User } from "firebase/auth";
 import { useUser } from "@/firebase/auth/use-user";
 import { useOrgUsers } from "@/hooks/use-org-users";
@@ -139,7 +140,7 @@ export default function OrgMentorsPage() {
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <p className="font-medium">{mentor.name}</p>
+                          <Link href={`/organization-dashboard/mentors/${mentor.id}`} className="font-medium hover:underline text-primary">{mentor.name}</Link>
                           <p className="text-xs text-muted-foreground">
                             {mentor.email}
                           </p>
@@ -156,10 +157,10 @@ export default function OrgMentorsPage() {
                     <TableCell>
                       <Badge
                         variant={
-                          mentor.status === "active" ? "default" : "secondary"
+                          (!mentor.status || mentor.status === "active") ? "default" : "secondary"
                         }
                       >
-                        {mentor.status === "active" ? "نشط" : "غير نشط"}
+                        {(!mentor.status || mentor.status === "active") ? "نشط" : "غير نشط"}
                       </Badge>
                     </TableCell>
                     <TableCell>
