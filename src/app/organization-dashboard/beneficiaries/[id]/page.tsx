@@ -9,21 +9,24 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ArrowRight, BookOpen, Calendar, UserCheck, TrendingUp } from "lucide-react";
-import { format, parseISO, isValid } from "date-fns";
-import { ar } from "date-fns/locale";
 
 type Profile = {
   id: string; name?: string; email?: string; progress?: number; status?: string;
   mentorId?: string; mentorName?: string; coachId?: string; coachName?: string;
   groupId?: string; phone?: string;
-  sessions?: { id: string; title?: string; date?: string; status: string }[];
-  enrolledCourses?: { id: string; title: string; progress: number; enrolledAt?: string }[];
+  sessions?: { id: string; title?: string; date?: any; status: string }[];
+  enrolledCourses?: { id: string; title: string; progress: number; enrolledAt?: any }[];
 };
 
-function safeFormat(dateStr?: string) {
-  if (!dateStr) return null;
-  try { const d = parseISO(dateStr); return isValid(d) ? format(d, "d MMM yyyy", { locale: ar }) : null; }
-  catch { return null; }
+function safeFormat(dateVal?: any): string | null {
+  if (!dateVal) return null;
+  try {
+    if (typeof dateVal === 'object' && dateVal._seconds) return new Date(dateVal._seconds * 1000).toLocaleDateString('ar-SA');
+    if (typeof dateVal === 'object' && dateVal.seconds) return new Date(dateVal.seconds * 1000).toLocaleDateString('ar-SA');
+    const d = new Date(dateVal);
+    if (isNaN(d.getTime())) return null;
+    return d.toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' });
+  } catch { return null; }
 }
 
 export default function BeneficiaryProfilePage() {

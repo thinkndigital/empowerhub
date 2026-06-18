@@ -9,25 +9,30 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ArrowRight, Users, Calendar, BookOpen, CheckCircle, Clock, XCircle } from "lucide-react";
-import { format, parseISO, isValid } from "date-fns";
-import { ar } from "date-fns/locale";
 
-type Enrollment = { userId: string; name: string; progress: number; enrolledAt?: string };
+type Enrollment = { userId: string; name: string; progress: number; enrolledAt?: any };
 type CreatedCourse = { id: string; title: string; status?: string; enrollments: Enrollment[] };
-type Session = { id: string; title?: string; date?: string; status?: string };
+type Session = { id: string; title?: string; date?: any; status?: string };
 type CoachProfile = {
   id: string; name?: string; email?: string; bio?: string; specializations?: string;
   sessions?: Session[];
   createdCourses?: CreatedCourse[];
 };
 
-function formatDate(dateStr?: string) {
-  if (!dateStr) return "—";
+function formatDate(dateVal?: any): string {
+  if (!dateVal) return "—";
   try {
-    const d = parseISO(dateStr);
-    if (!isValid(d)) return dateStr;
-    return format(d, "d MMM yyyy", { locale: ar });
-  } catch { return dateStr; }
+    // Firestore Timestamp object
+    if (typeof dateVal === 'object' && dateVal._seconds) {
+      return new Date(dateVal._seconds * 1000).toLocaleDateString('ar-SA');
+    }
+    if (typeof dateVal === 'object' && dateVal.seconds) {
+      return new Date(dateVal.seconds * 1000).toLocaleDateString('ar-SA');
+    }
+    const d = new Date(dateVal);
+    if (isNaN(d.getTime())) return String(dateVal);
+    return d.toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' });
+  } catch { return String(dateVal); }
 }
 
 function SessionBadge({ status }: { status?: string }) {

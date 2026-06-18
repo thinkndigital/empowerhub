@@ -9,23 +9,23 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ArrowRight, Users, Calendar, CheckCircle, Clock, XCircle } from "lucide-react";
-import { format, parseISO, isValid } from "date-fns";
-import { ar } from "date-fns/locale";
 
 type Beneficiary = { id: string; name?: string; progress?: number };
-type Session = { id: string; title?: string; date?: string; status?: string; attendees?: string[] };
+type Session = { id: string; title?: string; date?: any; status?: string };
 type MentorProfile = {
   id: string; name?: string; email?: string; bio?: string; specializations?: string;
   sessions?: Session[];
 };
 
-function formatDate(dateStr?: string) {
-  if (!dateStr) return "—";
+function formatDate(dateVal?: any): string {
+  if (!dateVal) return "—";
   try {
-    const d = parseISO(dateStr);
-    if (!isValid(d)) return dateStr;
-    return format(d, "d MMM yyyy", { locale: ar });
-  } catch { return dateStr; }
+    if (typeof dateVal === 'object' && dateVal._seconds) return new Date(dateVal._seconds * 1000).toLocaleDateString('ar-SA');
+    if (typeof dateVal === 'object' && dateVal.seconds) return new Date(dateVal.seconds * 1000).toLocaleDateString('ar-SA');
+    const d = new Date(dateVal);
+    if (isNaN(d.getTime())) return String(dateVal);
+    return d.toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' });
+  } catch { return String(dateVal); }
 }
 
 function SessionBadge({ status }: { status?: string }) {
