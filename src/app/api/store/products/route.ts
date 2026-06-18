@@ -26,14 +26,13 @@ export async function GET(req: NextRequest) {
     }
 
     const snap = await query.get();
-    const products = snap.docs
-      .map(d => ({ id: d.id, ...d.data() as Record<string, any> }))
-      .sort((a, b) => {
-        const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        return bTime - aTime;
-      });
-    return NextResponse.json({ products });
+    const rawProducts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    rawProducts.sort((a: any, b: any) => {
+      const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return bTime - aTime;
+    });
+    return NextResponse.json({ products: rawProducts });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
