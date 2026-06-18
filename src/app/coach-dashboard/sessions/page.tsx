@@ -3,7 +3,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { format, isPast, parseISO } from "date-fns";
+import { format, isPast } from "date-fns";
 import { ar } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,14 +21,22 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { useUser } from "@/firebase/auth/use-user";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EvaluationDialog } from "@/components/evaluation-dialog";
+import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 
 type Beneficiary = { id: string; name?: string };
 type Session = {
-  id: string; title: string; date: string; hostId: string;
+  id: string; title: string; date: any; hostId: string;
   attendees: string[]; status: 'scheduled' | 'completed' | 'cancelled';
-  meetLink?: string; beneficiaryName?: string;
+  meetLink?: string; beneficiaryName?: string; duration?: number;
 };
 type EvaluationTarget = { sessionId: string; evaluatedId: string; evaluatedName: string };
+
+function safeDate(d: any): Date {
+  if (!d) return new Date(0);
+  if (typeof d === 'object' && d._seconds) return new Date(d._seconds * 1000);
+  if (typeof d === 'object' && d.seconds) return new Date(d.seconds * 1000);
+  return new Date(d);
+}
 
 const formSchema = z.object({
   beneficiaryId: z.string({ required_error: "الرجاء اختيار متدرب." }),
@@ -47,6 +55,8 @@ export default function CoachSessionsPage() {
   const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
+  const [googleToken, setGoogleToken] = useState<string | null>(null);
+  const [googleLinking, setGoogleLinking] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!authUser) return;
@@ -70,10 +80,13 @@ export default function CoachSessionsPage() {
     const upcoming: Session[] = [], past: Session[] = [];
     sessions.forEach(s => {
       const sw = { ...s, beneficiaryName: beneficiaryMap.get(s.attendees?.[0]) || 'متدرب' };
-      if (s.status === 'scheduled' && !isPast(parseISO(s.date))) upcoming.push(sw);
+      if (s.status === 'scheduled' && !isPast(safeDate(s.date))) upcoming.push(sw);
       else past.push(sw);
     });
-    return { upcomingSessions: upcoming.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()), pastSessions: past };
+    return {
+      upcomingSessions: upcoming.sort((a, b) => safeDate(a.date).getTime() - safeDate(b.date).getTime()),
+      pastSessions: past.sort((a, b) => safeDate(b.date).getTime() - safeDate(a.date).getTime()),
+    };
   }, [sessions, beneficiaryMap]);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -81,17 +94,67 @@ export default function CoachSessionsPage() {
     defaultValues: { duration: 60, meetLink: "" },
   });
 
+  async function handleLinkGoogle() {
+    setGoogleLinking(true);
+    try {
+      const auth = getAuth();
+      const provider = new GoogleAuthProvider();
+      provider.addScope('https://www.googleapis.com/auth/calendar.events');
+      const result = await signInWithPopup(auth, provider);
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      const token = credential?.accessToken || null;
+      setGoogleToken(token);
+      toast({ title: "تم ربط حساب Google", description: "يمكنك الآن إنشاء روابط Google Meet تلقائياً." });
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'فشل ربط Google', description: e.message });
+    } finally {
+      setGoogleLinking(false);
+    }
+  }
+
+  async function generateMeetLink(title: string, startIso: string, durationMinutes: number): Promise<string | null> {
+    if (!googleToken) return null;
+    try {
+      const endDate = new Date(new Date(startIso).getTime() + durationMinutes * 60000);
+      const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events?conferenceDataVersion=1', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${googleToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          summary: title,
+          start: { dateTime: startIso },
+          end: { dateTime: endDate.toISOString() },
+          conferenceData: {
+            createRequest: {
+              requestId: Math.random().toString(36).substring(2),
+              conferenceSolutionKey: { type: 'hangoutsMeet' },
+            },
+          },
+        }),
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data.conferenceData?.entryPoints?.[0]?.uri || null;
+    } catch {
+      return null;
+    }
+  }
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!authUser) return;
     const [hours, minutes] = values.time.split(':').map(Number);
     const dt = new Date(values.date);
     dt.setHours(hours, minutes);
     try {
+      let meetLink = values.meetLink || '';
+      if (googleToken && !meetLink) {
+        const generated = await generateMeetLink(values.title, dt.toISOString(), values.duration);
+        if (generated) meetLink = generated;
+      }
       const token = await authUser.getIdToken();
       const res = await fetch('/api/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
-        body: JSON.stringify({ title: values.title, attendees: [values.beneficiaryId], date: dt.toISOString(), duration: values.duration, status: 'scheduled', meetLink: values.meetLink || '' }),
+        body: JSON.stringify({ title: values.title, attendees: [values.beneficiaryId], date: dt.toISOString(), duration: values.duration, status: 'scheduled', meetLink }),
       });
       if (!res.ok) throw new Error((await res.json()).error);
       toast({ title: "تمت الجدولة!", description: `تم جدولة جلستك "${values.title}".` });
@@ -165,7 +228,15 @@ export default function CoachSessionsPage() {
                             <FormControl><Input dir="ltr" placeholder="https://meet.google.com/..." {...field} /></FormControl>
                             <Button type="button" variant="outline" onClick={() => field.onChange(`https://meet.google.com/lookup/${Math.random().toString(36).substring(2, 10)}`)}>إنشاء رابط</Button>
                           </div>
-                          <FormDescription>يمكنك لصق رابط جلسة حالي أو إنشاء رابط جديد.</FormDescription><FormMessage /></FormItem>
+                          <FormDescription>يمكنك لصق رابط جلسة حالي أو إنشاء رابط جديد.</FormDescription>
+                          {!googleToken ? (
+                            <Button type="button" variant="secondary" size="sm" className="mt-2 w-full" onClick={handleLinkGoogle} disabled={googleLinking}>
+                              {googleLinking ? 'جارٍ الربط...' : 'ربط حساب Google لإنشاء رابط Meet تلقائياً'}
+                            </Button>
+                          ) : (
+                            <p className="text-xs text-green-600 mt-1">تم ربط حساب Google — سيتم إنشاء رابط Meet تلقائياً عند الجدولة.</p>
+                          )}
+                          <FormMessage /></FormItem>
                       )} />
                       <DialogFooter>
                         <DialogClose asChild><Button type="button" variant="ghost">إلغاء</Button></DialogClose>
@@ -189,8 +260,8 @@ export default function CoachSessionsPage() {
                   <p className="font-semibold">{session.title}</p>
                   <div className="flex items-center gap-6 text-sm text-muted-foreground mt-1">
                     <span className="flex items-center gap-1.5"><User className="h-4 w-4" />{session.beneficiaryName}</span>
-                    <span className="flex items-center gap-1.5"><CalendarIcon className="h-4 w-4" />{format(parseISO(session.date), "d MMMM yyyy", { locale: ar })}</span>
-                    <span className="flex items-center gap-1.5"><Clock className="h-4 w-4" />{format(parseISO(session.date), "p", { locale: ar })}</span>
+                    <span className="flex items-center gap-1.5"><CalendarIcon className="h-4 w-4" />{format(safeDate(session.date), "d MMMM yyyy", { locale: ar })}</span>
+                    <span className="flex items-center gap-1.5"><Clock className="h-4 w-4" />{format(safeDate(session.date), "p", { locale: ar })}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -213,19 +284,53 @@ export default function CoachSessionsPage() {
           <CardHeader><CardTitle>الجلسات السابقة</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             {loading && [...Array(2)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
-            {!loading && pastSessions.map(session => (
-              <div key={session.id} className="p-3 border-b flex justify-between items-center">
-                <div>
-                  <p className="font-semibold">{session.title} <span className="text-sm text-muted-foreground font-normal">مع {session.beneficiaryName} - {format(parseISO(session.date), "d MMMM yyyy", { locale: ar })}</span></p>
-                  <p className="text-sm text-muted-foreground mt-1"><b>الحالة:</b> {session.status === 'completed' ? 'مكتملة' : 'ملغاة'}</p>
+            {!loading && pastSessions.map(session => {
+              const sessionDate = safeDate(session.date);
+              const isCompleted = session.status === 'completed';
+              const isCancelled = session.status === 'cancelled';
+              return (
+                <div key={session.id} className="p-4 rounded-lg border bg-card flex justify-between items-start gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-semibold truncate">{session.title}</p>
+                      {isCompleted && (
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">
+                          <Check className="h-3 w-3" />مكتملة
+                        </span>
+                      )}
+                      {isCancelled && (
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded-full px-2 py-0.5">
+                          <X className="h-3 w-3" />ملغاة
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1.5 flex-wrap">
+                      <span className="flex items-center gap-1.5"><User className="h-3.5 w-3.5" />{session.beneficiaryName}</span>
+                      <span className="flex items-center gap-1.5"><CalendarIcon className="h-3.5 w-3.5" />{format(sessionDate, "d MMMM yyyy", { locale: ar })}</span>
+                      <span className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" />{format(sessionDate, "p", { locale: ar })}</span>
+                      {session.duration && (
+                        <span className="flex items-center gap-1.5 text-xs">{session.duration} دقيقة</span>
+                      )}
+                    </div>
+                    {isCompleted && (
+                      <div className="mt-2">
+                        <div className="flex items-center gap-1.5">
+                          <div className="h-1.5 rounded-full bg-green-200 flex-1 max-w-[120px]">
+                            <div className="h-1.5 rounded-full bg-green-500 w-full" />
+                          </div>
+                          <span className="text-xs text-green-600">مكتملة</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  {isCompleted && (
+                    <Button variant="outline" size="sm" className="shrink-0" onClick={() => setEvaluationTarget({ sessionId: session.id, evaluatedId: session.attendees[0], evaluatedName: session.beneficiaryName || 'المتدرب' })}>
+                      <Star className="ml-2 h-4 w-4" />تقييم المتدرب
+                    </Button>
+                  )}
                 </div>
-                {session.status === 'completed' && (
-                  <Button variant="outline" size="sm" onClick={() => setEvaluationTarget({ sessionId: session.id, evaluatedId: session.attendees[0], evaluatedName: session.beneficiaryName || 'المتدرب' })}>
-                    <Star className="ml-2 h-4 w-4" />تقييم المتدرب
-                  </Button>
-                )}
-              </div>
-            ))}
+              );
+            })}
             {!loading && pastSessions.length === 0 && <p className="text-center text-muted-foreground p-4">لا توجد جلسات سابقة.</p>}
           </CardContent>
         </Card>

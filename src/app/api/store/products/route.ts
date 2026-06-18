@@ -25,8 +25,14 @@ export async function GET(req: NextRequest) {
       query = query.where('status', '==', 'approved');
     }
 
-    const snap = await query.orderBy('createdAt', 'desc').get();
-    const products = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const snap = await query.get();
+    const products = snap.docs
+      .map(d => ({ id: d.id, ...d.data() as Record<string, any> }))
+      .sort((a, b) => {
+        const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return bTime - aTime;
+      });
     return NextResponse.json({ products });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
