@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useMemo, useRef } from "react";
 import {
   MoreHorizontal, PlusCircle, Users, Search, UserPlus, Mail, Upload, Loader2,
@@ -410,14 +411,16 @@ export default function BeneficiariesPage() {
                               <AvatarFallback>{(u.name || "م").charAt(0)}</AvatarFallback>
                             </Avatar>
                             <div>
-                              <span className="font-medium">{u.name || "بلا اسم"}</span>
+                              <Link href={`/organization-dashboard/beneficiaries/${u.id}`} className="font-medium hover:underline text-primary">
+                                {u.name || "بلا اسم"}
+                              </Link>
                               {(mentorName(u.mentorId) || coachName(u.coachId)) && (
                                 <div className="flex gap-2 mt-0.5">
                                   {mentorName(u.mentorId) && (
-                                    <span className="text-xs text-muted-foreground">مرشد: {mentorName(u.mentorId)}</span>
+                                    <Link href={`/organization-dashboard/mentors/${u.mentorId}`} className="text-xs text-muted-foreground hover:text-primary hover:underline">مرشد: {mentorName(u.mentorId)}</Link>
                                   )}
                                   {coachName(u.coachId) && (
-                                    <span className="text-xs text-muted-foreground">مدرب: {coachName(u.coachId)}</span>
+                                    <Link href={`/organization-dashboard/coaches/${u.coachId}`} className="text-xs text-muted-foreground hover:text-primary hover:underline">مدرب: {coachName(u.coachId)}</Link>
                                   )}
                                 </div>
                               )}

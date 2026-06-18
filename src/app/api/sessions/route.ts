@@ -7,9 +7,15 @@ export async function GET(req: NextRequest) {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
     const decoded = await adminAuth.verifyIdToken(token);
     const scope = req.nextUrl.searchParams.get('scope');
+    const hostIdParam = req.nextUrl.searchParams.get('hostId');
 
     let snap;
-    if (scope === 'all') {
+    if (hostIdParam) {
+      snap = await adminDb.collection('sessions')
+        .where('hostId', '==', hostIdParam)
+        .orderBy('date', 'desc')
+        .get();
+    } else if (scope === 'all') {
       // Org sees all sessions for their org
       const userSnap = await adminDb.collection('users').doc(decoded.uid).get();
       const role = userSnap.data()?.role;

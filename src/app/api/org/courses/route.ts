@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import type * as FirebaseFirestore from 'firebase-admin/firestore';
 
 export async function GET(req: NextRequest) {
   try {
@@ -12,8 +13,33 @@ export async function GET(req: NextRequest) {
     }
     if (!orgId) return NextResponse.json({ error: 'Not an org' }, { status: 403 });
 
-    const snap = await adminDb.collection('courses').where('organizationId', '==', orgId).get();
-    const courses = snap.docs.map(d => ({ id: d.id, ...d.data() as any }));
+    // Get all coaches in this org
+    const coachesSnap = await adminDb.collection('users')
+      .where('organizationId', '==', orgId)
+      .where('role', '==', 'coach').get();
+    const coachIds = coachesSnap.docs.map(d => d.id);
+
+    // Fetch courses by orgId OR by these coaches
+    const [byOrgSnap, ...byCoachSnaps] = await Promise.all([
+      adminDb.collection('courses').where('organizationId', '==', orgId).get(),
+      ...coachIds.map(id => adminDb.collection('courses').where('createdBy', '==', id).get()),
+    ]);
+
+    // Merge, deduplicate
+    const seen = new Set<string>();
+    const allDocs: FirebaseFirestore.QueryDocumentSnapshot[] = [];
+    for (const snap of [byOrgSnap, ...byCoachSnaps]) {
+      for (const doc of snap.docs) {
+        if (!seen.has(doc.id)) { seen.add(doc.id); allDocs.push(doc); }
+      }
+    }
+
+    // For each course, get enrollments
+    const courses = await Promise.all(allDocs.map(async d => {
+      const enrollSnap = await adminDb.collection('courses').doc(d.id).collection('enrollments').get();
+      const enrollments = enrollSnap.docs.map(e => ({ userId: e.id, progress: e.data().progress ?? 0 }));
+      return { id: d.id, ...d.data(), enrolledCount: enrollments.length, enrollments };
+    }));
 
     return NextResponse.json({ courses });
   } catch (e: any) {

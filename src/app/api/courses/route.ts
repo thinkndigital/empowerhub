@@ -35,11 +35,17 @@ export async function POST(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
     const decoded = await adminAuth.verifyIdToken(token);
-    const orgId = decoded.organizationId as string | undefined;
+    let orgId = decoded.organizationId as string | undefined;
     const body = await req.json();
+    const userDoc = await adminDb.collection('users').doc(decoded.uid).get();
+    if (!orgId) {
+      orgId = userDoc.data()?.organizationId;
+    }
+    const coachName = userDoc.data()?.name || '';
     const ref = await adminDb.collection('courses').add({
       ...body,
       createdBy: decoded.uid,
+      coachName,
       organizationId: orgId || null,
       status: 'draft',
       enrolledCount: 0,
