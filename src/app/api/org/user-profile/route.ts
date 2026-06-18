@@ -26,8 +26,11 @@ export async function GET(req: NextRequest) {
     }
     // Get sessions (as attendee)
     const sessionsSnap = await adminDb.collection('sessions')
-      .where('attendees', 'array-contains', userId).orderBy('date', 'desc').limit(10).get();
-    const sessions = sessionsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      .where('attendees', 'array-contains', userId).get();
+    const sessions = sessionsSnap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a: any, b: any) => (b.date || '').localeCompare(a.date || ''))
+      .slice(0, 10);
 
     // Get enrolled courses
     const coursesSnap = await adminDb.collection('courses').get();

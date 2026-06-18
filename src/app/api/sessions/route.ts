@@ -13,10 +13,8 @@ export async function GET(req: NextRequest) {
     if (hostIdParam) {
       snap = await adminDb.collection('sessions')
         .where('hostId', '==', hostIdParam)
-        .orderBy('date', 'desc')
         .get();
     } else if (scope === 'all') {
-      // Org sees all sessions for their org
       const userSnap = await adminDb.collection('users').doc(decoded.uid).get();
       const role = userSnap.data()?.role;
       const orgId = userSnap.data()?.organizationId || (decoded as any).organizationId;
@@ -25,16 +23,16 @@ export async function GET(req: NextRequest) {
       }
       snap = await adminDb.collection('sessions')
         .where('organizationId', '==', orgId)
-        .orderBy('date', 'desc')
         .get();
     } else {
       snap = await adminDb.collection('sessions')
         .where('hostId', '==', decoded.uid)
-        .orderBy('date', 'desc')
         .get();
     }
 
-    const sessions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const sessions = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a: any, b: any) => (b.date || '').localeCompare(a.date || ''));
     return NextResponse.json({ sessions });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
