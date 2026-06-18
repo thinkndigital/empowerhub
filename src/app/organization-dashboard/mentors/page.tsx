@@ -157,13 +157,7 @@ export default function OrgMentorsPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <Badge
-                        variant={
-                          (!mentor.status || mentor.status === "active") ? "default" : "secondary"
-                        }
-                      >
-                        {(!mentor.status || mentor.status === "active") ? "نشط" : "غير نشط"}
-                      </Badge>
+                      <Badge variant="default">نشط</Badge>
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">

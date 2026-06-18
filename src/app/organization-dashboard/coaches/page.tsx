@@ -157,13 +157,7 @@ export default function OrgCoachesPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <Badge
-                        variant={
-                          (!coach.status || coach.status === "active") ? "default" : "secondary"
-                        }
-                      >
-                        {(!coach.status || coach.status === "active") ? "نشط" : "غير نشط"}
-                      </Badge>
+                      <Badge variant="default">نشط</Badge>
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
