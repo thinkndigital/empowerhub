@@ -34,6 +34,7 @@ jobs:
       - name: Deploy to Firebase Hosting
         run: |
           echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > /tmp/sa.json
-          npx firebase-tools deploy --only hosting --project studio-4511819966-bc14f
+          npx firebase-tools@latest experiments:enable webframeworks
+          npx firebase-tools@latest deploy --only hosting --project studio-4511819966-bc14f
         env:
           GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa.json
