@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -10,10 +10,13 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Banknote, Save, Wallet, User, BookOpen } from 'lucide-react';
+import { Banknote, Save, Wallet, User, BookOpen, Camera, Loader2 } from 'lucide-react';
 import { useUser } from '@/firebase/auth/use-user';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useStorage } from '@/firebase/provider';
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 const mentorProfileSchema = z.object({
   name: z.string().min(2, { message: 'يجب أن يكون الاسم حرفين على الأقل.' }),
@@ -49,11 +52,15 @@ type MentorProfile = {
   };
 };
 
-export default function MentorSettingsPage() {
+export default function CoachSettingsPage() {
   const { toast } = useToast();
   const { user: authUser } = useUser();
+  const storage = useStorage();
   const [profile, setProfile] = useState<MentorProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchProfile = useCallback(async () => {
     if (!authUser) return;
@@ -107,6 +114,37 @@ export default function MentorSettingsPage() {
     }
   }, [profile, profileForm, payoutForm]);
 
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !authUser || !storage) return;
+
+    // Show preview immediately
+    const objectUrl = URL.createObjectURL(file);
+    setAvatarPreview(objectUrl);
+
+    setAvatarUploading(true);
+    try {
+      const path = `avatars/${authUser.uid}/${Date.now()}-${file.name}`;
+      const ref = storageRef(storage, path);
+      await uploadBytes(ref, file);
+      const downloadUrl = await getDownloadURL(ref);
+
+      const token = await authUser.getIdToken();
+      await fetch('/api/user/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify({ avatarUrl: downloadUrl }),
+      });
+      setProfile(prev => prev ? { ...prev, avatarUrl: downloadUrl } : prev);
+      toast({ title: 'تم تحديث الصورة الشخصية', description: 'تم رفع صورتك الشخصية بنجاح.' });
+    } catch {
+      toast({ variant: 'destructive', title: 'خطأ!', description: 'فشل رفع الصورة الشخصية.' });
+      setAvatarPreview(null);
+    } finally {
+      setAvatarUploading(false);
+    }
+  }
+
   async function onSubmitProfile(values: MentorProfileValues) {
     if (!authUser) return;
     try {
@@ -124,6 +162,9 @@ export default function MentorSettingsPage() {
       toast({ title: 'تم حفظ الإعدادات', description: 'تم تحديث معلومات الدفع بنجاح.' });
     } catch { toast({ variant: 'destructive', title: 'خطأ!', description: 'فشلت عملية الحفظ.' }); }
   }
+
+  const currentAvatarUrl = avatarPreview || profile?.avatarUrl;
+  const avatarInitial = profile?.name?.charAt(0) || '؟';
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
@@ -143,6 +184,42 @@ export default function MentorSettingsPage() {
             <CardContent className="space-y-4">
               {loading ? <Skeleton className="h-10 w-full" /> : (
                 <>
+                  {/* Avatar Section */}
+                  <div className="flex items-center gap-4 pb-4 border-b">
+                    <div className="relative">
+                      <Avatar className="h-24 w-24">
+                        <AvatarImage src={currentAvatarUrl} alt={profile?.name || ''} />
+                        <AvatarFallback className="text-2xl">{avatarInitial}</AvatarFallback>
+                      </Avatar>
+                      {avatarUploading && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full">
+                          <Loader2 className="h-6 w-6 text-white animate-spin" />
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium mb-2">الصورة الشخصية</p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={avatarUploading}
+                      >
+                        <Camera className="ml-2 h-4 w-4" />
+                        تغيير الصورة
+                      </Button>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleAvatarChange}
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">PNG، JPG حتى 5MB</p>
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField control={profileForm.control} name="name" render={({ field }) => (
                       <FormItem><FormLabel>الاسم الكامل</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
