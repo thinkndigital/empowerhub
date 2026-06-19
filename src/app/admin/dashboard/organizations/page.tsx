@@ -339,44 +339,44 @@ export default function OrganizationsPage() {
       ) : filtered.length === 0 ? (
         <p className="text-slate-500 text-center py-16">لا توجد منظمات</p>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 w-full">
           {filtered.map(org => {
             const color = org.primaryColor || "#6366f1";
             const initial = (org.name || "م")[0];
             return (
-              <Card key={org.id} className="bg-slate-800/50 border-white/10 hover:border-white/20 transition-all">
-                <CardContent className="p-5">
-                  <div className="flex items-start gap-4 mb-4">
-                    <div className="h-14 w-14 rounded-xl flex-shrink-0 flex items-center justify-center text-white font-bold text-xl" style={{ backgroundColor: color }}>
+              <Card key={org.id} className="bg-slate-800/50 border-white/10 hover:border-white/20 transition-all w-full overflow-hidden">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3 mb-3 min-w-0">
+                    <div className="h-12 w-12 rounded-xl flex-shrink-0 flex items-center justify-center text-white font-bold text-lg overflow-hidden" style={{ backgroundColor: color }}>
                       {org.logoUrl ? (
-                        <img src={org.logoUrl} alt="" className="h-full w-full object-contain rounded-xl" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                        <img src={org.logoUrl} alt="" className="h-full w-full object-contain" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                       ) : initial}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-white font-semibold truncate text-base">{org.name || "—"}</h3>
-                      <div className="flex items-center gap-2 mt-1 flex-wrap">
-                        <span className={`text-xs px-2 py-0.5 rounded-full border ${planColors[org.plan] || planColors.free}`}>
+                    <div className="flex-1 min-w-0 overflow-hidden">
+                      <h3 className="text-white font-semibold truncate text-sm">{org.name || "—"}</h3>
+                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                        <span className={`text-xs px-1.5 py-0.5 rounded-full border ${planColors[org.plan] || planColors.free}`}>
                           {planLabels[org.plan] || "مجاني"}
                         </span>
-                        <span className="flex items-center gap-1 text-xs text-slate-500">
-                          <span className="h-3 w-3 rounded-full inline-block border border-white/20" style={{ backgroundColor: color }} />
-                          {color}
+                        <span className="flex items-center gap-1 text-xs text-slate-500 min-w-0">
+                          <span className="h-2.5 w-2.5 rounded-full flex-shrink-0 border border-white/20" style={{ backgroundColor: color }} />
+                          <span className="truncate font-mono">{color}</span>
                         </span>
                       </div>
-                      {org.inviteCode && <p className="text-slate-500 text-xs mt-1 font-mono">كود: {org.inviteCode}</p>}
+                      {org.inviteCode && <p className="text-slate-500 text-xs mt-0.5 font-mono truncate">كود: {org.inviteCode}</p>}
                     </div>
                   </div>
 
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="outline" onClick={() => setOverviewOrg(org)} className="flex-1 border-white/20 text-slate-300 hover:text-white hover:bg-white/10 gap-1">
-                      <Eye className="h-3 w-3" />
-                      عرض
+                  <div className="grid grid-cols-3 gap-1.5">
+                    <Button size="sm" variant="outline" onClick={() => setOverviewOrg(org)} className="border-white/20 text-slate-300 hover:text-white hover:bg-white/10 gap-1 text-xs px-2">
+                      <Eye className="h-3 w-3 flex-shrink-0" />
+                      <span className="truncate">عرض</span>
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => openEdit(org)} className="flex-1 border-white/20 text-slate-300 hover:text-white hover:bg-white/10 gap-1">
-                      <Pencil className="h-3 w-3" />
-                      تعديل
+                    <Button size="sm" variant="outline" onClick={() => openEdit(org)} className="border-white/20 text-slate-300 hover:text-white hover:bg-white/10 gap-1 text-xs px-2">
+                      <Pencil className="h-3 w-3 flex-shrink-0" />
+                      <span className="truncate">تعديل</span>
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => setDeleteOrg(org)} className="border-red-500/30 text-red-400 hover:bg-red-500/10 gap-1">
+                    <Button size="sm" variant="outline" onClick={() => setDeleteOrg(org)} className="border-red-500/30 text-red-400 hover:bg-red-500/10">
                       <Trash2 className="h-3 w-3" />
                     </Button>
                   </div>
