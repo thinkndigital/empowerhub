@@ -269,7 +269,7 @@ export default function LandingPage() {
 
   // Load site config from API
   useEffect(() => {
-    fetch('/api/public/site-config').then(r => r.json()).then(d => {
+    fetch('/api/public/site-config', { cache: 'no-store' }).then(r => r.json()).then(d => {
       if (d.config) setSiteConfig(d.config);
     }).catch(() => {});
   }, []);

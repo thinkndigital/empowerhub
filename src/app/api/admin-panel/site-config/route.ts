@@ -30,13 +30,38 @@ const defaultConfig = {
     { title: 'السوق الرقمي', description: 'بع منتجاتك وخدماتك بسهولة', icon: 'ShoppingBag' },
     { title: 'التقارير والتحليل', description: 'تتبع تقدمك مع تقارير تفصيلية', icon: 'BarChart3' },
   ],
+  howItWorks: [
+    { step: '١', title: 'أنشئ حسابك', desc: 'سجّل مجاناً واختر دورك على المنصة.', icon: 'UserCheck' },
+    { step: '٢', title: 'استكشف المحتوى', desc: 'تصفح الدورات التدريبية وتواصل مع المرشدين.', icon: 'Globe' },
+    { step: '٣', title: 'حقق أهدافك', desc: 'أطلق متجرك واحصل على شهاداتك.', icon: 'TrendingUp' },
+  ],
+  testimonials: [
+    { name: 'سارة أحمد', role: 'مستفيدة - رائدة أعمال', text: 'بفضل EmpowerHub، تمكنت من إطلاق متجري الإلكتروني وتحقيق أول ألف ريال خلال شهرين.', stars: 5 },
+    { name: 'محمد الخالد', role: 'مدرب - خبير تسويق رقمي', text: 'المنصة أتاحت لي الفرصة للوصول إلى مئات المستفيدين ومشاركتهم خبرتي.', stars: 5 },
+    { name: 'منظمة بناء المستقبل', role: 'منظمة غير ربحية', text: 'ساعدتنا المنصة في إدارة 200 مستفيد بكل احترافية.', stars: 5 },
+  ],
+  contact: {
+    phone: '+966 XX XXX XXXX',
+    whatsapp: '+966 XX XXX XXXX',
+    whatsappLink: 'https://wa.me/966XXXXXXXXX',
+    email: 'info@empowerhub.com',
+  },
+  ctaBanner: {
+    title: 'جاهز للبدء؟ انضم إلى آلاف المستفيدين',
+    subtitle: 'سجّل مجاناً اليوم وابدأ رحلتك نحو التمكين والنجاح',
+    primaryText: 'ابدأ مجاناً الآن',
+    secondaryText: 'تجربة المنصة أولاً',
+  },
+  roles: [
+    { title: 'كمستفيد', description: 'طور مهاراتك وحقق استقلاليتك المالية.', icon: 'UserCheck', badge: 'الأكثر شعبية', link: '/register?role=beneficiary' },
+    { title: 'كمدرب', description: 'شارك خبراتك من خلال دورات تدريبية متخصصة.', icon: 'GraduationCap', badge: '', link: '/register?role=coach' },
+    { title: 'كمرشد', description: 'ساهم في نجاح الآخرين بالإرشاد والتوجيه.', icon: 'Users', badge: '', link: '/register?role=mentor' },
+    { title: 'كمنظمة', description: 'أدر برامج التمكين وتابع تقدم المستفيدين.', icon: 'Building', badge: '', link: '/register?role=organization' },
+  ],
   sections: {
-    showStats: true,
-    showFeatures: true,
-    showMentors: true,
-    showProducts: true,
-    showTestimonials: true,
-    showCTA: true,
+    showStats: true, showFeatures: true, showHowItWorks: true, showRoles: true,
+    showMentors: true, showCoaches: true, showTestimonials: true, showProducts: true,
+    showStores: true, showContact: true, showCTA: true,
   },
   footer: {
     description: 'منصة EmpowerHub للتمكين الرقمي',
@@ -45,6 +70,7 @@ const defaultConfig = {
     twitter: '',
     linkedin: '',
     instagram: '',
+    copyright: '© 2024 EmpowerHub. جميع الحقوق محفوظة.',
   },
 };
 
@@ -53,14 +79,20 @@ export async function GET() {
   const snap = await adminDb.collection('config').doc('site').get();
   const data = snap.exists ? snap.data() : {};
   // Deep merge with defaults
+  const d = data as any;
   const config = {
     ...defaultConfig,
-    ...data,
-    hero: { ...defaultConfig.hero, ...(data as any)?.hero },
-    sections: { ...defaultConfig.sections, ...(data as any)?.sections },
-    footer: { ...defaultConfig.footer, ...(data as any)?.footer },
-    stats: (data as any)?.stats || defaultConfig.stats,
-    features: (data as any)?.features || defaultConfig.features,
+    ...d,
+    hero: { ...defaultConfig.hero, ...d?.hero },
+    sections: { ...defaultConfig.sections, ...d?.sections },
+    footer: { ...defaultConfig.footer, ...d?.footer },
+    contact: { ...defaultConfig.contact, ...d?.contact },
+    ctaBanner: { ...defaultConfig.ctaBanner, ...d?.ctaBanner },
+    stats: d?.stats ?? defaultConfig.stats,
+    features: d?.features ?? defaultConfig.features,
+    howItWorks: d?.howItWorks ?? defaultConfig.howItWorks,
+    testimonials: d?.testimonials ?? defaultConfig.testimonials,
+    roles: d?.roles ?? defaultConfig.roles,
   };
   return NextResponse.json({ config });
 }

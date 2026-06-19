@@ -1,0 +1,428 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { Store, Package, Eye, EyeOff, Trash2, Search, RefreshCw, Edit2, X, Check } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+
+interface StoreItem {
+  id: string;
+  name: string;
+  logoUrl: string;
+  location: string;
+  beneficiaryName: string;
+  beneficiaryId: string;
+  organizationId: string;
+  hidden: boolean;
+  productsCount: number;
+  createdAt?: string;
+}
+
+interface ProductItem {
+  id: string;
+  name: string;
+  price?: number;
+  category?: string;
+  status?: string;
+  hidden: boolean;
+  imageUrl: string;
+  userId?: string;
+  storeId?: string;
+  createdAt?: string;
+}
+
+function StoresTab() {
+  const [stores, setStores] = useState<StoreItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [editStore, setEditStore] = useState<StoreItem | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editLocation, setEditLocation] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    const r = await fetch('/api/admin-panel/stores?type=stores');
+    const d = await r.json();
+    setStores(d.stores || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const toggleHidden = async (store: StoreItem) => {
+    await fetch(`/api/admin-panel/stores/${store.id}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ hidden: !store.hidden }),
+    });
+    setStores(s => s.map(x => x.id === store.id ? { ...x, hidden: !x.hidden } : x));
+  };
+
+  const deleteStore = async (id: string) => {
+    await fetch(`/api/admin-panel/stores/${id}`, { method: 'DELETE' });
+    setStores(s => s.filter(x => x.id !== id));
+  };
+
+  const openEdit = (store: StoreItem) => {
+    setEditStore(store);
+    setEditName(store.name);
+    setEditLocation(store.location);
+  };
+
+  const saveEdit = async () => {
+    if (!editStore) return;
+    setSaving(true);
+    await fetch(`/api/admin-panel/stores/${editStore.id}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: editName, location: editLocation }),
+    });
+    setStores(s => s.map(x => x.id === editStore.id ? { ...x, name: editName, location: editLocation } : x));
+    setEditStore(null);
+    setSaving(false);
+  };
+
+  const filtered = stores.filter(s =>
+    s.name?.toLowerCase().includes(search.toLowerCase()) ||
+    s.beneficiaryName?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-3 items-center">
+        <div className="relative flex-1 max-w-xs">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="بحث عن متجر..." className="pr-9" />
+        </div>
+        <Button variant="outline" size="icon" onClick={load} disabled={loading}>
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+        </Button>
+        <span className="text-slate-400 text-sm">{stores.length} متجر</span>
+      </div>
+
+      {loading ? (
+        <div className="text-center py-12 text-slate-400">جاري التحميل...</div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-12 text-slate-400">
+          <Store className="h-10 w-10 mx-auto mb-3 opacity-30" />
+          <p>لا توجد متاجر</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {filtered.map(store => (
+            <Card key={store.id} className={`bg-slate-800/50 border-white/10 transition-all ${store.hidden ? 'opacity-50' : ''}`}>
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="h-10 w-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary flex-shrink-0">
+                    {store.logoUrl ? (
+                      <img src={store.logoUrl} alt="" className="h-full w-full rounded-xl object-cover" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
+                    ) : (
+                      <Store className="h-5 w-5" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white font-semibold text-sm truncate">{store.name}</p>
+                    <p className="text-slate-400 text-xs truncate">{store.beneficiaryName || 'بدون صاحب'}</p>
+                    {store.location && <p className="text-slate-500 text-xs truncate">{store.location}</p>}
+                  </div>
+                  {store.hidden && <Badge className="bg-slate-700 text-slate-400 text-xs border-0 flex-shrink-0">مخفي</Badge>}
+                </div>
+
+                <div className="flex items-center justify-between text-xs text-slate-500 mb-3">
+                  <span>{store.productsCount} منتج</span>
+                  {store.createdAt && <span>{new Date(store.createdAt).toLocaleDateString('ar-SA')}</span>}
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className={`flex-1 gap-1.5 text-xs h-8 ${store.hidden ? 'text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10' : 'text-slate-400 hover:text-slate-200'}`}
+                    onClick={() => toggleHidden(store)}
+                  >
+                    {store.hidden ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                    {store.hidden ? 'إظهار' : 'إخفاء'}
+                  </Button>
+                  <Button size="sm" variant="outline" className="h-8 w-8 p-0 text-slate-400 hover:text-blue-400 hover:border-blue-500/30" onClick={() => openEdit(store)}>
+                    <Edit2 className="h-3.5 w-3.5" />
+                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button size="sm" variant="outline" className="h-8 w-8 p-0 text-slate-400 hover:text-red-400 hover:border-red-500/30">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="bg-slate-800 border-white/10">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle className="text-white">حذف المتجر</AlertDialogTitle>
+                        <AlertDialogDescription className="text-slate-400">هل أنت متأكد من حذف متجر "{store.name}"؟ هذا الإجراء لا يمكن التراجع عنه.</AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => deleteStore(store.id)} className="bg-red-600 hover:bg-red-700">حذف</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Edit Dialog */}
+      <Dialog open={!!editStore} onOpenChange={o => !o && setEditStore(null)}>
+        <DialogContent className="bg-slate-800 border-white/10 text-white" dir="rtl">
+          <DialogHeader>
+            <DialogTitle>تعديل المتجر</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>اسم المتجر</Label>
+              <Input value={editName} onChange={e => setEditName(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>الموقع</Label>
+              <Input value={editLocation} onChange={e => setEditLocation(e.target.value)} placeholder="المدينة..." />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditStore(null)}>إلغاء</Button>
+            <Button onClick={saveEdit} disabled={saving}>{saving ? 'جاري الحفظ...' : 'حفظ'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function ProductsTab() {
+  const [products, setProducts] = useState<ProductItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [editProduct, setEditProduct] = useState<ProductItem | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editPrice, setEditPrice] = useState('');
+  const [editCategory, setEditCategory] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    const r = await fetch('/api/admin-panel/stores?type=products');
+    const d = await r.json();
+    setProducts(d.products || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const toggleHidden = async (product: ProductItem) => {
+    await fetch(`/api/admin-panel/products/${product.id}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ hidden: !product.hidden }),
+    });
+    setProducts(p => p.map(x => x.id === product.id ? { ...x, hidden: !x.hidden } : x));
+  };
+
+  const deleteProduct = async (id: string) => {
+    await fetch(`/api/admin-panel/products/${id}`, { method: 'DELETE' });
+    setProducts(p => p.filter(x => x.id !== id));
+  };
+
+  const openEdit = (p: ProductItem) => {
+    setEditProduct(p);
+    setEditName(p.name);
+    setEditPrice(String(p.price ?? ''));
+    setEditCategory(p.category ?? '');
+  };
+
+  const saveEdit = async () => {
+    if (!editProduct) return;
+    setSaving(true);
+    const body: any = { name: editName, category: editCategory };
+    if (editPrice) body.price = parseFloat(editPrice);
+    await fetch(`/api/admin-panel/products/${editProduct.id}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    setProducts(p => p.map(x => x.id === editProduct.id ? { ...x, ...body } : x));
+    setEditProduct(null);
+    setSaving(false);
+  };
+
+  const filtered = products.filter(p =>
+    p.name?.toLowerCase().includes(search.toLowerCase()) ||
+    p.category?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const statusColor: Record<string, string> = {
+    published: 'bg-emerald-500/20 text-emerald-400',
+    منشورة: 'bg-emerald-500/20 text-emerald-400',
+    draft: 'bg-slate-600/40 text-slate-400',
+    مسودة: 'bg-slate-600/40 text-slate-400',
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-3 items-center">
+        <div className="relative flex-1 max-w-xs">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="بحث عن منتج..." className="pr-9" />
+        </div>
+        <Button variant="outline" size="icon" onClick={load} disabled={loading}>
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+        </Button>
+        <span className="text-slate-400 text-sm">{products.length} منتج</span>
+      </div>
+
+      {loading ? (
+        <div className="text-center py-12 text-slate-400">جاري التحميل...</div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-12 text-slate-400">
+          <Package className="h-10 w-10 mx-auto mb-3 opacity-30" />
+          <p>لا توجد منتجات</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {filtered.map(product => (
+            <Card key={product.id} className={`bg-slate-800/50 border-white/10 overflow-hidden transition-all ${product.hidden ? 'opacity-50' : ''}`}>
+              {product.imageUrl && (
+                <div className="h-28 w-full bg-slate-700 overflow-hidden">
+                  <img src={product.imageUrl} alt={product.name} className="h-full w-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
+                </div>
+              )}
+              <CardContent className="p-4">
+                <div className="mb-3">
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <p className="text-white font-semibold text-sm line-clamp-2 flex-1">{product.name}</p>
+                    {product.hidden && <Badge className="bg-slate-700 text-slate-400 text-xs border-0 flex-shrink-0">مخفي</Badge>}
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {product.price != null && (
+                      <span className="text-primary text-sm font-semibold">{product.price} ر.س</span>
+                    )}
+                    {product.category && (
+                      <Badge className="bg-primary/10 text-primary border-0 text-xs">{product.category}</Badge>
+                    )}
+                    {product.status && (
+                      <Badge className={`border-0 text-xs ${statusColor[product.status] || 'bg-slate-600/40 text-slate-400'}`}>
+                        {product.status}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className={`flex-1 gap-1.5 text-xs h-8 ${product.hidden ? 'text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10' : 'text-slate-400 hover:text-slate-200'}`}
+                    onClick={() => toggleHidden(product)}
+                  >
+                    {product.hidden ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                    {product.hidden ? 'إظهار' : 'إخفاء'}
+                  </Button>
+                  <Button size="sm" variant="outline" className="h-8 w-8 p-0 text-slate-400 hover:text-blue-400 hover:border-blue-500/30" onClick={() => openEdit(product)}>
+                    <Edit2 className="h-3.5 w-3.5" />
+                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button size="sm" variant="outline" className="h-8 w-8 p-0 text-slate-400 hover:text-red-400 hover:border-red-500/30">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="bg-slate-800 border-white/10">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle className="text-white">حذف المنتج</AlertDialogTitle>
+                        <AlertDialogDescription className="text-slate-400">هل أنت متأكد من حذف "{product.name}"؟</AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => deleteProduct(product.id)} className="bg-red-600 hover:bg-red-700">حذف</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Edit Dialog */}
+      <Dialog open={!!editProduct} onOpenChange={o => !o && setEditProduct(null)}>
+        <DialogContent className="bg-slate-800 border-white/10 text-white" dir="rtl">
+          <DialogHeader>
+            <DialogTitle>تعديل المنتج</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>اسم المنتج</Label>
+              <Input value={editName} onChange={e => setEditName(e.target.value)} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>السعر (ر.س)</Label>
+                <Input value={editPrice} onChange={e => setEditPrice(e.target.value)} type="number" min="0" dir="ltr" />
+              </div>
+              <div className="space-y-2">
+                <Label>التصنيف</Label>
+                <Input value={editCategory} onChange={e => setEditCategory(e.target.value)} placeholder="ملابس، إلكترونيات..." />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditProduct(null)}>إلغاء</Button>
+            <Button onClick={saveEdit} disabled={saving}>{saving ? 'جاري الحفظ...' : 'حفظ'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+export default function StoresAdminPage() {
+  return (
+    <div className="space-y-6" dir="rtl">
+      <div>
+        <h1 className="text-2xl font-bold text-white">المتاجر والمنتجات</h1>
+        <p className="text-slate-400 text-sm">إدارة متاجر المستفيدين ومنتجاتهم — يمكنك الإخفاء أو التعديل أو الحذف</p>
+      </div>
+
+      <Tabs defaultValue="stores">
+        <TabsList className="bg-slate-800 border border-white/10">
+          <TabsTrigger value="stores" className="data-[state=active]:bg-primary data-[state=active]:text-white text-slate-400 gap-2">
+            <Store className="h-4 w-4" />
+            المتاجر
+          </TabsTrigger>
+          <TabsTrigger value="products" className="data-[state=active]:bg-primary data-[state=active]:text-white text-slate-400 gap-2">
+            <Package className="h-4 w-4" />
+            المنتجات
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="stores" className="mt-4">
+          <StoresTab />
+        </TabsContent>
+        <TabsContent value="products" className="mt-4">
+          <ProductsTab />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}

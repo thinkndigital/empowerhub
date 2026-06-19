@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 const defaultConfig = {
   siteName: 'EmpowerHub',
   tagline: 'منصة التمكين الرقمي',
