@@ -21,14 +21,14 @@ import { useUser } from "@/firebase/auth/use-user";
 import { useAuth } from "@/firebase/provider";
 import { NotificationBell } from "@/components/notification-bell";
 
-const menuItems = [
-  { href: "/beneficiary-dashboard", label: "لوحة التحكم", icon: LayoutGrid },
-  { href: "/beneficiary-dashboard/progress", label: "تقدمي", icon: TrendingUp },
-  { href: "/beneficiary-dashboard/courses", label: "دوراتي", icon: BookOpen },
-  { href: "/beneficiary-dashboard/sessions", label: "جلساتي", icon: Calendar },
-  { href: "/beneficiary-dashboard/messages", label: "الرسائل", icon: MessageSquare },
-  { href: "/beneficiary-dashboard/store", label: "متجري", icon: ShoppingBag },
-  { href: "/beneficiary-dashboard/orders", label: "طلباتي", icon: ClipboardList },
+const allMenuItems = [
+  { href: "/beneficiary-dashboard", label: "لوحة التحكم", icon: LayoutGrid, sectionKey: null },
+  { href: "/beneficiary-dashboard/progress", label: "تقدمي", icon: TrendingUp, sectionKey: 'progress' },
+  { href: "/beneficiary-dashboard/courses", label: "دوراتي", icon: BookOpen, sectionKey: 'courses' },
+  { href: "/beneficiary-dashboard/sessions", label: "جلساتي", icon: Calendar, sectionKey: 'sessions' },
+  { href: "/beneficiary-dashboard/messages", label: "الرسائل", icon: MessageSquare, sectionKey: 'messages' },
+  { href: "/beneficiary-dashboard/store", label: "متجري", icon: ShoppingBag, sectionKey: 'store' },
+  { href: "/beneficiary-dashboard/orders", label: "طلباتي", icon: ClipboardList, sectionKey: 'orders' },
 ];
 
 export default function BeneficiaryDashboardLayout({ children }: { children: React.ReactNode }) {
@@ -41,14 +41,25 @@ export default function BeneficiaryDashboardLayout({ children }: { children: Rea
   const displayEmail = userProfile?.email || authUser?.email || '';
 
   const [avatarUrl, setAvatarUrl] = useState('');
+  const [menuItems, setMenuItems] = useState(allMenuItems);
+  const [platformLogo, setPlatformLogo] = useState('');
 
   const fetchAvatar = useCallback(async () => {
     if (!authUser) return;
     try {
       const token = await authUser.getIdToken();
-      const res = await fetch('/api/user/profile', { headers: { authorization: `Bearer ${token}` } });
-      const j = await res.json();
+      const [profileRes, platformRes] = await Promise.all([
+        fetch('/api/user/profile', { headers: { authorization: `Bearer ${token}` } }),
+        fetch('/api/public/platform-config'),
+      ]);
+      const j = await profileRes.json();
       if (j.profile?.avatarUrl) setAvatarUrl(j.profile.avatarUrl);
+      const platformData = await platformRes.json();
+      if (platformData.config?.logoUrl) setPlatformLogo(platformData.config.logoUrl);
+      if (platformData.config?.dashboardSections?.beneficiary) {
+        const sections = platformData.config.dashboardSections.beneficiary;
+        setMenuItems(allMenuItems.filter(item => item.sectionKey === null || sections[item.sectionKey] !== false));
+      }
     } catch { /* silent */ }
   }, [authUser]);
 
@@ -64,7 +75,9 @@ export default function BeneficiaryDashboardLayout({ children }: { children: Rea
       <Sidebar side="right">
         <SidebarHeader>
           <div className="flex flex-col items-center text-center gap-2 p-2">
-            <Logo className="h-16 w-16" />
+            {platformLogo ? (
+              <img src={platformLogo} alt="logo" className="h-16 w-16 object-contain rounded-xl" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+            ) : <Logo className="h-16 w-16" />}
             <span className="text-lg font-semibold">EmpowerHub</span>
           </div>
         </SidebarHeader>

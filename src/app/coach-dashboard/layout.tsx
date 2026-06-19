@@ -46,13 +46,13 @@ import { Logo } from "@/components/logo";
 import { useUser, type UserProfile } from "@/firebase/auth/use-user";
 import { NotificationBell } from "@/components/notification-bell";
 
-const menuItems = [
-  { href: "/coach-dashboard", label: "لوحة التحكم", icon: LayoutGrid },
-  { href: "/coach-dashboard/courses", label: "دوراتي", icon: BookOpen },
-  { href: "/coach-dashboard/sessions", label: "الجلسات", icon: CalendarDays },
-  { href: "/coach-dashboard/analytics", label: "التحليلات", icon: BarChartHorizontal },
-  { href: "/coach-dashboard/messages", label: "الرسائل", icon: MessageSquare },
-  { href: "/coach-dashboard/invitations", label: "الدعوات", icon: Bell },
+const allCoachMenuItems = [
+  { href: "/coach-dashboard", label: "لوحة التحكم", icon: LayoutGrid, sectionKey: null },
+  { href: "/coach-dashboard/courses", label: "دوراتي", icon: BookOpen, sectionKey: 'courses' },
+  { href: "/coach-dashboard/sessions", label: "الجلسات", icon: CalendarDays, sectionKey: 'sessions' },
+  { href: "/coach-dashboard/analytics", label: "التحليلات", icon: BarChartHorizontal, sectionKey: 'analytics' },
+  { href: "/coach-dashboard/messages", label: "الرسائل", icon: MessageSquare, sectionKey: 'messages' },
+  { href: "/coach-dashboard/invitations", label: "الدعوات", icon: Bell, sectionKey: 'invitations' },
 ];
 
 
@@ -67,13 +67,23 @@ export default function CoachDashboardLayout({
   const auth = useAuth();
 
   const [avatarUrl, setAvatarUrl] = useState('');
+  const [menuItems, setMenuItems] = useState(allCoachMenuItems);
+  const [platformLogo, setPlatformLogo] = useState('');
 
   useEffect(() => {
     if (!authUser) return;
     authUser.getIdToken().then(token =>
-      fetch('/api/user/profile', { headers: { authorization: `Bearer ${token}` } })
-        .then(r => r.json()).then(j => { if (j.profile?.avatarUrl) setAvatarUrl(j.profile.avatarUrl); })
-        .catch(() => {})
+      Promise.all([
+        fetch('/api/user/profile', { headers: { authorization: `Bearer ${token}` } }).then(r => r.json()),
+        fetch('/api/public/platform-config').then(r => r.json()),
+      ]).then(([j, platformData]) => {
+        if (j.profile?.avatarUrl) setAvatarUrl(j.profile.avatarUrl);
+        if (platformData.config?.logoUrl) setPlatformLogo(platformData.config.logoUrl);
+        if (platformData.config?.dashboardSections?.coach) {
+          const sections = platformData.config.dashboardSections.coach;
+          setMenuItems(allCoachMenuItems.filter(item => item.sectionKey === null || sections[item.sectionKey] !== false));
+        }
+      }).catch(() => {})
     );
   }, [authUser]);
 
@@ -141,8 +151,8 @@ export default function CoachDashboardLayout({
       <Sidebar side="right">
         <SidebarHeader>
           <div className="flex flex-col items-center text-center gap-2 p-2">
-            {organization?.logoUrl
-              ? <Image src={organization.logoUrl} alt="شعار المنظمة" width={64} height={64} className="h-16 w-16 object-contain" />
+            {(platformLogo || organization?.logoUrl)
+              ? <img src={platformLogo || organization?.logoUrl} alt="logo" className="h-16 w-16 object-contain rounded-xl" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
               : <Logo className="h-12 w-12" />}
             <span className="text-lg font-semibold">{organization?.name || 'EmpowerHub'}</span>
           </div>

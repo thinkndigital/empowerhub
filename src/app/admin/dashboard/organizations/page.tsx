@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Plus, Pencil, Trash2, Search } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
+import { Plus, Pencil, Trash2, Search, Eye, Users, GraduationCap, Store, UserCheck, RefreshCw } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
@@ -16,6 +18,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface Org {
   id: string; name: string; plan: string; primaryColor: string;
@@ -26,23 +29,32 @@ interface OrgForm {
   name: string; plan: string; primaryColor: string; logoUrl: string;
 }
 
+interface Person { id: string; name: string; email: string; role: string; status?: string; avatarUrl?: string; }
+interface OrgStore { id: string; name: string; beneficiaryId: string; hidden: boolean; }
+
+interface OrgOverview {
+  beneficiaries: Person[];
+  mentors: Person[];
+  coaches: Person[];
+  team: Person[];
+  stores: OrgStore[];
+}
+
 const planColors: Record<string, string> = {
   free: "bg-slate-500/20 text-slate-300 border-slate-500/30",
   pro: "bg-blue-500/20 text-blue-300 border-blue-500/30",
   enterprise: "bg-purple-500/20 text-purple-300 border-purple-500/30",
 };
 const planLabels: Record<string, string> = { free: "مجاني", pro: "احترافي", enterprise: "مؤسسي" };
+const statusBadge: Record<string, string> = { active: "bg-emerald-500/20 text-emerald-400", suspended: "bg-red-500/20 text-red-400", pending: "bg-yellow-500/20 text-yellow-400" };
+const statusLabel: Record<string, string> = { active: "نشط", suspended: "موقوف", pending: "معلق" };
 
 function OrgFormFields({ form, onChange }: { form: OrgForm; onChange: (f: OrgForm) => void }) {
   return (
     <div className="space-y-4">
       <div className="space-y-2">
         <Label>اسم المنظمة</Label>
-        <Input
-          value={form.name}
-          onChange={e => onChange({ ...form, name: e.target.value })}
-          placeholder="اسم المنظمة"
-        />
+        <Input value={form.name} onChange={e => onChange({ ...form, name: e.target.value })} placeholder="اسم المنظمة" />
       </div>
       <div className="space-y-2">
         <Label>الخطة</Label>
@@ -58,32 +70,147 @@ function OrgFormFields({ form, onChange }: { form: OrgForm; onChange: (f: OrgFor
       <div className="space-y-2">
         <Label>اللون الرئيسي</Label>
         <div className="flex items-center gap-3">
-          <input
-            type="color"
-            value={form.primaryColor}
-            onChange={e => onChange({ ...form, primaryColor: e.target.value })}
-            className="h-10 w-12 rounded cursor-pointer border border-white/20 bg-transparent"
-          />
+          <input type="color" value={form.primaryColor} onChange={e => onChange({ ...form, primaryColor: e.target.value })} className="h-10 w-12 rounded cursor-pointer border border-white/20 bg-transparent" />
           <div className="h-10 w-10 rounded-lg border border-white/20 flex-shrink-0" style={{ backgroundColor: form.primaryColor }} />
-          <Input
-            value={form.primaryColor}
-            onChange={e => onChange({ ...form, primaryColor: e.target.value })}
-            className="flex-1 font-mono text-sm"
-            dir="ltr"
-            placeholder="#6366f1"
-          />
+          <Input value={form.primaryColor} onChange={e => onChange({ ...form, primaryColor: e.target.value })} className="flex-1 font-mono text-sm" dir="ltr" placeholder="#6366f1" />
         </div>
       </div>
       <div className="space-y-2">
         <Label>رابط الشعار (اختياري)</Label>
-        <Input
-          value={form.logoUrl}
-          onChange={e => onChange({ ...form, logoUrl: e.target.value })}
-          placeholder="https://..."
-          dir="ltr"
-        />
+        <Input value={form.logoUrl} onChange={e => onChange({ ...form, logoUrl: e.target.value })} placeholder="https://..." dir="ltr" />
       </div>
     </div>
+  );
+}
+
+function PersonRow({ person }: { person: Person }) {
+  return (
+    <div className="flex items-center gap-3 py-2 border-b border-white/5 last:border-0">
+      <Avatar className="h-8 w-8 flex-shrink-0">
+        <AvatarImage src={person.avatarUrl} />
+        <AvatarFallback className="bg-slate-700 text-xs text-slate-300">{(person.name || '?')[0]}</AvatarFallback>
+      </Avatar>
+      <div className="flex-1 min-w-0">
+        <p className="text-white text-sm font-medium truncate">{person.name || '—'}</p>
+        <p className="text-slate-400 text-xs truncate">{person.email}</p>
+      </div>
+      <Badge className={`text-xs border-0 ${statusBadge[person.status || 'active']}`}>
+        {statusLabel[person.status || 'active']}
+      </Badge>
+    </div>
+  );
+}
+
+function OrgOverviewModal({ org, onClose }: { org: Org; onClose: () => void }) {
+  const [overview, setOverview] = useState<OrgOverview | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const r = await fetch(`/api/admin-panel/organizations/${org.id}/overview`);
+    const d = await r.json();
+    setOverview(d);
+    setLoading(false);
+  }, [org.id]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const color = org.primaryColor || '#6366f1';
+
+  return (
+    <Dialog open onOpenChange={o => !o && onClose()}>
+      <DialogContent dir="rtl" className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <div className="flex items-center gap-3">
+            <div className="h-12 w-12 rounded-xl flex items-center justify-center text-white font-bold text-xl flex-shrink-0" style={{ backgroundColor: color }}>
+              {org.logoUrl ? (
+                <img src={org.logoUrl} alt="" className="h-full w-full object-contain rounded-xl" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+              ) : (org.name || 'م')[0]}
+            </div>
+            <div>
+              <DialogTitle>{org.name}</DialogTitle>
+              <p className="text-muted-foreground text-sm">{planLabels[org.plan] || 'مجاني'}</p>
+            </div>
+            <Button variant="ghost" size="icon" className="mr-auto" onClick={load} disabled={loading}>
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            </Button>
+          </div>
+        </DialogHeader>
+
+        {loading ? (
+          <div className="text-center py-12 text-muted-foreground">جاري التحميل...</div>
+        ) : !overview ? (
+          <div className="text-center py-12 text-red-400">فشل تحميل البيانات</div>
+        ) : (
+          <>
+            {/* Stats row */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                { label: 'مستفيد', value: overview.beneficiaries.length, icon: Users, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+                { label: 'مرشد', value: overview.mentors.length, icon: GraduationCap, color: 'text-purple-400', bg: 'bg-purple-500/10' },
+                { label: 'مدرب', value: overview.coaches.length, icon: UserCheck, color: 'text-orange-400', bg: 'bg-orange-500/10' },
+                { label: 'متجر', value: overview.stores.length, icon: Store, color: 'text-blue-400', bg: 'bg-blue-500/10' },
+              ].map(s => {
+                const SIcon = s.icon;
+                return (
+                  <div key={s.label} className="flex items-center gap-3 p-3 bg-muted/30 rounded-xl">
+                    <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${s.bg} flex-shrink-0`}>
+                      <SIcon className={`h-5 w-5 ${s.color}`} />
+                    </div>
+                    <div>
+                      <p className={`text-xl font-bold ${s.color}`}>{s.value}</p>
+                      <p className="text-muted-foreground text-xs">{s.label}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <Tabs defaultValue="beneficiaries">
+              <TabsList className="w-full">
+                <TabsTrigger value="beneficiaries" className="flex-1">مستفيدون ({overview.beneficiaries.length})</TabsTrigger>
+                <TabsTrigger value="mentors" className="flex-1">مرشدون ({overview.mentors.length})</TabsTrigger>
+                <TabsTrigger value="coaches" className="flex-1">مدربون ({overview.coaches.length})</TabsTrigger>
+                <TabsTrigger value="stores" className="flex-1">متاجر ({overview.stores.length})</TabsTrigger>
+              </TabsList>
+
+              {(['beneficiaries', 'mentors', 'coaches'] as const).map(tab => (
+                <TabsContent key={tab} value={tab} className="mt-3">
+                  {overview[tab].length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">لا يوجد بيانات</p>
+                  ) : (
+                    <div className="divide-y divide-border rounded-xl border border-border px-3">
+                      {overview[tab].map(p => <PersonRow key={p.id} person={p} />)}
+                    </div>
+                  )}
+                </TabsContent>
+              ))}
+
+              <TabsContent value="stores" className="mt-3">
+                {overview.stores.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">لا توجد متاجر</p>
+                ) : (
+                  <div className="divide-y divide-border rounded-xl border border-border px-3">
+                    {overview.stores.map(s => (
+                      <div key={s.id} className="flex items-center gap-3 py-2">
+                        <div className="h-8 w-8 rounded-xl flex items-center justify-center bg-blue-500/10 flex-shrink-0">
+                          <Store className="h-4 w-4 text-blue-400" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{s.name || '—'}</p>
+                          <p className="text-xs text-muted-foreground">{s.beneficiaryId ? `مستفيد: ${s.beneficiaryId.slice(0, 8)}...` : ''}</p>
+                        </div>
+                        {s.hidden && <Badge variant="secondary" className="text-xs">مخفي</Badge>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -96,6 +223,7 @@ export default function OrganizationsPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [editOrg, setEditOrg] = useState<Org | null>(null);
   const [deleteOrg, setDeleteOrg] = useState<Org | null>(null);
+  const [overviewOrg, setOverviewOrg] = useState<Org | null>(null);
   const [addForm, setAddForm] = useState<OrgForm>(emptyForm);
   const [editForm, setEditForm] = useState<OrgForm>(emptyForm);
   const [saving, setSaving] = useState(false);
@@ -117,11 +245,7 @@ export default function OrganizationsPage() {
   const handleAdd = async () => {
     if (!addForm.name.trim()) return;
     setSaving(true);
-    await fetch("/api/admin-panel/organizations", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(addForm),
-    });
+    await fetch("/api/admin-panel/organizations", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(addForm) });
     setSaving(false);
     setAddOpen(false);
     setAddForm(emptyForm);
@@ -131,11 +255,7 @@ export default function OrganizationsPage() {
   const handleEdit = async () => {
     if (!editOrg) return;
     setSaving(true);
-    await fetch(`/api/admin-panel/organizations/${editOrg.id}`, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(editForm),
-    });
+    await fetch(`/api/admin-panel/organizations/${editOrg.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(editForm) });
     setSaving(false);
     setEditOrg(null);
     load();
@@ -148,13 +268,10 @@ export default function OrganizationsPage() {
     load();
   };
 
-  const filtered = orgs.filter(o =>
-    (o.name || "").toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = orgs.filter(o => (o.name || "").toLowerCase().includes(search.toLowerCase()));
 
   return (
     <div className="space-y-6" dir="rtl">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white">المنظمات</h1>
@@ -166,18 +283,11 @@ export default function OrganizationsPage() {
         </Button>
       </div>
 
-      {/* Search */}
       <div className="relative">
         <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-        <Input
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="بحث عن منظمة..."
-          className="bg-slate-800 border-white/10 text-white pr-10"
-        />
+        <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="بحث عن منظمة..." className="bg-slate-800 border-white/10 text-white pr-10" />
       </div>
 
-      {/* Content */}
       {loading ? (
         <p className="text-slate-400 text-center py-16">جاري التحميل...</p>
       ) : filtered.length === 0 ? (
@@ -190,20 +300,10 @@ export default function OrganizationsPage() {
             return (
               <Card key={org.id} className="bg-slate-800/50 border-white/10 hover:border-white/20 transition-all">
                 <CardContent className="p-5">
-                  {/* Org info */}
                   <div className="flex items-start gap-4 mb-4">
-                    <div
-                      className="h-14 w-14 rounded-xl flex-shrink-0 flex items-center justify-center text-white font-bold text-xl"
-                      style={{ backgroundColor: color }}
-                    >
+                    <div className="h-14 w-14 rounded-xl flex-shrink-0 flex items-center justify-center text-white font-bold text-xl" style={{ backgroundColor: color }}>
                       {org.logoUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={org.logoUrl}
-                          alt=""
-                          className="h-full w-full object-contain rounded-xl"
-                          onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                        />
+                        <img src={org.logoUrl} alt="" className="h-full w-full object-contain rounded-xl" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                       ) : initial}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -217,31 +317,21 @@ export default function OrganizationsPage() {
                           {color}
                         </span>
                       </div>
-                      {org.inviteCode && (
-                        <p className="text-slate-500 text-xs mt-1 font-mono">كود: {org.inviteCode}</p>
-                      )}
+                      {org.inviteCode && <p className="text-slate-500 text-xs mt-1 font-mono">كود: {org.inviteCode}</p>}
                     </div>
                   </div>
 
-                  {/* Actions */}
                   <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => openEdit(org)}
-                      className="flex-1 border-white/20 text-slate-300 hover:text-white hover:bg-white/10 gap-1"
-                    >
+                    <Button size="sm" variant="outline" onClick={() => setOverviewOrg(org)} className="flex-1 border-white/20 text-slate-300 hover:text-white hover:bg-white/10 gap-1">
+                      <Eye className="h-3 w-3" />
+                      عرض
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => openEdit(org)} className="flex-1 border-white/20 text-slate-300 hover:text-white hover:bg-white/10 gap-1">
                       <Pencil className="h-3 w-3" />
                       تعديل
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setDeleteOrg(org)}
-                      className="border-red-500/30 text-red-400 hover:bg-red-500/10 gap-1"
-                    >
+                    <Button size="sm" variant="outline" onClick={() => setDeleteOrg(org)} className="border-red-500/30 text-red-400 hover:bg-red-500/10 gap-1">
                       <Trash2 className="h-3 w-3" />
-                      حذف
                     </Button>
                   </div>
                 </CardContent>
@@ -251,6 +341,9 @@ export default function OrganizationsPage() {
         </div>
       )}
 
+      {/* Overview Modal */}
+      {overviewOrg && <OrgOverviewModal org={overviewOrg} onClose={() => setOverviewOrg(null)} />}
+
       {/* Add Dialog */}
       <Dialog open={addOpen} onOpenChange={open => { if (!open) { setAddOpen(false); setAddForm(emptyForm); } }}>
         <DialogContent dir="rtl" className="sm:max-w-md">
@@ -258,9 +351,7 @@ export default function OrganizationsPage() {
           <OrgFormFields form={addForm} onChange={setAddForm} />
           <DialogFooter>
             <Button variant="outline" onClick={() => { setAddOpen(false); setAddForm(emptyForm); }}>إلغاء</Button>
-            <Button onClick={handleAdd} disabled={!addForm.name.trim() || saving}>
-              {saving ? "جاري الحفظ..." : "إضافة"}
-            </Button>
+            <Button onClick={handleAdd} disabled={!addForm.name.trim() || saving}>{saving ? "جاري الحفظ..." : "إضافة"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -272,9 +363,7 @@ export default function OrganizationsPage() {
           <OrgFormFields form={editForm} onChange={setEditForm} />
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditOrg(null)}>إلغاء</Button>
-            <Button onClick={handleEdit} disabled={saving}>
-              {saving ? "جاري الحفظ..." : "حفظ التغييرات"}
-            </Button>
+            <Button onClick={handleEdit} disabled={saving}>{saving ? "جاري الحفظ..." : "حفظ التغييرات"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -284,15 +373,11 @@ export default function OrganizationsPage() {
         <AlertDialogContent dir="rtl">
           <AlertDialogHeader>
             <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
-            <AlertDialogDescription>
-              هل أنت متأكد من حذف منظمة "{deleteOrg?.name}"؟ لا يمكن التراجع عن هذا الإجراء.
-            </AlertDialogDescription>
+            <AlertDialogDescription>هل أنت متأكد من حذف منظمة "{deleteOrg?.name}"؟ لا يمكن التراجع عن هذا الإجراء.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>إلغاء</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
-              حذف
-            </AlertDialogAction>
+            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">حذف</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

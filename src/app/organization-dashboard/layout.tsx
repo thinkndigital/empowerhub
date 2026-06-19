@@ -25,17 +25,17 @@ import { useUser } from "@/firebase/auth/use-user";
 import { useAuth } from "@/firebase/provider";
 import { NotificationBell } from "@/components/notification-bell";
 
-const menuItems = [
-  { href: "/organization-dashboard", label: "لوحة التحكم", icon: LayoutGrid },
-  { href: "/organization-dashboard/beneficiaries", label: "المستفيدون", icon: Users },
-  { href: "/organization-dashboard/team", label: "فريق العمل", icon: Users },
-  { href: "/organization-dashboard/mentors", label: "المرشدون", icon: Users },
-  { href: "/organization-dashboard/coaches", label: "المدربون", icon: GraduationCap },
-  { href: "/organization-dashboard/courses", label: "الدورات", icon: BookOpen },
-  { href: "/organization-dashboard/stores", label: "المتاجر", icon: Store },
-  { href: "/organization-dashboard/orders", label: "الطلبات", icon: ClipboardList },
-  { href: "/organization-dashboard/reports", label: "التقارير", icon: BarChart3 },
-  { href: "/organization-dashboard/messages", label: "الرسائل", icon: MessageSquare },
+const allMenuItems = [
+  { href: "/organization-dashboard", label: "لوحة التحكم", icon: LayoutGrid, sectionKey: null },
+  { href: "/organization-dashboard/beneficiaries", label: "المستفيدون", icon: Users, sectionKey: 'beneficiaries' },
+  { href: "/organization-dashboard/team", label: "فريق العمل", icon: Users, sectionKey: 'team' },
+  { href: "/organization-dashboard/mentors", label: "المرشدون", icon: Users, sectionKey: 'mentors' },
+  { href: "/organization-dashboard/coaches", label: "المدربون", icon: GraduationCap, sectionKey: 'coaches' },
+  { href: "/organization-dashboard/courses", label: "الدورات", icon: BookOpen, sectionKey: 'courses' },
+  { href: "/organization-dashboard/stores", label: "المتاجر", icon: Store, sectionKey: 'stores' },
+  { href: "/organization-dashboard/orders", label: "الطلبات", icon: ClipboardList, sectionKey: 'orders' },
+  { href: "/organization-dashboard/reports", label: "التقارير", icon: BarChart3, sectionKey: 'reports' },
+  { href: "/organization-dashboard/messages", label: "الرسائل", icon: MessageSquare, sectionKey: 'messages' },
 ];
 
 export default function OrganizationDashboardLayout({ children }: { children: React.ReactNode }) {
@@ -45,19 +45,28 @@ export default function OrganizationDashboardLayout({ children }: { children: Re
   const auth = useAuth();
   const [orgName, setOrgName] = useState("منظمتي");
   const [avatarUrl, setAvatarUrl] = useState('');
+  const [menuItems, setMenuItems] = useState(allMenuItems);
+  const [platformLogo, setPlatformLogo] = useState('');
 
   const fetchOrg = useCallback(async () => {
     if (!authUser) return;
     try {
       const token = await authUser.getIdToken();
-      const [orgRes, profileRes] = await Promise.all([
+      const [orgRes, profileRes, platformRes] = await Promise.all([
         fetch('/api/org/settings', { headers: { authorization: `Bearer ${token}` } }),
         fetch('/api/user/profile', { headers: { authorization: `Bearer ${token}` } }),
+        fetch('/api/public/platform-config'),
       ]);
       const orgData = await orgRes.json();
       if (orgData.settings?.name) setOrgName(orgData.settings.name);
       const profileData = await profileRes.json();
       if (profileData.profile?.avatarUrl) setAvatarUrl(profileData.profile.avatarUrl);
+      const platformData = await platformRes.json();
+      if (platformData.config?.logoUrl) setPlatformLogo(platformData.config.logoUrl);
+      if (platformData.config?.dashboardSections?.organization) {
+        const sections = platformData.config.dashboardSections.organization;
+        setMenuItems(allMenuItems.filter(item => item.sectionKey === null || sections[item.sectionKey] !== false));
+      }
     } catch { /* silent */ }
   }, [authUser]);
 
@@ -76,7 +85,9 @@ export default function OrganizationDashboardLayout({ children }: { children: Re
       <Sidebar side="right">
         <SidebarHeader>
           <div className="flex flex-col items-center text-center gap-2 p-2">
-            <Logo className="h-16 w-16" />
+            {platformLogo ? (
+              <img src={platformLogo} alt="logo" className="h-16 w-16 object-contain rounded-xl" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+            ) : <Logo className="h-16 w-16" />}
             <span className="text-lg font-semibold">{orgName}</span>
           </div>
         </SidebarHeader>
