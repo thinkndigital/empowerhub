@@ -293,7 +293,9 @@ export default function LandingPage() {
       }
     })();
 
-    // Fetch products + stores from public API (no auth needed, bypasses Firestore rules)
+  }, [db]);
+
+  useEffect(() => {
     (async () => {
       try {
         const res = await fetch('/api/public/stores');
@@ -309,7 +311,7 @@ export default function LandingPage() {
         setLoadingStores(false);
       }
     })();
-  }, [db]);
+  }, []);
 
   const handleContactSubmit = (e: React.FormEvent) => {
     e.preventDefault();
