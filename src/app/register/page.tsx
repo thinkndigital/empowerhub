@@ -73,10 +73,26 @@ function PlanIcon({ icon, color }: { icon: string; color: string }) {
   return <Comp className="h-5 w-5" style={{ color }} />;
 }
 
-function formatPrice(plan: Plan) {
+function formatPrice(plan: Plan, period: "monthly" | "annual" = "monthly") {
   if (plan.priceMonthly === 0) return "مجاني";
+  if (period === "annual" && plan.priceAnnual > 0) {
+    return `${plan.priceAnnual.toLocaleString()} ${plan.currency} / سنة`;
+  }
   return `${plan.priceMonthly.toLocaleString()} ${plan.currency} / شهر`;
 }
+
+function getSavingPercent(plan: Plan): number {
+  if (!plan.priceAnnual || !plan.priceMonthly || plan.priceMonthly === 0) return 0;
+  return Math.round((1 - plan.priceAnnual / (plan.priceMonthly * 12)) * 100);
+}
+
+const LIMIT_LABELS: Record<string, string> = {
+  maxUsers: "مستفيد",
+  maxMentors: "مرشد",
+  maxCourses: "دورة",
+  maxProducts: "منتج",
+  maxStorage: "GB تخزين",
+};
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
@@ -117,6 +133,8 @@ function RegisterForm() {
   const [selectedPlanId, setSelectedPlanId] = useState<string>("");
   const [selectedGateway, setSelectedGateway] = useState<string>("");
   const [pendingValues, setPendingValues] = useState<z.infer<typeof formSchema> | null>(null);
+  const [billingPeriod, setBillingPeriod] = useState<"monthly" | "annual">("monthly");
+  const [expandedPlanId, setExpandedPlanId] = useState<string>("");
 
   // live data from API
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -185,8 +203,10 @@ function RegisterForm() {
   function onPlanNext() {
     const plan = plans.find((p) => p.id === selectedPlanId);
     if (!plan) return;
-    if (plan.priceMonthly > 0) {
-      // check if any gateway is enabled
+    const effectivePrice = billingPeriod === "annual" && plan.priceAnnual > 0
+      ? plan.priceAnnual
+      : plan.priceMonthly;
+    if (effectivePrice > 0) {
       const enabledGateways = getEnabledGateways();
       if (enabledGateways.length > 0) {
         setSelectedGateway(enabledGateways[0].key);
@@ -194,7 +214,6 @@ function RegisterForm() {
         return;
       }
     }
-    // free plan or no gateway configured → register directly
     onGatewayConfirm(selectedPlanId, "");
   }
 
@@ -235,6 +254,7 @@ function RegisterForm() {
             orgType: values.orgType,
             orgInviteCode: values.orgInviteCode,
             plan: planId || undefined,
+            billingPeriod: planId ? billingPeriod : undefined,
           }),
           signal: controller.signal,
         });
@@ -297,6 +317,7 @@ function RegisterForm() {
         toast({ title: "تم إنشاء الحساب!", description: "سيتم توجيهك لإتمام الدفع وتفعيل منصتك." });
         const params = new URLSearchParams({
           plan: planId,
+          billing: billingPeriod,
           gateway,
           orgId: data.organizationId || "",
         });
@@ -332,7 +353,7 @@ function RegisterForm() {
     ? "انضم إلى منصة EmpowerHub"
     : step === "plan"
     ? "اختر الخطة المناسبة لجهتك"
-    : `الخطة: ${selectedPlan?.name || ""} — ${formatPrice(selectedPlan!)}`;
+    : `الخطة: ${selectedPlan?.name || ""} — ${formatPrice(selectedPlan!, billingPeriod)}`;
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
@@ -475,104 +496,239 @@ function RegisterForm() {
               {plansLoading ? (
                 <div className="space-y-3">
                   {[1, 2, 3].map((i) => (
-                    <Skeleton key={i} className="h-32 w-full rounded-xl" />
+                    <Skeleton key={i} className="h-36 w-full rounded-xl" />
                   ))}
                 </div>
               ) : plans.length === 0 ? (
                 <div className="text-center py-8 space-y-3">
                   <p className="text-muted-foreground text-sm">لا توجد خطط متاحة حالياً.</p>
                   <Button onClick={() => onGatewayConfirm("", "")} disabled={isLoading} className="w-full">
-                    {isLoading ? <Loader2 className="h-4 w-4 animate-spin ml-2" /> : null}
+                    {isLoading && <Loader2 className="h-4 w-4 animate-spin ml-2" />}
                     إنشاء حساب والمتابعة
                   </Button>
                 </div>
               ) : (
                 <>
-                  <div className="grid gap-3">
-                    {plans.map((plan) => (
-                      <button
-                        key={plan.id}
-                        type="button"
-                        onClick={() => setSelectedPlanId(plan.id)}
-                        className={`text-right w-full rounded-xl border-2 p-4 transition-all relative ${
-                          selectedPlanId === plan.id
-                            ? "border-primary bg-primary/5 shadow-sm"
-                            : "border-border hover:border-primary/40"
-                        }`}
-                      >
-                        {plan.highlighted && (
-                          <span
-                            className="absolute -top-2.5 right-4 text-xs px-2.5 py-0.5 rounded-full text-white font-medium"
-                            style={{ backgroundColor: plan.color }}
-                          >
-                            الأكثر شعبية
+                  {/* ── Billing period toggle ── */}
+                  {plans.some((p) => p.priceAnnual > 0 && p.priceMonthly > 0) && (
+                    <div className="flex items-center justify-center">
+                      <div className="flex items-center gap-1 rounded-xl border p-1 bg-muted/40">
+                        <button
+                          type="button"
+                          onClick={() => setBillingPeriod("monthly")}
+                          className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                            billingPeriod === "monthly"
+                              ? "bg-background shadow text-foreground"
+                              : "text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          شهري
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setBillingPeriod("annual")}
+                          className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${
+                            billingPeriod === "annual"
+                              ? "bg-background shadow text-foreground"
+                              : "text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          سنوي
+                          <span className="text-xs bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-semibold">
+                            وفّر حتى {Math.max(...plans.map(getSavingPercent))}%
                           </span>
-                        )}
-                        <div className="flex items-start gap-3">
-                          <div className="p-1.5 rounded-lg mt-0.5" style={{ backgroundColor: `${plan.color}20` }}>
-                            <PlanIcon icon={plan.icon} color={plan.color} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="font-semibold text-sm">{plan.name}</span>
-                              <span className="font-bold text-sm" style={{ color: plan.color }}>
-                                {formatPrice(plan)}
-                              </span>
-                            </div>
-                            {plan.priceAnnual > 0 && (
-                              <p className="text-xs text-muted-foreground mt-0.5">
-                                أو {plan.priceAnnual.toLocaleString()} {plan.currency} / سنة
-                              </p>
-                            )}
-                            {plan.description && (
-                              <p className="text-xs text-muted-foreground mt-1">{plan.description}</p>
-                            )}
-                            {plan.features.length > 0 && (
-                              <ul className="mt-2 space-y-0.5">
-                                {plan.features.slice(0, 3).map((f, i) => (
-                                  <li key={i} className="text-xs text-muted-foreground flex items-center gap-1">
-                                    <Check className="h-3 w-3 flex-shrink-0" style={{ color: plan.color }} />
-                                    {f}
-                                  </li>
-                                ))}
-                                {plan.features.length > 3 && (
-                                  <li className="text-xs text-muted-foreground pr-4">
-                                    +{plan.features.length - 3} ميزات أخرى
-                                  </li>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── Plan cards ── */}
+                  <div className="grid gap-3">
+                    {plans.map((plan) => {
+                      const isSelected = selectedPlanId === plan.id;
+                      const isExpanded = expandedPlanId === plan.id;
+                      const savingPct = getSavingPercent(plan);
+                      const hasAnnual = plan.priceAnnual > 0 && plan.priceMonthly > 0;
+                      const limits = plan.limits || {};
+                      const limitEntries = Object.entries(LIMIT_LABELS).filter(
+                        ([key]) => limits[key] !== undefined
+                      );
+
+                      return (
+                        <div
+                          key={plan.id}
+                          className={`rounded-xl border-2 transition-all relative ${
+                            isSelected
+                              ? "border-primary bg-primary/5 shadow-sm"
+                              : "border-border hover:border-primary/30"
+                          }`}
+                        >
+                          {/* Highlighted badge */}
+                          {plan.highlighted && (
+                            <span
+                              className="absolute -top-2.5 right-4 text-xs px-2.5 py-0.5 rounded-full text-white font-medium"
+                              style={{ backgroundColor: plan.color }}
+                            >
+                              الأكثر شعبية
+                            </span>
+                          )}
+
+                          {/* Main row — click to select */}
+                          <button
+                            type="button"
+                            onClick={() => setSelectedPlanId(plan.id)}
+                            className="w-full text-right p-4"
+                          >
+                            <div className="flex items-center gap-3">
+                              {/* Icon */}
+                              <div
+                                className="p-2 rounded-xl flex-shrink-0"
+                                style={{ backgroundColor: `${plan.color}18` }}
+                              >
+                                <PlanIcon icon={plan.icon} color={plan.color} />
+                              </div>
+
+                              {/* Name + price */}
+                              <div className="flex-1 min-w-0 text-right">
+                                <div className="flex items-baseline justify-between gap-2 flex-wrap">
+                                  <span className="font-bold text-base">{plan.name}</span>
+                                  <div className="text-left">
+                                    <span className="font-bold text-lg" style={{ color: plan.color }}>
+                                      {plan.priceMonthly === 0
+                                        ? "مجاني"
+                                        : billingPeriod === "annual" && hasAnnual
+                                        ? plan.priceAnnual.toLocaleString()
+                                        : plan.priceMonthly.toLocaleString()}
+                                    </span>
+                                    {plan.priceMonthly > 0 && (
+                                      <span className="text-xs text-muted-foreground mr-1">
+                                        {plan.currency} / {billingPeriod === "annual" ? "سنة" : "شهر"}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Annual saving note */}
+                                {billingPeriod === "annual" && hasAnnual && savingPct > 0 && (
+                                  <p className="text-xs text-emerald-600 font-medium mt-0.5">
+                                    ✓ توفير {savingPct}% مقارنة بالاشتراك الشهري
+                                  </p>
                                 )}
-                              </ul>
-                            )}
-                          </div>
-                          <div
-                            className={`mt-1 h-4 w-4 rounded-full border-2 flex-shrink-0 transition-all ${
-                              selectedPlanId === plan.id
-                                ? "border-primary bg-primary"
-                                : "border-muted-foreground/40"
-                            }`}
-                          />
+                                {billingPeriod === "monthly" && hasAnnual && savingPct > 0 && (
+                                  <p className="text-xs text-muted-foreground mt-0.5">
+                                    اشترك سنوياً ووفّر {savingPct}%
+                                  </p>
+                                )}
+
+                                {/* Description */}
+                                {plan.description && (
+                                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                                    {plan.description}
+                                  </p>
+                                )}
+                              </div>
+
+                              {/* Radio dot */}
+                              <div
+                                className={`h-5 w-5 rounded-full border-2 flex-shrink-0 transition-all ${
+                                  isSelected
+                                    ? "border-primary bg-primary"
+                                    : "border-muted-foreground/40"
+                                }`}
+                              />
+                            </div>
+                          </button>
+
+                          {/* Specs section (always visible when selected, toggle-able otherwise) */}
+                          {(isSelected || isExpanded) && (
+                            <div className="px-4 pb-4 space-y-3 border-t pt-3">
+                              {/* Limits grid */}
+                              {limitEntries.length > 0 && (
+                                <div className="grid grid-cols-3 gap-2">
+                                  {limitEntries.map(([key, label]) => (
+                                    <div
+                                      key={key}
+                                      className="text-center rounded-lg bg-background border py-2 px-1"
+                                    >
+                                      <p
+                                        className="font-bold text-sm"
+                                        style={{ color: plan.color }}
+                                      >
+                                        {limits[key] === -1 ? "∞" : limits[key]?.toLocaleString?.() ?? limits[key]}
+                                      </p>
+                                      <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* Features list */}
+                              {plan.features.length > 0 && (
+                                <ul className="space-y-1.5">
+                                  {plan.features.map((f, i) => (
+                                    <li
+                                      key={i}
+                                      className="flex items-start gap-2 text-xs text-muted-foreground"
+                                    >
+                                      <Check
+                                        className="h-3.5 w-3.5 flex-shrink-0 mt-0.5"
+                                        style={{ color: plan.color }}
+                                      />
+                                      {f}
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+                          )}
+
+                          {/* "Show specs" toggle for non-selected plans */}
+                          {!isSelected && (plan.features.length > 0 || Object.keys(limits).length > 0) && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setExpandedPlanId(isExpanded ? "" : plan.id)
+                              }
+                              className="w-full text-center text-xs text-muted-foreground hover:text-primary py-2 border-t transition-colors"
+                            >
+                              {isExpanded ? "إخفاء المواصفات ▲" : "عرض المواصفات ▼"}
+                            </button>
+                          )}
                         </div>
-                      </button>
-                    ))}
+                      );
+                    })}
                   </div>
 
+                  {/* Actions */}
                   <div className="flex gap-2">
-                    <Button variant="outline" className="flex-1" onClick={() => setStep("form")} disabled={isLoading}>
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => setStep("form")}
+                      disabled={isLoading}
+                    >
                       رجوع
                     </Button>
-                    <Button className="flex-1" onClick={onPlanNext} disabled={isLoading || !selectedPlanId}>
-                      {isLoading ? (
-                        <Loader2 className="h-4 w-4 animate-spin ml-2" />
-                      ) : null}
-                      {selectedPlan?.priceMonthly === 0
-                        ? "إنشاء الحساب مجاناً"
-                        : enabledGateways.length > 0
-                        ? "التالي — طريقة الدفع ←"
-                        : "إنشاء الحساب"}
+                    <Button
+                      className="flex-1"
+                      onClick={onPlanNext}
+                      disabled={isLoading || !selectedPlanId}
+                    >
+                      {isLoading && <Loader2 className="h-4 w-4 animate-spin ml-2" />}
+                      {(() => {
+                        if (!selectedPlan) return "التالي";
+                        const price = billingPeriod === "annual" && selectedPlan.priceAnnual > 0
+                          ? selectedPlan.priceAnnual
+                          : selectedPlan.priceMonthly;
+                        if (price === 0) return "إنشاء الحساب مجاناً";
+                        if (enabledGateways.length > 0) return "التالي — طريقة الدفع ←";
+                        return "إنشاء الحساب";
+                      })()}
                     </Button>
                   </div>
 
                   <p className="text-xs text-center text-muted-foreground">
-                    الخطط المدفوعة تُفعَّل بعد إتمام الدفع بنجاح.
+                    الخطط المدفوعة تُفعَّل تلقائياً بعد إتمام الدفع.
                   </p>
                 </>
               )}
