@@ -62,7 +62,7 @@ export default function DashboardPage() {
   // Fetch upcoming sessions
   const sessionsQuery = useMemoFirebase(() => {
     if (!firestore || !authUser) return null;
-    return query(collection(firestore, "sessions"), where("attendees", "array-contains", authUser.uid));
+    return query(collection(firestore, "sessions"), where("beneficiaryId", "==", authUser.uid));
   }, [firestore, authUser]);
   const { data: sessions, isLoading: sessionsLoading } = useCollection<Session>(sessionsQuery);
 
@@ -92,7 +92,7 @@ export default function DashboardPage() {
 
   const storeRevenue = useMemo(() => {
     if (!orders) return 0;
-    return orders.filter(o => o.status === 'delivered').reduce((sum, o) => sum + (o.price || 0), 0);
+    return orders.filter(o => o.status === 'delivered').reduce((sum, o) => sum + ((o as any).total || 0), 0);
   }, [orders]);
 
   const progress = (userProfile as any)?.progress || 0;

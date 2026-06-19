@@ -48,7 +48,7 @@ export default function MentorshipPage() {
 
   const sessionsQuery = useMemoFirebase(() => {
     if (!firestore || !authUser) return null;
-    return query(collection(firestore, "sessions"), where("attendees", "array-contains", authUser.uid));
+    return query(collection(firestore, "sessions"), where("beneficiaryId", "==", authUser.uid));
   }, [firestore, authUser]);
 
   const { data: sessions, isLoading: sessionsLoading } = useCollection<Session>(sessionsQuery);

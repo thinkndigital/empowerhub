@@ -69,7 +69,6 @@ export default function StoreSettingsPage() {
   useEffect(() => {
     async function fetchStoreData() {
       if (!firestore || !authUser) {
-        setLoading(false);
         return;
       }
       setLoading(true);

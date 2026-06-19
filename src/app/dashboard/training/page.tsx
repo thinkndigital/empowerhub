@@ -100,9 +100,16 @@ export default function TrainingPage() {
   const [search, setSearch] = useState("");
 
   const coursesQuery = useMemoFirebase(() => {
-    if (!firestore || !(userProfile as any)?.organizationId) return null;
-    return query(collection(firestore, "courses"), where("organizationId", "==", (userProfile as any).organizationId));
-  }, [firestore, (userProfile as any)?.organizationId]);
+    if (!firestore) return null;
+    const orgId = (userProfile as any)?.organizationId;
+    if (orgId) {
+      return query(collection(firestore, "courses"), where("organizationId", "==", orgId));
+    }
+    if (authUser) {
+      return query(collection(firestore, "courses"), where("assignedTo", "array-contains", authUser.uid));
+    }
+    return null;
+  }, [firestore, (userProfile as any)?.organizationId, authUser]);
   const { data: courses, isLoading: coursesLoading } = useCollection<Course>(coursesQuery);
 
   const progressQuery = useMemoFirebase(() => {
