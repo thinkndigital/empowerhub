@@ -35,7 +35,7 @@ export default function AdminDashboardPage() {
   }, []);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir="rtl">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-white">لوحة التحكم الرئيسية</h1>

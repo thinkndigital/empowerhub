@@ -27,34 +27,54 @@ type OrderDialogProps = {
   onOpenChange: (open: boolean) => void;
 };
 
+interface GatewayInfo { enabled: boolean; label: string; }
 interface PaymentConfig {
-  enabled: boolean;
   allowCOD: boolean;
   codLabel: string;
-  onlineLabel: string;
   currency: string;
+  moyasar: GatewayInfo;
+  stripe: GatewayInfo;
+  paypal: GatewayInfo;
+  paytabs: GatewayInfo;
+  hyperpay: GatewayInfo;
+  tamara: GatewayInfo;
+  tabby: GatewayInfo;
 }
+
+const defaultPaymentConfig: PaymentConfig = {
+  allowCOD: true, codLabel: 'الدفع عند الاستلام', currency: 'SAR',
+  moyasar: { enabled: false, label: 'موياسر' },
+  stripe: { enabled: false, label: 'Stripe' },
+  paypal: { enabled: false, label: 'PayPal' },
+  paytabs: { enabled: false, label: 'PayTabs' },
+  hyperpay: { enabled: false, label: 'HyperPay' },
+  tamara: { enabled: false, label: 'تمارا' },
+  tabby: { enabled: false, label: 'تابي' },
+};
+
+type GatewayKey = 'moyasar' | 'stripe' | 'paypal' | 'paytabs' | 'hyperpay' | 'tamara' | 'tabby';
+
+const GATEWAY_ICONS: Record<GatewayKey, string> = {
+  moyasar: '🏦', stripe: '💳', paypal: '🅿️', paytabs: '💰', hyperpay: '⚡', tamara: '🛍️', tabby: '📦',
+};
+
+const BNPL_GATEWAYS: GatewayKey[] = ['tamara', 'tabby'];
 
 export function OrderDialog({ product, isOpen, onOpenChange }: OrderDialogProps) {
   const { toast } = useToast();
-  const [paymentConfig, setPaymentConfig] = useState<PaymentConfig>({
-    enabled: false, allowCOD: true,
-    codLabel: 'الدفع عند الاستلام',
-    onlineLabel: 'الدفع الإلكتروني',
-    currency: 'SAR',
-  });
+  const [paymentConfig, setPaymentConfig] = useState<PaymentConfig>(defaultPaymentConfig);
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [notes, setNotes] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'cod' | 'online'>('cod');
+  const [paymentMethod, setPaymentMethod] = useState<'cod' | GatewayKey>('cod');
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
 
   useEffect(() => {
     fetch('/api/public/payment-config').then(r => r.json()).then(d => {
-      if (d.config) setPaymentConfig(d.config);
+      if (d.config) setPaymentConfig({ ...defaultPaymentConfig, ...d.config });
     }).catch(() => {});
   }, []);
 
@@ -97,8 +117,7 @@ export function OrderDialog({ product, isOpen, onOpenChange }: OrderDialogProps)
 
       const orderId = orderData.orderId;
 
-      if (paymentMethod === 'online' && paymentConfig.enabled) {
-        // Initiate Moyasar payment
+      if (paymentMethod !== 'cod') {
         const payRes = await fetch('/api/public/payment/initiate', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
@@ -106,6 +125,7 @@ export function OrderDialog({ product, isOpen, onOpenChange }: OrderDialogProps)
             orderId,
             amount: total,
             description: `طلب: ${product.name}`,
+            gateway: paymentMethod,
           }),
         });
         const payData = await payRes.json();
@@ -187,39 +207,49 @@ export function OrderDialog({ product, isOpen, onOpenChange }: OrderDialogProps)
             </div>
 
             {/* Payment method */}
-            {(paymentConfig.allowCOD || paymentConfig.enabled) && (
-              <div className="space-y-2">
-                <Label>طريقة الدفع</Label>
-                <RadioGroup value={paymentMethod} onValueChange={v => setPaymentMethod(v as 'cod' | 'online')} className="space-y-2">
-                  {paymentConfig.allowCOD && (
-                    <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${paymentMethod === 'cod' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/40'}`}>
-                      <RadioGroupItem value="cod" id="pm-cod" />
-                      <Banknote className="h-5 w-5 text-emerald-600" />
-                      <div>
-                        <p className="text-sm font-medium">{paymentConfig.codLabel}</p>
-                        <p className="text-xs text-muted-foreground">ادفع عند استلام المنتج</p>
-                      </div>
-                    </label>
-                  )}
-                  {paymentConfig.enabled && (
-                    <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${paymentMethod === 'online' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/40'}`}>
-                      <RadioGroupItem value="online" id="pm-online" />
-                      <CreditCard className="h-5 w-5 text-blue-600" />
-                      <div>
-                        <p className="text-sm font-medium">{paymentConfig.onlineLabel}</p>
-                        <p className="text-xs text-muted-foreground">ادفع الآن ببطاقة أو STC Pay</p>
-                      </div>
-                      <Badge className="mr-auto text-xs bg-blue-500/10 text-blue-600 border-0">آمن</Badge>
-                    </label>
-                  )}
-                </RadioGroup>
-              </div>
-            )}
+            {(() => {
+              const enabledGateways = (Object.keys(GATEWAY_ICONS) as GatewayKey[]).filter(k => paymentConfig[k]?.enabled);
+              const hasAny = paymentConfig.allowCOD || enabledGateways.length > 0;
+              if (!hasAny) return null;
+              return (
+                <div className="space-y-2">
+                  <Label>طريقة الدفع</Label>
+                  <RadioGroup value={paymentMethod} onValueChange={v => setPaymentMethod(v as any)} className="space-y-2">
+                    {paymentConfig.allowCOD && (
+                      <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${paymentMethod === 'cod' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/40'}`}>
+                        <RadioGroupItem value="cod" id="pm-cod" />
+                        <Banknote className="h-5 w-5 text-emerald-600" />
+                        <div>
+                          <p className="text-sm font-medium">{paymentConfig.codLabel}</p>
+                          <p className="text-xs text-muted-foreground">ادفع عند استلام المنتج</p>
+                        </div>
+                      </label>
+                    )}
+                    {enabledGateways.map(gk => {
+                      const isBNPL = BNPL_GATEWAYS.includes(gk);
+                      return (
+                        <label key={gk} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${paymentMethod === gk ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/40'}`}>
+                          <RadioGroupItem value={gk} id={`pm-${gk}`} />
+                          {isBNPL ? <CreditCard className="h-5 w-5 text-purple-600" /> : <CreditCard className="h-5 w-5 text-blue-600" />}
+                          <div>
+                            <p className="text-sm font-medium">{paymentConfig[gk]?.label}</p>
+                            <p className="text-xs text-muted-foreground">{isBNPL ? 'اشتري الآن وادفع لاحقاً' : 'ادفع الآن ببطاقة بنكية'}</p>
+                          </div>
+                          <Badge className={`mr-auto text-xs border-0 ${isBNPL ? 'bg-purple-500/10 text-purple-600' : 'bg-blue-500/10 text-blue-600'}`}>
+                            {isBNPL ? 'تقسيط' : 'آمن'}
+                          </Badge>
+                        </label>
+                      );
+                    })}
+                  </RadioGroup>
+                </div>
+              );
+            })()}
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>إلغاء</Button>
               <Button type="submit" form="order-form" disabled={loading || !name.trim() || !phone.trim()}>
-                {loading ? 'جاري المعالجة...' : paymentMethod === 'online' ? `ادفع ${total.toFixed(2)} ${currency}` : 'تأكيد الطلب'}
+                {loading ? 'جاري المعالجة...' : paymentMethod === 'cod' ? 'تأكيد الطلب' : `ادفع ${total.toFixed(2)} ${currency}`}
               </Button>
             </DialogFooter>
           </form>
