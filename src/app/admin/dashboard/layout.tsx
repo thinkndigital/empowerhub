@@ -4,20 +4,38 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
-  LayoutGrid, Building2, Users, GraduationCap, Globe, Settings,
-  LogOut, Menu, X, Shield, ChevronLeft,
+  LayoutGrid, Building2, Users, GraduationCap, Settings,
+  LogOut, Menu, X, Shield, CreditCard, Star, PenSquare,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-const navItems = [
-  { href: "/admin/dashboard", label: "الرئيسية", icon: LayoutGrid, exact: true },
-  { href: "/admin/dashboard/organizations", label: "المنظمات", icon: Building2 },
-  { href: "/admin/dashboard/users", label: "المستخدمون", icon: Users },
-  { href: "/admin/dashboard/mentors", label: "المرشدون والمدربون", icon: GraduationCap },
-  { href: "/admin/dashboard/landing", label: "الصفحة الرئيسية", icon: Globe },
-  { href: "/admin/dashboard/settings", label: "الإعدادات", icon: Settings },
+const navGroups = [
+  {
+    label: 'الإدارة',
+    items: [
+      { href: "/admin/dashboard", label: "الرئيسية", icon: LayoutGrid, exact: true },
+      { href: "/admin/dashboard/organizations", label: "المنظمات", icon: Building2 },
+      { href: "/admin/dashboard/users", label: "المستخدمون", icon: Users },
+      { href: "/admin/dashboard/mentors", label: "المرشدون والمدربون", icon: GraduationCap },
+    ],
+  },
+  {
+    label: 'الاشتراكات',
+    items: [
+      { href: "/admin/dashboard/plans", label: "خطط التسعير", icon: Star },
+      { href: "/admin/dashboard/subscriptions", label: "الاشتراكات", icon: CreditCard },
+    ],
+  },
+  {
+    label: 'الموقع',
+    items: [
+      { href: "/admin/dashboard/site", label: "تعديل الموقع", icon: PenSquare },
+      { href: "/admin/dashboard/settings", label: "الإعدادات", icon: Settings },
+    ],
+  },
 ];
+
+const allNavItems = navGroups.flatMap(g => g.items);
 
 export default function AdminDashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -45,73 +63,82 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
     );
   }
 
-  const isActive = (item: typeof navItems[0]) =>
+  const isActive = (item: { href: string; exact?: boolean }) =>
     item.exact ? pathname === item.href : pathname.startsWith(item.href);
 
-  const Sidebar = () => (
-    <div className="flex flex-col h-full">
-      {/* Logo */}
-      <div className="p-6 border-b border-white/10">
-        <div className="flex items-center gap-3">
-          <div className="bg-primary/20 p-2 rounded-xl">
-            <Shield className="h-6 w-6 text-primary" />
-          </div>
-          <div>
-            <p className="text-white font-bold text-sm">EmpowerHub</p>
-            <p className="text-slate-400 text-xs">لوحة الإدارة</p>
+  function SidebarContent() {
+    return (
+      <div className="flex flex-col h-full">
+        {/* Logo */}
+        <div className="p-5 border-b border-white/10">
+          <div className="flex items-center gap-3">
+            <div className="bg-primary/20 p-2 rounded-xl flex-shrink-0">
+              <Shield className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+              <p className="text-white font-bold text-sm">EmpowerHub</p>
+              <p className="text-slate-400 text-xs">لوحة الإدارة</p>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Nav */}
-      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-        {navItems.map(item => (
-          <Link
-            key={item.href}
-            href={item.href}
-            onClick={() => setSidebarOpen(false)}
-            className={cn(
-              "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200",
-              isActive(item)
-                ? "bg-primary text-white shadow-lg shadow-primary/20"
-                : "text-slate-400 hover:text-white hover:bg-white/10"
-            )}
+        {/* Nav */}
+        <nav className="flex-1 p-3 overflow-y-auto space-y-4">
+          {navGroups.map(group => (
+            <div key={group.label}>
+              <p className="text-slate-600 text-xs font-semibold uppercase tracking-wider px-3 mb-1">{group.label}</p>
+              <div className="space-y-0.5">
+                {group.items.map(item => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setSidebarOpen(false)}
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150",
+                      isActive(item)
+                        ? "bg-primary text-white shadow-md shadow-primary/30"
+                        : "text-slate-400 hover:text-white hover:bg-white/8"
+                    )}
+                  >
+                    <item.icon className="h-4 w-4 flex-shrink-0" />
+                    <span>{item.label}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ))}
+        </nav>
+
+        {/* Footer */}
+        <div className="p-3 border-t border-white/10">
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all w-full"
           >
-            <item.icon className="h-5 w-5 flex-shrink-0" />
-            <span>{item.label}</span>
-          </Link>
-        ))}
-      </nav>
-
-      {/* Footer */}
-      <div className="p-4 border-t border-white/10">
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all w-full"
-        >
-          <LogOut className="h-5 w-5" />
-          <span>تسجيل الخروج</span>
-        </button>
+            <LogOut className="h-4 w-4" />
+            <span>تسجيل الخروج</span>
+          </button>
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 flex" dir="rtl">
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex w-64 flex-shrink-0 bg-slate-900 border-l border-white/10 flex-col">
-        <Sidebar />
+      <aside className="hidden lg:flex w-60 flex-shrink-0 bg-slate-900 border-l border-white/10 flex-col">
+        <SidebarContent />
       </aside>
 
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div className="lg:hidden fixed inset-0 z-50 flex">
           <div className="fixed inset-0 bg-black/60" onClick={() => setSidebarOpen(false)} />
-          <aside className="relative w-64 bg-slate-900 flex flex-col z-10">
+          <aside className="relative w-60 bg-slate-900 flex flex-col z-10">
             <button onClick={() => setSidebarOpen(false)} className="absolute top-4 left-4 text-slate-400 hover:text-white">
               <X className="h-5 w-5" />
             </button>
-            <Sidebar />
+            <SidebarContent />
           </aside>
         </div>
       )}
@@ -120,10 +147,7 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top bar */}
         <header className="h-14 bg-slate-900/80 backdrop-blur border-b border-white/10 flex items-center gap-4 px-4 lg:px-6 sticky top-0 z-30">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="lg:hidden text-slate-400 hover:text-white"
-          >
+          <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-slate-400 hover:text-white">
             <Menu className="h-5 w-5" />
           </button>
           <div className="flex-1" />
