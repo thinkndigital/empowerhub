@@ -277,7 +277,7 @@ export default function BeneficiaryStorePage() {
                     </CardHeader>
                     <CardContent className="space-y-1">
                       <p className="text-sm text-muted-foreground line-clamp-2">{p.description}</p>
-                      <p className="text-lg font-bold text-primary">{Number(p.price).toFixed(2)} د.أ</p>
+                      <p className="text-lg font-bold text-primary">{isNaN(Number(p.price)) ? '0.00' : Number(p.price).toFixed(2)} د.أ</p>
                     </CardContent>
                   </Card>
                 );

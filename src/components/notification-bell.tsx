@@ -126,7 +126,13 @@ export function NotificationBell() {
               </div>
               <span className="text-xs text-muted-foreground line-clamp-2">{notification.body}</span>
               <span className="text-xs text-muted-foreground">
-                {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true, locale: ar })}
+                {(() => {
+                  try {
+                    const d = new Date(notification.createdAt);
+                    if (isNaN(d.getTime())) return '';
+                    return formatDistanceToNow(d, { addSuffix: true, locale: ar });
+                  } catch { return ''; }
+                })()}
               </span>
             </DropdownMenuItem>
           ))
