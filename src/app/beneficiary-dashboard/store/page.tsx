@@ -37,7 +37,7 @@ const STATUS: Record<string, { label: string; variant: "secondary" | "default" |
 const CATS = ["منتجات يدوية", "خدمات", "منتجات رقمية", "أخرى"];
 
 export default function BeneficiaryStorePage() {
-  const { user, loading: authLoading } = useUser();
+  const { user } = useUser();
   const { toast } = useToast();
   const [storeId, setStoreId]       = useState("");
   const [storeName, setStoreName]   = useState("");
@@ -61,7 +61,7 @@ export default function BeneficiaryStorePage() {
 
   // Fetch store + products whenever the authenticated user becomes available
   useEffect(() => {
-    if (authLoading || !user) return;
+    if (!user) return;
     let alive = true;
 
     async function load() {
@@ -100,7 +100,7 @@ export default function BeneficiaryStorePage() {
 
     load().catch(() => { setStoreLoading(false); setProductsLoading(false); });
     return () => { alive = false; };
-  }, [user, authLoading]);
+  }, [user]);
 
   async function handleSaveStore() {
     setStoreStatus(null);
