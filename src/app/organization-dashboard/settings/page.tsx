@@ -8,10 +8,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Palette, Save, BookOpen, Users, Copy, Key } from "lucide-react";
-import { useState, useEffect, useCallback } from "react";
+import { Palette, Save, BookOpen, Users, Copy, Key, Loader2 } from "lucide-react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import { useUser } from "@/firebase/auth/use-user";
+import { useStorage } from "@/firebase/provider";
+import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 
 const settingsSchema = z.object({
   name: z.string().min(2, { message: "يجب أن يكون اسم المنظمة حرفين على الأقل." }),
@@ -47,9 +49,12 @@ const hexToHsl = (hex: string): string => {
 export default function OrgSettingsPage() {
   const { toast } = useToast();
   const { user, userProfile } = useUser();
+  const storage = useStorage();
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [logoUploading, setLogoUploading] = useState(false);
   const [inviteCode, setInviteCode] = useState<string | null>(null);
+  const logoFileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<z.infer<typeof settingsSchema>>({
     resolver: zodResolver(settingsSchema),
@@ -118,19 +123,16 @@ export default function OrgSettingsPage() {
         mentorshipSessionPrice: values.mentorshipSessionPrice,
       };
 
-      // Upload logo if provided (convert to base64 and send to separate upload endpoint if needed)
-      if (values.logo && values.logo.length > 0) {
+      // Upload logo to Firebase Storage if provided
+      if (values.logo && values.logo.length > 0 && storage && user) {
         const file = values.logo[0] as File;
-        const reader = new FileReader();
-        const dataUrl = await new Promise<string>((resolve, reject) => {
-          reader.onload = (e) => resolve(e.target?.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-        // Store logo as data URL for now (or handle via a separate upload API)
-        updateData.logoUrl = dataUrl;
-        setLogoPreview(dataUrl);
-        localStorage.setItem('orgLogo', dataUrl);
+        const path = `org-logos/${userProfile?.organizationId || user.uid}/${Date.now()}-${file.name}`;
+        const ref = storageRef(storage, path);
+        await uploadBytes(ref, file);
+        const downloadUrl = await getDownloadURL(ref);
+        updateData.logoUrl = downloadUrl;
+        setLogoPreview(downloadUrl);
+        localStorage.removeItem('orgLogo');
       }
 
       const res = await fetch('/api/org/settings', {

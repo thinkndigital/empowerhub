@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -16,9 +16,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useUser } from "@/firebase/auth/use-user";
-import { useFirestore, useMemoFirebase } from "@/firebase/provider";
-import { doc, updateDoc } from "firebase/firestore";
-import { User, Bell, Shield, Palette, Globe, Upload, Save, BookOpen, Briefcase, Target } from "lucide-react";
+import { useStorage } from "@/firebase/provider";
+import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
+import { User, Bell, Shield, Palette, Globe, Camera, Loader2, Save, BookOpen, Target } from "lucide-react";
+// Note: Firestore client SDK not used here — all writes go through API routes
 import { useToast } from "@/hooks/use-toast";
 
 const profileSchema = z.object({
@@ -39,8 +40,11 @@ type ProfileFormValues = z.infer<typeof profileSchema>;
 export default function SettingsPage() {
   const { userProfile, user: authUser } = useUser();
   const { toast } = useToast();
-  const firestore = useFirestore();
+  const storage = useStorage();
   const [isSaving, setIsSaving] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [notifications, setNotifications] = useState({
     email: true, sessions: true, courses: false, store: true,
   });
@@ -64,11 +68,6 @@ export default function SettingsPage() {
     },
   });
 
-  const userRef = useMemoFirebase(() => {
-    if (!firestore || !authUser) return null;
-    return doc(firestore, "users", authUser.uid);
-  }, [firestore, authUser]);
-
   useEffect(() => {
     if (userProfile) {
       form.reset({
@@ -86,11 +85,42 @@ export default function SettingsPage() {
     }
   }, [userProfile, form]);
 
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !authUser || !storage) return;
+    const objectUrl = URL.createObjectURL(file);
+    setAvatarPreview(objectUrl);
+    setAvatarUploading(true);
+    try {
+      const path = `avatars/${authUser.uid}/${Date.now()}-${file.name}`;
+      const ref = storageRef(storage, path);
+      await uploadBytes(ref, file);
+      const downloadUrl = await getDownloadURL(ref);
+      const token = await authUser.getIdToken();
+      await fetch('/api/user/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify({ avatarUrl: downloadUrl }),
+      });
+      toast({ title: 'تم تحديث الصورة الشخصية', description: 'تم رفع صورتك الشخصية بنجاح.' });
+    } catch {
+      toast({ variant: 'destructive', title: 'خطأ!', description: 'فشل رفع الصورة الشخصية.' });
+      setAvatarPreview(null);
+    } finally {
+      setAvatarUploading(false);
+    }
+  }
+
   async function onSubmitProfile(values: ProfileFormValues) {
-    if (!userRef) return;
+    if (!authUser) return;
     setIsSaving(true);
     try {
-      await updateDoc(userRef, values);
+      const token = await authUser.getIdToken();
+      await fetch('/api/user/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify(values),
+      });
       toast({ title: "تم الحفظ!", description: "تم تحديث ملفك الشخصي بنجاح." });
     } catch (err) {
       toast({ variant: "destructive", title: "خطأ", description: "فشل حفظ البيانات." });
@@ -119,15 +149,36 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent className="space-y-5">
               <div className="flex items-center gap-4">
-                <Avatar className="h-20 w-20 border-2 border-primary/20">
-                  <AvatarImage src={(userProfile as any)?.avatarUrl} />
-                  <AvatarFallback className="text-xl bg-primary/10 text-primary">{name[0]}</AvatarFallback>
-                </Avatar>
+                <div className="relative">
+                  <Avatar className="h-20 w-20 border-2 border-primary/20">
+                    <AvatarImage src={avatarPreview || (userProfile as any)?.avatarUrl} />
+                    <AvatarFallback className="text-xl bg-primary/10 text-primary">{name[0]}</AvatarFallback>
+                  </Avatar>
+                  {avatarUploading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full">
+                      <Loader2 className="h-5 w-5 text-white animate-spin" />
+                    </div>
+                  )}
+                </div>
                 <div>
-                  <Button variant="outline" size="sm" className="gap-2" type="button">
-                    <Upload className="h-4 w-4" />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    type="button"
+                    disabled={avatarUploading}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Camera className="h-4 w-4" />
                     تغيير الصورة
                   </Button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleAvatarChange}
+                  />
                   <p className="text-xs text-muted-foreground mt-1">PNG، JPG — حد أقصى 2MB</p>
                 </div>
               </div>
