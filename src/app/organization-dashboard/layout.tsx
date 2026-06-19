@@ -43,14 +43,20 @@ export default function OrganizationDashboardLayout({ children }: { children: Re
   const { user: authUser, userProfile } = useUser();
   const auth = useAuth();
   const [orgName, setOrgName] = useState("منظمتي");
+  const [avatarUrl, setAvatarUrl] = useState('');
 
   const fetchOrg = useCallback(async () => {
     if (!authUser) return;
     try {
       const token = await authUser.getIdToken();
-      const res = await fetch('/api/org/settings', { headers: { authorization: `Bearer ${token}` } });
-      const data = await res.json();
-      if (data.settings?.name) setOrgName(data.settings.name);
+      const [orgRes, profileRes] = await Promise.all([
+        fetch('/api/org/settings', { headers: { authorization: `Bearer ${token}` } }),
+        fetch('/api/user/profile', { headers: { authorization: `Bearer ${token}` } }),
+      ]);
+      const orgData = await orgRes.json();
+      if (orgData.settings?.name) setOrgName(orgData.settings.name);
+      const profileData = await profileRes.json();
+      if (profileData.profile?.avatarUrl) setAvatarUrl(profileData.profile.avatarUrl);
     } catch { /* silent */ }
   }, [authUser]);
 
@@ -118,7 +124,7 @@ export default function OrganizationDashboardLayout({ children }: { children: Re
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0">
-                <Avatar><AvatarImage src={userProfile?.avatarUrl} alt={displayName} /><AvatarFallback>{displayName.charAt(0)}</AvatarFallback></Avatar>
+                <Avatar><AvatarImage src={avatarUrl || userProfile?.avatarUrl} alt={displayName} /><AvatarFallback>{displayName.charAt(0)}</AvatarFallback></Avatar>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56" align="end" forceMount>
@@ -129,7 +135,7 @@ export default function OrganizationDashboardLayout({ children }: { children: Re
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-right" onSelect={() => router.push('/organization-dashboard/settings')}>الإعدادات</DropdownMenuItem>
+              <DropdownMenuItem className="text-right cursor-pointer" onSelect={() => router.push('/organization-dashboard/settings')}>الإعدادات</DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={handleLogout} className="text-right">تسجيل الخروج</DropdownMenuItem>
             </DropdownMenuContent>

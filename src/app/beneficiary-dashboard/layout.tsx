@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Bell, LayoutGrid, Search, Settings, MessageSquare, BookOpen, Calendar, TrendingUp, ShoppingBag } from "lucide-react";
 import { signOut } from "firebase/auth";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarMenu,
   SidebarMenuItem, SidebarMenuButton, SidebarFooter, SidebarInset, SidebarTrigger,
@@ -38,6 +38,20 @@ export default function BeneficiaryDashboardLayout({ children }: { children: Rea
 
   const displayName = userProfile?.name || authUser?.displayName || 'مستفيد';
   const displayEmail = userProfile?.email || authUser?.email || '';
+
+  const [avatarUrl, setAvatarUrl] = useState('');
+
+  const fetchAvatar = useCallback(async () => {
+    if (!authUser) return;
+    try {
+      const token = await authUser.getIdToken();
+      const res = await fetch('/api/user/profile', { headers: { authorization: `Bearer ${token}` } });
+      const j = await res.json();
+      if (j.profile?.avatarUrl) setAvatarUrl(j.profile.avatarUrl);
+    } catch { /* silent */ }
+  }, [authUser]);
+
+  useEffect(() => { fetchAvatar(); }, [fetchAvatar]);
 
   const handleLogout = async () => {
     if (auth) await signOut(auth);
@@ -98,7 +112,7 @@ export default function BeneficiaryDashboardLayout({ children }: { children: Rea
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0">
-                <Avatar><AvatarImage src={userProfile?.avatarUrl} alt={displayName} /><AvatarFallback>{displayName.charAt(0)}</AvatarFallback></Avatar>
+                <Avatar><AvatarImage src={avatarUrl || userProfile?.avatarUrl} alt={displayName} /><AvatarFallback>{displayName.charAt(0)}</AvatarFallback></Avatar>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56" align="end" forceMount>
@@ -109,9 +123,9 @@ export default function BeneficiaryDashboardLayout({ children }: { children: Rea
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-right">الملف الشخصي</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => router.push('/beneficiary-dashboard/settings')} className="text-right cursor-pointer">الملف الشخصي</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={handleLogout} className="text-right">تسجيل الخروج</DropdownMenuItem>
+              <DropdownMenuItem onSelect={handleLogout} className="text-right cursor-pointer">تسجيل الخروج</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </header>

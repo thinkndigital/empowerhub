@@ -180,10 +180,10 @@ export default function AdminDashboardLayout({
               <DropdownMenuSeparator />
                {authUser ? (
                 <>
-                  <DropdownMenuItem className="text-right">الملف الشخصي</DropdownMenuItem>
-                  <DropdownMenuItem className="text-right">إعدادات النظام</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => router.push('/admin-dashboard/settings')} className="text-right cursor-pointer">الملف الشخصي</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => router.push('/admin-dashboard/settings')} className="text-right cursor-pointer">إعدادات النظام</DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onSelect={handleLogout} className="text-right">
+                  <DropdownMenuItem onSelect={handleLogout} className="text-right cursor-pointer">
                     تسجيل الخروج
                   </DropdownMenuItem>
                 </>

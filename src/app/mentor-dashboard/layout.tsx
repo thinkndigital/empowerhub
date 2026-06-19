@@ -66,6 +66,17 @@ export default function MentorDashboardLayout({
   const { user: authUser, userProfile: realUserProfile, loading } = useUser();
   const auth = useAuth();
 
+  const [avatarUrl, setAvatarUrl] = useState('');
+
+  useEffect(() => {
+    if (!authUser) return;
+    authUser.getIdToken().then(token =>
+      fetch('/api/user/profile', { headers: { authorization: `Bearer ${token}` } })
+        .then(r => r.json()).then(j => { if (j.profile?.avatarUrl) setAvatarUrl(j.profile.avatarUrl); })
+        .catch(() => {})
+    );
+  }, [authUser]);
+
   const handleLogout = async () => {
     if (auth) await signOut(auth);
     router.push("/login");
@@ -194,7 +205,7 @@ export default function MentorDashboardLayout({
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0">
                 <Avatar>
-                  <AvatarImage src={userProfile?.avatarUrl} alt={displayName} />
+                  <AvatarImage src={avatarUrl || userProfile?.avatarUrl} alt={displayName} />
                   <AvatarFallback>{displayName.charAt(0)}</AvatarFallback>
                 </Avatar>
               </Button>
@@ -211,10 +222,10 @@ export default function MentorDashboardLayout({
               <DropdownMenuSeparator />
               {authUser ? (
                 <>
-                  <DropdownMenuItem className="text-right">الملف الشخصي</DropdownMenuItem>
-                  <DropdownMenuItem className="text-right">الإعدادات</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => router.push('/mentor-dashboard/settings')} className="text-right cursor-pointer">الملف الشخصي</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => router.push('/mentor-dashboard/settings')} className="text-right cursor-pointer">الإعدادات</DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onSelect={handleLogout} className="text-right">
+                  <DropdownMenuItem onSelect={handleLogout} className="text-right cursor-pointer">
                     تسجيل الخروج
                   </DropdownMenuItem>
                 </>
