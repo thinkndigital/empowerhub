@@ -146,7 +146,7 @@ const ShimmerCard = () => (
 const MentorCard = ({ mentor }: { mentor: MentorUser }) => {
   const name = mentor.displayName || mentor.name || 'بدون اسم';
   const bio = mentor.bio || mentor.description || '';
-  const specializations = mentor.specializations || [];
+  const specializations = Array.isArray(mentor.specializations) ? mentor.specializations : [];
   return (
     <Card className="card-hover border-0 shadow-md bg-card flex flex-col">
       <CardContent className="pt-6 flex flex-col items-center text-center gap-3 flex-grow">
