@@ -8,7 +8,7 @@ export async function GET() {
       const data = d.data();
       return { id: d.id, name: data.name, logoUrl: data.logoUrl, location: data.location, beneficiaryName: data.beneficiaryName };
     });
-    const productsSnap = await adminDb.collection('products').limit(8).get();
+    const productsSnap = await adminDb.collection('products').get();
     const products = productsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
     return NextResponse.json({ stores, products });
   } catch (e: any) {

@@ -1,45 +1,63 @@
-
 "use client";
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Logo } from "@/components/logo";
 import { OrderDialog } from "@/components/order-dialog";
 import { ShoppingCart, MapPin, Search, Store, SlidersHorizontal, Star, MessageCircle } from "lucide-react";
-import { useCollection } from "@/firebase/firestore/use-collection";
-import { collection, query } from "firebase/firestore";
-import { useFirestore, useMemoFirebase } from "@/firebase/provider";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { Product } from "@/lib/products-data";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import type { Product as LibProduct } from "@/lib/products-data";
+
+interface Product {
+  id: string;
+  name: string;
+  description?: string;
+  price: number;
+  category?: string;
+  imageUrl?: string;
+  beneficiaryName?: string;
+  location?: string;
+  whatsapp?: string;
+  stock?: number;
+  beneficiaryId?: string;
+}
 
 export default function MarketPage() {
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<LibProduct | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const firestore = useFirestore();
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const productsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, "products"));
-  }, [firestore]);
-
-  const { data: allProducts, isLoading: loading } = useCollection<Product>(productsQuery);
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/public/stores');
+        if (res.ok) {
+          const json = await res.json();
+          setAllProducts((json.products || []) as Product[]);
+        }
+      } catch {
+        // keep empty
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
 
   const categories = useMemo(() => {
-    if (!allProducts) return [];
     return Array.from(new Set(allProducts.map(p => p.category || "متفرقات")));
   }, [allProducts]);
 
   const filteredProducts = useMemo(() => {
-    if (!allProducts) return [];
     return allProducts.filter(p => {
       const matchesSearch = !searchQuery ||
-        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.description?.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory = !activeCategory || (p.category || "متفرقات") === activeCategory;
       return matchesSearch && matchesCategory;
@@ -94,7 +112,6 @@ export default function MarketPage() {
             اكتشف منتجات فريدة ومصنوعة بحب من قبل المستفيدين في برنامج التمكين.
           </p>
 
-          {/* Search */}
           <div className="relative max-w-md mx-auto">
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -108,7 +125,6 @@ export default function MarketPage() {
       </section>
 
       <main className="container mx-auto py-10 px-4">
-        {/* Category Filters */}
         {!loading && categories.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-8">
             <Button
@@ -133,7 +149,6 @@ export default function MarketPage() {
           </div>
         )}
 
-        {/* Results info */}
         {!loading && (
           <div className="flex items-center justify-between mb-6">
             <p className="text-sm text-muted-foreground">
@@ -190,7 +205,9 @@ export default function MarketPage() {
                       <h3 className="font-bold text-base mb-1 line-clamp-1">{product.name}</h3>
                       <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{product.description}</p>
                       <div className="space-y-1 text-xs text-muted-foreground">
-                        <p>من: <span className="font-semibold text-primary">{product.beneficiaryName}</span></p>
+                        {product.beneficiaryName && (
+                          <p>من: <span className="font-semibold text-primary">{product.beneficiaryName}</span></p>
+                        )}
                         {product.location && (
                           <div className="flex items-center gap-1">
                             <MapPin className="h-3 w-3" />
@@ -206,17 +223,20 @@ export default function MarketPage() {
                       </div>
                     </CardContent>
                     <CardFooter className="flex justify-between items-center p-4 pt-0 border-t mt-2 gap-2">
-                      <p className="text-lg font-bold text-primary">{product.price.toFixed(2)} <span className="text-sm font-normal text-muted-foreground">د.أ</span></p>
+                      <p className="text-lg font-bold text-primary">
+                        {product.price != null ? product.price.toFixed(2) : '—'}{' '}
+                        <span className="text-sm font-normal text-muted-foreground">ر.س</span>
+                      </p>
                       <div className="flex gap-2">
-                        {(product as any).whatsapp && (
+                        {product.whatsapp && (
                           <Button size="sm" variant="outline" className="gap-1.5 border-green-500 text-green-600 hover:bg-green-50" asChild>
-                            <a href={`https://wa.me/${((product as any).whatsapp || '').replace(/\D/g,'')}`} target="_blank" rel="noopener noreferrer">
+                            <a href={`https://wa.me/${(product.whatsapp || '').replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
                               <MessageCircle className="h-4 w-4" />
                               واتساب
                             </a>
                           </Button>
                         )}
-                        <Button size="sm" onClick={() => setSelectedProduct(product)} className="gap-1.5">
+                        <Button size="sm" onClick={() => setSelectedProduct(product as unknown as LibProduct)} className="gap-1.5">
                           <ShoppingCart className="h-4 w-4" />
                           اطلب
                         </Button>

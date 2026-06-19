@@ -16,7 +16,7 @@ import {
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useFirestore } from '@/firebase/provider';
-import { collection, query, where, limit, getDocs, getCountFromServer } from 'firebase/firestore';
+import { collection, query, where, getCountFromServer } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -267,33 +267,25 @@ export default function LandingPage() {
       }
     })();
 
-    // Fetch mentors
+  }, [db]);
+
+  useEffect(() => {
     (async () => {
       try {
-        const q = query(collection(db, 'users'), where('role', '==', 'mentor'), limit(4));
-        const snap = await getDocs(q);
-        setMentors(snap.docs.map(d => ({ id: d.id, ...d.data() } as MentorUser)));
+        const res = await fetch('/api/public/mentors');
+        if (res.ok) {
+          const json = await res.json();
+          setMentors(json.mentors || []);
+          setCoaches(json.coaches || []);
+        }
       } catch {
         // keep empty
       } finally {
         setLoadingMentors(false);
-      }
-    })();
-
-    // Fetch coaches
-    (async () => {
-      try {
-        const q = query(collection(db, 'users'), where('role', '==', 'coach'), limit(4));
-        const snap = await getDocs(q);
-        setCoaches(snap.docs.map(d => ({ id: d.id, ...d.data() } as MentorUser)));
-      } catch {
-        // keep empty
-      } finally {
         setLoadingCoaches(false);
       }
     })();
-
-  }, [db]);
+  }, []);
 
   useEffect(() => {
     (async () => {
