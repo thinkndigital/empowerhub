@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -21,14 +22,6 @@ import { Plus, Package, Store, Save } from "lucide-react";
 type StoreData = { id: string; name: string; description?: string; location?: string; phone?: string; whatsapp?: string };
 type Product = { id: string; name: string; description: string; price: number; category: string; status: string; createdAt: string };
 
-const storeSchema = z.object({
-  name: z.string().min(2, "اسم المتجر مطلوب (حرفان على الأقل)"),
-  description: z.string().optional(),
-  location: z.string().optional(),
-  phone: z.string().optional(),
-  whatsapp: z.string().optional(),
-});
-
 const productSchema = z.object({
   name: z.string().min(2, "الاسم مطلوب"),
   description: z.string().min(5, "الوصف مطلوب"),
@@ -36,7 +29,6 @@ const productSchema = z.object({
   category: z.string().min(1, "الفئة مطلوبة"),
 });
 
-type StoreForm = z.infer<typeof storeSchema>;
 type ProductForm = z.infer<typeof productSchema>;
 
 const statusConfig: Record<string, { label: string; variant: "secondary" | "default" | "destructive" }> = {
@@ -54,16 +46,12 @@ export default function BeneficiaryStorePage() {
   const [store, setStore] = useState<StoreData | null>(null);
   const [storeLoading, setStoreLoading] = useState(true);
   const [storeSaving, setStoreSaving] = useState(false);
+  const [storeFields, setStoreFields] = useState({ name: "", description: "", location: "", phone: "", whatsapp: "" });
 
   const [products, setProducts] = useState<Product[]>([]);
   const [productsLoading, setProductsLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-
-  const storeForm = useForm<StoreForm>({
-    resolver: zodResolver(storeSchema),
-    defaultValues: { name: "", description: "", location: "", phone: "", whatsapp: "" },
-  });
 
   const productForm = useForm<ProductForm>({
     resolver: zodResolver(productSchema),
@@ -88,7 +76,7 @@ export default function BeneficiaryStorePage() {
         .then(json => {
           if (json.store) {
             setStore(json.store);
-            storeForm.reset({
+            setStoreFields({
               name: json.store.name || "",
               description: json.store.description || "",
               location: json.store.location || "",
@@ -111,9 +99,10 @@ export default function BeneficiaryStorePage() {
     });
   }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const onSaveStore = async (values: StoreForm) => {
+  const onSaveStore = async () => {
     const u = userRef.current;
     if (!u) { toast({ title: "خطأ", description: "يجب تسجيل الدخول أولاً", variant: "destructive" }); return; }
+    if (!storeFields.name.trim()) { toast({ title: "خطأ", description: "اسم المتجر مطلوب", variant: "destructive" }); return; }
     setStoreSaving(true);
     try {
       const token = await u.getIdToken();
@@ -124,13 +113,13 @@ export default function BeneficiaryStorePage() {
         res = await fetch('/api/store', {
           method: 'PUT',
           headers: { authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: currentStoreId, ...values }),
+          body: JSON.stringify({ id: currentStoreId, ...storeFields }),
         });
       } else {
         res = await fetch('/api/store', {
           method: 'POST',
           headers: { authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify(values),
+          body: JSON.stringify(storeFields),
         });
       }
 
@@ -138,9 +127,9 @@ export default function BeneficiaryStorePage() {
       if (!res.ok) throw new Error(json.error || 'فشل حفظ المتجر');
 
       if (!currentStoreId && json.id) {
-        setStore({ id: json.id, ...values });
+        setStore({ id: json.id, ...storeFields });
       } else {
-        setStore(prev => prev ? { ...prev, ...values } : null);
+        setStore(prev => prev ? { ...prev, ...storeFields } : null);
       }
       toast({ title: "تم الحفظ ✓", description: "تم حفظ معلومات متجرك بنجاح." });
     } catch (e: any) {
@@ -205,51 +194,62 @@ export default function BeneficiaryStorePage() {
                   {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
                 </div>
               ) : (
-                <Form {...storeForm}>
-                  <form onSubmit={storeForm.handleSubmit(onSaveStore)} className="space-y-4">
-                    <FormField control={storeForm.control} name="name" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>اسم المتجر <span className="text-red-500">*</span></FormLabel>
-                        <FormControl><Input placeholder="مثال: إبداعات سارة" {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
-                    <FormField control={storeForm.control} name="description" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>وصف المتجر</FormLabel>
-                        <FormControl><Textarea placeholder="وصف موجز عن متجرك وما تقدمه..." rows={3} {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <FormField control={storeForm.control} name="location" render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>الموقع (المدينة)</FormLabel>
-                          <FormControl><Input placeholder="مثال: عمّان" {...field} /></FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )} />
-                      <FormField control={storeForm.control} name="phone" render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>رقم الهاتف</FormLabel>
-                          <FormControl><Input dir="ltr" placeholder="+962 7..." {...field} /></FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )} />
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="store-name">اسم المتجر <span className="text-red-500">*</span></Label>
+                    <Input
+                      id="store-name"
+                      placeholder="مثال: إبداعات سارة"
+                      value={storeFields.name}
+                      onChange={e => setStoreFields(p => ({ ...p, name: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="store-desc">وصف المتجر</Label>
+                    <Textarea
+                      id="store-desc"
+                      placeholder="وصف موجز عن متجرك وما تقدمه..."
+                      rows={3}
+                      value={storeFields.description}
+                      onChange={e => setStoreFields(p => ({ ...p, description: e.target.value }))}
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="store-loc">الموقع (المدينة)</Label>
+                      <Input
+                        id="store-loc"
+                        placeholder="مثال: عمّان"
+                        value={storeFields.location}
+                        onChange={e => setStoreFields(p => ({ ...p, location: e.target.value }))}
+                      />
                     </div>
-                    <FormField control={storeForm.control} name="whatsapp" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>رقم واتساب</FormLabel>
-                        <FormControl><Input dir="ltr" placeholder="+962 7..." {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
-                    <Button type="submit" disabled={storeSaving}>
-                      <Save className="h-4 w-4 ml-2" />
-                      {storeSaving ? "جاري الحفظ..." : store?.id ? "تحديث المتجر" : "إنشاء المتجر"}
-                    </Button>
-                  </form>
-                </Form>
+                    <div className="space-y-2">
+                      <Label htmlFor="store-phone">رقم الهاتف</Label>
+                      <Input
+                        id="store-phone"
+                        dir="ltr"
+                        placeholder="+962 7..."
+                        value={storeFields.phone}
+                        onChange={e => setStoreFields(p => ({ ...p, phone: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="store-wa">رقم واتساب</Label>
+                    <Input
+                      id="store-wa"
+                      dir="ltr"
+                      placeholder="+962 7..."
+                      value={storeFields.whatsapp}
+                      onChange={e => setStoreFields(p => ({ ...p, whatsapp: e.target.value }))}
+                    />
+                  </div>
+                  <Button onClick={onSaveStore} disabled={storeSaving}>
+                    <Save className="h-4 w-4 ml-2" />
+                    {storeSaving ? "جاري الحفظ..." : store?.id ? "تحديث المتجر" : "إنشاء المتجر"}
+                  </Button>
+                </div>
               )}
             </CardContent>
           </Card>
