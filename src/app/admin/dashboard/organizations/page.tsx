@@ -317,7 +317,7 @@ export default function OrganizationsPage() {
   const filtered = orgs.filter(o => (o.name || "").toLowerCase().includes(search.toLowerCase()));
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6 max-w-full" dir="rtl">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white">المنظمات</h1>
