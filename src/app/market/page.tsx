@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Logo } from "@/components/logo";
 import { OrderDialog } from "@/components/order-dialog";
-import { ShoppingCart, MapPin, Search, Store, SlidersHorizontal, Star, MessageCircle } from "lucide-react";
+import { ShoppingCart, MapPin, Search, Store, Star, MessageCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -30,7 +30,6 @@ interface Product {
 export default function MarketPage() {
   const [selectedProduct, setSelectedProduct] = useState<LibProduct | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -50,28 +49,13 @@ export default function MarketPage() {
     })();
   }, []);
 
-  const categories = useMemo(() => {
-    return Array.from(new Set(allProducts.map(p => p.category || "متفرقات")));
-  }, [allProducts]);
-
   const filteredProducts = useMemo(() => {
-    return allProducts.filter(p => {
-      const matchesSearch = !searchQuery ||
-        p.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.description?.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCategory = !activeCategory || (p.category || "متفرقات") === activeCategory;
-      return matchesSearch && matchesCategory;
-    });
-  }, [allProducts, searchQuery, activeCategory]);
-
-  const productsByCategory = useMemo(() => {
-    return filteredProducts.reduce((acc, product) => {
-      const category = product.category || "متفرقات";
-      if (!acc[category]) acc[category] = [];
-      acc[category].push(product);
-      return acc;
-    }, {} as Record<string, Product[]>);
-  }, [filteredProducts]);
+    if (!searchQuery) return allProducts;
+    return allProducts.filter(p =>
+      p.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.description?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [allProducts, searchQuery]);
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
@@ -125,44 +109,14 @@ export default function MarketPage() {
       </section>
 
       <main className="container mx-auto py-10 px-4">
-        {!loading && categories.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-8">
-            <Button
-              variant={activeCategory === null ? "default" : "outline"}
-              size="sm"
-              onClick={() => setActiveCategory(null)}
-              className="rounded-full"
-            >
-              الكل
-            </Button>
-            {categories.map(cat => (
-              <Button
-                key={cat}
-                variant={activeCategory === cat ? "default" : "outline"}
-                size="sm"
-                onClick={() => setActiveCategory(activeCategory === cat ? null : cat)}
-                className="rounded-full"
-              >
-                {cat}
-              </Button>
-            ))}
-          </div>
-        )}
-
         {!loading && (
-          <div className="flex items-center justify-between mb-6">
-            <p className="text-sm text-muted-foreground">
-              {filteredProducts.length} منتج متاح
-              {searchQuery && <span> لـ "<strong>{searchQuery}</strong>"</span>}
-            </p>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <SlidersHorizontal className="h-4 w-4" />
-              <span>ترتيب حسب: الأحدث</span>
-            </div>
-          </div>
+          <p className="text-sm text-muted-foreground mb-6">
+            {filteredProducts.length} منتج متاح
+            {searchQuery && <span> لـ "<strong>{searchQuery}</strong>"</span>}
+          </p>
         )}
 
-        <div className="space-y-12">
+        <div>
           {loading && (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {[...Array(8)].map((_, i) => (
@@ -178,14 +132,9 @@ export default function MarketPage() {
             </div>
           )}
 
-          {!loading && Object.entries(productsByCategory).map(([category, products]) => (
-            <section key={category}>
-              <div className="flex items-center gap-3 mb-6 border-b pb-3">
-                <h2 className="text-2xl font-bold">{category}</h2>
-                <Badge variant="secondary">{products.length} منتج</Badge>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {products.map((product) => (
+          {!loading && filteredProducts.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {filteredProducts.map((product) => (
                   <Card key={product.id} className="card-hover overflow-hidden flex flex-col border-0 shadow-md">
                     <div className="relative overflow-hidden">
                       <Image
@@ -243,10 +192,9 @@ export default function MarketPage() {
                       </div>
                     </CardFooter>
                   </Card>
-                ))}
-              </div>
-            </section>
-          ))}
+              ))}
+            </div>
+          )}
 
           {!loading && filteredProducts.length === 0 && (
             <div className="text-center py-20">
