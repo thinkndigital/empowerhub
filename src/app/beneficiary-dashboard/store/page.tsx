@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,10 +16,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/firebase/auth/use-user";
-import { Plus, ShoppingBag, Package, Store, Save } from "lucide-react";
+import { Plus, Package, Store, Save } from "lucide-react";
 
-type Store = { id: string; name: string; description?: string; location?: string; phone?: string; whatsapp?: string };
-type Product = { id: string; name: string; description: string; price: number; category: string; status: 'pending' | 'approved' | 'rejected'; createdAt: string };
+type StoreData = { id: string; name: string; description?: string; location?: string; phone?: string; whatsapp?: string };
+type Product = { id: string; name: string; description: string; price: number; category: string; status: string; createdAt: string };
 
 const storeSchema = z.object({
   name: z.string().min(2, "اسم المتجر مطلوب (حرفان على الأقل)"),
@@ -45,18 +45,13 @@ const statusConfig: Record<string, { label: string; variant: "secondary" | "defa
   rejected: { label: "مرفوض",        variant: "destructive" },
 };
 
-const categories = [
-  { value: "منتجات يدوية", label: "منتجات يدوية" },
-  { value: "خدمات",        label: "خدمات" },
-  { value: "منتجات رقمية", label: "منتجات رقمية" },
-  { value: "أخرى",         label: "أخرى" },
-];
+const categories = ["منتجات يدوية", "خدمات", "منتجات رقمية", "أخرى"];
 
 export default function BeneficiaryStorePage() {
   const { user } = useUser();
   const { toast } = useToast();
 
-  const [store, setStore] = useState<Store | null>(null);
+  const [store, setStore] = useState<StoreData | null>(null);
   const [storeLoading, setStoreLoading] = useState(true);
   const [storeSaving, setStoreSaving] = useState(false);
 
@@ -75,51 +70,61 @@ export default function BeneficiaryStorePage() {
     defaultValues: { name: "", description: "", price: 0, category: "" },
   });
 
-  const getToken = async () => {
-    if (!user) throw new Error('غير مسجل');
-    return user.getIdToken();
-  };
+  // Use refs to avoid stale closures in fetch calls
+  const userRef = useRef(user);
+  userRef.current = user;
 
-  const fetchStore = useCallback(async () => {
+  const storeIdRef = useRef<string | undefined>(undefined);
+  storeIdRef.current = store?.id;
+
+  useEffect(() => {
     if (!user) return;
+    const token_promise = user.getIdToken();
+
     setStoreLoading(true);
-    try {
-      const token = await user.getIdToken();
-      const res = await fetch('/api/store', { headers: { authorization: `Bearer ${token}` } });
-      const json = await res.json();
-      if (json.store) {
-        setStore(json.store);
-        storeForm.reset(json.store);
-      }
-    } catch { /* silent */ } finally { setStoreLoading(false); }
-  }, [user, storeForm]);
+    token_promise.then(token => {
+      fetch('/api/store', { headers: { authorization: `Bearer ${token}` } })
+        .then(r => r.json())
+        .then(json => {
+          if (json.store) {
+            setStore(json.store);
+            storeForm.reset({
+              name: json.store.name || "",
+              description: json.store.description || "",
+              location: json.store.location || "",
+              phone: json.store.phone || "",
+              whatsapp: json.store.whatsapp || "",
+            });
+          }
+        })
+        .catch(() => {})
+        .finally(() => setStoreLoading(false));
+    });
 
-  const fetchProducts = useCallback(async () => {
-    if (!user) return;
     setProductsLoading(true);
-    try {
-      const token = await user.getIdToken();
-      const res = await fetch('/api/store/products', { headers: { authorization: `Bearer ${token}` } });
-      if (!res.ok) throw new Error('فشل تحميل المنتجات');
-      const json = await res.json();
-      setProducts(json.products || []);
-    } catch (e: any) {
-      toast({ title: "خطأ", description: e.message, variant: "destructive" });
-    } finally { setProductsLoading(false); }
-  }, [user, toast]);
-
-  useEffect(() => { fetchStore(); fetchProducts(); }, [fetchStore, fetchProducts]);
+    token_promise.then(token => {
+      fetch('/api/store/products', { headers: { authorization: `Bearer ${token}` } })
+        .then(r => r.json())
+        .then(json => setProducts(json.products || []))
+        .catch(() => toast({ title: "خطأ في تحميل المنتجات", variant: "destructive" }))
+        .finally(() => setProductsLoading(false));
+    });
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onSaveStore = async (values: StoreForm) => {
+    const u = userRef.current;
+    if (!u) { toast({ title: "خطأ", description: "يجب تسجيل الدخول أولاً", variant: "destructive" }); return; }
     setStoreSaving(true);
     try {
-      const token = await getToken();
-      let res;
-      if (store?.id) {
+      const token = await u.getIdToken();
+      const currentStoreId = storeIdRef.current;
+      let res: Response;
+
+      if (currentStoreId) {
         res = await fetch('/api/store', {
           method: 'PUT',
           headers: { authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: store.id, ...values }),
+          body: JSON.stringify({ id: currentStoreId, ...values }),
         });
       } else {
         res = await fetch('/api/store', {
@@ -128,53 +133,57 @@ export default function BeneficiaryStorePage() {
           body: JSON.stringify(values),
         });
       }
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'فشل حفظ المتجر');
-      }
+
       const json = await res.json();
-      if (!store?.id && json.id) {
+      if (!res.ok) throw new Error(json.error || 'فشل حفظ المتجر');
+
+      if (!currentStoreId && json.id) {
         setStore({ id: json.id, ...values });
       } else {
         setStore(prev => prev ? { ...prev, ...values } : null);
       }
-      toast({ title: "تم الحفظ", description: "تم حفظ معلومات متجرك بنجاح." });
+      toast({ title: "تم الحفظ ✓", description: "تم حفظ معلومات متجرك بنجاح." });
     } catch (e: any) {
-      toast({ title: "خطأ", description: e.message, variant: "destructive" });
-    } finally { setStoreSaving(false); }
+      toast({ title: "خطأ في الحفظ", description: e.message, variant: "destructive" });
+    } finally {
+      setStoreSaving(false);
+    }
   };
 
   const onAddProduct = async (values: ProductForm) => {
+    const u = userRef.current;
+    if (!u) { toast({ title: "خطأ", description: "يجب تسجيل الدخول أولاً", variant: "destructive" }); return; }
     setSubmitting(true);
     try {
-      const token = await getToken();
+      const token = await u.getIdToken();
       const res = await fetch('/api/store/products', {
         method: 'POST',
         headers: { authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(values),
       });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'فشل إضافة المنتج');
-      }
-      toast({ title: "تم إضافة المنتج", description: "سيتم مراجعة منتجك قريباً." });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'فشل إضافة المنتج');
+
+      toast({ title: "تم إضافة المنتج ✓", description: "سيتم مراجعة منتجك قريباً." });
       productForm.reset();
       setDialogOpen(false);
-      fetchProducts();
+      // Refresh products
+      const token2 = await u.getIdToken();
+      const r2 = await fetch('/api/store/products', { headers: { authorization: `Bearer ${token2}` } });
+      const j2 = await r2.json();
+      setProducts(j2.products || []);
     } catch (e: any) {
-      toast({ title: "خطأ", description: e.message, variant: "destructive" });
-    } finally { setSubmitting(false); }
+      toast({ title: "خطأ في إضافة المنتج", description: e.message, variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
     <div className="space-y-6" dir="rtl">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <ShoppingBag className="h-6 w-6" /> متجري
-          </h1>
-          <p className="text-muted-foreground text-sm">أدر متجرك ومنتجاتك وخدماتك هنا.</p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">متجري</h1>
+        <p className="text-muted-foreground text-sm">أدر متجرك ومنتجاتك وخدماتك هنا.</p>
       </div>
 
       <Tabs defaultValue="store">
@@ -188,7 +197,7 @@ export default function BeneficiaryStorePage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-base">معلومات المتجر</CardTitle>
-              <CardDescription>أدخل معلومات متجرك الأساسية</CardDescription>
+              <CardDescription>أدخل معلومات متجرك الأساسية ثم اضغط حفظ</CardDescription>
             </CardHeader>
             <CardContent>
               {storeLoading ? (
@@ -235,7 +244,7 @@ export default function BeneficiaryStorePage() {
                         <FormMessage />
                       </FormItem>
                     )} />
-                    <Button type="submit" disabled={storeSaving} className="w-full sm:w-auto">
+                    <Button type="submit" disabled={storeSaving}>
                       <Save className="h-4 w-4 ml-2" />
                       {storeSaving ? "جاري الحفظ..." : store?.id ? "تحديث المتجر" : "إنشاء المتجر"}
                     </Button>
@@ -250,7 +259,7 @@ export default function BeneficiaryStorePage() {
         <TabsContent value="products">
           <div className="flex justify-between items-center mb-4">
             <p className="text-sm text-muted-foreground">{productsLoading ? "..." : `${products.length} منتج`}</p>
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) productForm.reset(); }}>
               <DialogTrigger asChild>
                 <Button><Plus className="h-4 w-4 ml-2" />إضافة منتج</Button>
               </DialogTrigger>
@@ -259,7 +268,7 @@ export default function BeneficiaryStorePage() {
                   <DialogTitle>إضافة منتج جديد</DialogTitle>
                 </DialogHeader>
                 <Form {...productForm}>
-                  <form onSubmit={productForm.handleSubmit(onAddProduct)} className="space-y-4">
+                  <form id="add-product-form" onSubmit={productForm.handleSubmit(onAddProduct)} className="space-y-4">
                     <FormField control={productForm.control} name="name" render={({ field }) => (
                       <FormItem>
                         <FormLabel>اسم المنتج</FormLabel>
@@ -289,22 +298,26 @@ export default function BeneficiaryStorePage() {
                             <SelectTrigger><SelectValue placeholder="اختر الفئة" /></SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {categories.map(c => (
-                              <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-                            ))}
+                            {categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                           </SelectContent>
                         </Select>
                         <FormMessage />
                       </FormItem>
                     )} />
-                    <DialogFooter className="gap-2 pt-2">
-                      <Button type="button" variant="ghost" onClick={() => { setDialogOpen(false); productForm.reset(); }}>إلغاء</Button>
-                      <Button type="submit" disabled={submitting}>
-                        {submitting ? "جارٍ الإضافة..." : "إضافة المنتج"}
-                      </Button>
-                    </DialogFooter>
                   </form>
                 </Form>
+                <DialogFooter className="gap-2">
+                  <DialogClose asChild>
+                    <Button type="button" variant="ghost">إلغاء</Button>
+                  </DialogClose>
+                  <Button
+                    type="submit"
+                    form="add-product-form"
+                    disabled={submitting}
+                  >
+                    {submitting ? "جارٍ الإضافة..." : "إضافة المنتج"}
+                  </Button>
+                </DialogFooter>
               </DialogContent>
             </Dialog>
           </div>
@@ -333,7 +346,7 @@ export default function BeneficiaryStorePage() {
                     </CardHeader>
                     <CardContent className="flex-1 space-y-2">
                       <p className="text-sm text-muted-foreground line-clamp-3">{product.description}</p>
-                      <p className="text-lg font-bold text-primary">{product.price.toFixed(2)} د.أ</p>
+                      <p className="text-lg font-bold text-primary">{Number(product.price).toFixed(2)} د.أ</p>
                     </CardContent>
                   </Card>
                 );
