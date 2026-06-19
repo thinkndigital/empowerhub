@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   LayoutGrid, Building2, Users, GraduationCap, Settings,
-  LogOut, Menu, X, Shield, CreditCard, Star, PenSquare, Store,
+  LogOut, Menu, X, Shield, CreditCard, Star, PenSquare, Store, Wallet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -30,6 +30,7 @@ const navGroups = [
     label: 'المحتوى',
     items: [
       { href: "/admin/dashboard/stores", label: "المتاجر والمنتجات", icon: Store },
+      { href: "/admin/dashboard/payment", label: "بوابة الدفع", icon: Wallet },
     ],
   },
   {

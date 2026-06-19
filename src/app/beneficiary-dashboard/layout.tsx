@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Bell, LayoutGrid, Search, Settings, MessageSquare, BookOpen, Calendar, TrendingUp, ShoppingBag } from "lucide-react";
+import { Bell, LayoutGrid, Search, Settings, MessageSquare, BookOpen, Calendar, TrendingUp, ShoppingBag, ClipboardList } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { useState, useEffect, useCallback } from "react";
 import {
@@ -28,6 +28,7 @@ const menuItems = [
   { href: "/beneficiary-dashboard/sessions", label: "جلساتي", icon: Calendar },
   { href: "/beneficiary-dashboard/messages", label: "الرسائل", icon: MessageSquare },
   { href: "/beneficiary-dashboard/store", label: "متجري", icon: ShoppingBag },
+  { href: "/beneficiary-dashboard/orders", label: "طلباتي", icon: ClipboardList },
 ];
 
 export default function BeneficiaryDashboardLayout({ children }: { children: React.ReactNode }) {
