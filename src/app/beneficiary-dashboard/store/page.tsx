@@ -16,8 +16,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { useUser } from "@/firebase/auth/use-user";
-import { Plus, Package, Store, Save } from "lucide-react";
+import { useAuth } from "@/firebase/provider";
+import { Plus, Package, Store, Save, CheckCircle, AlertCircle } from "lucide-react";
 
 type Product = { id: string; name: string; description: string; price: number; category: string; status: string };
 
@@ -37,7 +37,7 @@ const statusConfig: Record<string, { label: string; variant: "secondary" | "defa
 const CATEGORIES = ["منتجات يدوية", "خدمات", "منتجات رقمية", "أخرى"];
 
 export default function BeneficiaryStorePage() {
-  const { user } = useUser();
+  const auth = useAuth();
   const { toast } = useToast();
 
   // Store fields — plain state
@@ -49,6 +49,7 @@ export default function BeneficiaryStorePage() {
   const [storeWa, setStoreWa]       = useState("");
   const [storeSaving, setStoreSaving] = useState(false);
   const [storeReady, setStoreReady] = useState(false);
+  const [storeMsg, setStoreMsg] = useState<{type:'ok'|'err', text:string}|null>(null);
 
   // Products
   const [products, setProducts] = useState<Product[]>([]);
@@ -63,6 +64,7 @@ export default function BeneficiaryStorePage() {
 
   // Load store and products once user is ready
   useEffect(() => {
+    const user = auth?.currentUser;
     if (!user) return;
     let cancelled = false;
 
@@ -94,15 +96,17 @@ export default function BeneficiaryStorePage() {
     });
 
     return () => { cancelled = true; };
-  }, [user]);
+  }, [auth]);
 
   async function handleSaveStore() {
+    const user = auth?.currentUser;
+    setStoreMsg(null);
     if (!user) {
-      toast({ title: "خطأ", description: "يجب تسجيل الدخول أولاً", variant: "destructive" });
+      setStoreMsg({ type: 'err', text: 'يجب تسجيل الدخول أولاً' });
       return;
     }
     if (!storeName.trim()) {
-      toast({ title: "خطأ", description: "اسم المتجر مطلوب", variant: "destructive" });
+      setStoreMsg({ type: 'err', text: 'اسم المتجر مطلوب' });
       return;
     }
 
@@ -121,15 +125,16 @@ export default function BeneficiaryStorePage() {
       if (!res.ok) throw new Error(json.error || 'فشل الحفظ');
 
       if (!storeId && json.id) setStoreId(json.id);
-      toast({ title: "تم الحفظ ✓", description: "تم حفظ معلومات متجرك." });
+      setStoreMsg({ type: 'ok', text: 'تم حفظ معلومات متجرك بنجاح ✓' });
     } catch (e: any) {
-      toast({ title: "خطأ", description: e.message, variant: "destructive" });
+      setStoreMsg({ type: 'err', text: e.message });
     } finally {
       setStoreSaving(false);
     }
   }
 
   async function handleAddProduct(values: z.infer<typeof productSchema>) {
+    const user = auth?.currentUser;
     if (!user) return;
     setSubmitting(true);
     try {
@@ -174,12 +179,7 @@ export default function BeneficiaryStorePage() {
               <CardDescription>أدخل معلومات متجرك ثم اضغط الزر</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {!storeReady && !user ? (
-                <div className="space-y-3">
-                  {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
-                </div>
-              ) : (
-                <>
+              <>
                   <div className="space-y-2">
                     <Label>اسم المتجر <span className="text-red-500">*</span></Label>
                     <Input placeholder="مثال: إبداعات سارة" value={storeName} onChange={e => setStoreName(e.target.value)} />
@@ -202,6 +202,12 @@ export default function BeneficiaryStorePage() {
                     <Label>رقم واتساب</Label>
                     <Input dir="ltr" placeholder="+962 7..." value={storeWa} onChange={e => setStoreWa(e.target.value)} />
                   </div>
+                  {storeMsg && (
+                    <div className={`flex items-center gap-2 p-3 rounded-lg text-sm ${storeMsg.type === 'ok' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                      {storeMsg.type === 'ok' ? <CheckCircle className="h-4 w-4 shrink-0" /> : <AlertCircle className="h-4 w-4 shrink-0" />}
+                      {storeMsg.text}
+                    </div>
+                  )}
                   <Button
                     onClick={handleSaveStore}
                     disabled={storeSaving}
@@ -210,8 +216,7 @@ export default function BeneficiaryStorePage() {
                     <Save className="h-4 w-4 ml-2" />
                     {storeSaving ? "جاري الحفظ..." : storeId ? "تحديث المتجر" : "إنشاء المتجر"}
                   </Button>
-                </>
-              )}
+              </>
             </CardContent>
           </Card>
         </TabsContent>
