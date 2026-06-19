@@ -39,7 +39,6 @@ const CATS = ["منتجات يدوية", "خدمات", "منتجات رقمية"
 export default function BeneficiaryStorePage() {
   const { user, loading: authLoading } = useUser();
   const { toast } = useToast();
-
   const [storeId, setStoreId]       = useState("");
   const [storeName, setStoreName]   = useState("");
   const [storeDesc, setStoreDesc]   = useState("");
@@ -149,10 +148,6 @@ export default function BeneficiaryStorePage() {
     } finally {
       setSubmitting(false);
     }
-  }
-
-  if (authLoading) {
-    return <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
   }
 
   return (
