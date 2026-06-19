@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { Check, Star, Zap, Building2, Crown, Loader2, CreditCard } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,41 +21,62 @@ import { Badge } from "@/components/ui/badge";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { Logo } from "@/components/logo";
 import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
 
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { useAuth, useFirestore } from "@/firebase/provider";
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
 import { ORG_TYPES } from "@/lib/org-types";
 
-const PLANS = [
-  {
-    id: "basic",
-    label: "الخطة الأساسية",
-    price: "مجاني",
-    priceNum: 0,
-    features: ["حتى 20 مستفيداً", "الدورات التدريبية", "دعم عبر البريد الإلكتروني"],
-    badge: "",
-  },
-  {
-    id: "pro",
-    label: "الخطة الاحترافية",
-    price: "299 ر.س / شهر",
-    priceNum: 299,
-    features: ["حتى 100 مستفيد", "الدورات + الإرشاد", "متجر إلكتروني", "دعم أولوية"],
-    badge: "الأكثر شيوعاً",
-  },
-  {
-    id: "enterprise",
-    label: "الخطة المؤسسية",
-    price: "999 ر.س / شهر",
-    priceNum: 999,
-    features: ["مستفيدون غير محدودين", "جميع الميزات", "تخصيص كامل", "مدير حساب مخصص"],
-    badge: "الأفضل للمؤسسات",
-  },
-];
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface Plan {
+  id: string;
+  name: string;
+  nameEn: string;
+  key: string;
+  description: string;
+  priceMonthly: number;
+  priceAnnual: number;
+  currency: string;
+  color: string;
+  icon: string;
+  highlighted: boolean;
+  features: string[];
+  limits: Record<string, number>;
+}
+
+interface GatewayInfo {
+  enabled: boolean;
+  label: string;
+}
+
+interface PaymentConfig {
+  allowCOD: boolean;
+  codLabel: string;
+  currency: string;
+  moyasar: GatewayInfo;
+  stripe: GatewayInfo;
+  paypal: GatewayInfo;
+  paytabs: GatewayInfo;
+  hyperpay: GatewayInfo;
+  tamara: GatewayInfo;
+  tabby: GatewayInfo;
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+const iconMap: Record<string, any> = { Star, Zap, Building2, Crown };
+
+function PlanIcon({ icon, color }: { icon: string; color: string }) {
+  const Comp = iconMap[icon] || Star;
+  return <Comp className="h-5 w-5" style={{ color }} />;
+}
+
+function formatPrice(plan: Plan) {
+  if (plan.priceMonthly === 0) return "مجاني";
+  return `${plan.priceMonthly.toLocaleString()} ${plan.currency} / شهر`;
+}
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
@@ -78,9 +100,9 @@ const formSchema = z
     { message: "يجب إدخال اسم الجهة (حرفان على الأقل).", path: ["organizationName"] }
   );
 
-// ─── Steps ────────────────────────────────────────────────────────────────────
+type Step = "form" | "plan" | "gateway";
 
-type Step = "form" | "plan";
+// ─── Component ────────────────────────────────────────────────────────────────
 
 function RegisterForm() {
   const registerImage = PlaceHolderImages.find((img) => img.id === "register-background");
@@ -92,8 +114,14 @@ function RegisterForm() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [step, setStep] = useState<Step>("form");
-  const [selectedPlan, setSelectedPlan] = useState("basic");
+  const [selectedPlanId, setSelectedPlanId] = useState<string>("");
+  const [selectedGateway, setSelectedGateway] = useState<string>("");
   const [pendingValues, setPendingValues] = useState<z.infer<typeof formSchema> | null>(null);
+
+  // live data from API
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [plansLoading, setPlansLoading] = useState(false);
+  const [paymentConfig, setPaymentConfig] = useState<PaymentConfig | null>(null);
 
   const roleFromQuery = searchParams.get("role");
   const orgInviteParam = searchParams.get("orgInvite");
@@ -124,33 +152,70 @@ function RegisterForm() {
     }
   }, [searchParams, form]);
 
-  const getDashboardLink = (role: string) => {
-    switch (role) {
-      case "organization": return "/organization-dashboard";
-      case "admin": return "/admin-dashboard";
-      case "mentor": return "/mentor-dashboard";
-      case "coach": return "/coach-dashboard";
-      default: return "/dashboard";
-    }
-  };
+  // Load plans + payment config when user reaches plan step
+  useEffect(() => {
+    if (step !== "plan") return;
+    setPlansLoading(true);
+    Promise.all([
+      fetch("/api/public/plans").then((r) => r.json()),
+      fetch("/api/public/payment-config").then((r) => r.json()),
+    ]).then(([plansData, payData]) => {
+      const loadedPlans: Plan[] = plansData.plans || [];
+      setPlans(loadedPlans);
+      setPaymentConfig(payData.config || null);
+      // pre-select highlighted or first plan
+      const highlighted = loadedPlans.find((p) => p.highlighted) || loadedPlans[0];
+      if (highlighted) setSelectedPlanId(highlighted.id);
+    }).catch(() => {
+      // fallback to empty — user can still proceed
+    }).finally(() => setPlansLoading(false));
+  }, [step]);
 
-  // Step 1: validate form → if org → go to plan selection → else register
+  // ── handlers ──────────────────────────────────────────────────────────────
+
   async function onFormSubmit(values: z.infer<typeof formSchema>) {
     if (values.role === "organization") {
       setPendingValues(values);
       setStep("plan");
       return;
     }
-    await doRegister(values, "");
+    await doRegister(values, "", "");
   }
 
-  // Step 2: plan selected → register
-  async function onPlanConfirm() {
+  function onPlanNext() {
+    const plan = plans.find((p) => p.id === selectedPlanId);
+    if (!plan) return;
+    if (plan.priceMonthly > 0) {
+      // check if any gateway is enabled
+      const enabledGateways = getEnabledGateways();
+      if (enabledGateways.length > 0) {
+        setSelectedGateway(enabledGateways[0].key);
+        setStep("gateway");
+        return;
+      }
+    }
+    // free plan or no gateway configured → register directly
+    onGatewayConfirm(selectedPlanId, "");
+  }
+
+  async function onGatewayConfirm(planId: string, gateway: string) {
     if (!pendingValues) return;
-    await doRegister(pendingValues, selectedPlan);
+    await doRegister(pendingValues, planId, gateway);
   }
 
-  async function doRegister(values: z.infer<typeof formSchema>, plan: string) {
+  function getEnabledGateways() {
+    if (!paymentConfig) return [];
+    const keys = ["moyasar", "stripe", "paypal", "paytabs", "hyperpay", "tamara", "tabby"] as const;
+    return keys
+      .filter((k) => paymentConfig[k]?.enabled)
+      .map((k) => ({ key: k, label: paymentConfig[k].label || k }));
+  }
+
+  async function doRegister(
+    values: z.infer<typeof formSchema>,
+    planId: string,
+    gateway: string
+  ) {
     setIsLoading(true);
     try {
       const controller = new AbortController();
@@ -169,7 +234,7 @@ function RegisterForm() {
             organizationName: values.organizationName,
             orgType: values.orgType,
             orgInviteCode: values.orgInviteCode,
-            plan: plan || undefined,
+            plan: planId || undefined,
           }),
           signal: controller.signal,
         });
@@ -217,12 +282,8 @@ function RegisterForm() {
           await setDoc(
             doc(firestore, "users", signedInUid),
             {
-              id: signedInUid,
-              name: values.name,
-              email: values.email,
-              role: values.role,
-              status: "نشط",
-              progress: 0,
+              id: signedInUid, name: values.name, email: values.email,
+              role: values.role, status: "نشط", progress: 0,
               createdAt: new Date().toISOString(),
               ...(data.organizationId ? { organizationId: data.organizationId } : {}),
             },
@@ -231,14 +292,15 @@ function RegisterForm() {
         } catch { /* non-fatal */ }
       }
 
-      // Org with paid plan → pending payment
-      const planObj = PLANS.find((p) => p.id === plan);
-      if (values.role === "organization" && planObj && planObj.priceNum > 0) {
-        toast({
-          title: "تم إنشاء الحساب!",
-          description: "يرجى إتمام الدفع لتفعيل منصتك.",
+      const plan = plans.find((p) => p.id === planId);
+      if (values.role === "organization" && plan && plan.priceMonthly > 0) {
+        toast({ title: "تم إنشاء الحساب!", description: "سيتم توجيهك لإتمام الدفع وتفعيل منصتك." });
+        const params = new URLSearchParams({
+          plan: planId,
+          gateway,
+          orgId: data.organizationId || "",
         });
-        router.push(`/payment?plan=${plan}&orgId=${data.organizationId || ""}`);
+        router.push(`/payment?${params.toString()}`);
         return;
       }
 
@@ -255,22 +317,51 @@ function RegisterForm() {
     }
   }
 
+  // ── derived ───────────────────────────────────────────────────────────────
+
+  const selectedPlan = plans.find((p) => p.id === selectedPlanId);
+  const enabledGateways = getEnabledGateways();
+
+  const stepTitle = step === "form"
+    ? "إنشاء حساب جديد"
+    : step === "plan"
+    ? "اختر خطتك"
+    : "طريقة الدفع";
+
+  const stepSub = step === "form"
+    ? "انضم إلى منصة EmpowerHub"
+    : step === "plan"
+    ? "اختر الخطة المناسبة لجهتك"
+    : `الخطة: ${selectedPlan?.name || ""} — ${formatPrice(selectedPlan!)}`;
+
+  // ─── Render ───────────────────────────────────────────────────────────────
+
   return (
     <div className="w-full lg:grid lg:min-h-screen lg:grid-cols-2" dir="rtl">
       <div className="flex items-center justify-center py-12 px-4">
-        <div className="mx-auto grid w-full max-w-[420px] gap-6">
+        <div className="mx-auto grid w-full max-w-[440px] gap-6">
+
+          {/* Header */}
           <div className="grid gap-2 text-center">
-            <Link href="/" className="flex justify-center items-center gap-2 mb-2">
+            <Link href="/" className="flex justify-center mb-2">
               <Logo className="w-12 h-12 mx-auto" />
             </Link>
-            <h1 className="text-3xl font-bold">
-              {step === "plan" ? "اختر خطتك" : "إنشاء حساب جديد"}
-            </h1>
-            <p className="text-balance text-muted-foreground">
-              {step === "plan"
-                ? "اختر الخطة المناسبة للبدء"
-                : "انضم إلى منصة EmpowerHub"}
-            </p>
+            <h1 className="text-3xl font-bold">{stepTitle}</h1>
+            <p className="text-balance text-muted-foreground text-sm">{stepSub}</p>
+
+            {/* Progress dots */}
+            {selectedRole === "organization" && (
+              <div className="flex justify-center gap-2 mt-1">
+                {(["form", "plan", "gateway"] as Step[]).map((s, i) => (
+                  <span
+                    key={s}
+                    className={`h-1.5 rounded-full transition-all ${
+                      step === s ? "w-6 bg-primary" : "w-1.5 bg-muted-foreground/30"
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
           </div>
 
           {/* ── Step 1: Registration Form ── */}
@@ -338,7 +429,6 @@ function RegisterForm() {
                             ))}
                           </SelectContent>
                         </Select>
-                        <FormDescription className="text-xs">اختر النوع الذي يمثل جهتك.</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )} />
@@ -367,11 +457,13 @@ function RegisterForm() {
                 )}
 
                 <Button type="submit" className="w-full shadow-md" disabled={isLoading}>
-                  {isLoading
-                    ? "جاري إنشاء الحساب..."
-                    : selectedRole === "organization"
-                    ? "التالي — اختيار الخطة"
-                    : "إنشاء حساب مجاناً"}
+                  {isLoading ? (
+                    <><Loader2 className="ml-2 h-4 w-4 animate-spin" />جاري المعالجة...</>
+                  ) : selectedRole === "organization" ? (
+                    "التالي — اختيار الخطة ←"
+                  ) : (
+                    "إنشاء حساب مجاناً"
+                  )}
                 </Button>
               </form>
             </Form>
@@ -380,74 +472,196 @@ function RegisterForm() {
           {/* ── Step 2: Plan Selection ── */}
           {step === "plan" && (
             <div className="space-y-4">
-              <div className="grid gap-3">
-                {PLANS.map((plan) => (
+              {plansLoading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <Skeleton key={i} className="h-32 w-full rounded-xl" />
+                  ))}
+                </div>
+              ) : plans.length === 0 ? (
+                <div className="text-center py-8 space-y-3">
+                  <p className="text-muted-foreground text-sm">لا توجد خطط متاحة حالياً.</p>
+                  <Button onClick={() => onGatewayConfirm("", "")} disabled={isLoading} className="w-full">
+                    {isLoading ? <Loader2 className="h-4 w-4 animate-spin ml-2" /> : null}
+                    إنشاء حساب والمتابعة
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <div className="grid gap-3">
+                    {plans.map((plan) => (
+                      <button
+                        key={plan.id}
+                        type="button"
+                        onClick={() => setSelectedPlanId(plan.id)}
+                        className={`text-right w-full rounded-xl border-2 p-4 transition-all relative ${
+                          selectedPlanId === plan.id
+                            ? "border-primary bg-primary/5 shadow-sm"
+                            : "border-border hover:border-primary/40"
+                        }`}
+                      >
+                        {plan.highlighted && (
+                          <span
+                            className="absolute -top-2.5 right-4 text-xs px-2.5 py-0.5 rounded-full text-white font-medium"
+                            style={{ backgroundColor: plan.color }}
+                          >
+                            الأكثر شعبية
+                          </span>
+                        )}
+                        <div className="flex items-start gap-3">
+                          <div className="p-1.5 rounded-lg mt-0.5" style={{ backgroundColor: `${plan.color}20` }}>
+                            <PlanIcon icon={plan.icon} color={plan.color} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="font-semibold text-sm">{plan.name}</span>
+                              <span className="font-bold text-sm" style={{ color: plan.color }}>
+                                {formatPrice(plan)}
+                              </span>
+                            </div>
+                            {plan.priceAnnual > 0 && (
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                أو {plan.priceAnnual.toLocaleString()} {plan.currency} / سنة
+                              </p>
+                            )}
+                            {plan.description && (
+                              <p className="text-xs text-muted-foreground mt-1">{plan.description}</p>
+                            )}
+                            {plan.features.length > 0 && (
+                              <ul className="mt-2 space-y-0.5">
+                                {plan.features.slice(0, 3).map((f, i) => (
+                                  <li key={i} className="text-xs text-muted-foreground flex items-center gap-1">
+                                    <Check className="h-3 w-3 flex-shrink-0" style={{ color: plan.color }} />
+                                    {f}
+                                  </li>
+                                ))}
+                                {plan.features.length > 3 && (
+                                  <li className="text-xs text-muted-foreground pr-4">
+                                    +{plan.features.length - 3} ميزات أخرى
+                                  </li>
+                                )}
+                              </ul>
+                            )}
+                          </div>
+                          <div
+                            className={`mt-1 h-4 w-4 rounded-full border-2 flex-shrink-0 transition-all ${
+                              selectedPlanId === plan.id
+                                ? "border-primary bg-primary"
+                                : "border-muted-foreground/40"
+                            }`}
+                          />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button variant="outline" className="flex-1" onClick={() => setStep("form")} disabled={isLoading}>
+                      رجوع
+                    </Button>
+                    <Button className="flex-1" onClick={onPlanNext} disabled={isLoading || !selectedPlanId}>
+                      {isLoading ? (
+                        <Loader2 className="h-4 w-4 animate-spin ml-2" />
+                      ) : null}
+                      {selectedPlan?.priceMonthly === 0
+                        ? "إنشاء الحساب مجاناً"
+                        : enabledGateways.length > 0
+                        ? "التالي — طريقة الدفع ←"
+                        : "إنشاء الحساب"}
+                    </Button>
+                  </div>
+
+                  <p className="text-xs text-center text-muted-foreground">
+                    الخطط المدفوعة تُفعَّل بعد إتمام الدفع بنجاح.
+                  </p>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* ── Step 3: Gateway Selection ── */}
+          {step === "gateway" && (
+            <div className="space-y-4">
+              <div className="rounded-xl border p-4 bg-muted/30 text-sm space-y-1">
+                <p className="font-medium">ملخص الطلب</p>
+                <p className="text-muted-foreground">
+                  الخطة: <span className="font-semibold text-foreground">{selectedPlan?.name}</span>
+                </p>
+                <p className="text-muted-foreground">
+                  المبلغ:{" "}
+                  <span className="font-bold text-foreground" style={{ color: selectedPlan?.color }}>
+                    {selectedPlan ? formatPrice(selectedPlan) : ""}
+                  </span>
+                </p>
+              </div>
+
+              <p className="text-sm font-medium">اختر طريقة الدفع:</p>
+
+              <div className="grid gap-2">
+                {enabledGateways.map((gw) => (
                   <button
-                    key={plan.id}
+                    key={gw.key}
                     type="button"
-                    onClick={() => setSelectedPlan(plan.id)}
-                    className={`text-right w-full rounded-xl border-2 p-4 transition-all ${
-                      selectedPlan === plan.id
+                    onClick={() => setSelectedGateway(gw.key)}
+                    className={`flex items-center gap-3 w-full rounded-xl border-2 p-3.5 text-right transition-all ${
+                      selectedGateway === gw.key
                         ? "border-primary bg-primary/5"
                         : "border-border hover:border-primary/40"
                     }`}
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-semibold text-sm">{plan.label}</span>
-                          {plan.badge && (
-                            <Badge variant="secondary" className="text-xs">
-                              {plan.badge}
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-primary font-bold mt-0.5">{plan.price}</p>
-                        <ul className="mt-2 space-y-0.5">
-                          {plan.features.map((f) => (
-                            <li key={f} className="text-xs text-muted-foreground flex items-center gap-1">
-                              <span className="text-primary">✓</span> {f}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                      <div
-                        className={`mt-1 h-4 w-4 rounded-full border-2 flex-shrink-0 ${
-                          selectedPlan === plan.id
-                            ? "border-primary bg-primary"
-                            : "border-muted-foreground"
-                        }`}
-                      />
-                    </div>
+                    <CreditCard className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                    <span className="flex-1 text-sm font-medium">{gw.label}</span>
+                    <div
+                      className={`h-4 w-4 rounded-full border-2 flex-shrink-0 ${
+                        selectedGateway === gw.key
+                          ? "border-primary bg-primary"
+                          : "border-muted-foreground/40"
+                      }`}
+                    />
                   </button>
                 ))}
+
+                {paymentConfig?.allowCOD && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedGateway("cod")}
+                    className={`flex items-center gap-3 w-full rounded-xl border-2 p-3.5 text-right transition-all ${
+                      selectedGateway === "cod"
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/40"
+                    }`}
+                  >
+                    <CreditCard className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                    <span className="flex-1 text-sm font-medium">
+                      {paymentConfig.codLabel || "الدفع لاحقاً"}
+                    </span>
+                    <div
+                      className={`h-4 w-4 rounded-full border-2 flex-shrink-0 ${
+                        selectedGateway === "cod"
+                          ? "border-primary bg-primary"
+                          : "border-muted-foreground/40"
+                      }`}
+                    />
+                  </button>
+                )}
               </div>
 
               <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => setStep("form")}
-                  disabled={isLoading}
-                >
+                <Button variant="outline" className="flex-1" onClick={() => setStep("plan")} disabled={isLoading}>
                   رجوع
                 </Button>
                 <Button
                   className="flex-1"
-                  onClick={onPlanConfirm}
-                  disabled={isLoading}
+                  onClick={() => onGatewayConfirm(selectedPlanId, selectedGateway)}
+                  disabled={isLoading || !selectedGateway}
                 >
-                  {isLoading
-                    ? "جاري الإنشاء..."
-                    : PLANS.find((p) => p.id === selectedPlan)?.priceNum === 0
-                    ? "إنشاء الحساب مجاناً"
-                    : "إنشاء الحساب والانتقال للدفع"}
+                  {isLoading ? (
+                    <><Loader2 className="h-4 w-4 animate-spin ml-2" />جاري المعالجة...</>
+                  ) : (
+                    "تأكيد وإنشاء الحساب"
+                  )}
                 </Button>
               </div>
-
-              <p className="text-xs text-center text-muted-foreground">
-                الخطة الأساسية مجانية تماماً. الخطط المدفوعة تُفعَّل بعد إتمام الدفع.
-              </p>
             </div>
           )}
 
