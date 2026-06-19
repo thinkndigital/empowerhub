@@ -36,8 +36,8 @@ import { Badge } from "@/components/ui/badge";
 const formSchema = z.object({
     id: z.string().optional(),
     name: z.string().min(2, { message: "يجب أن يكون اسم المنتج حرفين على الأقل." }),
-    description: z.string().min(10, { message: "يجب أن يكون الوصف 10 أحرف على الأقل." }).optional(),
-    location: z.string().min(2, { message: "يجب أن يكون الموقع حرفين على الأقل." }).optional(),
+    description: z.string().optional().refine(val => !val || val.length >= 10, { message: "يجب أن يكون الوصف 10 أحرف على الأقل." }),
+    location: z.string().optional().refine(val => !val || val.length >= 2, { message: "يجب أن يكون الموقع حرفين على الأقل." }),
     price: z.coerce.number().positive({ message: "يجب أن يكون السعر رقمًا موجبًا." }),
     stock: z.coerce.number().int().min(0, { message: "يجب أن يكون المخزون رقمًا صحيحًا." }),
     deliveryCost: z.coerce.number().min(0, { message: "يجب أن تكون تكلفة التوصيل 0 أو أكثر." }).optional(),
@@ -181,33 +181,28 @@ export default function MyStorePage() {
 
         const productsCollection = collection(firestore, "products");
 
-        if (editProduct && editProduct.id) {
-            const productRef = doc(firestore, 'products', editProduct.id);
-            updateDoc(productRef, productData)
-                .then(() => {
-                    toast({ title: "تم التعديل بنجاح!", description: `تم تحديث منتج "${values.name}".` });
-                })
-                .catch(err => {
-                    toast({ variant: "destructive", title: "خطأ", description: "فشل تحديث المنتج." });
-                    errorEmitter.emit('permission-error', new FirestorePermissionError({ path: productRef.path, operation: 'update', requestResourceData: productData }));
-                });
-        } else {
-            addDoc(productsCollection, productData)
-                .then(() => {
-                    toast({ title: "تمت الإضافة بنجاح!", description: `تمت إضافة منتج "${values.name}" إلى متجرك.` });
-                })
-                .catch(err => {
-                    toast({ variant: "destructive", title: "خطأ", description: "فشل إضافة المنتج." });
-                    errorEmitter.emit('permission-error', new FirestorePermissionError({ path: productsCollection.path, operation: 'create', requestResourceData: productData }));
-                });
+        try {
+            if (editProduct && editProduct.id) {
+                const productRef = doc(firestore, 'products', editProduct.id);
+                await updateDoc(productRef, productData);
+                toast({ title: "تم التعديل بنجاح!", description: `تم تحديث منتج "${values.name}".` });
+            } else {
+                await addDoc(productsCollection, productData);
+                toast({ title: "تمت الإضافة بنجاح!", description: `تمت إضافة منتج "${values.name}" إلى متجرك.` });
+            }
+            form.reset();
+            setIsDialogOpen(false);
+            setEditProduct(null);
+            setImagePreview(null);
+            setImageFile(null);
+        } catch (err) {
+            const isEdit = !!(editProduct && editProduct.id);
+            toast({ variant: "destructive", title: "خطأ", description: isEdit ? "فشل تحديث المنتج." : "فشل إضافة المنتج." });
+            const path = isEdit ? doc(firestore, 'products', editProduct!.id!).path : productsCollection.path;
+            errorEmitter.emit('permission-error', new FirestorePermissionError({ path, operation: isEdit ? 'update' : 'create', requestResourceData: productData }));
+        } finally {
+            setIsUploading(false);
         }
-
-        form.reset();
-        setIsDialogOpen(false);
-        setEditProduct(null);
-        setImagePreview(null);
-        setImageFile(null);
-        setIsUploading(false);
     }
     
     async function handleDelete() {

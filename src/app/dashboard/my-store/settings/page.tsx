@@ -69,7 +69,7 @@ export default function StoreSettingsPage() {
   useEffect(() => {
     async function fetchStoreData() {
       if (!firestore || !authUser) {
-        setLoading(false);
+        // لا توقف loading إذا Firebase لم يُهيأ بعد — انتظر
         return;
       }
       setLoading(true);
