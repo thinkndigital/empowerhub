@@ -11,7 +11,7 @@ import { Logo } from '@/components/logo';
 import {
   ArrowLeft, BookOpen, Users, Store, Building, GraduationCap,
   UserCheck, CheckCircle, TrendingUp, Award, Globe, ChevronDown,
-  Star, BarChart3, Shield, Zap, MessageSquare, Phone, Mail
+  Star, BarChart3, Shield, Zap, MessageSquare, Phone, Mail, Sparkles,
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -41,12 +41,45 @@ interface Product {
   store?: { phone?: string };
 }
 
-interface LiveStats {
-  totalUsers: number;
-  beneficiaries: number;
-  organizations: number;
-  products: number;
+interface SiteConfig {
+  siteName: string;
+  tagline: string;
+  logoUrl: string;
+  hero: { title: string; subtitle: string; ctaText: string; ctaSecondaryText: string; backgroundImage: string };
+  stats: { label: string; value: string; icon: string }[];
+  features: { title: string; description: string; icon: string }[];
+  howItWorks: { step: string; title: string; desc: string; icon: string }[];
+  testimonials: { name: string; role: string; text: string; stars: number }[];
+  contact: { phone: string; whatsapp: string; whatsappLink: string; email: string };
+  ctaBanner: { title: string; subtitle: string; primaryText: string; secondaryText: string };
+  roles: { title: string; description: string; icon: string; badge: string; link: string }[];
+  sections: {
+    showStats: boolean; showFeatures: boolean; showHowItWorks: boolean; showRoles: boolean;
+    showMentors: boolean; showCoaches: boolean; showTestimonials: boolean; showProducts: boolean;
+    showStores: boolean; showContact: boolean; showCTA: boolean;
+  };
+  footer: { description: string; email: string; phone: string; twitter: string; linkedin: string; instagram: string; copyright: string };
 }
+
+const iconMap: Record<string, React.ReactNode> = {
+  Users: <Users className="h-6 w-6" />,
+  BookOpen: <BookOpen className="h-6 w-6" />,
+  GraduationCap: <GraduationCap className="h-6 w-6" />,
+  Award: <Award className="h-6 w-6" />,
+  Store: <Store className="h-6 w-6" />,
+  BarChart3: <BarChart3 className="h-6 w-6" />,
+  Zap: <Zap className="h-6 w-6" />,
+  Shield: <Shield className="h-6 w-6" />,
+  Star: <Star className="h-6 w-6" />,
+  TrendingUp: <TrendingUp className="h-6 w-6" />,
+  UserCheck: <UserCheck className="h-6 w-6" />,
+  Building: <Building className="h-6 w-6" />,
+  Globe: <Globe className="h-6 w-6" />,
+  Sparkles: <Sparkles className="h-6 w-6" />,
+  MessageSquare: <MessageSquare className="h-6 w-6" />,
+};
+
+const featureColors = ['bg-primary', 'bg-accent', 'bg-amber-500', 'bg-purple-500', 'bg-rose-500', 'bg-teal-600'];
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -110,7 +143,7 @@ const TestimonialCard = ({ name, role, text, stars }: {
   <Card className="card-hover border-0 shadow-md bg-card">
     <CardContent className="pt-6">
       <div className="flex mb-3">
-        {Array.from({ length: stars }).map((_, i) => (
+        {Array.from({ length: Math.max(1, Math.min(5, stars)) }).map((_, i) => (
           <Star key={i} className="h-4 w-4 text-amber-400 fill-amber-400" />
         ))}
       </div>
@@ -178,10 +211,7 @@ const ProductCard = ({ product }: { product: Product }) => {
   const name = product.name || 'منتج';
   const imageUrl = product.imageUrl || product.image || '';
   const whatsapp = product.whatsapp || product.store?.phone || '';
-  const waLink = whatsapp
-    ? `https://wa.me/${whatsapp.replace(/\D/g, '')}`
-    : 'https://wa.me/';
-
+  const waLink = whatsapp ? `https://wa.me/${whatsapp.replace(/\D/g, '')}` : 'https://wa.me/';
   return (
     <Card className="card-hover border-0 shadow-md bg-card flex flex-col overflow-hidden">
       <div className="relative h-40 w-full bg-muted">
@@ -205,11 +235,7 @@ const ProductCard = ({ product }: { product: Product }) => {
         )}
       </CardContent>
       <CardFooter className="pt-0">
-        <Button
-          asChild
-          className="w-full text-white font-semibold"
-          style={{ backgroundColor: '#25D366' }}
-        >
+        <Button asChild className="w-full text-white font-semibold" style={{ backgroundColor: '#25D366' }}>
           <a href={waLink} target="_blank" rel="noopener noreferrer">
             <MessageSquare className="h-4 w-4 ml-2" />
             تواصل عبر واتساب
@@ -227,7 +253,7 @@ export default function LandingPage() {
   const db = useFirestore();
   const { toast } = useToast();
 
-  const [stats, setStats] = useState<LiveStats>({ totalUsers: 0, beneficiaries: 0, organizations: 0, products: 0 });
+  const [siteConfig, setSiteConfig] = useState<SiteConfig | null>(null);
   const [mentors, setMentors] = useState<MentorUser[]>([]);
   const [coaches, setCoaches] = useState<MentorUser[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -237,37 +263,16 @@ export default function LandingPage() {
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [loadingStores, setLoadingStores] = useState(true);
 
-  // Contact form state
   const [contactName, setContactName] = useState('');
   const [contactEmail, setContactEmail] = useState('');
   const [contactMessage, setContactMessage] = useState('');
 
+  // Load site config from API
   useEffect(() => {
-    if (!db) return;
-
-    // Fetch live stats
-    (async () => {
-      try {
-        const usersRef = collection(db, 'users');
-        const [totalSnap, benefSnap, orgSnap] = await Promise.all([
-          getCountFromServer(usersRef),
-          getCountFromServer(query(usersRef, where('role', '==', 'beneficiary'))),
-          getCountFromServer(query(usersRef, where('role', '==', 'organization'))),
-        ]);
-        const productsRef = collection(db, 'products');
-        const prodSnap = await getCountFromServer(productsRef);
-        setStats({
-          totalUsers: totalSnap.data().count,
-          beneficiaries: benefSnap.data().count,
-          organizations: orgSnap.data().count,
-          products: prodSnap.data().count,
-        });
-      } catch {
-        // keep defaults on error
-      }
-    })();
-
-  }, [db]);
+    fetch('/api/public/site-config').then(r => r.json()).then(d => {
+      if (d.config) setSiteConfig(d.config);
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -278,9 +283,8 @@ export default function LandingPage() {
           setMentors(json.mentors || []);
           setCoaches(json.coaches || []);
         }
-      } catch {
-        // keep empty
-      } finally {
+      } catch {}
+      finally {
         setLoadingMentors(false);
         setLoadingCoaches(false);
       }
@@ -296,9 +300,8 @@ export default function LandingPage() {
           setProducts((json.products || []) as Product[]);
           setPublicStores(json.stores || []);
         }
-      } catch {
-        // keep empty
-      } finally {
+      } catch {}
+      finally {
         setLoadingProducts(false);
         setLoadingStores(false);
       }
@@ -313,7 +316,59 @@ export default function LandingPage() {
     setContactMessage('');
   };
 
-  const formatCount = (n: number) => (n > 0 ? n.toLocaleString('ar-SA') + '+' : '...');
+  // Derived values from config (with fallbacks)
+  const cfg = siteConfig;
+  const sections = cfg?.sections ?? {
+    showStats: true, showFeatures: true, showHowItWorks: true, showRoles: true,
+    showMentors: true, showCoaches: true, showTestimonials: true, showProducts: true,
+    showStores: true, showContact: true, showCTA: true,
+  };
+
+  const heroTitle = cfg?.hero?.title || 'بوابتك للتمكين والنجاح';
+  const heroSubtitle = cfg?.hero?.subtitle || 'منصة متكاملة تجمع بين التدريب المتخصص، الإرشاد الشخصي، والتجارة الإلكترونية\nلمساعدتك على بناء مستقبلك وتحقيق أهدافك.';
+  const heroCta = cfg?.hero?.ctaText || 'ابدأ رحلتك مجاناً';
+  const heroCtaSecondary = cfg?.hero?.ctaSecondaryText || 'تصفح المتجر';
+  const heroBg = cfg?.hero?.backgroundImage || '';
+
+  const statsData = cfg?.stats?.length ? cfg.stats : [
+    { label: 'مستفيد نشط', value: '2,500+', icon: 'Users' },
+    { label: 'دورة تدريبية', value: '150+', icon: 'BookOpen' },
+    { label: 'مرشد ومدرب', value: '80+', icon: 'GraduationCap' },
+    { label: 'نسبة الرضا', value: '95%', icon: 'Award' },
+  ];
+
+  const featuresData = cfg?.features?.length ? cfg.features : [
+    { title: 'تدريب متخصص', description: 'مسارات تعليمية ودورات تدريبية مصممة لتزويدك بالمهارات المطلوبة في سوق العمل الحديث.', icon: 'BookOpen' },
+    { title: 'إرشاد شخصي', description: 'تواصل مع مرشدين وخبراء لمساعدتك في رحلتك وتقديم النصح والتوجيه المخصص.', icon: 'Users' },
+    { title: 'متجر إلكتروني', description: 'أنشئ متجرك الخاص، اعرض منتجاتك، وابدأ في تحقيق الدخل من مشروعك بسهولة.', icon: 'Store' },
+    { title: 'تقارير وتحليلات', description: 'تابع تقدمك ونموك بتقارير مرئية شاملة تساعدك على اتخاذ قرارات أفضل.', icon: 'BarChart3' },
+    { title: 'توصيات بالذكاء الاصطناعي', description: 'احصل على توصيات مخصصة لمحتوى التدريب والموارد المناسبة لأهدافك.', icon: 'Zap' },
+    { title: 'أمان وموثوقية', description: 'بياناتك محمية بأحدث تقنيات الأمان. نضمن لك تجربة موثوقة وآمنة في كل وقت.', icon: 'Shield' },
+  ];
+
+  const howItWorksData = cfg?.howItWorks?.length ? cfg.howItWorks : [
+    { step: '١', title: 'أنشئ حسابك', desc: 'سجّل مجاناً واختر دورك على المنصة سواء كمستفيد أو مرشد أو منظمة.', icon: 'UserCheck' },
+    { step: '٢', title: 'استكشف المحتوى', desc: 'تصفح الدورات التدريبية، تواصل مع المرشدين، وابنِ مهاراتك.', icon: 'Globe' },
+    { step: '٣', title: 'حقق أهدافك', desc: 'أطلق متجرك، احصل على شهاداتك، وابنِ مستقبلاً أفضل.', icon: 'TrendingUp' },
+  ];
+
+  const testimonialsData = cfg?.testimonials?.length ? cfg.testimonials : [
+    { name: 'سارة أحمد', role: 'مستفيدة - رائدة أعمال', text: 'بفضل EmpowerHub، تمكنت من إطلاق متجري الإلكتروني وتحقيق أول ألف ريال خلال شهرين فقط. الدعم والتدريب كانا استثنائيين!', stars: 5 },
+    { name: 'محمد الخالد', role: 'مدرب - خبير تسويق رقمي', text: 'المنصة أتاحت لي الفرصة للوصول إلى مئات المستفيدين ومشاركتهم خبرتي. الأدوات سهلة الاستخدام والدعم الفني ممتاز.', stars: 5 },
+    { name: 'منظمة بناء المستقبل', role: 'منظمة غير ربحية', text: 'ساعدتنا المنصة في إدارة 200 مستفيد بكل احترافية. التقارير التفصيلية مكّنتنا من قياس أثر برامجنا بشكل دقيق.', stars: 5 },
+  ];
+
+  const rolesData = cfg?.roles?.length ? cfg.roles : [
+    { title: 'كمستفيد', description: 'طور مهاراتك، ابنِ مشروعك، وحقق استقلاليتك المالية من خلال برامج تمكين متكاملة.', icon: 'UserCheck', badge: 'الأكثر شعبية', link: '/register?role=beneficiary' },
+    { title: 'كمدرب', description: 'شارك خبراتك ومعرفتك من خلال إنشاء وتقديم دورات تدريبية متخصصة.', icon: 'GraduationCap', badge: '', link: '/register?role=coach' },
+    { title: 'كمرشد', description: 'ساهم في نجاح الآخرين من خلال تقديم الإرشاد والتوجيه الشخصي.', icon: 'Users', badge: '', link: '/register?role=mentor' },
+    { title: 'كمنظمة', description: 'أدر برامج التمكين الخاصة بك، وتابع تقدم المستفيدين بفعالية.', icon: 'Building', badge: '', link: '/register?role=organization' },
+  ];
+
+  const ctaBanner = cfg?.ctaBanner ?? { title: 'جاهز للبدء؟ انضم إلى آلاف المستفيدين', subtitle: 'سجّل مجاناً اليوم وابدأ رحلتك نحو التمكين والنجاح مع EmpowerHub', primaryText: 'ابدأ مجاناً الآن', secondaryText: 'تجربة المنصة أولاً' };
+
+  const contactInfo = cfg?.contact ?? { phone: '+966 XX XXX XXXX', whatsapp: '+966 XX XXX XXXX', whatsappLink: 'https://wa.me/966XXXXXXXXX', email: 'info@empowerhub.com' };
+  const footerData = cfg?.footer ?? { description: 'منصة متكاملة للتمكين الرقمي تجمع التدريب، الإرشاد، والتجارة الإلكترونية في مكان واحد.', email: 'info@empowerhub.com', phone: '', twitter: '', linkedin: '', instagram: '', copyright: '© 2024 EmpowerHub. جميع الحقوق محفوظة.' };
 
   return (
     <div className="bg-background text-foreground" dir="rtl">
@@ -322,7 +377,7 @@ export default function LandingPage() {
         <div className="container flex h-16 items-center">
           <Link href="/" className="flex items-center gap-2 font-bold text-lg">
             <Logo />
-            <span className="gradient-text">EmpowerHub</span>
+            <span className="gradient-text">{cfg?.siteName || 'EmpowerHub'}</span>
           </Link>
           <nav className="flex-1 mr-8 hidden md:flex gap-6 text-sm font-medium">
             <Link href="#features" className="text-muted-foreground transition-colors hover:text-primary">الميزات</Link>
@@ -345,44 +400,37 @@ export default function LandingPage() {
       <main>
         {/* Hero Section */}
         <section className="relative flex min-h-[85vh] items-center justify-center text-center text-white overflow-hidden">
-          {heroImage && (
-            <Image
-              src={heroImage.imageUrl}
-              alt={heroImage.description}
-              fill
-              className="object-cover scale-105"
-              data-ai-hint={heroImage.imageHint}
-              priority
-            />
-          )}
+          {heroBg ? (
+            <img src={heroBg} alt="" className="absolute inset-0 w-full h-full object-cover scale-105" />
+          ) : heroImage ? (
+            <Image src={heroImage.imageUrl} alt={heroImage.description} fill className="object-cover scale-105" data-ai-hint={heroImage.imageHint} priority />
+          ) : null}
           <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/60 to-black/80" />
 
           <div className="relative z-10 container px-4 md:px-6 animate-fade-in-up">
             <Badge className="mb-6 bg-primary/20 text-primary-foreground border border-primary/30 backdrop-blur px-4 py-1.5 text-sm">
-              🚀 منصة التمكين الرقمي الشاملة
+              🚀 {cfg?.tagline || 'منصة التمكين الرقمي الشاملة'}
             </Badge>
             <h1 className="text-4xl font-extrabold tracking-tight md:text-5xl lg:text-7xl leading-tight">
               <span className="block">EmpowerHub</span>
               <span className="block mt-3 text-3xl md:text-4xl lg:text-5xl font-bold text-white/90">
-                بوابتك للتمكين والنجاح
+                {heroTitle}
               </span>
             </h1>
-            <p className="mt-6 max-w-2xl mx-auto text-lg md:text-xl text-white/80 leading-relaxed">
-              منصة متكاملة تجمع بين التدريب المتخصص، الإرشاد الشخصي، والتجارة الإلكترونية
-              <br />لمساعدتك على بناء مستقبلك وتحقيق أهدافك.
+            <p className="mt-6 max-w-2xl mx-auto text-lg md:text-xl text-white/80 leading-relaxed whitespace-pre-line">
+              {heroSubtitle}
             </p>
             <div className="mt-10 flex flex-wrap justify-center gap-4">
               <Button size="lg" asChild className="shadow-xl text-base px-8 py-6">
                 <Link href="/register">
-                  ابدأ رحلتك مجاناً
+                  {heroCta}
                   <ArrowLeft className="mr-2 h-5 w-5" />
                 </Link>
               </Button>
               <Button size="lg" variant="outline" asChild className="bg-white/10 border-white/30 text-white hover:bg-white/20 backdrop-blur text-base px-8 py-6">
-                <Link href="/market">تصفح المتجر</Link>
+                <Link href="/market">{heroCtaSecondary}</Link>
               </Button>
             </div>
-
             <div className="mt-12 flex flex-wrap justify-center gap-8 text-sm text-white/70">
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-4 w-4 text-primary" />
@@ -404,465 +452,386 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Stats Section — live from Firestore */}
-        <section id="stats" className="py-16 bg-card border-y">
-          <div className="container px-4 md:px-6">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-              <StatCard
-                number={stats.beneficiaries > 0 ? formatCount(stats.beneficiaries) : '2,500+'}
-                label="مستفيد نشط"
-                icon={<Users className="h-6 w-6" />}
-              />
-              <StatCard number="150+" label="دورة تدريبية" icon={<BookOpen className="h-6 w-6" />} />
-              <StatCard
-                number={stats.totalUsers > 0 ? formatCount(stats.totalUsers) : '80+'}
-                label="مرشد ومدرب"
-                icon={<GraduationCap className="h-6 w-6" />}
-              />
-              <StatCard number="95%" label="نسبة الرضا" icon={<Award className="h-6 w-6" />} />
+        {/* Stats Section */}
+        {sections.showStats && (
+          <section id="stats" className="py-16 bg-card border-y">
+            <div className="container px-4 md:px-6">
+              <div className={`grid grid-cols-2 md:grid-cols-${Math.min(4, statsData.length)} gap-8`}>
+                {statsData.map((s, i) => (
+                  <StatCard key={i} number={s.value} label={s.label} icon={iconMap[s.icon] ?? <Star className="h-6 w-6" />} />
+                ))}
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* Features Section */}
-        <section id="features" className="py-16 md:py-24">
-          <div className="container px-4 md:px-6">
-            <div className="text-center mb-14">
-              <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">ميزاتنا</Badge>
-              <h2 className="text-3xl font-bold tracking-tight md:text-4xl">كل ما تحتاجه للنجاح في مكان واحد</h2>
-              <p className="mt-3 text-lg text-muted-foreground max-w-2xl mx-auto">
-                نقدم لك الأدوات والموارد اللازمة لتنمية مهاراتك وتحقيق أهدافك المهنية والشخصية.
-              </p>
+        {sections.showFeatures && (
+          <section id="features" className="py-16 md:py-24">
+            <div className="container px-4 md:px-6">
+              <div className="text-center mb-14">
+                <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">ميزاتنا</Badge>
+                <h2 className="text-3xl font-bold tracking-tight md:text-4xl">كل ما تحتاجه للنجاح في مكان واحد</h2>
+                <p className="mt-3 text-lg text-muted-foreground max-w-2xl mx-auto">
+                  نقدم لك الأدوات والموارد اللازمة لتنمية مهاراتك وتحقيق أهدافك المهنية والشخصية.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {featuresData.map((f, i) => (
+                  <FeatureCard
+                    key={i}
+                    title={f.title}
+                    description={f.description}
+                    color={featureColors[i % featureColors.length]}
+                    icon={
+                      <span className="text-white">
+                        {iconMap[f.icon] ?? <Sparkles className="h-6 w-6" />}
+                      </span>
+                    }
+                  />
+                ))}
+              </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <FeatureCard
-                icon={<BookOpen size={28} className="text-white" />}
-                title="تدريب متخصص"
-                description="مسارات تعليمية ودورات تدريبية مصممة لتزويدك بالمهارات المطلوبة في سوق العمل الحديث."
-                color="bg-primary"
-              />
-              <FeatureCard
-                icon={<Users size={28} className="text-white" />}
-                title="إرشاد شخصي"
-                description="تواصل مع مرشدين وخبراء لمساعدتك في رحلتك وتقديم النصح والتوجيه المخصص."
-                color="bg-accent"
-              />
-              <FeatureCard
-                icon={<Store size={28} className="text-white" />}
-                title="متجر إلكتروني"
-                description="أنشئ متجرك الخاص، اعرض منتجاتك، وابدأ في تحقيق الدخل من مشروعك بسهولة."
-                color="bg-amber-500"
-              />
-              <FeatureCard
-                icon={<BarChart3 size={28} className="text-white" />}
-                title="تقارير وتحليلات"
-                description="تابع تقدمك ونموك بتقارير مرئية شاملة تساعدك على اتخاذ قرارات أفضل."
-                color="bg-purple-500"
-              />
-              <FeatureCard
-                icon={<Zap size={28} className="text-white" />}
-                title="توصيات بالذكاء الاصطناعي"
-                description="احصل على توصيات مخصصة لمحتوى التدريب والموارد المناسبة لأهدافك."
-                color="bg-rose-500"
-              />
-              <FeatureCard
-                icon={<Shield size={28} className="text-white" />}
-                title="أمان وموثوقية"
-                description="بياناتك محمية بأحدث تقنيات الأمان. نضمن لك تجربة موثوقة وآمنة في كل وقت."
-                color="bg-teal-600"
-              />
-            </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* How it works */}
-        <section className="py-16 md:py-24 bg-muted/40">
-          <div className="container px-4 md:px-6">
-            <div className="text-center mb-14">
-              <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">كيف تعمل المنصة</Badge>
-              <h2 className="text-3xl font-bold tracking-tight">ابدأ رحلتك في 3 خطوات بسيطة</h2>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
-              {[
-                { step: '١', title: 'أنشئ حسابك', desc: 'سجّل مجاناً واختر دورك على المنصة سواء كمستفيد أو مرشد أو منظمة.', icon: <UserCheck className="h-8 w-8" /> },
-                { step: '٢', title: 'استكشف المحتوى', desc: 'تصفح الدورات التدريبية، تواصل مع المرشدين، وابنِ مهاراتك.', icon: <Globe className="h-8 w-8" /> },
-                { step: '٣', title: 'حقق أهدافك', desc: 'أطلق متجرك، احصل على شهاداتك، وابنِ مستقبلاً أفضل.', icon: <TrendingUp className="h-8 w-8" /> },
-              ].map((item, i) => (
-                <div key={i} className="text-center relative z-10">
-                  <div className="flex items-center justify-center h-20 w-20 rounded-full bg-primary text-primary-foreground text-2xl font-extrabold mx-auto mb-4 shadow-lg shadow-primary/30">
-                    {item.step}
+        {sections.showHowItWorks && howItWorksData.length > 0 && (
+          <section className="py-16 md:py-24 bg-muted/40">
+            <div className="container px-4 md:px-6">
+              <div className="text-center mb-14">
+                <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">كيف تعمل المنصة</Badge>
+                <h2 className="text-3xl font-bold tracking-tight">ابدأ رحلتك في {howItWorksData.length} خطوات بسيطة</h2>
+              </div>
+              <div className={`grid grid-cols-1 md:grid-cols-${Math.min(3, howItWorksData.length)} gap-8`}>
+                {howItWorksData.map((item, i) => (
+                  <div key={i} className="text-center relative z-10">
+                    <div className="flex items-center justify-center h-20 w-20 rounded-full bg-primary text-primary-foreground text-2xl font-extrabold mx-auto mb-4 shadow-lg shadow-primary/30">
+                      {item.step}
+                    </div>
+                    <div className="flex justify-center mb-3 text-primary">
+                      {iconMap[item.icon] ?? <CheckCircle className="h-8 w-8" />}
+                    </div>
+                    <h3 className="text-xl font-bold mb-2">{item.title}</h3>
+                    <p className="text-muted-foreground text-sm leading-relaxed">{item.desc}</p>
                   </div>
-                  <div className="flex justify-center mb-3 text-primary">{item.icon}</div>
-                  <h3 className="text-xl font-bold mb-2">{item.title}</h3>
-                  <p className="text-muted-foreground text-sm leading-relaxed">{item.desc}</p>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* Roles CTA Section */}
-        <section id="roles" className="py-16 md:py-24">
-          <div className="container px-4 md:px-6">
-            <div className="text-center mb-14">
-              <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">انضم إلينا</Badge>
-              <h2 className="text-3xl font-bold tracking-tight">انضم إلى مجتمعنا اليوم</h2>
-              <p className="mt-3 text-lg text-muted-foreground">
-                سواء كنت مستفيدًا، مرشدًا، أو منظمة، هناك مكان لك في EmpowerHub.
-              </p>
+        {sections.showRoles && rolesData.length > 0 && (
+          <section id="roles" className="py-16 md:py-24">
+            <div className="container px-4 md:px-6">
+              <div className="text-center mb-14">
+                <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">انضم إلينا</Badge>
+                <h2 className="text-3xl font-bold tracking-tight">انضم إلى مجتمعنا اليوم</h2>
+                <p className="mt-3 text-lg text-muted-foreground">
+                  سواء كنت مستفيدًا، مرشدًا، أو منظمة، هناك مكان لك في EmpowerHub.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {rolesData.map((role, i) => (
+                  <RoleCard
+                    key={i}
+                    icon={iconMap[role.icon] ?? <UserCheck size={32} />}
+                    title={role.title}
+                    description={role.description}
+                    link={role.link || '/register'}
+                    badge={role.badge || undefined}
+                  />
+                ))}
+              </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              <RoleCard
-                icon={<UserCheck size={32} />}
-                title="كمستفيد"
-                description="طور مهاراتك، ابنِ مشروعك، وحقق استقلاليتك المالية من خلال برامج تمكين متكاملة."
-                link="/register?role=beneficiary"
-                badge="الأكثر شعبية"
-              />
-              <RoleCard
-                icon={<GraduationCap size={32} />}
-                title="كمدرب"
-                description="شارك خبراتك ومعرفتك من خلال إنشاء وتقديم دورات تدريبية متخصصة."
-                link="/register?role=coach"
-              />
-              <RoleCard
-                icon={<Users size={32} />}
-                title="كمرشد"
-                description="ساهم في نجاح الآخرين من خلال تقديم الإرشاد والتوجيه الشخصي."
-                link="/register?role=mentor"
-              />
-              <RoleCard
-                icon={<Building size={32} />}
-                title="كمنظمة"
-                description="أدر برامج التمكين الخاصة بك، وتابع تقدم المستفيدين بفعالية."
-                link="/register?role=organization"
-              />
-            </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* Featured Mentors Section */}
-        <section id="mentors" className="py-16 md:py-24 bg-muted/40">
-          <div className="container px-4 md:px-6">
-            <div className="text-center mb-14">
-              <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">مرشدون</Badge>
-              <h2 className="text-3xl font-bold tracking-tight">مرشدون متميزون</h2>
-              <p className="mt-3 text-lg text-muted-foreground">
-                تواصل مع نخبة من المرشدين المتخصصين الذين يساعدونك في رحلتك نحو النجاح.
-              </p>
-            </div>
-            {loadingMentors ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {[...Array(4)].map((_, i) => <ShimmerCard key={i} />)}
+        {sections.showMentors && (
+          <section id="mentors" className="py-16 md:py-24 bg-muted/40">
+            <div className="container px-4 md:px-6">
+              <div className="text-center mb-14">
+                <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">مرشدون</Badge>
+                <h2 className="text-3xl font-bold tracking-tight">مرشدون متميزون</h2>
+                <p className="mt-3 text-lg text-muted-foreground">
+                  تواصل مع نخبة من المرشدين المتخصصين الذين يساعدونك في رحلتك نحو النجاح.
+                </p>
               </div>
-            ) : mentors.length === 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {[...Array(4)].map((_, i) => <ShimmerCard key={i} />)}
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {mentors.map(m => <MentorCard key={m.id} mentor={m} />)}
-              </div>
-            )}
-            <div className="text-center mt-10">
-              <Button variant="outline" asChild>
-                <Link href="/register?role=mentor">انضم كمرشد</Link>
-              </Button>
-            </div>
-          </div>
-        </section>
-
-        {/* Featured Trainers (Coaches) Section */}
-        <section id="coaches" className="py-16 md:py-24">
-          <div className="container px-4 md:px-6">
-            <div className="text-center mb-14">
-              <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">مدربون</Badge>
-              <h2 className="text-3xl font-bold tracking-tight">مدربون متميزون</h2>
-              <p className="mt-3 text-lg text-muted-foreground">
-                تعلم من أفضل المدربين في مختلف المجالات وطور مهاراتك معهم.
-              </p>
-            </div>
-            {loadingCoaches ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {[...Array(4)].map((_, i) => <ShimmerCard key={i} />)}
-              </div>
-            ) : coaches.length === 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {[...Array(4)].map((_, i) => <ShimmerCard key={i} />)}
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {coaches.map(c => <MentorCard key={c.id} mentor={c} />)}
-              </div>
-            )}
-            <div className="text-center mt-10">
-              <Button variant="outline" asChild>
-                <Link href="/register?role=coach">انضم كمدرب</Link>
-              </Button>
-            </div>
-          </div>
-        </section>
-
-        {/* Testimonials */}
-        <section className="py-16 md:py-24 bg-muted/40">
-          <div className="container px-4 md:px-6">
-            <div className="text-center mb-14">
-              <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">آراء مستخدمينا</Badge>
-              <h2 className="text-3xl font-bold tracking-tight">ماذا يقول من جربوا المنصة</h2>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <TestimonialCard
-                name="سارة أحمد"
-                role="مستفيدة - رائدة أعمال"
-                text="بفضل EmpowerHub، تمكنت من إطلاق متجري الإلكتروني وتحقيق أول ألف ريال خلال شهرين فقط. الدعم والتدريب كانا استثنائيين!"
-                stars={5}
-              />
-              <TestimonialCard
-                name="محمد الخالد"
-                role="مدرب - خبير تسويق رقمي"
-                text="المنصة أتاحت لي الفرصة للوصول إلى مئات المستفيدين ومشاركتهم خبرتي. الأدوات سهلة الاستخدام والدعم الفني ممتاز."
-                stars={5}
-              />
-              <TestimonialCard
-                name="منظمة بناء المستقبل"
-                role="منظمة غير ربحية"
-                text="ساعدتنا المنصة في إدارة 200 مستفيد بكل احترافية. التقارير التفصيلية مكّنتنا من قياس أثر برامجنا بشكل دقيق."
-                stars={5}
-              />
-            </div>
-          </div>
-        </section>
-
-        {/* Marketplace Preview Section */}
-        <section id="marketplace" className="py-16 md:py-24">
-          <div className="container px-4 md:px-6">
-            <div className="text-center mb-14">
-              <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">المتجر</Badge>
-              <h2 className="text-3xl font-bold tracking-tight">منتجات من مجتمعنا</h2>
-              <p className="mt-3 text-lg text-muted-foreground">
-                اكتشف منتجات متنوعة من رواد الأعمال في منصتنا وادعم مشاريعهم.
-              </p>
-            </div>
-            {loadingProducts ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {[...Array(6)].map((_, i) => (
-                  <Card key={i} className="border-0 shadow-md bg-card animate-pulse overflow-hidden">
-                    <div className="h-40 bg-muted w-full" />
-                    <CardContent className="pt-4 flex flex-col gap-2">
-                      <div className="h-4 w-3/4 rounded bg-muted" />
-                      <div className="h-3 w-1/3 rounded bg-muted" />
-                    </CardContent>
-                    <CardFooter>
-                      <div className="h-9 w-full rounded bg-muted" />
-                    </CardFooter>
-                  </Card>
-                ))}
-              </div>
-            ) : products.length === 0 ? (
-              <div className="text-center py-16 text-muted-foreground">
-                <Store className="h-16 w-16 mx-auto mb-4 opacity-20" />
-                <p className="text-lg">لا توجد منتجات بعد. كن أول من يضيف منتجه!</p>
-                <Button asChild className="mt-6">
-                  <Link href="/register">ابدأ الآن</Link>
+              {loadingMentors || mentors.length === 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {[...Array(4)].map((_, i) => <ShimmerCard key={i} />)}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {mentors.map(m => <MentorCard key={m.id} mentor={m} />)}
+                </div>
+              )}
+              <div className="text-center mt-10">
+                <Button variant="outline" asChild>
+                  <Link href="/register?role=mentor">انضم كمرشد</Link>
                 </Button>
               </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {products.map(p => <ProductCard key={p.id} product={p} />)}
-              </div>
-            )}
-            <div className="text-center mt-10">
-              <Button asChild size="lg">
-                <Link href="/market">
-                  تصفح جميع المنتجات
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                </Link>
-              </Button>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
+
+        {/* Featured Coaches Section */}
+        {sections.showCoaches && (
+          <section id="coaches" className="py-16 md:py-24">
+            <div className="container px-4 md:px-6">
+              <div className="text-center mb-14">
+                <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">مدربون</Badge>
+                <h2 className="text-3xl font-bold tracking-tight">مدربون متميزون</h2>
+                <p className="mt-3 text-lg text-muted-foreground">
+                  تعلم من أفضل المدربين في مختلف المجالات وطور مهاراتك معهم.
+                </p>
+              </div>
+              {loadingCoaches || coaches.length === 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {[...Array(4)].map((_, i) => <ShimmerCard key={i} />)}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {coaches.map(c => <MentorCard key={c.id} mentor={c} />)}
+                </div>
+              )}
+              <div className="text-center mt-10">
+                <Button variant="outline" asChild>
+                  <Link href="/register?role=coach">انضم كمدرب</Link>
+                </Button>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Testimonials */}
+        {sections.showTestimonials && testimonialsData.length > 0 && (
+          <section className="py-16 md:py-24 bg-muted/40">
+            <div className="container px-4 md:px-6">
+              <div className="text-center mb-14">
+                <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">آراء مستخدمينا</Badge>
+                <h2 className="text-3xl font-bold tracking-tight">ماذا يقول من جربوا المنصة</h2>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {testimonialsData.map((t, i) => (
+                  <TestimonialCard key={i} name={t.name} role={t.role} text={t.text} stars={t.stars} />
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Marketplace Preview Section */}
+        {sections.showProducts && (
+          <section id="marketplace" className="py-16 md:py-24">
+            <div className="container px-4 md:px-6">
+              <div className="text-center mb-14">
+                <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">المتجر</Badge>
+                <h2 className="text-3xl font-bold tracking-tight">منتجات من مجتمعنا</h2>
+                <p className="mt-3 text-lg text-muted-foreground">
+                  اكتشف منتجات متنوعة من رواد الأعمال في منصتنا وادعم مشاريعهم.
+                </p>
+              </div>
+              {loadingProducts ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {[...Array(6)].map((_, i) => (
+                    <Card key={i} className="border-0 shadow-md bg-card animate-pulse overflow-hidden">
+                      <div className="h-40 bg-muted w-full" />
+                      <CardContent className="pt-4 flex flex-col gap-2">
+                        <div className="h-4 w-3/4 rounded bg-muted" />
+                        <div className="h-3 w-1/3 rounded bg-muted" />
+                      </CardContent>
+                      <CardFooter><div className="h-9 w-full rounded bg-muted" /></CardFooter>
+                    </Card>
+                  ))}
+                </div>
+              ) : products.length === 0 ? (
+                <div className="text-center py-16 text-muted-foreground">
+                  <Store className="h-16 w-16 mx-auto mb-4 opacity-20" />
+                  <p className="text-lg">لا توجد منتجات بعد. كن أول من يضيف منتجه!</p>
+                  <Button asChild className="mt-6"><Link href="/register">ابدأ الآن</Link></Button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {products.map(p => <ProductCard key={p.id} product={p} />)}
+                </div>
+              )}
+              <div className="text-center mt-10">
+                <Button asChild size="lg">
+                  <Link href="/market">تصفح جميع المنتجات <ArrowLeft className="mr-2 h-4 w-4" /></Link>
+                </Button>
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* Stores Section */}
-        <section id="stores" className="py-16 md:py-24 bg-muted/20">
-          <div className="container px-4 md:px-6">
-            <div className="text-center mb-14">
-              <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">المتاجر</Badge>
-              <h2 className="text-3xl font-bold tracking-tight">متاجر رواد الأعمال</h2>
-              <p className="mt-3 text-lg text-muted-foreground">
-                اكتشف متاجر المستفيدين في مجتمعنا وادعم مشاريعهم.
-              </p>
-            </div>
-            {loadingStores ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {[...Array(3)].map((_, i) => (
-                  <Card key={i} className="border-0 shadow-md animate-pulse">
-                    <CardContent className="pt-6 flex flex-col gap-2">
-                      <div className="h-5 w-3/4 rounded bg-muted" />
-                      <div className="h-4 w-1/2 rounded bg-muted" />
-                    </CardContent>
-                  </Card>
-                ))}
+        {sections.showStores && (
+          <section id="stores" className="py-16 md:py-24 bg-muted/20">
+            <div className="container px-4 md:px-6">
+              <div className="text-center mb-14">
+                <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">المتاجر</Badge>
+                <h2 className="text-3xl font-bold tracking-tight">متاجر رواد الأعمال</h2>
+                <p className="mt-3 text-lg text-muted-foreground">
+                  اكتشف متاجر المستفيدين في مجتمعنا وادعم مشاريعهم.
+                </p>
               </div>
-            ) : publicStores.length === 0 ? (
-              <div className="text-center py-10 text-muted-foreground">
-                <Store className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                <p>لا توجد متاجر بعد.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {publicStores.map(store => (
-                  <Card key={store.id} className="border-0 shadow-md hover:shadow-lg transition-shadow">
-                    <CardContent className="pt-6 flex flex-col gap-2">
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="p-2 bg-primary/10 rounded-full">
-                          <Store className="h-5 w-5 text-primary" />
+              {loadingStores ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {[...Array(3)].map((_, i) => (
+                    <Card key={i} className="border-0 shadow-md animate-pulse">
+                      <CardContent className="pt-6 flex flex-col gap-2">
+                        <div className="h-5 w-3/4 rounded bg-muted" />
+                        <div className="h-4 w-1/2 rounded bg-muted" />
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : publicStores.length === 0 ? (
+                <div className="text-center py-10 text-muted-foreground">
+                  <Store className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                  <p>لا توجد متاجر بعد.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {publicStores.map(store => (
+                    <Card key={store.id} className="border-0 shadow-md hover:shadow-lg transition-shadow">
+                      <CardContent className="pt-6 flex flex-col gap-2">
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="p-2 bg-primary/10 rounded-full">
+                            <Store className="h-5 w-5 text-primary" />
+                          </div>
+                          <h3 className="font-bold text-base">{store.name}</h3>
                         </div>
-                        <h3 className="font-bold text-base">{store.name}</h3>
-                      </div>
-                      {store.beneficiaryName && (
-                        <p className="text-sm text-muted-foreground">البائع: {store.beneficiaryName}</p>
-                      )}
-                      {store.location && (
-                        <p className="text-sm text-muted-foreground">الموقع: {store.location}</p>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </div>
-        </section>
+                        {store.beneficiaryName && <p className="text-sm text-muted-foreground">البائع: {store.beneficiaryName}</p>}
+                        {store.location && <p className="text-sm text-muted-foreground">الموقع: {store.location}</p>}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+        )}
 
         {/* Contact Section */}
-        <section id="contact" className="py-16 md:py-24 bg-muted/40">
-          <div className="container px-4 md:px-6">
-            <div className="text-center mb-14">
-              <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">تواصل</Badge>
-              <h2 className="text-3xl font-bold tracking-tight">تواصل معنا</h2>
-              <p className="mt-3 text-lg text-muted-foreground">
-                نحن هنا للإجابة على استفساراتك ومساعدتك في كل خطوة.
-              </p>
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
-              {/* Contact info */}
-              <div className="flex flex-col gap-4">
+        {sections.showContact && (
+          <section id="contact" className="py-16 md:py-24 bg-muted/40">
+            <div className="container px-4 md:px-6">
+              <div className="text-center mb-14">
+                <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">تواصل</Badge>
+                <h2 className="text-3xl font-bold tracking-tight">تواصل معنا</h2>
+                <p className="mt-3 text-lg text-muted-foreground">نحن هنا للإجابة على استفساراتك ومساعدتك في كل خطوة.</p>
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
+                <div className="flex flex-col gap-4">
+                  {contactInfo.phone && (
+                    <Card className="border-0 shadow-md bg-card">
+                      <CardContent className="pt-6 flex items-center gap-4">
+                        <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
+                          <Phone className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-sm">الهاتف</p>
+                          <p className="text-muted-foreground text-sm" dir="ltr">{contactInfo.phone}</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                  {contactInfo.email && (
+                    <Card className="border-0 shadow-md bg-card">
+                      <CardContent className="pt-6 flex items-center gap-4">
+                        <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
+                          <Mail className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-sm">البريد الإلكتروني</p>
+                          <p className="text-muted-foreground text-sm" dir="ltr">{contactInfo.email}</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                  {contactInfo.whatsapp && (
+                    <Card className="border-0 shadow-md bg-card">
+                      <CardContent className="pt-6 flex items-center gap-4">
+                        <div className="h-12 w-12 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#25D366' }}>
+                          <MessageSquare className="h-5 w-5 text-white" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-semibold text-sm">واتساب</p>
+                          <p className="text-muted-foreground text-sm mb-3" dir="ltr">{contactInfo.whatsapp}</p>
+                          <Button
+                            asChild
+                            className="text-white text-sm px-4 py-2 h-auto"
+                            style={{ backgroundColor: '#25D366' }}
+                          >
+                            <a href={contactInfo.whatsappLink || `https://wa.me/${contactInfo.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
+                              <MessageSquare className="h-4 w-4 ml-1" />
+                              تواصل عبر واتساب
+                            </a>
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
                 <Card className="border-0 shadow-md bg-card">
-                  <CardContent className="pt-6 flex items-center gap-4">
-                    <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
-                      <Phone className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-sm">الهاتف</p>
-                      <p className="text-muted-foreground text-sm" dir="ltr">+966 XX XXX XXXX</p>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="border-0 shadow-md bg-card">
-                  <CardContent className="pt-6 flex items-center gap-4">
-                    <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
-                      <Mail className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-sm">البريد الإلكتروني</p>
-                      <p className="text-muted-foreground text-sm" dir="ltr">info@empowerhub.com</p>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="border-0 shadow-md bg-card">
-                  <CardContent className="pt-6 flex items-center gap-4">
-                    <div className="h-12 w-12 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#25D366' }}>
-                      <MessageSquare className="h-5 w-5 text-white" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-semibold text-sm">واتساب</p>
-                      <p className="text-muted-foreground text-sm mb-3" dir="ltr">+966 XX XXX XXXX</p>
-                      <Button
-                        asChild
-                        className="text-white text-sm px-4 py-2 h-auto"
-                        style={{ backgroundColor: '#25D366' }}
-                      >
-                        <a href="https://wa.me/966XXXXXXXXX" target="_blank" rel="noopener noreferrer">
-                          <MessageSquare className="h-4 w-4 ml-1" />
-                          تواصل عبر واتساب
-                        </a>
+                  <CardHeader>
+                    <CardTitle className="text-xl">أرسل لنا رسالة</CardTitle>
+                    <CardDescription>سنرد عليك في أقرب وقت ممكن</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <form onSubmit={handleContactSubmit} className="flex flex-col gap-4">
+                      <div>
+                        <label className="text-sm font-medium mb-1 block">الاسم</label>
+                        <Input placeholder="اسمك الكريم" value={contactName} onChange={e => setContactName(e.target.value)} required />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium mb-1 block">البريد الإلكتروني</label>
+                        <Input type="email" placeholder="example@email.com" value={contactEmail} onChange={e => setContactEmail(e.target.value)} required dir="ltr" />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium mb-1 block">رسالتك</label>
+                        <Textarea placeholder="اكتب رسالتك هنا..." rows={5} value={contactMessage} onChange={e => setContactMessage(e.target.value)} required className="resize-none" />
+                      </div>
+                      <Button type="submit" className="w-full mt-2" size="lg">
+                        <Mail className="h-4 w-4 ml-2" />
+                        إرسال الرسالة
                       </Button>
-                    </div>
+                    </form>
                   </CardContent>
                 </Card>
               </div>
-
-              {/* Contact form */}
-              <Card className="border-0 shadow-md bg-card">
-                <CardHeader>
-                  <CardTitle className="text-xl">أرسل لنا رسالة</CardTitle>
-                  <CardDescription>سنرد عليك في أقرب وقت ممكن</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleContactSubmit} className="flex flex-col gap-4">
-                    <div>
-                      <label className="text-sm font-medium mb-1 block">الاسم</label>
-                      <Input
-                        placeholder="اسمك الكريم"
-                        value={contactName}
-                        onChange={e => setContactName(e.target.value)}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium mb-1 block">البريد الإلكتروني</label>
-                      <Input
-                        type="email"
-                        placeholder="example@email.com"
-                        value={contactEmail}
-                        onChange={e => setContactEmail(e.target.value)}
-                        required
-                        dir="ltr"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium mb-1 block">رسالتك</label>
-                      <Textarea
-                        placeholder="اكتب رسالتك هنا..."
-                        rows={5}
-                        value={contactMessage}
-                        onChange={e => setContactMessage(e.target.value)}
-                        required
-                        className="resize-none"
-                      />
-                    </div>
-                    <Button type="submit" className="w-full mt-2" size="lg">
-                      <Mail className="h-4 w-4 ml-2" />
-                      إرسال الرسالة
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* CTA Banner */}
-        <section className="py-16 md:py-24 bg-primary text-primary-foreground">
-          <div className="container px-4 md:px-6 text-center">
-            <h2 className="text-3xl md:text-4xl font-extrabold mb-4">
-              جاهز للبدء؟ انضم إلى آلاف المستفيدين
-            </h2>
-            <p className="text-lg text-primary-foreground/80 mb-8 max-w-xl mx-auto">
-              سجّل مجاناً اليوم وابدأ رحلتك نحو التمكين والنجاح مع EmpowerHub
-            </p>
-            <div className="flex flex-wrap justify-center gap-4">
-              <Button size="lg" variant="secondary" asChild className="text-primary font-bold px-8 py-6 text-base shadow-xl">
-                <Link href="/register">
-                  ابدأ مجاناً الآن
-                  <ArrowLeft className="mr-2 h-5 w-5" />
-                </Link>
-              </Button>
-              <Button size="lg" variant="outline" asChild className="border-white/40 text-white hover:bg-white/10 px-8 py-6 text-base">
-                <Link href="/try-roles">تجربة المنصة أولاً</Link>
-              </Button>
+        {sections.showCTA && (
+          <section className="py-16 md:py-24 bg-primary text-primary-foreground">
+            <div className="container px-4 md:px-6 text-center">
+              <h2 className="text-3xl md:text-4xl font-extrabold mb-4">
+                {ctaBanner.title}
+              </h2>
+              <p className="text-lg text-primary-foreground/80 mb-8 max-w-xl mx-auto">
+                {ctaBanner.subtitle}
+              </p>
+              <div className="flex flex-wrap justify-center gap-4">
+                <Button size="lg" variant="secondary" asChild className="text-primary font-bold px-8 py-6 text-base shadow-xl">
+                  <Link href="/register">
+                    {ctaBanner.primaryText}
+                    <ArrowLeft className="mr-2 h-5 w-5" />
+                  </Link>
+                </Button>
+                <Button size="lg" variant="outline" asChild className="border-white/40 text-white hover:bg-white/10 px-8 py-6 text-base">
+                  <Link href="/try-roles">{ctaBanner.secondaryText}</Link>
+                </Button>
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
       </main>
 
       {/* Footer */}
@@ -872,10 +841,10 @@ export default function LandingPage() {
             <div className="md:col-span-2">
               <div className="flex items-center gap-2 mb-3">
                 <Logo className="h-8 w-8" />
-                <span className="font-bold text-lg gradient-text">EmpowerHub</span>
+                <span className="font-bold text-lg gradient-text">{cfg?.siteName || 'EmpowerHub'}</span>
               </div>
               <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">
-                منصة متكاملة للتمكين الرقمي تجمع التدريب، الإرشاد، والتجارة الإلكترونية في مكان واحد.
+                {footerData.description}
               </p>
             </div>
             <div>
@@ -897,10 +866,15 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="border-t pt-6 flex flex-col md:flex-row items-center justify-between gap-3">
-            <p className="text-sm text-muted-foreground">© 2024 EmpowerHub. جميع الحقوق محفوظة.</p>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Globe className="h-3 w-3" />
-              <span>مدعوم بالذكاء الاصطناعي</span>
+            <p className="text-sm text-muted-foreground">{footerData.copyright || '© 2024 EmpowerHub. جميع الحقوق محفوظة.'}</p>
+            <div className="flex items-center gap-3">
+              {footerData.twitter && <a href={footerData.twitter} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary text-xs transition-colors">تويتر</a>}
+              {footerData.linkedin && <a href={footerData.linkedin} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary text-xs transition-colors">LinkedIn</a>}
+              {footerData.instagram && <a href={footerData.instagram} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary text-xs transition-colors">Instagram</a>}
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Globe className="h-3 w-3" />
+                <span>مدعوم بالذكاء الاصطناعي</span>
+              </div>
             </div>
           </div>
         </div>
