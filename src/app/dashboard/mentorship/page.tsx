@@ -6,128 +6,84 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Calendar, Clock, Video, User, Star } from "lucide-react";
-import { useState, useMemo } from "react";
-import { useUser, type UserProfile } from "@/firebase/auth/use-user";
-import { useFirestore, useMemoFirebase } from "@/firebase/provider";
-import { useCollection } from "@/firebase/firestore/use-collection";
-import { useDoc } from "@/firebase/firestore/use-doc";
-import { collection, query, where, doc, addDoc, getDocs, serverTimestamp } from 'firebase/firestore';
+import { useState, useMemo, useEffect, useCallback } from "react";
+import { useUser } from "@/firebase/auth/use-user";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, isPast, parseISO } from "date-fns";
 import { ar } from "date-fns/locale";
 import { EvaluationDialog } from "@/components/evaluation-dialog";
 
-type Session = {
-    id: string;
-    title: string;
-    date: string;
-    status: 'scheduled' | 'completed' | 'cancelled';
-    meetLink?: string;
-    notes?: string;
-};
+import { useFirestore } from "@/firebase/provider";
+import { collection, query, where, doc, addDoc, getDocs, serverTimestamp } from "firebase/firestore";
 
-type EvaluationTarget = {
-    sessionId: string;
-    evaluatedId: string;
-    evaluatedName: string;
-};
+type Session = { id: string; title: string; date: string; status: 'scheduled' | 'completed' | 'cancelled'; meetLink?: string; notes?: string };
+type EvaluationTarget = { sessionId: string; evaluatedId: string; evaluatedName: string };
 
 export default function MentorshipPage() {
   const { toast } = useToast();
   const [message, setMessage] = useState("");
-  const { user: authUser, userProfile: beneficiaryProfile } = useUser();
+  const { user: authUser } = useUser();
   const firestore = useFirestore();
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [mentor, setMentor] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [evaluationTarget, setEvaluationTarget] = useState<EvaluationTarget | null>(null);
 
-  const mentorRef = useMemoFirebase(() => {
-    if (!firestore || !beneficiaryProfile?.mentorId) return null;
-    return doc(firestore, 'users', beneficiaryProfile.mentorId);
-  }, [firestore, beneficiaryProfile?.mentorId]);
+  const fetchData = useCallback(async () => {
+    if (!authUser) return;
+    try {
+      const token = await authUser.getIdToken();
+      const headers = { Authorization: `Bearer ${token}` };
+      const [sRes, mRes] = await Promise.all([
+        fetch('/api/beneficiary/sessions', { headers }),
+        fetch('/api/beneficiary/mentor', { headers }),
+      ]);
+      const [{ sessions: sData }, { mentor: mData }] = await Promise.all([sRes.json(), mRes.json()]);
+      setSessions(sData || []);
+      setMentor(mData);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  }, [authUser]);
 
-  const { data: mentor, isLoading: mentorLoading } = useDoc<UserProfile>(mentorRef);
-
-  const sessionsQuery = useMemoFirebase(() => {
-    if (!firestore || !authUser) return null;
-    return query(collection(firestore, "sessions"), where("attendees", "array-contains", authUser.uid));
-  }, [firestore, authUser]);
-
-  const { data: sessions, isLoading: sessionsLoading } = useCollection<Session>(sessionsQuery);
-  
-  const loading = mentorLoading || sessionsLoading;
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   const { upcomingSessions, pastSessions } = useMemo(() => {
-    if (!sessions) return { upcomingSessions: [], pastSessions: [] };
     const upcoming: Session[] = [];
     const past: Session[] = [];
     sessions.forEach(s => {
-      if (s.status !== 'cancelled' && !isPast(parseISO(s.date))) {
-        upcoming.push(s);
-      } else {
-        past.push(s);
-      }
+      if (s.status !== 'cancelled' && s.date && !isPast(parseISO(s.date))) upcoming.push(s);
+      else past.push(s);
     });
-    return { 
-        upcomingSessions: upcoming.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()), 
-        pastSessions: past.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) 
+    return {
+      upcomingSessions: upcoming.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
+      pastSessions: past.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
     };
   }, [sessions]);
 
-
   const handleSendMessage = async () => {
-    if (!message.trim()) {
-      toast({ variant: "destructive", title: "خطأ", description: "لا يمكن إرسال رسالة فارغة." });
-      return;
-    }
+    if (!message.trim()) { toast({ variant: "destructive", title: "خطأ", description: "لا يمكن إرسال رسالة فارغة." }); return; }
     if (!firestore || !authUser || !mentor) return;
     try {
-      // Find or create conversation between beneficiary and mentor
-      const convoQuery = query(
-        collection(firestore, "conversations"),
-        where("participants", "array-contains", authUser.uid)
-      );
+      const convoQuery = query(collection(firestore, "conversations"), where("participants", "array-contains", authUser.uid));
       const snap = await getDocs(convoQuery);
       let convoId: string | null = null;
-      snap.forEach(d => {
-        const p: string[] = d.data().participants || [];
-        if (p.includes(mentor.id)) convoId = d.id;
-      });
+      snap.forEach(d => { if ((d.data().participants || []).includes(mentor.id)) convoId = d.id; });
       if (!convoId) {
-        const convoRef = await addDoc(collection(firestore, "conversations"), {
-          participants: [authUser.uid, mentor.id],
-          createdAt: serverTimestamp(),
-          lastMessage: message.trim(),
-          lastMessageAt: serverTimestamp(),
+        const ref = await addDoc(collection(firestore, "conversations"), {
+          participants: [authUser.uid, mentor.id], createdAt: serverTimestamp(), lastMessage: message.trim(), lastMessageAt: serverTimestamp(),
         });
-        convoId = convoRef.id;
+        convoId = ref.id;
       }
-      await addDoc(collection(firestore, "conversations", convoId, "messages"), {
-        senderId: authUser.uid,
-        text: message.trim(),
-        createdAt: serverTimestamp(),
-      });
-      // Notify mentor
-      await addDoc(collection(firestore, "notifications"), {
-        userId: mentor.id,
-        title: "رسالة جديدة من مستفيد",
-        body: message.trim().slice(0, 80),
-        read: false,
-        createdAt: serverTimestamp(),
-        link: "/mentor-dashboard/messages",
-      });
+      await addDoc(collection(firestore, "conversations", convoId, "messages"), { senderId: authUser.uid, text: message.trim(), createdAt: serverTimestamp() });
+      await addDoc(collection(firestore, "notifications"), { userId: mentor.id, title: "رسالة جديدة من مستفيد", body: message.trim().slice(0, 80), read: false, createdAt: serverTimestamp(), link: "/mentor-dashboard/messages" });
       toast({ title: "تم الإرسال!", description: "تم إرسال رسالتك إلى مرشدك بنجاح." });
       setMessage("");
     } catch {
       toast({ variant: "destructive", title: "خطأ!", description: "فشل إرسال الرسالة. حاول مرة أخرى." });
     }
-  };
-
-  const handleEvaluationClick = (session: Session) => {
-    if (!mentor) return;
-    setEvaluationTarget({
-      sessionId: session.id,
-      evaluatedId: mentor.id,
-      evaluatedName: mentor.name || 'المرشد',
-    });
   };
 
   return (
@@ -137,24 +93,17 @@ export default function MentorshipPage() {
         <h1 className="text-3xl font-bold tracking-tight">الإرشاد والتوجيه</h1>
         <p className="text-muted-foreground mt-1">تابع جلساتك الإرشادية وتواصل مع مرشدك.</p>
       </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           <Card className="border-0 shadow-sm">
             <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Video className="h-4 w-4 text-primary" />
-                الجلسات القادمة
-              </CardTitle>
+              <CardTitle className="flex items-center gap-2 text-base"><Video className="h-4 w-4 text-primary" />الجلسات القادمة</CardTitle>
               <CardDescription>استعد لجلسات الإرشاد القادمة.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               {loading && <Skeleton className="h-20 w-full" />}
               {!loading && upcomingSessions.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Calendar className="h-10 w-10 mx-auto mb-3 opacity-30" />
-                  <p className="text-sm">لا توجد جلسات قادمة</p>
-                </div>
+                <div className="text-center py-8 text-muted-foreground"><Calendar className="h-10 w-10 mx-auto mb-3 opacity-30" /><p className="text-sm">لا توجد جلسات قادمة</p></div>
               )}
               {!loading && upcomingSessions.map(session => (
                 <div key={session.id} className="flex items-center justify-between p-4 rounded-xl bg-primary/5 border border-primary/10">
@@ -166,10 +115,7 @@ export default function MentorshipPage() {
                     </div>
                   </div>
                   <Button size="sm" className="shadow-sm" asChild>
-                    <a href={session.meetLink || "https://meet.google.com"} target="_blank" rel="noopener noreferrer">
-                      <Video className="ml-2 h-3.5 w-3.5" />
-                      انضم
-                    </a>
+                    <a href={session.meetLink || "https://meet.google.com"} target="_blank" rel="noopener noreferrer"><Video className="ml-2 h-3.5 w-3.5" />انضم</a>
                   </Button>
                 </div>
               ))}
@@ -178,19 +124,13 @@ export default function MentorshipPage() {
 
           <Card className="border-0 shadow-sm">
             <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Star className="h-4 w-4 text-primary" />
-                الجلسات السابقة
-              </CardTitle>
+              <CardTitle className="flex items-center gap-2 text-base"><Star className="h-4 w-4 text-primary" />الجلسات السابقة</CardTitle>
               <CardDescription>مراجعة ملاحظات الجلسات السابقة وتقييمها.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               {loading && <Skeleton className="h-24 w-full" />}
               {!loading && pastSessions.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  <User className="h-10 w-10 mx-auto mb-3 opacity-30" />
-                  <p className="text-sm">لا توجد جلسات سابقة</p>
-                </div>
+                <div className="text-center py-8 text-muted-foreground"><User className="h-10 w-10 mx-auto mb-3 opacity-30" /><p className="text-sm">لا توجد جلسات سابقة</p></div>
               )}
               {!loading && pastSessions.map(session => (
                 <div key={session.id} className="flex items-start justify-between p-4 rounded-xl bg-muted/40 gap-4">
@@ -202,9 +142,8 @@ export default function MentorshipPage() {
                     <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2">{session.notes || "لا توجد ملاحظات."}</p>
                   </div>
                   {session.status === 'completed' && (
-                    <Button variant="outline" size="sm" className="shrink-0" onClick={() => handleEvaluationClick(session)}>
-                      <Star className="ml-1.5 h-3.5 w-3.5" />
-                      تقييم
+                    <Button variant="outline" size="sm" className="shrink-0" onClick={() => mentor && setEvaluationTarget({ sessionId: session.id, evaluatedId: mentor.id, evaluatedName: mentor.name || 'المرشد' })}>
+                      <Star className="ml-1.5 h-3.5 w-3.5" />تقييم
                     </Button>
                   )}
                 </div>
@@ -215,15 +154,7 @@ export default function MentorshipPage() {
 
         <div className="space-y-5">
           {loading ? (
-            <Card className="border-0 shadow-sm">
-              <CardHeader className="items-center text-center">
-                <Skeleton className="w-24 h-24 rounded-full" />
-                <div className="pt-2 w-full space-y-2">
-                  <Skeleton className="h-6 w-3/4 mx-auto" />
-                  <Skeleton className="h-4 w-1/2 mx-auto" />
-                </div>
-              </CardHeader>
-            </Card>
+            <Card className="border-0 shadow-sm"><CardHeader className="items-center text-center"><Skeleton className="w-24 h-24 rounded-full" /><div className="pt-2 w-full space-y-2"><Skeleton className="h-6 w-3/4 mx-auto" /><Skeleton className="h-4 w-1/2 mx-auto" /></div></CardHeader></Card>
           ) : mentor ? (
             <Card className="border-0 shadow-sm">
               <CardHeader className="items-center text-center pb-2">
@@ -237,17 +168,13 @@ export default function MentorshipPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="bg-muted/40 rounded-xl p-3 text-xs text-muted-foreground text-center leading-relaxed italic">
-                  "مهمتي مساعدتك على تحقيق أهدافك وتحويل فكرتك إلى مشروع ناجح."
-                </div>
+                <div className="bg-muted/40 rounded-xl p-3 text-xs text-muted-foreground text-center leading-relaxed italic">"مهمتي مساعدتك على تحقيق أهدافك وتحويل فكرتك إلى مشروع ناجح."</div>
               </CardContent>
             </Card>
           ) : (
             <Card className="border-0 shadow-sm">
               <CardHeader className="items-center text-center py-8">
-                <div className="p-4 bg-muted rounded-full mb-3">
-                  <User className="h-8 w-8 text-muted-foreground" />
-                </div>
+                <div className="p-4 bg-muted rounded-full mb-3"><User className="h-8 w-8 text-muted-foreground" /></div>
                 <CardTitle className="text-base">لم يتم تعيين مرشد</CardTitle>
                 <CardDescription className="text-sm">تواصل مع مدير منظمتك لتعيين مرشد لك.</CardDescription>
               </CardHeader>
@@ -255,17 +182,9 @@ export default function MentorshipPage() {
           )}
 
           <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">أرسل رسالة لمرشدك</CardTitle>
-            </CardHeader>
+            <CardHeader className="pb-3"><CardTitle className="text-base">أرسل رسالة لمرشدك</CardTitle></CardHeader>
             <CardContent className="space-y-3">
-              <Textarea
-                placeholder="اكتب رسالتك هنا..."
-                className="min-h-[110px] resize-none"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                disabled={!mentor}
-              />
+              <Textarea placeholder="اكتب رسالتك هنا..." className="min-h-[110px] resize-none" value={message} onChange={e => setMessage(e.target.value)} disabled={!mentor} />
               <Button className="w-full shadow-sm" onClick={handleSendMessage} disabled={!mentor}>إرسال الرسالة</Button>
             </CardContent>
           </Card>
@@ -273,15 +192,7 @@ export default function MentorshipPage() {
       </div>
     </div>
     {evaluationTarget && authUser && (
-        <EvaluationDialog
-            isOpen={!!evaluationTarget}
-            onOpenChange={(isOpen) => !isOpen && setEvaluationTarget(null)}
-            sessionId={evaluationTarget.sessionId}
-            evaluatorId={authUser.uid}
-            evaluatedId={evaluationTarget.evaluatedId}
-            evaluatedName={evaluationTarget.evaluatedName}
-            type="beneficiary_to_mentor"
-        />
+      <EvaluationDialog isOpen={!!evaluationTarget} onOpenChange={isOpen => !isOpen && setEvaluationTarget(null)} sessionId={evaluationTarget.sessionId} evaluatorId={authUser.uid} evaluatedId={evaluationTarget.evaluatedId} evaluatedName={evaluationTarget.evaluatedName} type="beneficiary_to_mentor" />
     )}
     </>
   );
