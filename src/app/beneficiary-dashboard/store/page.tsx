@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -19,8 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/firebase/auth/use-user";
 import { Plus, Package, Store, Save } from "lucide-react";
 
-type StoreData = { id: string; name: string; description?: string; location?: string; phone?: string; whatsapp?: string };
-type Product = { id: string; name: string; description: string; price: number; category: string; status: string; createdAt: string };
+type Product = { id: string; name: string; description: string; price: number; category: string; status: string };
 
 const productSchema = z.object({
   name: z.string().min(2, "الاسم مطلوب"),
@@ -29,122 +28,112 @@ const productSchema = z.object({
   category: z.string().min(1, "الفئة مطلوبة"),
 });
 
-type ProductForm = z.infer<typeof productSchema>;
-
 const statusConfig: Record<string, { label: string; variant: "secondary" | "default" | "destructive" }> = {
   pending:  { label: "قيد المراجعة", variant: "secondary" },
   approved: { label: "مُعتمد",       variant: "default"   },
   rejected: { label: "مرفوض",        variant: "destructive" },
 };
 
-const categories = ["منتجات يدوية", "خدمات", "منتجات رقمية", "أخرى"];
+const CATEGORIES = ["منتجات يدوية", "خدمات", "منتجات رقمية", "أخرى"];
 
 export default function BeneficiaryStorePage() {
   const { user } = useUser();
   const { toast } = useToast();
 
-  const [store, setStore] = useState<StoreData | null>(null);
-  const [storeLoading, setStoreLoading] = useState(true);
+  // Store fields — plain state
+  const [storeId, setStoreId]       = useState<string>("");
+  const [storeName, setStoreName]   = useState("");
+  const [storeDesc, setStoreDesc]   = useState("");
+  const [storeLoc, setStoreLoc]     = useState("");
+  const [storePhone, setStorePhone] = useState("");
+  const [storeWa, setStoreWa]       = useState("");
   const [storeSaving, setStoreSaving] = useState(false);
-  const [storeFields, setStoreFields] = useState({ name: "", description: "", location: "", phone: "", whatsapp: "" });
+  const [storeReady, setStoreReady] = useState(false);
 
+  // Products
   const [products, setProducts] = useState<Product[]>([]);
-  const [productsLoading, setProductsLoading] = useState(true);
+  const [productsLoading, setProductsLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const productForm = useForm<ProductForm>({
+  const productForm = useForm<z.infer<typeof productSchema>>({
     resolver: zodResolver(productSchema),
     defaultValues: { name: "", description: "", price: 0, category: "" },
   });
 
-  // Use refs to avoid stale closures in fetch calls
-  const userRef = useRef(user);
-  userRef.current = user;
-
-  const storeIdRef = useRef<string | undefined>(undefined);
-  storeIdRef.current = store?.id;
-
+  // Load store and products once user is ready
   useEffect(() => {
     if (!user) return;
-    const token_promise = user.getIdToken();
+    let cancelled = false;
 
-    setStoreLoading(true);
-    token_promise.then(token => {
+    user.getIdToken().then(token => {
+      // Load store profile
       fetch('/api/store', { headers: { authorization: `Bearer ${token}` } })
         .then(r => r.json())
         .then(json => {
+          if (cancelled) return;
           if (json.store) {
-            setStore(json.store);
-            setStoreFields({
-              name: json.store.name || "",
-              description: json.store.description || "",
-              location: json.store.location || "",
-              phone: json.store.phone || "",
-              whatsapp: json.store.whatsapp || "",
-            });
+            setStoreId(json.store.id || "");
+            setStoreName(json.store.name || "");
+            setStoreDesc(json.store.description || "");
+            setStoreLoc(json.store.location || "");
+            setStorePhone(json.store.phone || "");
+            setStoreWa(json.store.whatsapp || "");
           }
+          setStoreReady(true);
         })
-        .catch(() => {})
-        .finally(() => setStoreLoading(false));
-    });
+        .catch(() => { if (!cancelled) setStoreReady(true); });
 
-    setProductsLoading(true);
-    token_promise.then(token => {
+      // Load products
+      setProductsLoading(true);
       fetch('/api/store/products', { headers: { authorization: `Bearer ${token}` } })
         .then(r => r.json())
-        .then(json => setProducts(json.products || []))
-        .catch(() => toast({ title: "خطأ في تحميل المنتجات", variant: "destructive" }))
-        .finally(() => setProductsLoading(false));
+        .then(json => { if (!cancelled) setProducts(json.products || []); })
+        .catch(() => {})
+        .finally(() => { if (!cancelled) setProductsLoading(false); });
     });
-  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const onSaveStore = async () => {
-    const u = userRef.current;
-    if (!u) { toast({ title: "خطأ", description: "يجب تسجيل الدخول أولاً", variant: "destructive" }); return; }
-    if (!storeFields.name.trim()) { toast({ title: "خطأ", description: "اسم المتجر مطلوب", variant: "destructive" }); return; }
+    return () => { cancelled = true; };
+  }, [user]);
+
+  async function handleSaveStore() {
+    if (!user) {
+      toast({ title: "خطأ", description: "يجب تسجيل الدخول أولاً", variant: "destructive" });
+      return;
+    }
+    if (!storeName.trim()) {
+      toast({ title: "خطأ", description: "اسم المتجر مطلوب", variant: "destructive" });
+      return;
+    }
+
     setStoreSaving(true);
     try {
-      const token = await u.getIdToken();
-      const currentStoreId = storeIdRef.current;
-      let res: Response;
+      const token = await user.getIdToken();
+      const body = { name: storeName, description: storeDesc, location: storeLoc, phone: storePhone, whatsapp: storeWa };
 
-      if (currentStoreId) {
-        res = await fetch('/api/store', {
-          method: 'PUT',
-          headers: { authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: currentStoreId, ...storeFields }),
-        });
-      } else {
-        res = await fetch('/api/store', {
-          method: 'POST',
-          headers: { authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify(storeFields),
-        });
-      }
+      const res = await fetch('/api/store', {
+        method: storeId ? 'PUT' : 'POST',
+        headers: { authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(storeId ? { id: storeId, ...body } : body),
+      });
 
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'فشل حفظ المتجر');
+      if (!res.ok) throw new Error(json.error || 'فشل الحفظ');
 
-      if (!currentStoreId && json.id) {
-        setStore({ id: json.id, ...storeFields });
-      } else {
-        setStore(prev => prev ? { ...prev, ...storeFields } : null);
-      }
-      toast({ title: "تم الحفظ ✓", description: "تم حفظ معلومات متجرك بنجاح." });
+      if (!storeId && json.id) setStoreId(json.id);
+      toast({ title: "تم الحفظ ✓", description: "تم حفظ معلومات متجرك." });
     } catch (e: any) {
-      toast({ title: "خطأ في الحفظ", description: e.message, variant: "destructive" });
+      toast({ title: "خطأ", description: e.message, variant: "destructive" });
     } finally {
       setStoreSaving(false);
     }
-  };
+  }
 
-  const onAddProduct = async (values: ProductForm) => {
-    const u = userRef.current;
-    if (!u) { toast({ title: "خطأ", description: "يجب تسجيل الدخول أولاً", variant: "destructive" }); return; }
+  async function handleAddProduct(values: z.infer<typeof productSchema>) {
+    if (!user) return;
     setSubmitting(true);
     try {
-      const token = await u.getIdToken();
+      const token = await user.getIdToken();
       const res = await fetch('/api/store/products', {
         method: 'POST',
         headers: { authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -156,110 +145,82 @@ export default function BeneficiaryStorePage() {
       toast({ title: "تم إضافة المنتج ✓", description: "سيتم مراجعة منتجك قريباً." });
       productForm.reset();
       setDialogOpen(false);
-      // Refresh products
-      const token2 = await u.getIdToken();
-      const r2 = await fetch('/api/store/products', { headers: { authorization: `Bearer ${token2}` } });
-      const j2 = await r2.json();
-      setProducts(j2.products || []);
+      setProducts(prev => [{ id: json.id, ...values, status: 'pending' } as Product, ...prev]);
     } catch (e: any) {
-      toast({ title: "خطأ في إضافة المنتج", description: e.message, variant: "destructive" });
+      toast({ title: "خطأ", description: e.message, variant: "destructive" });
     } finally {
       setSubmitting(false);
     }
-  };
+  }
 
   return (
     <div className="space-y-6" dir="rtl">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">متجري</h1>
-        <p className="text-muted-foreground text-sm">أدر متجرك ومنتجاتك وخدماتك هنا.</p>
+        <h1 className="text-2xl font-bold">متجري</h1>
+        <p className="text-muted-foreground text-sm">أدر متجرك ومنتجاتك هنا.</p>
       </div>
 
       <Tabs defaultValue="store">
-        <TabsList className="mb-4">
-          <TabsTrigger value="store" className="flex items-center gap-1"><Store className="h-4 w-4" />إعداد المتجر</TabsTrigger>
-          <TabsTrigger value="products" className="flex items-center gap-1"><Package className="h-4 w-4" />المنتجات</TabsTrigger>
+        <TabsList>
+          <TabsTrigger value="store"><Store className="h-4 w-4 ml-1" />إعداد المتجر</TabsTrigger>
+          <TabsTrigger value="products"><Package className="h-4 w-4 ml-1" />المنتجات</TabsTrigger>
         </TabsList>
 
-        {/* Store Setup Tab */}
-        <TabsContent value="store">
+        {/* ── Store Setup ── */}
+        <TabsContent value="store" className="mt-4">
           <Card>
             <CardHeader>
               <CardTitle className="text-base">معلومات المتجر</CardTitle>
-              <CardDescription>أدخل معلومات متجرك الأساسية ثم اضغط حفظ</CardDescription>
+              <CardDescription>أدخل معلومات متجرك ثم اضغط الزر</CardDescription>
             </CardHeader>
-            <CardContent>
-              {storeLoading ? (
-                <div className="space-y-4">
+            <CardContent className="space-y-4">
+              {!storeReady && !user ? (
+                <div className="space-y-3">
                   {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
                 </div>
               ) : (
-                <div className="space-y-4">
+                <>
                   <div className="space-y-2">
-                    <Label htmlFor="store-name">اسم المتجر <span className="text-red-500">*</span></Label>
-                    <Input
-                      id="store-name"
-                      placeholder="مثال: إبداعات سارة"
-                      value={storeFields.name}
-                      onChange={e => setStoreFields(p => ({ ...p, name: e.target.value }))}
-                    />
+                    <Label>اسم المتجر <span className="text-red-500">*</span></Label>
+                    <Input placeholder="مثال: إبداعات سارة" value={storeName} onChange={e => setStoreName(e.target.value)} />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="store-desc">وصف المتجر</Label>
-                    <Textarea
-                      id="store-desc"
-                      placeholder="وصف موجز عن متجرك وما تقدمه..."
-                      rows={3}
-                      value={storeFields.description}
-                      onChange={e => setStoreFields(p => ({ ...p, description: e.target.value }))}
-                    />
+                    <Label>وصف المتجر</Label>
+                    <Textarea placeholder="وصف موجز عن متجرك..." rows={3} value={storeDesc} onChange={e => setStoreDesc(e.target.value)} />
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="store-loc">الموقع (المدينة)</Label>
-                      <Input
-                        id="store-loc"
-                        placeholder="مثال: عمّان"
-                        value={storeFields.location}
-                        onChange={e => setStoreFields(p => ({ ...p, location: e.target.value }))}
-                      />
+                      <Label>الموقع</Label>
+                      <Input placeholder="مثال: عمّان" value={storeLoc} onChange={e => setStoreLoc(e.target.value)} />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="store-phone">رقم الهاتف</Label>
-                      <Input
-                        id="store-phone"
-                        dir="ltr"
-                        placeholder="+962 7..."
-                        value={storeFields.phone}
-                        onChange={e => setStoreFields(p => ({ ...p, phone: e.target.value }))}
-                      />
+                      <Label>رقم الهاتف</Label>
+                      <Input dir="ltr" placeholder="+962 7..." value={storePhone} onChange={e => setStorePhone(e.target.value)} />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="store-wa">رقم واتساب</Label>
-                    <Input
-                      id="store-wa"
-                      dir="ltr"
-                      placeholder="+962 7..."
-                      value={storeFields.whatsapp}
-                      onChange={e => setStoreFields(p => ({ ...p, whatsapp: e.target.value }))}
-                    />
+                    <Label>رقم واتساب</Label>
+                    <Input dir="ltr" placeholder="+962 7..." value={storeWa} onChange={e => setStoreWa(e.target.value)} />
                   </div>
-                  <Button onClick={onSaveStore} disabled={storeSaving}>
+                  <Button
+                    onClick={handleSaveStore}
+                    disabled={storeSaving}
+                    className="mt-2"
+                  >
                     <Save className="h-4 w-4 ml-2" />
-                    {storeSaving ? "جاري الحفظ..." : store?.id ? "تحديث المتجر" : "إنشاء المتجر"}
+                    {storeSaving ? "جاري الحفظ..." : storeId ? "تحديث المتجر" : "إنشاء المتجر"}
                   </Button>
-                </div>
+                </>
               )}
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* Products Tab */}
-        <TabsContent value="products">
+        {/* ── Products ── */}
+        <TabsContent value="products" className="mt-4">
           <div className="flex justify-between items-center mb-4">
             <p className="text-sm text-muted-foreground">{productsLoading ? "..." : `${products.length} منتج`}</p>
-            <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) productForm.reset(); }}>
+            <Dialog open={dialogOpen} onOpenChange={open => { setDialogOpen(open); if (!open) productForm.reset(); }}>
               <DialogTrigger asChild>
                 <Button><Plus className="h-4 w-4 ml-2" />إضافة منتج</Button>
               </DialogTrigger>
@@ -268,7 +229,7 @@ export default function BeneficiaryStorePage() {
                   <DialogTitle>إضافة منتج جديد</DialogTitle>
                 </DialogHeader>
                 <Form {...productForm}>
-                  <form id="add-product-form" onSubmit={productForm.handleSubmit(onAddProduct)} className="space-y-4">
+                  <form id="product-form" onSubmit={productForm.handleSubmit(handleAddProduct)} className="space-y-4 py-2">
                     <FormField control={productForm.control} name="name" render={({ field }) => (
                       <FormItem>
                         <FormLabel>اسم المنتج</FormLabel>
@@ -279,7 +240,7 @@ export default function BeneficiaryStorePage() {
                     <FormField control={productForm.control} name="description" render={({ field }) => (
                       <FormItem>
                         <FormLabel>الوصف</FormLabel>
-                        <FormControl><Textarea placeholder="وصف مختصر للمنتج..." rows={3} {...field} /></FormControl>
+                        <FormControl><Textarea placeholder="وصف مختصر..." rows={3} {...field} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )} />
@@ -298,7 +259,7 @@ export default function BeneficiaryStorePage() {
                             <SelectTrigger><SelectValue placeholder="اختر الفئة" /></SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                            {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -310,11 +271,7 @@ export default function BeneficiaryStorePage() {
                   <DialogClose asChild>
                     <Button type="button" variant="ghost">إلغاء</Button>
                   </DialogClose>
-                  <Button
-                    type="submit"
-                    form="add-product-form"
-                    disabled={submitting}
-                  >
+                  <Button type="submit" form="product-form" disabled={submitting}>
                     {submitting ? "جارٍ الإضافة..." : "إضافة المنتج"}
                   </Button>
                 </DialogFooter>
@@ -324,12 +281,12 @@ export default function BeneficiaryStorePage() {
 
           {productsLoading ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-48 rounded-lg" />)}
+              {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-40 rounded-lg" />)}
             </div>
           ) : products.length === 0 ? (
-            <div className="text-center py-16 space-y-3">
-              <Package className="h-12 w-12 mx-auto text-muted-foreground" />
-              <p className="text-muted-foreground">لا توجد منتجات بعد. أضف أول منتج لك!</p>
+            <div className="text-center py-16 text-muted-foreground space-y-2">
+              <Package className="h-12 w-12 mx-auto opacity-40" />
+              <p>لا توجد منتجات بعد. أضف أول منتج لك!</p>
             </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -344,7 +301,7 @@ export default function BeneficiaryStorePage() {
                       </div>
                       <CardDescription className="text-xs">{product.category}</CardDescription>
                     </CardHeader>
-                    <CardContent className="flex-1 space-y-2">
+                    <CardContent className="flex-1 space-y-1">
                       <p className="text-sm text-muted-foreground line-clamp-3">{product.description}</p>
                       <p className="text-lg font-bold text-primary">{Number(product.price).toFixed(2)} د.أ</p>
                     </CardContent>
