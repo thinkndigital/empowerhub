@@ -333,7 +333,7 @@ export default function MyStorePage() {
                             </span>
                           </TableCell>
                           <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
-                            {order.createdAt ? format(new Date(order.createdAt?.seconds ? order.createdAt.seconds * 1000 : order.createdAt), 'd MMM yyyy', { locale: ar }) : '—'}
+                            {(() => { try { const d = new Date(order.createdAt?.seconds ? order.createdAt.seconds * 1000 : order.createdAt?._seconds ? order.createdAt._seconds * 1000 : order.createdAt); return d && !isNaN(d.getTime()) ? format(d, 'd MMM yyyy', { locale: ar }) : '—'; } catch { return '—'; } })()}
                           </TableCell>
                           <TableCell>
                             <Select value={order.status} onValueChange={v => handleUpdateOrderStatus(order.id, v)}>

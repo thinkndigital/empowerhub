@@ -17,9 +17,21 @@ export async function GET(req: NextRequest) {
       adminDb.collection('orders').where('beneficiaryId', '==', uid).get(),
     ]);
 
-    const store = storeSnap.empty ? null : { id: storeSnap.docs[0].id, ...storeSnap.docs[0].data() };
-    const products = productsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-    const orders = ordersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const normalizeTs = (v: any): any => {
+      if (!v || typeof v === 'string' || typeof v === 'number') return v;
+      const s = v._seconds ?? v.seconds;
+      if (s != null) return new Date(s * 1000).toISOString();
+      return v;
+    };
+    const normalizeDoc = (data: any) => {
+      const out: any = {};
+      for (const k of Object.keys(data)) out[k] = normalizeTs(data[k]);
+      return out;
+    };
+
+    const store = storeSnap.empty ? null : { id: storeSnap.docs[0].id, ...normalizeDoc(storeSnap.docs[0].data()) };
+    const products = productsSnap.docs.map(d => ({ id: d.id, ...normalizeDoc(d.data()) }));
+    const orders = ordersSnap.docs.map(d => ({ id: d.id, ...normalizeDoc(d.data()) }));
 
     return NextResponse.json({ store, products, orders });
   } catch (e: any) {
