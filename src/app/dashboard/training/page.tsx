@@ -6,27 +6,18 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription }
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { BookMarked, PlayCircle, BookHeart, Clock, BarChart3, CheckCircle2, Search } from "lucide-react";
-import { useCollection } from "@/firebase/firestore/use-collection";
-import { collection, query, where } from "firebase/firestore";
-import { useFirestore, useMemoFirebase } from "@/firebase/provider";
 import { useUser } from "@/firebase/auth/use-user";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 
 type Course = {
   id: string;
   title: string;
   description?: string;
   category?: string;
-  status: string;
-};
-
-type CourseProgress = {
-  id: string;
-  userId: string;
-  courseId: string;
-  progress: number;
+  status?: string;
+  progress?: number;
 };
 
 const EmptyState = ({ title, description }: { title: string; description: string }) => (
@@ -95,36 +86,41 @@ const SkeletonCard = () => (
 );
 
 export default function TrainingPage() {
-  const firestore = useFirestore();
-  const { user: authUser, userProfile } = useUser();
+  const { user: authUser, loading: authLoading } = useUser();
   const [search, setSearch] = useState("");
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [progressMap, setProgressMap] = useState<Record<string, number>>({});
+  const [loading, setLoading] = useState(true);
 
-  const coursesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    const orgId = (userProfile as any)?.organizationId;
-    if (orgId) {
-      return query(collection(firestore, "courses"), where("organizationId", "==", orgId));
+  const fetchData = useCallback(async () => {
+    if (!authUser) return;
+    setLoading(true);
+    try {
+      const token = await authUser.getIdToken();
+      const headers = { authorization: `Bearer ${token}` };
+
+      const [cRes, pRes] = await Promise.all([
+        fetch('/api/beneficiary/courses', { headers }),
+        fetch(`/api/beneficiary/courses/progress`, { headers }).catch(() => ({ ok: false, json: async () => ({}) })),
+      ]);
+
+      const cJson = await cRes.json();
+      setCourses(cJson.courses || []);
+
+      if ((pRes as Response).ok) {
+        const pJson = await (pRes as Response).json();
+        setProgressMap(pJson.progressMap || {});
+      }
+    } catch {
+      // silent
+    } finally {
+      setLoading(false);
     }
-    if (authUser) {
-      return query(collection(firestore, "courses"), where("assignedTo", "array-contains", authUser.uid));
-    }
-    return null;
-  }, [firestore, (userProfile as any)?.organizationId, authUser]);
-  const { data: courses, isLoading: coursesLoading } = useCollection<Course>(coursesQuery);
+  }, [authUser]);
 
-  const progressQuery = useMemoFirebase(() => {
-    if (!firestore || !authUser) return null;
-    return query(collection(firestore, "courseProgress"), where("userId", "==", authUser.uid));
-  }, [firestore, authUser]);
-  const { data: progressDocs, isLoading: progressLoading } = useCollection<CourseProgress>(progressQuery);
-
-  const progressMap = useMemo(() => {
-    const map: Record<string, number> = {};
-    progressDocs?.forEach(p => { map[p.courseId] = p.progress; });
-    return map;
-  }, [progressDocs]);
-
-  const loading = coursesLoading || progressLoading;
+  useEffect(() => {
+    if (!authLoading && authUser) fetchData();
+  }, [authLoading, authUser, fetchData]);
 
   const filtered = useMemo(() => {
     if (!courses) return [];
@@ -136,8 +132,8 @@ export default function TrainingPage() {
   const inProgress = filtered.filter(c => (progressMap[c.id] || 0) > 0 && (progressMap[c.id] || 0) < 100);
   const notStarted = filtered.filter(c => !progressMap[c.id] || progressMap[c.id] === 0);
   const completedC = filtered.filter(c => (progressMap[c.id] || 0) >= 100);
-  const totalCourses = (courses || []).length;
-  const totalCompleted = (courses || []).filter(c => (progressMap[c.id] || 0) >= 100).length;
+  const totalCourses = courses.length;
+  const totalCompleted = courses.filter(c => (progressMap[c.id] || 0) >= 100).length;
 
   return (
     <div className="space-y-8">

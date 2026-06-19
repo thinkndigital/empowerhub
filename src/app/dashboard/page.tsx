@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
+import { useMemo, useState, useEffect, useCallback } from "react";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Activity, BookOpenCheck, DollarSign, TrendingUp, Clock, Target, ChevronRight, User, Calendar, Video, Star } from "lucide-react";
 import { AiRecommender } from "./ai-recommender";
 import { Badge } from "@/components/ui/badge";
@@ -9,18 +9,14 @@ import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
-import { useUser, type UserProfile } from "@/firebase/auth/use-user";
-import { useFirestore, useMemoFirebase } from "@/firebase/provider";
-import { useDoc } from "@/firebase/firestore/use-doc";
-import { useCollection } from "@/firebase/firestore/use-collection";
-import { collection, query, where, doc, orderBy } from "firebase/firestore";
+import { useUser } from "@/firebase/auth/use-user";
 import { format, isPast, parseISO } from "date-fns";
 import { ar } from "date-fns/locale";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 type Session = { id: string; title: string; date: string; status: string; meetLink?: string };
 type Course = { id: string; title: string; progress?: number; category?: string };
-type Order = { id: string; status: string; price?: number };
+type Order = { id: string; status: string; total?: number };
 
 const StatCard = ({
   title, value, sub, icon, trend, color, loading
@@ -49,52 +45,53 @@ const StatCard = ({
 );
 
 export default function DashboardPage() {
-  const firestore = useFirestore();
-  const { user: authUser, userProfile } = useUser();
+  const { user: authUser, userProfile, loading: authLoading } = useUser();
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [mentor, setMentor] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Fetch mentor info
-  const mentorRef = useMemoFirebase(() => {
-    if (!firestore || !(userProfile as any)?.mentorId) return null;
-    return doc(firestore, "users", (userProfile as any).mentorId);
-  }, [firestore, (userProfile as any)?.mentorId]);
-  const { data: mentor, isLoading: mentorLoading } = useDoc<UserProfile>(mentorRef);
+  const fetchData = useCallback(async () => {
+    if (!authUser) return;
+    setLoading(true);
+    try {
+      const token = await authUser.getIdToken();
+      const headers = { authorization: `Bearer ${token}` };
 
-  // Fetch upcoming sessions
-  const sessionsQuery = useMemoFirebase(() => {
-    if (!firestore || !authUser) return null;
-    return query(collection(firestore, "sessions"), where("beneficiaryId", "==", authUser.uid));
-  }, [firestore, authUser]);
-  const { data: sessions, isLoading: sessionsLoading } = useCollection<Session>(sessionsQuery);
+      const [sRes, cRes, storeRes, mRes] = await Promise.all([
+        fetch('/api/beneficiary/sessions', { headers }),
+        fetch('/api/beneficiary/courses', { headers }),
+        fetch('/api/beneficiary/store', { headers }),
+        fetch('/api/beneficiary/mentor', { headers }),
+      ]);
 
-  // Fetch courses
-  const coursesQuery = useMemoFirebase(() => {
-    if (!firestore || !(userProfile as any)?.organizationId) return null;
-    return query(collection(firestore, "courses"), where("organizationId", "==", (userProfile as any).organizationId));
-  }, [firestore, (userProfile as any)?.organizationId]);
-  const { data: courses, isLoading: coursesLoading } = useCollection<Course>(coursesQuery);
+      const [sJson, cJson, storeJson, mJson] = await Promise.all([sRes.json(), cRes.json(), storeRes.json(), mRes.json()]);
 
-  // Fetch orders for store revenue
-  const ordersQuery = useMemoFirebase(() => {
-    if (!firestore || !authUser) return null;
-    return query(collection(firestore, "orders"), where("beneficiaryId", "==", authUser.uid));
-  }, [firestore, authUser]);
-  const { data: orders } = useCollection<Order>(ordersQuery);
+      setSessions(sJson.sessions || []);
+      setCourses(cJson.courses || []);
+      setOrders(storeJson.orders || []);
+      setMentor(mJson.mentor || null);
+    } catch {
+      // silent
+    } finally {
+      setLoading(false);
+    }
+  }, [authUser, userProfile?.mentorId]);
+
+  useEffect(() => {
+    if (!authLoading && authUser) fetchData();
+  }, [authLoading, authUser, fetchData]);
 
   const upcomingSessions = useMemo(() => {
-    if (!sessions) return [];
     return sessions
       .filter(s => s.status === 'scheduled' && !isPast(parseISO(s.date)))
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
       .slice(0, 3);
   }, [sessions]);
 
-  const completedSessions = useMemo(() => sessions?.filter(s => s.status === 'completed').length || 0, [sessions]);
-
-  const storeRevenue = useMemo(() => {
-    if (!orders) return 0;
-    return orders.filter(o => o.status === 'delivered').reduce((sum, o) => sum + ((o as any).total || 0), 0);
-  }, [orders]);
-
+  const completedSessions = useMemo(() => sessions.filter(s => s.status === 'completed').length, [sessions]);
+  const storeRevenue = useMemo(() => orders.filter(o => o.status === 'delivered').reduce((sum, o) => sum + (o.total || 0), 0), [orders]);
   const progress = (userProfile as any)?.progress || 0;
 
   return (
@@ -120,7 +117,7 @@ export default function DashboardPage() {
           sub="نسبة الإنجاز في البرنامج"
           icon={<Activity className="h-5 w-5 text-white" />}
           color="bg-primary"
-          loading={false}
+          loading={loading}
         />
         <StatCard
           title="جلسات الإرشاد"
@@ -128,7 +125,7 @@ export default function DashboardPage() {
           sub="جلسة مكتملة"
           icon={<BookOpenCheck className="h-5 w-5 text-white" />}
           color="bg-accent"
-          loading={sessionsLoading}
+          loading={loading}
         />
         <StatCard
           title="إيرادات المتجر"
@@ -136,14 +133,15 @@ export default function DashboardPage() {
           sub="من الطلبات المكتملة"
           icon={<DollarSign className="h-5 w-5 text-white" />}
           color="bg-amber-500"
+          loading={loading}
         />
         <StatCard
           title="الدورات المتاحة"
-          value={`${courses?.length || 0}`}
+          value={`${courses.length}`}
           sub="دورة تدريبية"
           icon={<Target className="h-5 w-5 text-white" />}
           color="bg-purple-500"
-          loading={coursesLoading}
+          loading={loading}
         />
       </div>
 
@@ -169,13 +167,13 @@ export default function DashboardPage() {
           <AiRecommender />
 
           {/* Mentor Card */}
-          {(mentorLoading || mentor) && (
+          {(loading || mentor) && (
             <Card className="border-0 shadow-sm">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2"><User className="h-4 w-4 text-primary" /> مرشدي</CardTitle>
               </CardHeader>
               <CardContent>
-                {mentorLoading ? (
+                {loading ? (
                   <div className="flex items-center gap-3"><Skeleton className="h-12 w-12 rounded-full" /><div className="space-y-2"><Skeleton className="h-4 w-32" /><Skeleton className="h-3 w-24" /></div></div>
                 ) : mentor ? (
                   <div className="flex items-center justify-between">
@@ -185,9 +183,7 @@ export default function DashboardPage() {
                       </Avatar>
                       <div>
                         <p className="font-semibold">{mentor.name}</p>
-                        {(mentor as any).specializations && (
-                          <p className="text-xs text-muted-foreground">{(mentor as any).specializations.split(',')[0]}</p>
-                        )}
+                        {mentor.expertise && <p className="text-xs text-muted-foreground">{mentor.expertise}</p>}
                         <div className="flex mt-1">{[...Array(5)].map((_, i) => <Star key={i} className="h-3 w-3 text-amber-400 fill-amber-400" />)}</div>
                       </div>
                     </div>
@@ -195,9 +191,7 @@ export default function DashboardPage() {
                       <Link href="/dashboard/mentorship">تواصل</Link>
                     </Button>
                   </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">لم يتم تعيين مرشد بعد. تواصل مع المنظمة لتعيين مرشد لك.</p>
-                )}
+                ) : null}
               </CardContent>
             </Card>
           )}
@@ -206,7 +200,7 @@ export default function DashboardPage() {
         {/* Sidebar */}
         <div className="space-y-5">
           {/* Course Progress */}
-          {courses && courses.length > 0 && (
+          {courses.length > 0 && (
             <Card className="border-0 shadow-sm">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
@@ -261,7 +255,7 @@ export default function DashboardPage() {
               <CardTitle className="text-base flex items-center gap-2"><Calendar className="h-4 w-4 text-primary" /> المواعيد القادمة</CardTitle>
             </CardHeader>
             <CardContent>
-              {sessionsLoading ? (
+              {loading ? (
                 <div className="space-y-3">{[...Array(2)].map((_, i) => <Skeleton key={i} className="h-12" />)}</div>
               ) : upcomingSessions.length > 0 ? (
                 <div className="flex flex-col gap-3">

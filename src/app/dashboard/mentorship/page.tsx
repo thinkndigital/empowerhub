@@ -6,57 +6,66 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Calendar, Clock, Video, User, Star } from "lucide-react";
-import { useState, useMemo } from "react";
-import { useUser, type UserProfile } from "@/firebase/auth/use-user";
-import { useFirestore, useMemoFirebase } from "@/firebase/provider";
-import { useCollection } from "@/firebase/firestore/use-collection";
-import { useDoc } from "@/firebase/firestore/use-doc";
-import { collection, query, where, doc, addDoc, getDocs, serverTimestamp } from 'firebase/firestore';
+import { useState, useMemo, useEffect, useCallback } from "react";
+import { useUser } from "@/firebase/auth/use-user";
+import { useFirestore } from "@/firebase/provider";
+import { collection, addDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, isPast, parseISO } from "date-fns";
 import { ar } from "date-fns/locale";
 import { EvaluationDialog } from "@/components/evaluation-dialog";
 
 type Session = {
-    id: string;
-    title: string;
-    date: string;
-    status: 'scheduled' | 'completed' | 'cancelled';
-    meetLink?: string;
-    notes?: string;
+  id: string;
+  title: string;
+  date: string;
+  status: 'scheduled' | 'completed' | 'cancelled';
+  meetLink?: string;
+  notes?: string;
 };
 
 type EvaluationTarget = {
-    sessionId: string;
-    evaluatedId: string;
-    evaluatedName: string;
+  sessionId: string;
+  evaluatedId: string;
+  evaluatedName: string;
 };
 
 export default function MentorshipPage() {
   const { toast } = useToast();
   const [message, setMessage] = useState("");
-  const { user: authUser, userProfile: beneficiaryProfile } = useUser();
+  const { user: authUser, userProfile, loading: authLoading } = useUser();
   const firestore = useFirestore();
   const [evaluationTarget, setEvaluationTarget] = useState<EvaluationTarget | null>(null);
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [mentor, setMentor] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  const mentorRef = useMemoFirebase(() => {
-    if (!firestore || !beneficiaryProfile?.mentorId) return null;
-    return doc(firestore, 'users', beneficiaryProfile.mentorId);
-  }, [firestore, beneficiaryProfile?.mentorId]);
+  const fetchData = useCallback(async () => {
+    if (!authUser) return;
+    setLoading(true);
+    try {
+      const token = await authUser.getIdToken();
+      const headers = { authorization: `Bearer ${token}` };
 
-  const { data: mentor, isLoading: mentorLoading } = useDoc<UserProfile>(mentorRef);
+      const [sRes, mRes] = await Promise.all([
+        fetch('/api/beneficiary/sessions', { headers }),
+        fetch('/api/beneficiary/mentor', { headers }),
+      ]);
+      const [sJson, mJson] = await Promise.all([sRes.json(), mRes.json()]);
+      setSessions(sJson.sessions || []);
+      setMentor(mJson.mentor || null);
+    } catch {
+      // silent
+    } finally {
+      setLoading(false);
+    }
+  }, [authUser]);
 
-  const sessionsQuery = useMemoFirebase(() => {
-    if (!firestore || !authUser) return null;
-    return query(collection(firestore, "sessions"), where("beneficiaryId", "==", authUser.uid));
-  }, [firestore, authUser]);
-
-  const { data: sessions, isLoading: sessionsLoading } = useCollection<Session>(sessionsQuery);
-  
-  const loading = mentorLoading || sessionsLoading;
+  useEffect(() => {
+    if (!authLoading && authUser) fetchData();
+  }, [authLoading, authUser, fetchData]);
 
   const { upcomingSessions, pastSessions } = useMemo(() => {
-    if (!sessions) return { upcomingSessions: [], pastSessions: [] };
     const upcoming: Session[] = [];
     const past: Session[] = [];
     sessions.forEach(s => {
@@ -66,12 +75,11 @@ export default function MentorshipPage() {
         past.push(s);
       }
     });
-    return { 
-        upcomingSessions: upcoming.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()), 
-        pastSessions: past.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) 
+    return {
+      upcomingSessions: upcoming.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
+      pastSessions: past.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
     };
   }, [sessions]);
-
 
   const handleSendMessage = async () => {
     if (!message.trim()) {
@@ -80,7 +88,6 @@ export default function MentorshipPage() {
     }
     if (!firestore || !authUser || !mentor) return;
     try {
-      // Find or create conversation between beneficiary and mentor
       const convoQuery = query(
         collection(firestore, "conversations"),
         where("participants", "array-contains", authUser.uid)
@@ -105,7 +112,6 @@ export default function MentorshipPage() {
         text: message.trim(),
         createdAt: serverTimestamp(),
       });
-      // Notify mentor
       await addDoc(collection(firestore, "notifications"), {
         userId: mentor.id,
         title: "رسالة جديدة من مستفيد",
@@ -273,15 +279,15 @@ export default function MentorshipPage() {
       </div>
     </div>
     {evaluationTarget && authUser && (
-        <EvaluationDialog
-            isOpen={!!evaluationTarget}
-            onOpenChange={(isOpen) => !isOpen && setEvaluationTarget(null)}
-            sessionId={evaluationTarget.sessionId}
-            evaluatorId={authUser.uid}
-            evaluatedId={evaluationTarget.evaluatedId}
-            evaluatedName={evaluationTarget.evaluatedName}
-            type="beneficiary_to_mentor"
-        />
+      <EvaluationDialog
+        isOpen={!!evaluationTarget}
+        onOpenChange={(isOpen) => !isOpen && setEvaluationTarget(null)}
+        sessionId={evaluationTarget.sessionId}
+        evaluatorId={authUser.uid}
+        evaluatedId={evaluationTarget.evaluatedId}
+        evaluatedName={evaluationTarget.evaluatedName}
+        type="beneficiary_to_mentor"
+      />
     )}
     </>
   );
