@@ -216,9 +216,9 @@ export default function CourseDetailsPage({ params }: { params: { courseId: stri
 
         {/* Lessons sidebar + content OR single video */}
         {hasLessons ? (
-          <div className="flex gap-4">
+          <div className="flex flex-col md:flex-row gap-4">
             {/* Sidebar */}
-            <div className="w-64 shrink-0">
+            <div className="w-full md:w-64 md:shrink-0">
               <Card className="border-0 shadow-sm">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm flex items-center gap-2">

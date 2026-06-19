@@ -149,14 +149,14 @@ export default function CoursesPage() {
     <>
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 flex-wrap">
             <div>
                 <CardTitle>الدورات التدريبية</CardTitle>
                 <CardDescription>
                 إدارة جميع الدورات التدريبية المتاحة على المنصة.
                 </CardDescription>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
                 <Button variant="outline" size="sm" onClick={handleExport}>
                     <Download className="ml-2 h-4 w-4" />
                     تصدير
@@ -198,6 +198,7 @@ export default function CoursesPage() {
         </div>
       </CardHeader>
       <CardContent>
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -263,6 +264,7 @@ export default function CoursesPage() {
             )}
           </TableBody>
         </Table>
+        </div>
       </CardContent>
     </Card>
 

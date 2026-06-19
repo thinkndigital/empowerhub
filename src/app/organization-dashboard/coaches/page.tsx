@@ -121,12 +121,13 @@ export default function OrgCoachesPage() {
               <p>لا يوجد مدربون في منظمتك بعد</p>
             </div>
           ) : (
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead className="text-right">المدرب</TableHead>
-                  <TableHead className="text-right">التخصص</TableHead>
-                  <TableHead className="text-right">الحالة</TableHead>
+                  <TableHead className="text-right hidden md:table-cell">التخصص</TableHead>
+                  <TableHead className="text-right hidden md:table-cell">الحالة</TableHead>
                   <TableHead className="text-right">الإجراءات</TableHead>
                 </TableRow>
               </TableHeader>
@@ -149,14 +150,14 @@ export default function OrgCoachesPage() {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden md:table-cell">
                       {coach.expertise ? (
                         <Badge variant="outline">{coach.expertise}</Badge>
                       ) : (
                         "—"
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden md:table-cell">
                       <Badge variant="default">نشط</Badge>
                     </TableCell>
                     <TableCell>
@@ -184,6 +185,7 @@ export default function OrgCoachesPage() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           )}
         </TabsContent>
 

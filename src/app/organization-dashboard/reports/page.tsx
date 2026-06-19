@@ -121,7 +121,7 @@ export default function OrgReportsPage() {
 
   return (
     <>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-lg font-semibold md:text-2xl">تقارير الأثر والتحليلات</h1>
           <p className="text-muted-foreground text-sm">قياس أثر برامج التمكين في منظمتك</p>
@@ -159,7 +159,7 @@ export default function OrgReportsPage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         {[
           { label: "إجمالي المستفيدين", value: stats.total, sub: "مستفيد مسجل", icon: <Users className="h-5 w-5 text-white" />, color: "bg-primary" },
           { label: "المستفيدون النشطون", value: stats.active, sub: `من أصل ${stats.total}`, icon: <Activity className="h-5 w-5 text-white" />, color: "bg-accent" },

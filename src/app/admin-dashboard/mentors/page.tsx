@@ -81,7 +81,7 @@ export default function MentorsPage() {
     <>
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <CardTitle>المرشدون</CardTitle>
             <CardDescription>
@@ -95,6 +95,7 @@ export default function MentorsPage() {
         </div>
       </CardHeader>
       <CardContent>
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -176,6 +177,7 @@ export default function MentorsPage() {
             )}
           </TableBody>
         </Table>
+        </div>
       </CardContent>
     </Card>
 

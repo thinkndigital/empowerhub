@@ -216,7 +216,7 @@ export default function BeneficiaryStorePage() {
 
         {/* Products */}
         <TabsContent value="products" className="mt-4">
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
             <p className="text-sm text-muted-foreground">{productsLoading ? "جاري التحميل..." : `${products.length} منتج`}</p>
             <Dialog open={dialogOpen} onOpenChange={o => { setDialogOpen(o); if (!o) productForm.reset(); }}>
               <DialogTrigger asChild><Button><Plus className="h-4 w-4 ml-2" />إضافة منتج</Button></DialogTrigger>

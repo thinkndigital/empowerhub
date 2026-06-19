@@ -228,7 +228,7 @@ export default function MyStorePage() {
 
       {store && (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4" dir="rtl">
             <Card className="border-0 shadow-sm">
               <CardContent className="pt-6">
                 <div className="flex items-center gap-3">
@@ -307,14 +307,15 @@ export default function MyStorePage() {
               {orders.length === 0 ? (
                 <div className="text-center py-10 text-muted-foreground"><ShoppingCart className="h-10 w-10 mx-auto mb-3 opacity-30" /><p>لا توجد طلبات حتى الآن.</p></div>
               ) : (
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>المنتج</TableHead>
-                      <TableHead>المشتري</TableHead>
+                      <TableHead className="hidden md:table-cell">المشتري</TableHead>
                       <TableHead>المبلغ</TableHead>
                       <TableHead>الحالة</TableHead>
-                      <TableHead>التاريخ</TableHead>
+                      <TableHead className="hidden md:table-cell">التاريخ</TableHead>
                       <TableHead></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -323,15 +324,15 @@ export default function MyStorePage() {
                       const cfg = statusConfig[order.status] || statusConfig.pending;
                       return (
                         <TableRow key={order.id}>
-                          <TableCell className="font-medium">{order.productName || '—'}</TableCell>
-                          <TableCell>{order.buyerName || '—'}</TableCell>
+                          <TableCell className="font-medium truncate max-w-[100px]">{order.productName || '—'}</TableCell>
+                          <TableCell className="hidden md:table-cell">{order.buyerName || '—'}</TableCell>
                           <TableCell>{(order.total || order.price || 0).toFixed(0)} د.أ</TableCell>
                           <TableCell>
                             <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${cfg.color}`}>
                               {cfg.icon}{cfg.label}
                             </span>
                           </TableCell>
-                          <TableCell className="text-xs text-muted-foreground">
+                          <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
                             {order.createdAt ? format(new Date(order.createdAt?.seconds ? order.createdAt.seconds * 1000 : order.createdAt), 'd MMM yyyy', { locale: ar }) : '—'}
                           </TableCell>
                           <TableCell>
@@ -347,6 +348,7 @@ export default function MyStorePage() {
                     })}
                   </TableBody>
                 </Table>
+                </div>
               )}
             </CardContent>
           </Card>
@@ -354,7 +356,7 @@ export default function MyStorePage() {
       )}
 
       <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="w-[90vw] sm:max-w-lg" dir="rtl">
           <DialogHeader><DialogTitle>{editingProduct ? 'تعديل المنتج' : 'إضافة منتج جديد'}</DialogTitle></DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmitProduct)} className="space-y-4">

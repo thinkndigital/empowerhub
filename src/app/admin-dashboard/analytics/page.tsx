@@ -116,7 +116,7 @@ export default function AnalyticsPage() {
 
   return (
     <>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h1 className="text-lg font-semibold md:text-2xl">تحليلات المنصة</h1>
         <Dialog open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen}>
           <DialogTrigger asChild>
@@ -152,7 +152,7 @@ export default function AnalyticsPage() {
         </Dialog>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
         {[
           { label: "إجمالي المستخدمين", value: stats.totalUsers.toLocaleString(), sub: "مستخدم مسجل", icon: <Users className="h-5 w-5 text-white" />, color: "bg-primary", loading: usersLoading },
           { label: "إجمالي المنظمات", value: stats.totalOrgs, sub: "منظمة مسجلة", icon: <Building className="h-5 w-5 text-white" />, color: "bg-purple-500", loading: orgsLoading },

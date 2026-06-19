@@ -58,10 +58,10 @@ export default function BeneficiarySessionsPage() {
           {loading && [...Array(2)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
           {!loading && upcoming.length === 0 && <p className="text-center text-muted-foreground py-6 text-sm">لا توجد جلسات قادمة.</p>}
           {!loading && upcoming.map(s => (
-            <div key={s.id} className="flex items-center justify-between p-4 border rounded-lg">
+            <div key={s.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-4 border rounded-lg">
               <div>
                 <p className="font-semibold">{s.title}</p>
-                <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-sm text-muted-foreground mt-1">
                   <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{fmtDate(s.date)}</span>
                   <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{fmtTime(s.date)}</span>
                 </div>

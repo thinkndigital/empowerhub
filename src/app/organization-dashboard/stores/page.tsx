@@ -279,7 +279,7 @@ export default function OrgStoresPage() {
 
       {/* Store Detail Dialog */}
       <Dialog open={!!selectedStore} onOpenChange={(open) => !open && setSelectedStore(null)}>
-        <DialogContent dir="rtl" className="max-w-3xl max-h-[80vh] overflow-y-auto">
+        <DialogContent dir="rtl" className="sm:max-w-[90vw] md:max-w-3xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Store className="h-5 w-5" />
@@ -350,11 +350,12 @@ export default function OrgStoresPage() {
               {(selectedStore?.orders.length || 0) === 0 ? (
                 <p className="text-center text-muted-foreground py-8">لا توجد طلبات</p>
               ) : (
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead className="text-right">المنتج</TableHead>
-                      <TableHead className="text-right">المشتري</TableHead>
+                      <TableHead className="text-right hidden md:table-cell">المشتري</TableHead>
                       <TableHead className="text-right">المبلغ</TableHead>
                       <TableHead className="text-right">الحالة</TableHead>
                     </TableRow>
@@ -363,7 +364,7 @@ export default function OrgStoresPage() {
                     {selectedStore?.orders.map(order => (
                       <TableRow key={order.id}>
                         <TableCell className="text-sm">{order.productName || '—'}</TableCell>
-                        <TableCell className="text-sm">{order.buyerName || '—'}</TableCell>
+                        <TableCell className="text-sm hidden md:table-cell">{order.buyerName || '—'}</TableCell>
                         <TableCell className="text-sm">{order.total?.toFixed(2) || '—'} د.أ</TableCell>
                         <TableCell>
                           <Badge variant={order.status === 'delivered' || order.status === 'مكتمل' ? 'default' : 'secondary'} className="text-xs">
@@ -374,6 +375,7 @@ export default function OrgStoresPage() {
                     ))}
                   </TableBody>
                 </Table>
+                </div>
               )}
             </TabsContent>
           </Tabs>

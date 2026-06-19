@@ -141,8 +141,8 @@ export default function MessagesPage() {
   return (
     <div className="container mx-auto p-4 h-[calc(100vh-80px)]" dir="rtl">
       <h1 className="text-2xl font-bold mb-4">{PAGE_TITLE}</h1>
-      <div className="flex gap-4 h-[calc(100%-60px)]">
-        <Card className="w-80 flex-shrink-0 flex flex-col">
+      <div className="flex flex-col md:flex-row gap-4 h-[calc(100%-60px)]">
+        <Card className="w-full md:w-80 flex-shrink-0 flex flex-col max-h-64 md:max-h-none">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg">المحادثات</CardTitle>
           </CardHeader>

@@ -249,12 +249,12 @@ export default function AdminCourseEditPage({ params }: { params: { courseId: st
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
                  <h1 className="text-lg font-semibold md:text-2xl">تحرير محتوى الدورة (المشرف)</h1>
                  <p className="text-muted-foreground">أنت تقوم بتعديل دورة: <span className="font-bold text-primary">{course.title}</span></p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
                 <Button variant="outline" asChild>
                     <Link href="/admin-dashboard/courses">
                         <ArrowRight className="ml-2 h-4 w-4" />

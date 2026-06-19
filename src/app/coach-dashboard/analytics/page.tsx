@@ -85,7 +85,7 @@ export default function CoachAnalyticsPage() {
 
   return (
     <>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h1 className="text-lg font-semibold md:text-2xl">تحليلات التدريب</h1>
         <Dialog open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen}>
           <DialogTrigger asChild>
@@ -116,7 +116,7 @@ export default function CoachAnalyticsPage() {
         </Dialog>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         {[
           { label: "إجمالي المتدربين", value: stats.totalBeneficiaries, sub: "متدرب نشط", icon: <Users className="h-5 w-5 text-white" />, color: "bg-primary" },
           { label: "متوسط تقدم المتدربين", value: `${stats.avgProgress}%`, sub: "نسبة الإنجاز الكلية", icon: <BarChart3 className="h-5 w-5 text-white" />, color: "bg-accent" },

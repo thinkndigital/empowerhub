@@ -78,7 +78,7 @@ export default function MyBeneficiariesPage() {
     <>
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <CardTitle>المستفيدون</CardTitle>
               <CardDescription>قائمة المستفيدين الذين تشرف على إرشادهم.</CardDescription>
@@ -90,6 +90,7 @@ export default function MyBeneficiariesPage() {
           </div>
         </CardHeader>
         <CardContent>
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -169,11 +170,12 @@ export default function MyBeneficiariesPage() {
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
 
       <Dialog open={!!beneficiaryToView} onOpenChange={(open) => !open && setBeneficiaryToView(null)}>
-        <DialogContent dir="rtl">
+        <DialogContent dir="rtl" className="sm:max-w-[90vw] md:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>الملف الشخصي للمستفيد</DialogTitle>
             <DialogDescription>تفاصيل المستفيد {beneficiaryToView?.name || 'بلا اسم'}</DialogDescription>

@@ -228,14 +228,14 @@ export default function CoachCoursesPage() {
     <>
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
                 <CardTitle>دوراتي التدريبية</CardTitle>
                 <CardDescription>
                 إدارة جميع الدورات التدريبية التي قمت بإنشائها.
                 </CardDescription>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
                 <Button variant="outline" size="sm" onClick={handleExport}>
                     <Download className="ml-2 h-4 w-4" />
                     تصدير
@@ -247,7 +247,7 @@ export default function CoachCoursesPage() {
                         إنشاء دورة جديدة
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-[425px]" dir="rtl">
+                  <DialogContent className="sm:max-w-[90vw] md:max-w-[425px]" dir="rtl">
                     <DialogHeader>
                       <DialogTitle>إنشاء دورة جديدة</DialogTitle>
                       <DialogDescription>
@@ -277,6 +277,7 @@ export default function CoachCoursesPage() {
         </div>
       </CardHeader>
       <CardContent>
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -361,6 +362,7 @@ export default function CoachCoursesPage() {
             ))}
           </TableBody>
         </Table>
+        </div>
       </CardContent>
     </Card>
 

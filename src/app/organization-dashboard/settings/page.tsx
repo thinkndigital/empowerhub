@@ -216,12 +216,12 @@ export default function OrgSettingsPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>اللون الأساسي</FormLabel>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <FormControl>
                         <Input type="color" className="w-12 h-10 p-1" {...field} />
                       </FormControl>
                       <FormControl>
-                        <Input className="w-40" {...field} />
+                        <Input className="w-40 max-w-full" {...field} />
                       </FormControl>
                     </div>
                     <FormDescription>

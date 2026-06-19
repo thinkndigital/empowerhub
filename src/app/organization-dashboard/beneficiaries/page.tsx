@@ -379,6 +379,7 @@ export default function BeneficiariesPage() {
               </div>
             </CardHeader>
             <CardContent>
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -490,6 +491,7 @@ export default function BeneficiariesPage() {
                   })}
                 </TableBody>
               </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -517,6 +519,7 @@ export default function BeneficiariesPage() {
               </div>
             </CardHeader>
             <CardContent>
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -566,6 +569,7 @@ export default function BeneficiariesPage() {
                   ))}
                 </TableBody>
               </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -637,6 +641,7 @@ export default function BeneficiariesPage() {
                 <>
                   <div>
                     <p className="text-sm font-medium mb-2">معاينة ({csvRows.length} سجل)</p>
+                    <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -660,6 +665,7 @@ export default function BeneficiariesPage() {
                         )}
                       </TableBody>
                     </Table>
+                    </div>
                   </div>
                   <Button onClick={handleCsvImport} disabled={csvImporting}>
                     {csvImporting ? (
@@ -685,7 +691,7 @@ export default function BeneficiariesPage() {
           {/* Section C: Groups */}
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                   <CardTitle>المجموعات</CardTitle>
                   <CardDescription>إدارة مجموعات المستفيدين في منظمتك.</CardDescription>

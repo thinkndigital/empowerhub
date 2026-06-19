@@ -150,7 +150,7 @@ export default function UsersPage() {
     <>
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 flex-wrap">
           <div>
             <CardTitle>المستخدمون</CardTitle>
             <CardDescription>
@@ -164,6 +164,7 @@ export default function UsersPage() {
         </div>
       </CardHeader>
       <CardContent>
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -246,6 +247,7 @@ export default function UsersPage() {
              )}
           </TableBody>
         </Table>
+        </div>
       </CardContent>
     </Card>
 

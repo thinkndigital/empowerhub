@@ -143,14 +143,14 @@ export default function TeamPage() {
     <>
      <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
                 <CardTitle>فريق العمل</CardTitle>
                 <CardDescription>
                 إدارة أعضاء فريق منظمتك وأدوارهم.
                 </CardDescription>
             </div>
-             <div className="flex items-center gap-2">
+             <div className="flex items-center gap-2 flex-wrap">
                 <Button variant="outline" onClick={handleExport}>
                     <Download className="ml-2 h-4 w-4" />
                     تصدير
@@ -202,6 +202,7 @@ export default function TeamPage() {
         </div>
       </CardHeader>
       <CardContent>
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -274,6 +275,7 @@ export default function TeamPage() {
             )}
           </TableBody>
         </Table>
+        </div>
       </CardContent>
     </Card>
      <AlertDialog open={!!memberToDelete} onOpenChange={(isOpen) => !isOpen && setMemberToDelete(null)}>

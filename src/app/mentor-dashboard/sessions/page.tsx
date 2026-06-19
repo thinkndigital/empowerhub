@@ -213,7 +213,7 @@ export default function MentorSessionsPage() {
       <div className="space-y-8">
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
                 <CardTitle>الجلسات</CardTitle>
                 <CardDescription>إدارة وجدولة جلسات الإرشاد مع المستفيدين.</CardDescription>
@@ -222,7 +222,7 @@ export default function MentorSessionsPage() {
                 <DialogTrigger asChild>
                   <Button><PlusCircle className="ml-2 h-4 w-4" />جدولة جلسة جديدة</Button>
                 </DialogTrigger>
-                <DialogContent dir="rtl" onPointerDownOutside={(e) => { if (e.target instanceof Element && e.target.closest('.rdp')) e.preventDefault(); }}>
+                <DialogContent dir="rtl" className="sm:max-w-[90vw] md:max-w-[600px]" onPointerDownOutside={(e) => { if (e.target instanceof Element && e.target.closest('.rdp')) e.preventDefault(); }}>
                   <DialogHeader>
                     <DialogTitle>جدولة جلسة جديدة</DialogTitle>
                     <DialogDescription>املأ التفاصيل أدناه لجدولة جلسة إرشادية جديدة.</DialogDescription>
@@ -317,17 +317,17 @@ export default function MentorSessionsPage() {
           <CardContent className="space-y-4">
             {loading && [...Array(1)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
             {!loading && upcomingSessions.map(session => (
-              <div key={session.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+              <div key={session.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 rounded-lg bg-muted/50">
                 <div>
                   <p className="font-semibold">{session.title}</p>
-                  <div className="flex items-center gap-6 text-sm text-muted-foreground mt-1">
+                  <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground mt-1">
                     <span className="flex items-center gap-1.5"><User className="h-4 w-4" />{session.beneficiaryName}</span>
                     <span className="flex items-center gap-1.5"><CalendarIcon className="h-4 w-4" />{format(safeDate(session.date), "d MMMM yyyy", { locale: ar })}</span>
                     <span className="flex items-center gap-1.5"><Clock className="h-4 w-4" />{format(safeDate(session.date), "p", { locale: ar })}</span>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button asChild disabled={!session.meetLink}>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <Button size="sm" asChild disabled={!session.meetLink}>
                     <a href={session.meetLink} target="_blank" rel="noopener noreferrer"><Video className="ml-2 h-4 w-4" />انضم للجلسة</a>
                   </Button>
                   <DropdownMenu>

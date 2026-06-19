@@ -116,7 +116,7 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">التقارير والتحليلات</h1>
           <p className="text-muted-foreground">نظرة عميقة على أدائك وتأثيرك.</p>
@@ -153,7 +153,7 @@ export default function ReportsPage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
         <Card className="border-0 shadow-sm card-hover">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">إجمالي إيرادات المتجر</CardTitle>

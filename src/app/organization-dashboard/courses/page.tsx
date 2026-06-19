@@ -170,14 +170,15 @@ export default function OrgCoursesPage() {
           <p className="text-sm">ستظهر هنا الدورات المرتبطة بمنظمتك</p>
         </div>
       ) : (
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead className="text-right">عنوان الدورة</TableHead>
-              <TableHead className="text-right">الفئة</TableHead>
-              <TableHead className="text-right">المدرب</TableHead>
+              <TableHead className="text-right hidden md:table-cell">الفئة</TableHead>
+              <TableHead className="text-right hidden md:table-cell">المدرب</TableHead>
               <TableHead className="text-right">المسجلون</TableHead>
-              <TableHead className="text-right">متوسط التقدم</TableHead>
+              <TableHead className="text-right hidden lg:table-cell">متوسط التقدم</TableHead>
               <TableHead className="text-right">الحالة</TableHead>
               <TableHead className="text-right">إجراءات</TableHead>
             </TableRow>
@@ -185,16 +186,16 @@ export default function OrgCoursesPage() {
           <TableBody>
             {courses.map((course) => (
               <TableRow key={course.id}>
-                <TableCell className="font-medium">{course.title}</TableCell>
-                <TableCell>{course.category ?? "—"}</TableCell>
-                <TableCell>{course.coachName ?? "—"}</TableCell>
+                <TableCell className="font-medium min-w-[120px]">{course.title}</TableCell>
+                <TableCell className="hidden md:table-cell">{course.category ?? "—"}</TableCell>
+                <TableCell className="hidden md:table-cell">{course.coachName ?? "—"}</TableCell>
                 <TableCell>
                   <Badge variant="outline" className="gap-1">
                     <Users className="h-3 w-3" />
                     {course.enrolledCount ?? 0}
                   </Badge>
                 </TableCell>
-                <TableCell>
+                <TableCell className="hidden lg:table-cell">
                   <div className="flex items-center gap-2 min-w-[80px]">
                     <Progress value={avgProgress(course)} className="h-2 flex-1" />
                     <span className="text-xs text-muted-foreground w-8">{avgProgress(course)}%</span>
@@ -206,7 +207,7 @@ export default function OrgCoursesPage() {
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <Button
                       size="sm"
                       variant="outline"
@@ -229,11 +230,12 @@ export default function OrgCoursesPage() {
             ))}
           </TableBody>
         </Table>
+        </div>
       )}
 
       {/* Enrollments Dialog */}
       <Dialog open={!!viewCourse} onOpenChange={(open) => !open && setViewCourse(null)}>
-        <DialogContent dir="rtl" className="max-w-lg">
+        <DialogContent dir="rtl" className="sm:max-w-[90vw] md:max-w-lg">
           <DialogHeader>
             <DialogTitle>المسجلون في: {viewCourse?.title}</DialogTitle>
             <DialogDescription>
