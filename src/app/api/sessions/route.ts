@@ -31,7 +31,14 @@ export async function GET(req: NextRequest) {
     }
 
     const sessions = snap.docs
-      .map(d => ({ id: d.id, ...d.data() }))
+      .map(d => {
+        const data = d.data();
+        let date = data.date;
+        if (date && typeof date === 'object' && (date._seconds || date.seconds)) {
+          date = new Date((date._seconds ?? date.seconds) * 1000).toISOString();
+        }
+        return { id: d.id, ...data, date };
+      })
       .sort((a: any, b: any) => (b.date || '').localeCompare(a.date || ''));
     return NextResponse.json({ sessions });
   } catch (e: any) {

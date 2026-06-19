@@ -55,17 +55,38 @@ export default function CoachDashboardPage() {
 
   useEffect(() => { fetchBeneficiaries(); }, [fetchBeneficiaries]);
 
-  const courses: Course[] = [];
-  const coursesLoading = false;
-  const sessions: { id: string; status: string; date: string }[] = [];
-  const sessLoading = false;
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [coursesLoading, setCoursesLoading] = useState(true);
+  const [sessions, setSessions] = useState<{ id: string; status: string; date: string }[]>([]);
+  const [sessLoading, setSessLoading] = useState(true);
 
-  const stats = useMemo(() => ({
-    totalEnrolled: 0,
-    publishedCourses: 0,
-    avgCompletion: 0,
-    upcomingSessions: 0,
-  }), []);
+  const fetchCoachData = useCallback(async () => {
+    if (!authUser) return;
+    const token = await authUser.getIdToken();
+    const [cRes, sRes] = await Promise.all([
+      fetch('/api/courses', { headers: { authorization: `Bearer ${token}` } }),
+      fetch('/api/sessions', { headers: { authorization: `Bearer ${token}` } }),
+    ]);
+    const cData = await cRes.json();
+    const sData = await sRes.json();
+    setCourses(cData.courses || []);
+    setCoursesLoading(false);
+    setSessions(sData.sessions || []);
+    setSessLoading(false);
+  }, [authUser]);
+
+  useEffect(() => { fetchCoachData(); }, [fetchCoachData]);
+
+  const stats = useMemo(() => {
+    const totalEnrolled = courses.reduce((s, c) => s + (c.enrolledCount || 0), 0);
+    const publishedCourses = courses.filter(c => c.status === 'published' || c.status === 'منشورة').length;
+    const avgCompletion = courses.length > 0
+      ? Math.round(courses.reduce((s, c) => s + (c.completionRate || 0), 0) / courses.length)
+      : 0;
+    const now = new Date().toISOString();
+    const upcomingSessions = sessions.filter(s => s.status === 'scheduled' && (s.date || '') >= now).length;
+    return { totalEnrolled, publishedCourses, avgCompletion, upcomingSessions };
+  }, [courses, sessions]);
 
   return (
     <>

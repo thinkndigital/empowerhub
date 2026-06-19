@@ -29,10 +29,10 @@ export default function BeneficiaryDashboardPage() {
     setLoading(true);
     try {
       const token = await authUser.getIdToken();
-      const [profileRes, sessionsRes, coursesRes] = await Promise.all([
+      const [profileRes, sessionsRes, enrollmentsRes] = await Promise.all([
         fetch('/api/user/profile', { headers: { authorization: `Bearer ${token}` } }),
         fetch('/api/beneficiary/sessions', { headers: { authorization: `Bearer ${token}` } }).catch(() => null),
-        fetch('/api/courses', { headers: { authorization: `Bearer ${token}` } }).catch(() => null),
+        fetch('/api/beneficiary/enrollments', { headers: { authorization: `Bearer ${token}` } }).catch(() => null),
       ]);
       const json = await profileRes.json();
       setProfile(json.profile);
@@ -40,12 +40,12 @@ export default function BeneficiaryDashboardPage() {
       if (sessionsRes && sessionsRes.ok) {
         const s = await sessionsRes.json();
         const now = new Date().toISOString();
-        const upcoming = (s.sessions || []).filter((sess: any) => sess.date >= now).length;
+        const upcoming = (s.sessions || []).filter((sess: any) => (sess.date || '') >= now && sess.status === 'scheduled').length;
         setUpcomingSessions(upcoming);
       }
-      if (coursesRes && coursesRes.ok) {
-        const c = await coursesRes.json();
-        setEnrolledCourses((c.courses || c.enrolled || []).length);
+      if (enrollmentsRes && enrollmentsRes.ok) {
+        const e = await enrollmentsRes.json();
+        setEnrolledCourses((e.enrollments || []).length);
       }
     } catch { /* silent */ } finally { setLoading(false); }
   }, [authUser]);

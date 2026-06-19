@@ -56,9 +56,25 @@ export default function MentorDashboardPage() {
 
   useEffect(() => { fetchBeneficiaries(); }, [fetchBeneficiaries]);
 
-  const upcomingSessions: Session[] = [];
-  const sessLoading = false;
-  const loading = benefLoading;
+  const [allSessions, setAllSessions] = useState<Session[]>([]);
+  const [sessLoading, setSessLoading] = useState(true);
+
+  const fetchSessions = useCallback(async () => {
+    if (!authUser) return;
+    setSessLoading(true);
+    try {
+      const token = await authUser.getIdToken();
+      const res = await fetch('/api/sessions', { headers: { authorization: `Bearer ${token}` } });
+      const json = await res.json();
+      setAllSessions(json.sessions || []);
+    } catch { setAllSessions([]); } finally { setSessLoading(false); }
+  }, [authUser]);
+
+  useEffect(() => { fetchSessions(); }, [fetchSessions]);
+
+  const now = new Date().toISOString();
+  const upcomingSessions = allSessions.filter(s => s.status === 'scheduled' && (s.date || '') >= now);
+  const loading = benefLoading || sessLoading;
 
   return (
     <>
@@ -121,9 +137,21 @@ export default function MentorDashboardPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
-            {upcomingSessions.length === 0 && (
+            {sessLoading && [...Array(2)].map((_, i) => <Skeleton key={i} className="h-14 w-full" />)}
+            {!sessLoading && upcomingSessions.length === 0 && (
               <p className="text-sm text-muted-foreground text-center py-4">لا توجد جلسات قادمة. <Link href="/mentor-dashboard/sessions" className="text-primary underline">جدولة جلسة</Link></p>
             )}
+            {!sessLoading && upcomingSessions.slice(0, 4).map(s => (
+              <div key={s.id} className="flex items-center gap-3 p-3 rounded-lg border">
+                <div className="h-9 w-9 rounded-lg bg-accent/20 flex items-center justify-center shrink-0">
+                  <Calendar className="h-4 w-4 text-accent-foreground" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium">{s.title}</p>
+                  <p className="text-xs text-muted-foreground">{s.date ? new Date(s.date).toLocaleDateString('ar-SA', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}</p>
+                </div>
+              </div>
+            ))}
           </CardContent>
         </Card>
 

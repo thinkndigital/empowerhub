@@ -1,18 +1,27 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar, Clock, Video } from "lucide-react";
+import { Calendar, Clock, Video, CheckCircle } from "lucide-react";
 import { useUser } from "@/firebase/auth/use-user";
-import { format, parseISO, isPast } from "date-fns";
-import { ar } from "date-fns/locale";
 
 type Session = {
   id: string; title: string; date: string; status: string; meetLink?: string; duration?: number;
 };
+
+function fmtDate(d?: string) {
+  if (!d) return "—";
+  try { return new Date(d).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' }); }
+  catch { return d; }
+}
+function fmtTime(d?: string) {
+  if (!d) return "";
+  try { return new Date(d).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }); }
+  catch { return ""; }
+}
 
 export default function BeneficiarySessionsPage() {
   const { user: authUser } = useUser();
@@ -32,8 +41,9 @@ export default function BeneficiarySessionsPage() {
 
   useEffect(() => { fetchSessions(); }, [fetchSessions]);
 
-  const upcoming = sessions.filter(s => s.status === 'scheduled' && !isPast(parseISO(s.date)));
-  const past = sessions.filter(s => s.status !== 'scheduled' || isPast(parseISO(s.date)));
+  const now = new Date().toISOString();
+  const upcoming = sessions.filter(s => s.status === 'scheduled' && (s.date || '') >= now);
+  const past = sessions.filter(s => s.status !== 'scheduled' || (s.date || '') < now);
 
   return (
     <div className="space-y-6" dir="rtl">
@@ -52,8 +62,8 @@ export default function BeneficiarySessionsPage() {
               <div>
                 <p className="font-semibold">{s.title}</p>
                 <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-                  <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{format(parseISO(s.date), "d MMMM yyyy", { locale: ar })}</span>
-                  <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{format(parseISO(s.date), "p", { locale: ar })}</span>
+                  <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{fmtDate(s.date)}</span>
+                  <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{fmtTime(s.date)}</span>
                 </div>
               </div>
               {s.meetLink && (
@@ -66,22 +76,25 @@ export default function BeneficiarySessionsPage() {
         </CardContent>
       </Card>
 
-      {past.length > 0 && (
-        <Card>
-          <CardHeader><CardTitle className="text-base">الجلسات السابقة</CardTitle></CardHeader>
-          <CardContent className="space-y-2">
-            {past.map(s => (
-              <div key={s.id} className="flex items-center justify-between p-3 border rounded-lg">
-                <div>
-                  <p className="font-medium">{s.title}</p>
-                  <p className="text-xs text-muted-foreground">{s.date ? format(parseISO(s.date), "d MMMM yyyy", { locale: ar }) : ""}</p>
-                </div>
-                <Badge variant={s.status === 'completed' ? 'default' : 'secondary'}>{s.status === 'completed' ? 'مكتملة' : 'ملغاة'}</Badge>
+      <Card>
+        <CardHeader><CardTitle className="text-base">الجلسات السابقة ({loading ? "..." : past.length})</CardTitle></CardHeader>
+        <CardContent className="space-y-2">
+          {loading && [...Array(2)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
+          {!loading && past.length === 0 && <p className="text-center text-muted-foreground py-6 text-sm">لا توجد جلسات سابقة.</p>}
+          {!loading && past.map(s => (
+            <div key={s.id} className="flex items-center justify-between p-3 border rounded-lg">
+              <div>
+                <p className="font-medium">{s.title}</p>
+                <p className="text-xs text-muted-foreground">{fmtDate(s.date)} {fmtTime(s.date)}</p>
               </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
+              <Badge variant={s.status === 'completed' ? 'default' : 'secondary'} className="gap-1">
+                {s.status === 'completed' && <CheckCircle className="h-3 w-3" />}
+                {s.status === 'completed' ? 'مكتملة' : 'ملغاة'}
+              </Badge>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
     </div>
   );
 }
