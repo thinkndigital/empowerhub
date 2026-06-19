@@ -231,9 +231,11 @@ export default function LandingPage() {
   const [mentors, setMentors] = useState<MentorUser[]>([]);
   const [coaches, setCoaches] = useState<MentorUser[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [publicStores, setPublicStores] = useState<{ id: string; name: string; logoUrl?: string; location?: string; beneficiaryName?: string }[]>([]);
   const [loadingMentors, setLoadingMentors] = useState(true);
   const [loadingCoaches, setLoadingCoaches] = useState(true);
   const [loadingProducts, setLoadingProducts] = useState(true);
+  const [loadingStores, setLoadingStores] = useState(true);
 
   // Contact form state
   const [contactName, setContactName] = useState('');
@@ -301,6 +303,21 @@ export default function LandingPage() {
         // keep empty
       } finally {
         setLoadingProducts(false);
+      }
+    })();
+
+    // Fetch public stores
+    (async () => {
+      try {
+        const res = await fetch('/api/public/stores');
+        if (res.ok) {
+          const json = await res.json();
+          setPublicStores(json.stores || []);
+        }
+      } catch {
+        // keep empty
+      } finally {
+        setLoadingStores(false);
       }
     })();
   }, [db]);
@@ -679,6 +696,57 @@ export default function LandingPage() {
                 </Link>
               </Button>
             </div>
+          </div>
+        </section>
+
+        {/* Stores Section */}
+        <section id="stores" className="py-16 md:py-24 bg-muted/20">
+          <div className="container px-4 md:px-6">
+            <div className="text-center mb-14">
+              <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">المتاجر</Badge>
+              <h2 className="text-3xl font-bold tracking-tight">متاجر رواد الأعمال</h2>
+              <p className="mt-3 text-lg text-muted-foreground">
+                اكتشف متاجر المستفيدين في مجتمعنا وادعم مشاريعهم.
+              </p>
+            </div>
+            {loadingStores ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[...Array(3)].map((_, i) => (
+                  <Card key={i} className="border-0 shadow-md animate-pulse">
+                    <CardContent className="pt-6 flex flex-col gap-2">
+                      <div className="h-5 w-3/4 rounded bg-muted" />
+                      <div className="h-4 w-1/2 rounded bg-muted" />
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : publicStores.length === 0 ? (
+              <div className="text-center py-10 text-muted-foreground">
+                <Store className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                <p>لا توجد متاجر بعد.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {publicStores.map(store => (
+                  <Card key={store.id} className="border-0 shadow-md hover:shadow-lg transition-shadow">
+                    <CardContent className="pt-6 flex flex-col gap-2">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-primary/10 rounded-full">
+                          <Store className="h-5 w-5 text-primary" />
+                        </div>
+                        <h3 className="font-bold text-base">{store.name}</h3>
+                      </div>
+                      {store.beneficiaryName && (
+                        <p className="text-sm text-muted-foreground">البائع: {store.beneficiaryName}</p>
+                      )}
+                      {store.location && (
+                        <p className="text-sm text-muted-foreground">الموقع: {store.location}</p>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </div>
         </section>
 
