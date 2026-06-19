@@ -51,7 +51,7 @@ type Organization = { id: string; name: string; };
 // A mapping for roles to display in Arabic
 const roleMap: { [key: string]: string } = {
     admin: "مشرف",
-    organization: "مدير منظمة",
+    organization: "مدير جهة",
     mentor: "مرشد",
     beneficiary: "مستفيد",
     coach: "مدرب",
@@ -150,7 +150,7 @@ export default function UsersPage() {
     <>
     <Card>
       <CardHeader>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 flex-wrap">
+        <div className="flex items-center justify-between">
           <div>
             <CardTitle>المستخدمون</CardTitle>
             <CardDescription>
@@ -164,7 +164,6 @@ export default function UsersPage() {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -247,7 +246,6 @@ export default function UsersPage() {
              )}
           </TableBody>
         </Table>
-        </div>
       </CardContent>
     </Card>
 

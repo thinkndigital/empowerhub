@@ -45,7 +45,7 @@ const roleLabel: Record<string, string> = {
   beneficiary: 'مستفيد',
   mentor: 'مرشد',
   coach: 'مدرب',
-  organization: 'مدير منظمة',
+  organization: 'مدير جهة',
   admin: 'مشرف',
 };
 

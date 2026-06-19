@@ -61,7 +61,7 @@ export default function AdminDashboardPage() {
 
   const roleLabels: Record<string, string> = {
     admin: 'مشرف',
-    organization: 'مدير منظمة',
+    organization: 'مدير جهة',
     coach: 'مدرب',
     mentor: 'مرشد',
     beneficiary: 'مستفيد',
@@ -79,7 +79,7 @@ export default function AdminDashboardPage() {
 
       <div className="grid gap-4 pt-4 grid-cols-2 lg:grid-cols-4">
         <StatCard title="إجمالي المستخدمين" value={String(users?.length ?? 0)} sub="مستخدم مسجل" icon={<Users className="h-5 w-5 text-white" />} color="bg-primary" loading={usersLoading} />
-        <StatCard title="إجمالي المنظمات" value={String(orgs?.length ?? 0)} sub="منظمة مسجلة" icon={<Building className="h-5 w-5 text-white" />} color="bg-accent" loading={orgsLoading} />
+        <StatCard title="إجمالي الجهات" value={String(orgs?.length ?? 0)} sub="جهة مسجلة" icon={<Building className="h-5 w-5 text-white" />} color="bg-accent" loading={orgsLoading} />
         <StatCard title="إجمالي المستفيدين" value={String(beneficiaries.length)} sub="مستفيد في المنصة" icon={<Activity className="h-5 w-5 text-white" />} color="bg-purple-500" loading={usersLoading} />
         <StatCard title="إجمالي الدورات" value={String(courses?.length ?? 0)} sub="دورة منشورة" icon={<BookOpen className="h-5 w-5 text-white" />} color="bg-rose-500" loading={coursesLoading} />
       </div>
@@ -92,7 +92,7 @@ export default function AdminDashboardPage() {
           </CardHeader>
           <CardContent className="grid grid-cols-2 gap-3">
             <QuickLink href="/admin-dashboard/users" label="إدارة المستخدمين" desc="عرض وإدارة جميع المستخدمين" icon={<Users className="h-4 w-4" />} />
-            <QuickLink href="/admin-dashboard/organizations" label="المنظمات" desc="إدارة المنظمات المسجلة" icon={<Building className="h-4 w-4" />} />
+            <QuickLink href="/admin-dashboard/organizations" label="الجهات" desc="إدارة الجهات المسجلة" icon={<Building className="h-4 w-4" />} />
             <QuickLink href="/admin-dashboard/courses" label="الدورات" desc="إدارة المحتوى التعليمي" icon={<BookOpen className="h-4 w-4" />} />
             <QuickLink href="/admin-dashboard/mentors" label="المرشدون" desc="إدارة فريق الإرشاد" icon={<UserCheck className="h-4 w-4" />} />
             <QuickLink href="/admin-dashboard/analytics" label="التحليلات" desc="تقارير وإحصائيات المنصة" icon={<TrendingUp className="h-4 w-4" />} />

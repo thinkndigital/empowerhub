@@ -47,7 +47,7 @@ import { NotificationBell } from "@/components/notification-bell";
 
 const menuItems = [
   { href: "/admin-dashboard", label: "لوحة التحكم", icon: LayoutGrid },
-  { href: "/admin-dashboard/organizations", label: "المنظمات", icon: Building },
+  { href: "/admin-dashboard/organizations", label: "الجهات المسجلة", icon: Building },
   { href: "/admin-dashboard/users", label: "المستخدمون", icon: Users },
   { href: "/admin-dashboard/mentors", label: "المرشدون", icon: Users },
   { href: "/admin-dashboard/courses", label: "الدورات", icon: BookOpen },
@@ -97,7 +97,7 @@ export default function AdminDashboardLayout({
   const displayEmail = userProfile.email || 'لا يوجد بريد إلكتروني';
 
   return (
-    <SidebarProvider>
+    <SidebarProvider dir="rtl">
       <Sidebar side="right">
         <SidebarHeader>
           <div className="flex items-center gap-2 p-2">
@@ -180,10 +180,10 @@ export default function AdminDashboardLayout({
               <DropdownMenuSeparator />
                {authUser ? (
                 <>
-                  <DropdownMenuItem onSelect={() => router.push('/admin-dashboard/settings')} className="text-right cursor-pointer">الملف الشخصي</DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => router.push('/admin-dashboard/settings')} className="text-right cursor-pointer">إعدادات النظام</DropdownMenuItem>
+                  <DropdownMenuItem className="text-right">الملف الشخصي</DropdownMenuItem>
+                  <DropdownMenuItem className="text-right">إعدادات النظام</DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onSelect={handleLogout} className="text-right cursor-pointer">
+                  <DropdownMenuItem onSelect={handleLogout} className="text-right">
                     تسجيل الخروج
                   </DropdownMenuItem>
                 </>
@@ -195,7 +195,7 @@ export default function AdminDashboardLayout({
             </DropdownMenuContent>
           </DropdownMenu>
         </header>
-        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-background">
+        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-background" dir="rtl">
           {children}
         </main>
       </SidebarInset>

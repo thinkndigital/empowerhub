@@ -17,7 +17,7 @@ const roles = [
   {
     icon: <Building size={28} />,
     title: "مدير منظمة",
-    description: "إدارة المستفيدين، المرشدين، الدورات، والتقارير الخاصة بمنظمتك.",
+    description: "إدارة المستفيدين، المرشدين، الدورات، والتقارير الخاصة بجهتك.",
     link: "/organization-dashboard",
     color: "bg-purple-500",
     badge: null,
