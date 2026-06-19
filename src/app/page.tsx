@@ -293,30 +293,19 @@ export default function LandingPage() {
       }
     })();
 
-    // Fetch products
-    (async () => {
-      try {
-        const q = query(collection(db, 'products'), limit(6));
-        const snap = await getDocs(q);
-        setProducts(snap.docs.map(d => ({ id: d.id, ...d.data() } as Product)));
-      } catch {
-        // keep empty
-      } finally {
-        setLoadingProducts(false);
-      }
-    })();
-
-    // Fetch public stores
+    // Fetch products + stores from public API (no auth needed, bypasses Firestore rules)
     (async () => {
       try {
         const res = await fetch('/api/public/stores');
         if (res.ok) {
           const json = await res.json();
+          setProducts((json.products || []) as Product[]);
           setPublicStores(json.stores || []);
         }
       } catch {
         // keep empty
       } finally {
+        setLoadingProducts(false);
         setLoadingStores(false);
       }
     })();
