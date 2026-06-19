@@ -26,10 +26,10 @@ export async function POST(req: NextRequest) {
   if (!checkAuth()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await req.json();
-  const { name, plan = 'free', primaryColor = '#6366f1' } = body;
+  const { name, plan = 'free', primaryColor = '#6366f1', logoUrl = '' } = body;
   if (!name) return NextResponse.json({ error: 'Name required' }, { status: 400 });
 
   const ref = adminDb.collection('organizations').doc();
-  await ref.set({ name, plan, primaryColor, createdAt: new Date() });
-  return NextResponse.json({ id: ref.id, name, plan, primaryColor });
+  await ref.set({ name, plan, primaryColor, logoUrl, createdAt: new Date() });
+  return NextResponse.json({ id: ref.id, name, plan, primaryColor, logoUrl });
 }

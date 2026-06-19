@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Plus, Pencil, Trash2, Search, Eye, Users, GraduationCap, Store, UserCheck, RefreshCw } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Eye, Users, GraduationCap, Store, UserCheck, RefreshCw, Upload } from "lucide-react";
+import { useStorage } from "@/firebase/provider";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,6 +51,53 @@ const planLabels: Record<string, string> = { free: "مجاني", pro: "احتر�
 const statusBadge: Record<string, string> = { active: "bg-emerald-500/20 text-emerald-400", suspended: "bg-red-500/20 text-red-400", pending: "bg-yellow-500/20 text-yellow-400" };
 const statusLabel: Record<string, string> = { active: "نشط", suspended: "موقوف", pending: "معلق" };
 
+function LogoUploadField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const storage = useStorage();
+  const [uploading, setUploading] = useState(false);
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !storage) return;
+    setUploading(true);
+    try {
+      const r = ref(storage, `organizations/${Date.now()}-${file.name}`);
+      const snap = await uploadBytes(r, file);
+      onChange(await getDownloadURL(snap.ref));
+    } catch {}
+    setUploading(false);
+    e.target.value = '';
+  };
+
+  return (
+    <div className="space-y-2">
+      <Label>شعار المنظمة</Label>
+      <div className="flex gap-3 items-center">
+        <div className="h-16 w-16 rounded-xl border border-white/20 overflow-hidden bg-slate-700/50 flex items-center justify-center flex-shrink-0">
+          {value
+            ? <img src={value} alt="" className="h-full w-full object-contain" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+            : <span className="text-slate-500 text-xs text-center">لا شعار</span>}
+        </div>
+        <div className="flex-1 space-y-2">
+          <Input value={value} onChange={e => onChange(e.target.value)} placeholder="https://..." dir="ltr" className="font-mono text-sm" />
+          <label className="cursor-pointer">
+            <Button type="button" variant="outline" size="sm" disabled={uploading} asChild>
+              <span className="border-white/20 text-slate-300 hover:text-white hover:bg-white/10 gap-2">
+                {uploading ? <span className="text-xs">جاري الرفع...</span> : <><Upload className="h-3 w-3" />رفع صورة</>}
+              </span>
+            </Button>
+            <input type="file" accept="image/*" className="hidden" onChange={handleFile} />
+          </label>
+        </div>
+        {value && (
+          <Button type="button" variant="ghost" size="sm" onClick={() => onChange('')} className="text-red-400 hover:text-red-300 flex-shrink-0">
+            حذف
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function OrgFormFields({ form, onChange }: { form: OrgForm; onChange: (f: OrgForm) => void }) {
   return (
     <div className="space-y-4">
@@ -70,15 +119,12 @@ function OrgFormFields({ form, onChange }: { form: OrgForm; onChange: (f: OrgFor
       <div className="space-y-2">
         <Label>اللون الرئيسي</Label>
         <div className="flex items-center gap-3">
-          <input type="color" value={form.primaryColor} onChange={e => onChange({ ...form, primaryColor: e.target.value })} className="h-10 w-12 rounded cursor-pointer border border-white/20 bg-transparent" />
-          <div className="h-10 w-10 rounded-lg border border-white/20 flex-shrink-0" style={{ backgroundColor: form.primaryColor }} />
+          <input type="color" value={form.primaryColor || '#6366f1'} onChange={e => onChange({ ...form, primaryColor: e.target.value })} className="h-10 w-12 rounded cursor-pointer border border-white/20 bg-transparent" />
+          <div className="h-10 w-10 rounded-lg border border-white/20 flex-shrink-0" style={{ backgroundColor: form.primaryColor || '#6366f1' }} />
           <Input value={form.primaryColor} onChange={e => onChange({ ...form, primaryColor: e.target.value })} className="flex-1 font-mono text-sm" dir="ltr" placeholder="#6366f1" />
         </div>
       </div>
-      <div className="space-y-2">
-        <Label>رابط الشعار (اختياري)</Label>
-        <Input value={form.logoUrl} onChange={e => onChange({ ...form, logoUrl: e.target.value })} placeholder="https://..." dir="ltr" />
-      </div>
+      <LogoUploadField value={form.logoUrl} onChange={v => onChange({ ...form, logoUrl: v })} />
     </div>
   );
 }
