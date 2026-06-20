@@ -44,6 +44,7 @@ interface Product {
 interface SiteConfig {
   siteName: string;
   tagline: string;
+  primaryColor?: string;
   logoUrl: string;
   hero: { title: string; subtitle: string; ctaText: string; ctaSecondaryText: string; backgroundImage: string };
   stats: { label: string; value: string; icon: string }[];
@@ -273,6 +274,24 @@ export default function LandingPage() {
       if (d.config) setSiteConfig(d.config);
     }).catch(() => {});
   }, []);
+
+  // Apply platform primary color from admin config
+  useEffect(() => {
+    const hex = siteConfig?.primaryColor?.replace(/^#/, '');
+    if (!hex || hex.length !== 6) return;
+    let r = parseInt(hex.slice(0, 2), 16) / 255;
+    let g = parseInt(hex.slice(2, 4), 16) / 255;
+    let b = parseInt(hex.slice(4, 6), 16) / 255;
+    const cmin = Math.min(r, g, b), cmax = Math.max(r, g, b), delta = cmax - cmin;
+    let h = 0, s = 0, l = (cmax + cmin) / 2;
+    if (delta !== 0) {
+      s = l > 0.5 ? delta / (2 - cmax - cmin) : delta / (cmax + cmin);
+      if (cmax === r) h = ((g - b) / delta + (g < b ? 6 : 0)) * 60;
+      else if (cmax === g) h = ((b - r) / delta + 2) * 60;
+      else h = ((r - g) / delta + 4) * 60;
+    }
+    document.documentElement.style.setProperty('--primary', `${Math.round(h)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`);
+  }, [siteConfig?.primaryColor]);
 
   useEffect(() => {
     (async () => {

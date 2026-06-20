@@ -18,6 +18,7 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 interface SiteConfig {
   siteName: string;
   tagline: string;
+  primaryColor: string;
   logoUrl: string;
   faviconUrl: string;
   hero: { title: string; subtitle: string; ctaText: string; ctaSecondaryText: string; backgroundImage: string };
@@ -38,6 +39,7 @@ interface SiteConfig {
 
 const defaultConfig: SiteConfig = {
   siteName: 'EmpowerHub', tagline: 'منصة التمكين الرقمي',
+  primaryColor: '#3b82f6',
   logoUrl: '', faviconUrl: '',
   hero: { title: '', subtitle: '', ctaText: 'ابدأ الآن', ctaSecondaryText: 'تعرف على المزيد', backgroundImage: '' },
   stats: [], features: [], howItWorks: [], testimonials: [],
@@ -237,6 +239,24 @@ export default function SiteEditorPage() {
                   <div className="space-y-2">
                     <Label>الشعار النصي (tagline)</Label>
                     <Input value={config.tagline} onChange={e => setConfig(c => ({ ...c, tagline: e.target.value }))} placeholder="منصة التمكين الرقمي" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>اللون الرئيسي للمنصة</Label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="color"
+                      value={config.primaryColor || '#3b82f6'}
+                      onChange={e => setConfig(c => ({ ...c, primaryColor: e.target.value }))}
+                      className="h-10 w-10 rounded-lg border border-white/10 bg-transparent cursor-pointer p-0.5"
+                    />
+                    <Input
+                      value={config.primaryColor || '#3b82f6'}
+                      onChange={e => setConfig(c => ({ ...c, primaryColor: e.target.value }))}
+                      placeholder="#3b82f6"
+                      className="max-w-[140px] font-mono"
+                    />
+                    <p className="text-xs text-slate-400">يؤثر على لون الأزرار والعناصر في صفحة الهبوط</p>
                   </div>
                 </div>
                 <ImageUploadField label="شعار الموقع (Logo)" value={config.logoUrl} onChange={url => setConfig(c => ({ ...c, logoUrl: url }))} storagePath="site/logo" />

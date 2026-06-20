@@ -7,6 +7,7 @@ export const revalidate = 0;
 const defaultConfig = {
   siteName: 'EmpowerHub',
   tagline: 'منصة التمكين الرقمي',
+  primaryColor: '#3b82f6',
   logoUrl: '',
   faviconUrl: '',
   hero: {
