@@ -20,7 +20,7 @@ export async function GET(req: NextRequest, { params }: { params: { convId: stri
       createdAt: d.data().createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
     }));
 
-    // Mark unread messages from the other party as read
+    // Mark unread messages from the other party as read and reset unread counter
     const batch = adminDb.batch();
     let hasUnread = false;
     snap.docs.forEach(d => {
@@ -29,7 +29,12 @@ export async function GET(req: NextRequest, { params }: { params: { convId: stri
         hasUnread = true;
       }
     });
-    if (hasUnread) await batch.commit();
+    if (hasUnread) {
+      batch.update(adminDb.collection('conversations').doc(convId), {
+        [`unread_${uid}`]: 0,
+      });
+      await batch.commit();
+    }
 
     return NextResponse.json({ messages });
   } catch (e: any) {

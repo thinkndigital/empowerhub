@@ -164,7 +164,6 @@ export default function MessagesCenter({ title = 'الرسائل' }: MessagesCen
       return;
     }
 
-    // Send an empty placeholder to create the conversation
     try {
       const res = await fetch('/api/messages', {
         method: 'POST',
@@ -172,14 +171,19 @@ export default function MessagesCenter({ title = 'الرسائل' }: MessagesCen
         body: JSON.stringify({ toUserId: contact.id, content: '' }),
       });
       if (res.ok) {
+        const { conversationId } = await res.json();
+        const newConv: Conversation = {
+          id: conversationId,
+          participants: [],
+          lastMessage: '',
+          lastUpdated: new Date().toISOString(),
+          unreadCount: 0,
+          otherUser: { id: contact.id, name: contact.name, role: contact.role },
+        };
         await fetchConversations();
-        setTimeout(async () => {
-          const updated = conversations.find(c => c.otherUser.id === contact.id)
-            || { id: (await res.json()).conversationId, participants: [], lastMessage: '', lastUpdated: '', unreadCount: 0, otherUser: contact };
-          setSelectedConv(updated as Conversation);
-          setMobileView('chat');
-          await fetchMessages((updated as Conversation).id);
-        }, 300);
+        setSelectedConv(newConv);
+        setMobileView('chat');
+        await fetchMessages(conversationId);
       }
     } catch { /* silent */ }
   };

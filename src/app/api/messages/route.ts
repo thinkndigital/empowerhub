@@ -2,14 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 
-const ROLE_LABELS: Record<string, string> = {
-  beneficiary: 'مستفيد',
-  mentor: 'مرشد',
-  coach: 'مدرب',
-  organization: 'مدير جهة',
-  admin: 'مشرف',
-};
-
 export async function GET(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
@@ -18,7 +10,8 @@ export async function GET(req: NextRequest) {
 
     const snap = await adminDb.collection('conversations')
       .where('participants', 'array-contains', uid)
-      .orderBy('lastUpdated', 'desc').get();
+      .orderBy('lastUpdated', 'desc')
+      .get();
 
     const conversations = await Promise.all(snap.docs.map(async d => {
       const data = d.data();
@@ -27,27 +20,17 @@ export async function GET(req: NextRequest) {
       if (otherId) {
         const u = await adminDb.collection('users').doc(otherId).get();
         if (u.exists) {
-          otherUser = {
-            id: otherId,
-            name: u.data()?.name || 'مستخدم',
-            role: u.data()?.role || '',
-          };
+          otherUser = { id: otherId, name: u.data()?.name || 'مستخدم', role: u.data()?.role || '' };
         }
       }
-
-      // Count unread messages (messages not sent by current user without a read receipt)
-      const unreadSnap = await adminDb.collection('conversations').doc(d.id)
-        .collection('msgs')
-        .where('senderId', '!=', uid)
-        .where('read', '==', false)
-        .get();
-
+      // unreadCount stored directly on conversation doc as unread_{uid}
+      const unreadCount = data[`unread_${uid}`] || 0;
       return {
         id: d.id,
         participants: data.participants || [],
         lastMessage: data.lastMessage || '',
         lastUpdated: data.lastUpdated?.toDate?.()?.toISOString() || null,
-        unreadCount: unreadSnap.size,
+        unreadCount,
         otherUser,
       };
     }));
@@ -79,39 +62,43 @@ export async function POST(req: NextRequest) {
         participants,
         createdAt: FieldValue.serverTimestamp(),
         lastUpdated: FieldValue.serverTimestamp(),
-        lastMessage: content || '',
+        lastMessage: '',
+        [`unread_${uid}`]: 0,
+        [`unread_${toUserId}`]: 0,
       });
       convId = ref.id;
     } else {
       convId = convQuery.docs[0].id;
-      if (content) {
-        await adminDb.collection('conversations').doc(convId).update({
-          lastUpdated: FieldValue.serverTimestamp(),
-          lastMessage: content,
-        });
-      }
     }
 
     let messageId = '';
-    if (content && content.trim()) {
-      // Get sender name for notification
+    const text = content?.trim() || '';
+    if (text) {
+      // Get sender name
       const senderDoc = await adminDb.collection('users').doc(uid).get();
       const senderName = senderDoc.data()?.name || 'مستخدم';
 
       const msgRef = await adminDb.collection('conversations').doc(convId).collection('msgs').add({
         senderId: uid,
-        content: content.trim(),
+        content: text,
         read: false,
         createdAt: FieldValue.serverTimestamp(),
       });
       messageId = msgRef.id;
 
-      // Create notification for recipient
+      // Update conversation: last message + increment unread for recipient
+      await adminDb.collection('conversations').doc(convId).update({
+        lastMessage: text,
+        lastUpdated: FieldValue.serverTimestamp(),
+        [`unread_${toUserId}`]: FieldValue.increment(1),
+      });
+
+      // Notify recipient
       await adminDb.collection('notifications').add({
         userId: toUserId,
         type: 'message',
         title: `رسالة جديدة من ${senderName}`,
-        body: content.slice(0, 100),
+        body: text.slice(0, 100),
         link: '/messages',
         read: false,
         createdAt: FieldValue.serverTimestamp(),
