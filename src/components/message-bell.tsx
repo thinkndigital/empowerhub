@@ -38,19 +38,21 @@ export function MessageBell({ href }: MessageBellProps) {
   }, [fetchUnread]);
 
   return (
-    <Button asChild variant="outline" size="icon" className="relative h-8 w-8">
-      <Link href={href}>
-        <MessageSquare className="h-4 w-4" />
-        {unreadCount > 0 && (
-          <Badge
-            className="absolute -top-1 -right-1 h-4 min-w-4 flex items-center justify-center p-0 px-1 text-[10px] pointer-events-none"
-            variant="destructive"
-          >
-            {unreadCount > 9 ? '9+' : unreadCount}
-          </Badge>
-        )}
-        <span className="sr-only">الرسائل</span>
-      </Link>
-    </Button>
+    <div className="relative">
+      <Button asChild variant="outline" size="icon" className="h-8 w-8">
+        <Link href={href}>
+          <MessageSquare className="h-4 w-4" />
+          <span className="sr-only">الرسائل</span>
+        </Link>
+      </Button>
+      {unreadCount > 0 && (
+        <Badge
+          className="absolute -top-1 -right-1 h-5 min-w-5 flex items-center justify-center p-0 px-1 text-xs pointer-events-none z-10"
+          variant="destructive"
+        >
+          {unreadCount > 9 ? '9+' : unreadCount}
+        </Badge>
+      )}
+    </div>
   );
 }
