@@ -358,22 +358,24 @@ function RegisterForm() {
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
-    <div className="w-full lg:grid lg:min-h-screen lg:grid-cols-2" dir="rtl">
-      <div className="flex items-center justify-center py-12 px-4">
-        <div className="mx-auto grid w-full max-w-[440px] gap-6">
+    <div className="flex min-h-screen" dir="rtl">
+      <div className="flex flex-1 flex-col items-center justify-center px-6 py-12 bg-background">
+        <div className="w-full max-w-[440px] space-y-8">
 
-          {/* Header */}
-          <div className="grid gap-2 text-center">
-            <Link href="/" className="flex justify-center mb-2">
-              <Logo className="w-12 h-12 mx-auto" />
+          {/* Logo + title */}
+          <div className="flex flex-col items-center gap-4 text-center">
+            <Link href="/" className="flex items-center justify-center">
+              <Logo className="w-14 h-14" />
             </Link>
-            <h1 className="text-3xl font-bold">{stepTitle}</h1>
-            <p className="text-balance text-muted-foreground text-sm">{stepSub}</p>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">{stepTitle}</h1>
+              <p className="mt-1.5 text-sm text-muted-foreground">{stepSub}</p>
+            </div>
 
             {/* Progress dots */}
             {selectedRole === "organization" && (
-              <div className="flex justify-center gap-2 mt-1">
-                {(["form", "plan", "gateway"] as Step[]).map((s, i) => (
+              <div className="flex gap-2">
+                {(["form", "plan", "gateway"] as Step[]).map((s) => (
                   <span
                     key={s}
                     className={`h-1.5 rounded-full transition-all ${
@@ -384,6 +386,9 @@ function RegisterForm() {
               </div>
             )}
           </div>
+
+          <div className="rounded-2xl border bg-card shadow-sm overflow-hidden">
+          <div className="p-5 space-y-4">
 
           {/* ── Step 1: Registration Form ── */}
           {step === "form" && (
@@ -821,6 +826,9 @@ function RegisterForm() {
             </div>
           )}
 
+          </div>{/* /p-5 */}
+          </div>{/* /card */}
+
           <p className="text-xs text-center text-muted-foreground">
             بالتسجيل أنت توافق على{" "}
             <Link href="#" className="underline hover:text-primary">شروط الاستخدام</Link>
@@ -837,7 +845,7 @@ function RegisterForm() {
         </div>
       </div>
 
-      <div className="hidden bg-muted lg:block relative overflow-hidden">
+      <div className="hidden lg:relative lg:flex lg:w-[480px] lg:flex-col lg:shrink-0 overflow-hidden">
         {registerImage && (
           <Image
             src={registerImage.imageUrl}
@@ -847,12 +855,33 @@ function RegisterForm() {
             data-ai-hint={registerImage.imageHint}
           />
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
-        <div className="absolute bottom-10 right-10 text-white max-w-xs">
-          <h2 className="text-2xl font-bold mb-2">ابدأ رحلتك نحو النجاح</h2>
-          <p className="text-white/80 text-sm leading-relaxed">
-            انضم إلى منصة EmpowerHub وابدأ التغيير اليوم
-          </p>
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-900/95 via-blue-950/85 to-slate-900/90" />
+        <div className="relative z-10 flex flex-col justify-between h-full p-10">
+          <div className="flex items-center gap-3">
+            <Logo className="h-8 w-8" />
+            <span className="text-xl font-bold text-white">EmpowerHub</span>
+          </div>
+          <div>
+            <h2 className="text-3xl font-bold text-white mb-3 leading-snug">
+              ابدأ رحلتك نحو النجاح
+            </h2>
+            <p className="text-white/65 text-sm leading-relaxed mb-8">
+              انضم إلى آلاف المستفيدين والجهات التي تثق بـ EmpowerHub لتحقيق أهدافها
+            </p>
+            <div className="space-y-3">
+              {[
+                'إعداد سريع في دقائق',
+                'دعم متعدد الأدوار: مستفيد، مرشد، مدرب، منظمة',
+                'لوحة تحكم متكاملة لكل دور',
+                'تقارير وتحليلات فورية',
+              ].map(feature => (
+                <div key={feature} className="flex items-center gap-3 text-sm text-white/75">
+                  <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-blue-400" />
+                  {feature}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -90,7 +90,7 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatCard title="التقدم العام" value={`${progress}%`} sub="نسبة الإنجاز في البرنامج" icon={<Activity className="h-5 w-5 text-white" />} color="bg-primary" />
-        <StatCard title="جلسات الإرشاد" value={`${completedSessions}`} sub="جلسة مكتملة" icon={<BookOpenCheck className="h-5 w-5 text-white" />} color="bg-accent" loading={loading} />
+        <StatCard title="جلسات الإرشاد" value={`${completedSessions}`} sub="جلسة مكتملة" icon={<BookOpenCheck className="h-5 w-5 text-white" />} color="bg-emerald-500" loading={loading} />
         <StatCard title="إيرادات المتجر" value={`${storeRevenue.toFixed(0)} د.أ`} sub="من الطلبات المكتملة" icon={<DollarSign className="h-5 w-5 text-white" />} color="bg-amber-500" loading={loading} />
         <StatCard title="الدورات المتاحة" value={`${courses.length}`} sub="دورة تدريبية" icon={<Target className="h-5 w-5 text-white" />} color="bg-purple-500" loading={loading} />
       </div>

@@ -112,7 +112,7 @@ export default function CoachDashboardPage() {
           value={stats.upcomingSessions}
           sub="جلسة مجدولة"
           icon={<CalendarDays className="h-5 w-5 text-white" />}
-          color="bg-accent"
+          color="bg-sky-500"
           loading={sessLoading}
         />
         <StatCard

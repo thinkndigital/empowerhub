@@ -79,7 +79,7 @@ export default function AdminDashboardPage() {
 
       <div className="grid gap-4 pt-4 grid-cols-2 lg:grid-cols-4">
         <StatCard title="إجمالي المستخدمين" value={String(users?.length ?? 0)} sub="مستخدم مسجل" icon={<Users className="h-5 w-5 text-white" />} color="bg-primary" loading={usersLoading} />
-        <StatCard title="إجمالي الجهات" value={String(orgs?.length ?? 0)} sub="جهة مسجلة" icon={<Building className="h-5 w-5 text-white" />} color="bg-accent" loading={orgsLoading} />
+        <StatCard title="إجمالي الجهات" value={String(orgs?.length ?? 0)} sub="جهة مسجلة" icon={<Building className="h-5 w-5 text-white" />} color="bg-emerald-500" loading={orgsLoading} />
         <StatCard title="إجمالي المستفيدين" value={String(beneficiaries.length)} sub="مستفيد في المنصة" icon={<Activity className="h-5 w-5 text-white" />} color="bg-purple-500" loading={usersLoading} />
         <StatCard title="إجمالي الدورات" value={String(courses?.length ?? 0)} sub="دورة منشورة" icon={<BookOpen className="h-5 w-5 text-white" />} color="bg-rose-500" loading={coursesLoading} />
       </div>

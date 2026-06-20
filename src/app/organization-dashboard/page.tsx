@@ -98,7 +98,7 @@ export default function OrganizationDashboardPage() {
       {/* Stats */}
       <div className="grid gap-4 pt-4 grid-cols-2 lg:grid-cols-4">
         <StatCard loading={loading} title="إجمالي المستفيدين" value={String(stats.total)} sub="مستفيد مسجل" icon={<Users className="h-5 w-5 text-white" />} color="bg-primary" />
-        <StatCard loading={loading} title="المستفيدون النشطون" value={String(stats.active)} sub={`${stats.total > 0 ? Math.round((stats.active / stats.total) * 100) : 0}% من الإجمالي`} icon={<UserCheck className="h-5 w-5 text-white" />} color="bg-accent" />
+        <StatCard loading={loading} title="المستفيدون النشطون" value={String(stats.active)} sub={`${stats.total > 0 ? Math.round((stats.active / stats.total) * 100) : 0}% من الإجمالي`} icon={<UserCheck className="h-5 w-5 text-white" />} color="bg-emerald-500" />
         <StatCard loading={loading} title="متوسط التقدم" value={`${stats.avgProgress}%`} sub="في جميع الدورات" icon={<BarChart3 className="h-5 w-5 text-white" />} color="bg-purple-500" />
         <StatCard loading={loading} title="المستفيدون المكتملون" value={String(stats.completed)} sub="أكملوا برنامجهم" icon={<TrendingUp className="h-5 w-5 text-white" />} color="bg-amber-500" />
       </div>

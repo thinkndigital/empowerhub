@@ -100,7 +100,7 @@ export default function MentorDashboardPage() {
           value={upcomingSessions.length}
           sub="جلسة مجدولة"
           icon={<Calendar className="h-5 w-5 text-white" />}
-          color="bg-accent"
+          color="bg-sky-500"
           loading={sessLoading}
         />
         <StatCard
