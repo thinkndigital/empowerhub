@@ -20,6 +20,7 @@ import { Logo } from "@/components/logo";
 import { useUser } from "@/firebase/auth/use-user";
 import { useAuth } from "@/firebase/provider";
 import { NotificationBell } from "@/components/notification-bell";
+import { MessageBell } from "@/components/message-bell";
 
 const allMenuItems = [
   { href: "/beneficiary-dashboard", label: "لوحة التحكم", icon: LayoutGrid, sectionKey: null },
@@ -118,9 +119,7 @@ export default function BeneficiaryDashboardLayout({ children }: { children: Rea
             </div></form>
           </div>
           <div className="flex items-center gap-2">
-            <Button asChild variant="outline" size="icon" className="h-8 w-8">
-              <Link href="/beneficiary-dashboard/messages"><MessageSquare className="h-4 w-4" /><span className="sr-only">الرسائل</span></Link>
-            </Button>
+            <MessageBell href="/beneficiary-dashboard/messages" />
             <NotificationBell />
           </div>
           <DropdownMenu>

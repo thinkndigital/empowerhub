@@ -48,6 +48,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Logo } from "@/components/logo";
 import { useUser, type UserProfile } from "@/firebase/auth/use-user";
 import { NotificationBell } from "@/components/notification-bell";
+import { MessageBell } from "@/components/message-bell";
 
 const menuItems = [
   { href: "/dashboard", label: "لوحة التحكم", icon: LayoutGrid },
@@ -194,12 +195,7 @@ export default function DashboardLayout({
             </form>
           </div>
           <div className="flex items-center gap-2">
-            <Button asChild variant="outline" size="icon" className="h-8 w-8">
-              <Link href="/dashboard/messages">
-                <MessageSquare className="h-4 w-4" />
-                <span className="sr-only">الرسائل</span>
-              </Link>
-            </Button>
+            <MessageBell href="/dashboard/messages" />
             <NotificationBell />
           </div>
           <DropdownMenu>

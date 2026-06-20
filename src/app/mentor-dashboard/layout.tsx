@@ -45,6 +45,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Logo } from "@/components/logo";
 import { useUser, type UserProfile } from "@/firebase/auth/use-user";
 import { NotificationBell } from "@/components/notification-bell";
+import { MessageBell } from "@/components/message-bell";
 
 const allMentorMenuItems = [
   { href: "/mentor-dashboard", label: "لوحة التحكم", icon: LayoutGrid, sectionKey: null },
@@ -203,12 +204,7 @@ export default function MentorDashboardLayout({
             </form>
           </div>
           <div className="flex items-center gap-2">
-            <Button asChild variant="outline" size="icon" className="h-8 w-8">
-              <Link href="/mentor-dashboard/messages">
-                <MessageSquare className="h-4 w-4" />
-                <span className="sr-only">الرسائل</span>
-              </Link>
-            </Button>
+            <MessageBell href="/mentor-dashboard/messages" />
             <NotificationBell />
           </div>
           <DropdownMenu>
