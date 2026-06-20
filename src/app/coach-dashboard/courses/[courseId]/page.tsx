@@ -319,7 +319,7 @@ export default function CourseEditPage({ params }: { params: { courseId: string 
       <div className="space-y-6">
         <Skeleton className="h-10 w-1/4" />
         <Skeleton className="h-8 w-1/2" />
-        <Card><CardHeader><Skeleton className="h-6 w-1/4" /></CardHeader>
+        <Card className="border-0 shadow-sm"><CardHeader><Skeleton className="h-6 w-1/4" /></CardHeader>
           <CardContent className="space-y-4">
             <Skeleton className="h-8 w-full" />
             <Skeleton className="h-8 w-full" />
@@ -347,7 +347,7 @@ export default function CourseEditPage({ params }: { params: { courseId: string 
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-lg font-semibold md:text-2xl">تحرير محتوى الدورة</h1>
+            <h1 className="text-2xl font-bold tracking-tight">تحرير محتوى الدورة</h1>
             <p className="text-muted-foreground">أنت تقوم بتعديل دورة: <span className="font-bold text-primary">{course.title}</span></p>
           </div>
           <div className="flex gap-2 flex-wrap">
@@ -365,7 +365,7 @@ export default function CourseEditPage({ params }: { params: { courseId: string 
         </div>
 
         {/* Basic Info */}
-        <Card>
+        <Card className="border-0 shadow-sm">
           <CardHeader><CardTitle>المعلومات الأساسية</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <FormField control={form.control} name="title" render={({ field }) => (
@@ -389,7 +389,7 @@ export default function CourseEditPage({ params }: { params: { courseId: string 
         </Card>
 
         {/* Lessons */}
-        <Card>
+        <Card className="border-0 shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Video className="h-5 w-5" /> الدروس والمحتوى</CardTitle>
             <CardDescription>أضف دروس الدورة وقم بترتيبها. كل درس يمكن أن يحتوي على فيديو ووصف.</CardDescription>
@@ -513,7 +513,7 @@ export default function CourseEditPage({ params }: { params: { courseId: string 
         </Card>
 
         {/* Materials */}
-        <Card>
+        <Card className="border-0 shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><FileText className="h-5 w-5" /> المواد التعليمية</CardTitle>
             <CardDescription>أضف روابط ومستندات ومواد تعليمية مرتبطة بالدورة.</CardDescription>
@@ -588,7 +588,7 @@ export default function CourseEditPage({ params }: { params: { courseId: string 
         </Card>
 
         {/* Quiz */}
-        <Card>
+        <Card className="border-0 shadow-sm">
           <CardHeader>
             <CardTitle>الاختبار القصير</CardTitle>
             <CardDescription>أنشئ اختبارًا قصيرًا للتحقق من فهم المستفيدين. اتركه فارغًا إذا لم تكن هناك حاجة لاختبار.</CardDescription>
@@ -633,7 +633,7 @@ export default function CourseEditPage({ params }: { params: { courseId: string 
         </Card>
 
         {/* Assessments */}
-        <Card>
+        <Card className="border-0 shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><BookCheck className="h-5 w-5" />التقييمات</CardTitle>
             <CardDescription>أنشئ تقييمًا قبليًا وبعديًا لقياس مدى تقدم المستفيدين. هذه التقييمات اختيارية.</CardDescription>

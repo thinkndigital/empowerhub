@@ -234,10 +234,10 @@ export default function MyStorePage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">إجمالي الإيرادات</CardTitle><DollarSign className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{isLoading ? '...' : `${storeStats.totalRevenue} د.أ`}</div><p className="text-xs text-muted-foreground">من الطلبات المكتملة</p></CardContent></Card>
-        <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">إجمالي المنتجات</CardTitle><Package className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{isLoading ? '...' : storeStats.totalProducts}</div><p className="text-xs text-muted-foreground">منتج معروض في المتجر</p></CardContent></Card>
-        <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">الطلبات</CardTitle><ShoppingCart className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{isLoading ? '...' : storeStats.totalOrders}</div><p className="text-xs text-muted-foreground">إجمالي الطلبات المستلمة</p></CardContent></Card>
-        <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">العملاء</CardTitle><Users className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{isLoading ? '...' : storeStats.newCustomers}</div><p className="text-xs text-muted-foreground">إجمالي عدد العملاء</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">إجمالي الإيرادات</CardTitle><div className="h-9 w-9 rounded-lg bg-primary flex items-center justify-center"><DollarSign className="h-5 w-5 text-white" /></div></CardHeader><CardContent>{isLoading ? <Skeleton className="h-8 w-24" /> : <div className="text-2xl font-bold">{storeStats.totalRevenue} د.أ</div>}<p className="text-xs text-muted-foreground mt-1">من الطلبات المكتملة</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">إجمالي المنتجات</CardTitle><div className="h-9 w-9 rounded-lg bg-emerald-500 flex items-center justify-center"><Package className="h-5 w-5 text-white" /></div></CardHeader><CardContent>{isLoading ? <Skeleton className="h-8 w-16" /> : <div className="text-2xl font-bold">{storeStats.totalProducts}</div>}<p className="text-xs text-muted-foreground mt-1">منتج معروض في المتجر</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">الطلبات</CardTitle><div className="h-9 w-9 rounded-lg bg-amber-500 flex items-center justify-center"><ShoppingCart className="h-5 w-5 text-white" /></div></CardHeader><CardContent>{isLoading ? <Skeleton className="h-8 w-16" /> : <div className="text-2xl font-bold">{storeStats.totalOrders}</div>}<p className="text-xs text-muted-foreground mt-1">إجمالي الطلبات المستلمة</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">العملاء</CardTitle><div className="h-9 w-9 rounded-lg bg-purple-500 flex items-center justify-center"><Users className="h-5 w-5 text-white" /></div></CardHeader><CardContent>{isLoading ? <Skeleton className="h-8 w-16" /> : <div className="text-2xl font-bold">{storeStats.newCustomers}</div>}<p className="text-xs text-muted-foreground mt-1">إجمالي عدد العملاء</p></CardContent></Card>
       </div>
 
       <div>
@@ -301,7 +301,7 @@ export default function MyStorePage() {
         </div>
       </div>
 
-      <Card>
+      <Card className="border-0 shadow-sm">
         <CardHeader><CardTitle>الطلبات الواردة</CardTitle><CardDescription>إدارة الطلبات الجديدة على منتجاتك.</CardDescription></CardHeader>
         <CardContent>
           <Table>

@@ -230,7 +230,7 @@ export default function AnalyticsPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Card>
+        <Card className="border-0 shadow-sm">
           <CardHeader>
             <CardTitle>نمو المبيعات الشهرية</CardTitle>
             <CardDescription>إجمالي مبيعات المتاجر على مدار 6 أشهر.</CardDescription>
@@ -251,7 +251,7 @@ export default function AnalyticsPage() {
             </ChartContainer>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-0 shadow-sm">
           <CardHeader>
             <CardTitle>الدورات الأكثر تسجيلاً</CardTitle>
             <CardDescription>ترتيب الدورات حسب عدد المسجلين.</CardDescription>

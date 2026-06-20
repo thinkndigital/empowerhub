@@ -135,7 +135,7 @@ export default function MentorInvitationsPage() {
 
       {/* History */}
       {history.length > 0 && (
-        <Card>
+        <Card className="border-0 shadow-sm">
           <CardHeader>
             <CardTitle className="text-base">السجل</CardTitle>
           </CardHeader>

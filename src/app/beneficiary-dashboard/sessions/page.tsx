@@ -48,7 +48,7 @@ export default function BeneficiarySessionsPage() {
   return (
     <div className="space-y-6" dir="rtl">
       <div>
-        <h1 className="text-2xl font-bold">جلساتي</h1>
+        <h1 className="text-2xl font-bold tracking-tight">جلساتي</h1>
         <p className="text-muted-foreground text-sm mt-1">جلسات الإرشاد والتدريب المجدولة لك</p>
       </div>
 

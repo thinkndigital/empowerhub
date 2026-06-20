@@ -58,7 +58,7 @@ export default function BeneficiaryProfilePage() {
           <ArrowRight className="h-4 w-4" />
         </Button>
         <div>
-          <h1 className="text-2xl font-bold">{loading ? "جاري التحميل..." : (profile?.name || "مستفيد")}</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{loading ? "جاري التحميل..." : (profile?.name || "مستفيد")}</h1>
           <p className="text-muted-foreground text-sm">ملف المستفيد</p>
         </div>
       </div>
@@ -117,7 +117,7 @@ export default function BeneficiaryProfilePage() {
             {/* Right column */}
             <div className="md:col-span-2 space-y-4">
               {/* Enrolled Courses */}
-              <Card>
+              <Card className="border-0 shadow-sm">
                 <CardHeader><CardTitle className="text-base flex items-center gap-2"><BookOpen className="h-4 w-4" />الدورات المسجل فيها ({profile?.enrolledCourses?.length ?? 0})</CardTitle></CardHeader>
                 <CardContent>
                   {(profile?.enrolledCourses ?? []).length === 0 ? (
@@ -142,7 +142,7 @@ export default function BeneficiaryProfilePage() {
               </Card>
 
               {/* Sessions */}
-              <Card>
+              <Card className="border-0 shadow-sm">
                 <CardHeader><CardTitle className="text-base flex items-center gap-2"><Calendar className="h-4 w-4" />الجلسات ({profile?.sessions?.length ?? 0})</CardTitle></CardHeader>
                 <CardContent>
                   {(profile?.sessions ?? []).length === 0 ? (

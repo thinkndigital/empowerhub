@@ -65,14 +65,14 @@ export default function MentorProfilePage() {
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" onClick={() => router.back()}><ArrowRight className="h-4 w-4" /></Button>
         <div>
-          <h1 className="text-2xl font-bold">{profile?.name || "مرشد"}</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{profile?.name || "مرشد"}</h1>
           <p className="text-muted-foreground text-sm">ملف المرشد</p>
         </div>
       </div>
 
       {loading ? <Skeleton className="h-64 w-full" /> : (
         <div className="grid gap-4 md:grid-cols-3">
-          <Card>
+          <Card className="border-0 shadow-sm">
             <CardHeader><CardTitle className="text-base">المعلومات</CardTitle></CardHeader>
             <CardContent className="space-y-3">
               <div className="flex flex-col items-center gap-2 pb-3 border-b">
@@ -95,7 +95,7 @@ export default function MentorProfilePage() {
           </Card>
 
           <div className="md:col-span-2 space-y-4">
-            <Card>
+            <Card className="border-0 shadow-sm">
               <CardHeader><CardTitle className="text-base flex items-center gap-2"><Users className="h-4 w-4" />المستفيدون ({beneficiaries.length})</CardTitle></CardHeader>
               <CardContent>
                 {beneficiaries.length === 0 ? <p className="text-muted-foreground text-sm">لا يوجد مستفيدون.</p> : (
@@ -119,7 +119,7 @@ export default function MentorProfilePage() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-0 shadow-sm">
               <CardHeader><CardTitle className="text-base flex items-center gap-2"><Calendar className="h-4 w-4" />الجلسات ({sessions.length})</CardTitle></CardHeader>
               <CardContent>
                 {sessions.length === 0 ? <p className="text-muted-foreground text-sm">لا توجد جلسات.</p> : (

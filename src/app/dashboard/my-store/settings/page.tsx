@@ -165,7 +165,7 @@ export default function StoreSettingsPage() {
     return (
       <div className="max-w-4xl mx-auto space-y-6">
         <Skeleton className="h-8 w-1/3" />
-        <Card><CardContent className="p-6 space-y-4"><Skeleton className="h-10 w-full" /><Skeleton className="h-20 w-full" /></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardContent className="p-6 space-y-4"><Skeleton className="h-10 w-full" /><Skeleton className="h-20 w-full" /></CardContent></Card>
       </div>
     );
   }
@@ -176,7 +176,7 @@ export default function StoreSettingsPage() {
       <p className="text-muted-foreground mb-6">إدارة الهوية المرئية ومعلومات التواصل لمتجرك.</p>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-          <Card>
+          <Card className="border-0 shadow-sm">
             <CardHeader><CardTitle className="flex items-center gap-2"><Building className="h-5 w-5" /> المعلومات الأساسية</CardTitle></CardHeader>
             <CardContent className="space-y-6">
               <FormField control={form.control} name="name" render={({ field }) => (
@@ -198,7 +198,7 @@ export default function StoreSettingsPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-0 shadow-sm">
             <CardHeader><CardTitle>معلومات التواصل</CardTitle></CardHeader>
             <CardContent className="space-y-6">
               <FormField control={form.control} name="location" render={({ field }) => (
@@ -213,7 +213,7 @@ export default function StoreSettingsPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-0 shadow-sm">
             <CardHeader><CardTitle>حسابات التواصل الاجتماعي</CardTitle></CardHeader>
             <CardContent className="space-y-6">
               <FormField control={form.control} name="socials.facebook" render={({ field }) => (

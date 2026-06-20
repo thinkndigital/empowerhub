@@ -284,7 +284,7 @@ export default function OrganizationsPage() {
 
   return (
     <div dir="rtl">
-      <Card>
+      <Card className="border-0 shadow-sm">
         <CardHeader>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>

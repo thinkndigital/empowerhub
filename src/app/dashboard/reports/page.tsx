@@ -188,7 +188,7 @@ export default function ReportsPage() {
 
       {/* Products summary */}
       {!loading && products && products.length > 0 && (
-        <Card>
+        <Card className="border-0 shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><ShoppingCart className="h-5 w-5" /> ملخص منتجاتي</CardTitle>
           </CardHeader>
@@ -204,7 +204,7 @@ export default function ReportsPage() {
       )}
 
       <div className="grid gap-6 md:grid-cols-2">
-        <Card>
+        <Card className="border-0 shadow-sm">
           <CardHeader>
             <CardTitle>إيرادات المتجر الشهرية</CardTitle>
             <CardDescription>إجمالي الإيرادات من متجرك على مدار الأشهر الستة الماضية.</CardDescription>
@@ -225,7 +225,7 @@ export default function ReportsPage() {
             </ChartContainer>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-0 shadow-sm">
           <CardHeader>
             <CardTitle>التقدم في البرنامج</CardTitle>
             <CardDescription>نسبة إنجازك في البرنامج وجلسات الإرشاد.</CardDescription>
@@ -247,7 +247,7 @@ export default function ReportsPage() {
       </div>
 
       {salesByCategoryData.length > 0 && (
-        <Card>
+        <Card className="border-0 shadow-sm">
           <CardHeader>
             <CardTitle>مبيعات المتجر حسب الفئة</CardTitle>
             <CardDescription>توزيع إيرادات متجرك على فئات المنتجات المختلفة.</CardDescription>

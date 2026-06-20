@@ -268,7 +268,7 @@ export default function AdminCourseEditPage({ params }: { params: { courseId: st
             </div>
         </div>
 
-        <Card>
+        <Card className="border-0 shadow-sm">
           <CardHeader>
             <CardTitle>المعلومات الأساسية</CardTitle>
           </CardHeader>
@@ -285,7 +285,7 @@ export default function AdminCourseEditPage({ params }: { params: { courseId: st
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="border-0 shadow-sm">
             <CardHeader>
                 <CardTitle>محتوى الفيديو</CardTitle>
                 <CardDescription>أضف رابط الفيديو الرئيسي للدورة. يمكنك استخدام روابط من يوتيوب أو فيميو.</CardDescription>
@@ -301,7 +301,7 @@ export default function AdminCourseEditPage({ params }: { params: { courseId: st
             </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-0 shadow-sm">
             <CardHeader>
                 <CardTitle>الاختبار القصير</CardTitle>
                 <CardDescription>أنشئ اختبارًا قصيرًا للتحقق من فهم المستفيدين. اتركه فارغًا إذا لم تكن هناك حاجة لاختبار.</CardDescription>
@@ -361,7 +361,7 @@ export default function AdminCourseEditPage({ params }: { params: { courseId: st
             </CardContent>
         </Card>
         
-        <Card>
+        <Card className="border-0 shadow-sm">
             <CardHeader>
                 <CardTitle className="flex items-center gap-2"><BookCheck className="h-5 w-5" />التقييمات</CardTitle>
                 <CardDescription>

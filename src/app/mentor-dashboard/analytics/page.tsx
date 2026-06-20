@@ -130,7 +130,7 @@ export default function MentorAnalyticsPage() {
       </div>
 
       {!loading && beneficiaries.length > 0 && (
-        <Card>
+        <Card className="border-0 shadow-sm">
           <CardHeader><CardTitle className="flex items-center gap-2"><TrendingUp className="h-5 w-5" />تقدم المستفيدين</CardTitle><CardDescription>نسبة إنجاز كل مستفيد.</CardDescription></CardHeader>
           <CardContent className="space-y-4">
             {beneficiaries.map(b => (
@@ -144,7 +144,7 @@ export default function MentorAnalyticsPage() {
       )}
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Card>
+        <Card className="border-0 shadow-sm">
           <CardHeader><CardTitle>تقدم المستفيدين</CardTitle><CardDescription>التقدم الحالي للمستفيدين الذين تشرف عليهم.</CardDescription></CardHeader>
           <CardContent>
             <ChartContainer config={progressConfig} className="h-[250px] w-full relative">
@@ -162,7 +162,7 @@ export default function MentorAnalyticsPage() {
             </ChartContainer>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-0 shadow-sm">
           <CardHeader><CardTitle>تكرار الجلسات الشهرية</CardTitle><CardDescription>عدد الجلسات المنجزة على مدار 6 أشهر.</CardDescription></CardHeader>
           <CardContent>
             <ChartContainer config={sessionFrequencyConfig} className="h-[250px] w-full relative">

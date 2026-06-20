@@ -137,7 +137,7 @@ export default function CoachAnalyticsPage() {
       </div>
 
       {!loading && beneficiaries && beneficiaries.length > 0 && (
-        <Card>
+        <Card className="border-0 shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><TrendingUp className="h-5 w-5" /> تقدم المتدربين</CardTitle>
           </CardHeader>
@@ -156,7 +156,7 @@ export default function CoachAnalyticsPage() {
       )}
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Card>
+        <Card className="border-0 shadow-sm">
           <CardHeader>
             <CardTitle>تقدم المتدربين</CardTitle>
             <CardDescription>التقدم الحالي للمتدربين الذين تشرف عليهم.</CardDescription>
@@ -177,7 +177,7 @@ export default function CoachAnalyticsPage() {
             </ChartContainer>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-0 shadow-sm">
           <CardHeader>
             <CardTitle>تكرار الجلسات الشهرية</CardTitle>
             <CardDescription>عدد الجلسات المنجزة على مدار 6 أشهر.</CardDescription>

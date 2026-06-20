@@ -85,8 +85,8 @@ export default function BeneficiaryCoursesPage() {
   return (
     <div className="space-y-6" dir="rtl">
       <div>
-        <h1 className="text-2xl font-bold">الدورات التدريبية</h1>
-        <p className="text-muted-foreground">تصفح الدورات المتاحة وانضم إليها</p>
+        <h1 className="text-2xl font-bold tracking-tight">الدورات التدريبية</h1>
+        <p className="text-sm text-muted-foreground">تصفح الدورات المتاحة وانضم إليها</p>
       </div>
 
       {loading ? (
