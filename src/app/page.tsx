@@ -442,7 +442,6 @@ export default function LandingPage() {
     { title: 'برامج التدريب المهني', description: 'دورات متخصصة في التقنية، الأعمال والتصميم لتزويدك بمهارات سوق العمل الحديث.', icon: 'GraduationCap', badge: 'متاح الآن', color: 'bg-primary', link: '/register' },
     { title: 'الإرشاد الفردي', description: 'جلسات مخصصة مع مرشدين خبراء لمساعدتك في رسم مسارك المهني وتحقيق أهدافك.', icon: 'Users', badge: 'مجاني', color: 'bg-sky-500', link: '/register' },
     { title: 'ريادة الأعمال', description: 'ابدأ مشروعك، أطلق متجرك الإلكتروني، وابنِ مصدر دخل مستدام مع دعم متكامل.', icon: 'Store', badge: 'جديد', color: 'bg-amber-500', link: '/register' },
-    { title: 'المواطنة الفاعلة', description: 'انضم لبرامج التمكين المجتمعي وكن عضواً فاعلاً ومؤثراً في مجتمعك.', icon: 'Globe', badge: '', color: 'bg-purple-500', link: '/register' },
   ];
 
   const blogPostsData = cfg?.blogPosts?.length ? cfg.blogPosts : [
