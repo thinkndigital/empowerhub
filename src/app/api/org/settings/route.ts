@@ -29,7 +29,8 @@ export async function PUT(req: NextRequest) {
     }
     if (!orgId) return NextResponse.json({ error: 'Not an org' }, { status: 403 });
     const body = await req.json();
-    await adminDb.collection('organizations').doc(orgId).update(body);
+    // set+merge creates the document if it doesn't exist yet
+    await adminDb.collection('organizations').doc(orgId).set(body, { merge: true });
     return NextResponse.json({ success: true });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
