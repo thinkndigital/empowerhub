@@ -121,12 +121,11 @@ export default function OrgSettingsPage() {
       };
 
       // Upload logo via server media API
-      if (values.logo && values.logo.length > 0 && user) {
+      if (values.logo && values.logo.length > 0) {
         const file = values.logo[0] as File;
         const fd = new FormData();
         fd.append('file', file);
         fd.append('folder', 'org-logos');
-        const token = await user.getIdToken();
         const uploadRes = await fetch('/api/media', {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
