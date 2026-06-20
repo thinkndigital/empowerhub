@@ -17,10 +17,9 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
-  DropdownMenuSeparator,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { Send, PlusCircle, ArrowRight, MessageSquare, Search, Users, Trash2, MoreVertical, Ban, ShieldOff } from 'lucide-react';
+import { Send, PlusCircle, ArrowLeft, MessageSquare, Search, Users, Trash2, MoreVertical, Ban, ShieldOff } from 'lucide-react';
 
 const ROLE_LABELS: Record<string, string> = {
   beneficiary: 'مستفيد',
@@ -30,42 +29,17 @@ const ROLE_LABELS: Record<string, string> = {
   admin: 'مشرف',
 };
 
-interface Contact {
-  id: string;
-  name: string;
-  role: string;
-  roleLabel: string;
-}
-
-interface OtherUser {
-  id: string;
-  name: string;
-  role: string;
-}
-
+interface Contact { id: string; name: string; role: string; roleLabel: string; }
+interface OtherUser { id: string; name: string; role: string; }
 interface Conversation {
-  id: string;
-  participants: string[];
-  lastMessage: string;
-  lastUpdated: string;
-  unreadCount: number;
-  otherUser: OtherUser;
+  id: string; participants: string[]; lastMessage: string;
+  lastUpdated: string; unreadCount: number; otherUser: OtherUser;
 }
-
-interface Message {
-  id: string;
-  senderId: string;
-  content: string;
-  createdAt: string;
-}
-
-interface MessagesCenterProps {
-  title?: string;
-}
+interface Message { id: string; senderId: string; content: string; createdAt: string; }
+interface MessagesCenterProps { title?: string; }
 
 export default function MessagesCenter({ title = 'الرسائل' }: MessagesCenterProps) {
   const { user } = useUser();
-
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [selectedConv, setSelectedConv] = useState<Conversation | null>(null);
@@ -80,10 +54,13 @@ export default function MessagesCenter({ title = 'الرسائل' }: MessagesCen
   const [blockedUsers, setBlockedUsers] = useState<string[]>([]);
   const [showBlockConfirm, setShowBlockConfirm] = useState(false);
   const [showUnblockConfirm, setShowUnblockConfirm] = useState(false);
+  const [showDeleteConvConfirm, setShowDeleteConvConfirm] = useState(false);
   const [hoveredMsgId, setHoveredMsgId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const convIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const msgIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isFirstMsgLoad = useRef(true);
+  const prevMsgCount = useRef(0);
 
   const getToken = useCallback(async () => {
     if (!user) return null;
@@ -97,7 +74,17 @@ export default function MessagesCenter({ title = 'الرسائل' }: MessagesCen
       const res = await fetch('/api/messages', { headers: { Authorization: `Bearer ${token}` } });
       if (res.ok) {
         const data = await res.json();
-        setConversations(data.conversations || []);
+        const fresh = data.conversations || [];
+        setConversations(prev => {
+          // Avoid re-render if nothing changed
+          if (
+            prev.length === fresh.length &&
+            prev.every((c, i) => c.id === fresh[i]?.id &&
+              c.unreadCount === fresh[i]?.unreadCount &&
+              c.lastMessage === fresh[i]?.lastMessage)
+          ) return prev;
+          return fresh;
+        });
       }
     } catch { /* silent */ } finally {
       setLoadingConvs(false);
@@ -109,10 +96,7 @@ export default function MessagesCenter({ title = 'الرسائل' }: MessagesCen
     if (!token) return;
     try {
       const res = await fetch('/api/messages/contacts', { headers: { Authorization: `Bearer ${token}` } });
-      if (res.ok) {
-        const data = await res.json();
-        setContacts(data.contacts || []);
-      }
+      if (res.ok) { const data = await res.json(); setContacts(data.contacts || []); }
     } catch { /* silent */ }
   }, [getToken]);
 
@@ -121,22 +105,26 @@ export default function MessagesCenter({ title = 'الرسائل' }: MessagesCen
     if (!token) return;
     try {
       const res = await fetch('/api/messages/block', { headers: { Authorization: `Bearer ${token}` } });
-      if (res.ok) {
-        const data = await res.json();
-        setBlockedUsers(data.blockedUsers || []);
-      }
+      if (res.ok) { const data = await res.json(); setBlockedUsers(data.blockedUsers || []); }
     } catch { /* silent */ }
   }, [getToken]);
 
   const fetchMessages = useCallback(async (convId: string) => {
     const token = await getToken();
     if (!token) return;
-    setLoadingMsgs(true);
+    // Show skeleton only on first load of this conversation
+    if (isFirstMsgLoad.current) setLoadingMsgs(true);
     try {
       const res = await fetch(`/api/messages/${convId}`, { headers: { Authorization: `Bearer ${token}` } });
       if (res.ok) {
         const data = await res.json();
-        setMessages(data.messages || []);
+        const fresh = data.messages || [];
+        setMessages(prev => {
+          // Avoid re-render if message IDs haven't changed
+          if (prev.length === fresh.length && prev.every((m, i) => m.id === fresh[i]?.id)) return prev;
+          return fresh;
+        });
+        isFirstMsgLoad.current = false;
       }
     } catch { /* silent */ } finally {
       setLoadingMsgs(false);
@@ -144,9 +132,7 @@ export default function MessagesCenter({ title = 'الرسائل' }: MessagesCen
   }, [getToken]);
 
   useEffect(() => {
-    fetchConversations();
-    fetchContacts();
-    fetchBlockedUsers();
+    fetchConversations(); fetchContacts(); fetchBlockedUsers();
   }, [fetchConversations, fetchContacts, fetchBlockedUsers]);
 
   useEffect(() => {
@@ -162,11 +148,18 @@ export default function MessagesCenter({ title = 'الرسائل' }: MessagesCen
     return () => { if (msgIntervalRef.current) clearInterval(msgIntervalRef.current); };
   }, [selectedConv, fetchMessages]);
 
+  // Scroll to bottom only when new messages arrive
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messages.length > prevMsgCount.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+    prevMsgCount.current = messages.length;
   }, [messages]);
 
   const selectConversation = (conv: Conversation) => {
+    isFirstMsgLoad.current = true;
+    prevMsgCount.current = 0;
+    setMessages([]);
     setSelectedConv(conv);
     setMobileView('chat');
     setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, unreadCount: 0 } : c));
@@ -177,13 +170,8 @@ export default function MessagesCenter({ title = 'الرسائل' }: MessagesCen
     setContactSearch('');
     const token = await getToken();
     if (!token) return;
-
     const existing = conversations.find(c => c.otherUser.id === contact.id);
-    if (existing) {
-      selectConversation(existing);
-      return;
-    }
-
+    if (existing) { selectConversation(existing); return; }
     try {
       const res = await fetch('/api/messages', {
         method: 'POST',
@@ -193,17 +181,12 @@ export default function MessagesCenter({ title = 'الرسائل' }: MessagesCen
       if (res.ok) {
         const { conversationId } = await res.json();
         const newConv: Conversation = {
-          id: conversationId,
-          participants: [],
-          lastMessage: '',
-          lastUpdated: new Date().toISOString(),
-          unreadCount: 0,
+          id: conversationId, participants: [], lastMessage: '',
+          lastUpdated: new Date().toISOString(), unreadCount: 0,
           otherUser: { id: contact.id, name: contact.name, role: contact.role },
         };
         await fetchConversations();
-        setSelectedConv(newConv);
-        setMobileView('chat');
-        await fetchMessages(conversationId);
+        selectConversation(newConv);
       }
     } catch { /* silent */ }
   };
@@ -222,16 +205,12 @@ export default function MessagesCenter({ title = 'الرسائل' }: MessagesCen
         body: JSON.stringify({ toUserId: selectedConv.otherUser.id, content: text }),
       });
       if (res.ok) {
+        // Force scroll on send
+        prevMsgCount.current = 0;
         await fetchMessages(selectedConv.id);
         await fetchConversations();
-      } else {
-        setNewMessage(text);
-      }
-    } catch {
-      setNewMessage(text);
-    } finally {
-      setSending(false);
-    }
+      } else { setNewMessage(text); }
+    } catch { setNewMessage(text); } finally { setSending(false); }
   };
 
   const deleteMessage = async (msgId: string) => {
@@ -242,10 +221,25 @@ export default function MessagesCenter({ title = 'الرسائل' }: MessagesCen
     setHoveredMsgId(null);
     try {
       await fetch(`/api/messages/${selectedConv.id}?msgId=${msgId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
+        method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
       });
       await fetchConversations();
+    } catch { /* silent */ }
+  };
+
+  const deleteConversation = async () => {
+    if (!selectedConv) return;
+    const token = await getToken();
+    if (!token) return;
+    const convId = selectedConv.id;
+    setConversations(prev => prev.filter(c => c.id !== convId));
+    setSelectedConv(null);
+    setMobileView('list');
+    setShowDeleteConvConfirm(false);
+    try {
+      await fetch(`/api/messages/${convId}`, {
+        method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
+      });
     } catch { /* silent */ }
   };
 
@@ -288,10 +282,8 @@ export default function MessagesCenter({ title = 'الرسائل' }: MessagesCen
   };
 
   const filteredContacts = contacts.filter(c =>
-    c.name.toLowerCase().includes(contactSearch.toLowerCase()) ||
-    c.roleLabel.includes(contactSearch)
+    c.name.toLowerCase().includes(contactSearch.toLowerCase()) || c.roleLabel.includes(contactSearch)
   );
-
   const groupedContacts = filteredContacts.reduce<Record<string, Contact[]>>((acc, c) => {
     const label = c.roleLabel || c.role;
     if (!acc[label]) acc[label] = [];
@@ -312,68 +304,67 @@ export default function MessagesCenter({ title = 'الرسائل' }: MessagesCen
       </div>
 
       <div className="flex flex-col md:flex-row gap-4 flex-1 min-h-0">
+
         {/* ── Conversations Panel ── */}
         <Card className={`w-full md:w-72 lg:w-80 flex-shrink-0 flex flex-col overflow-hidden ${mobileView === 'chat' ? 'hidden md:flex' : 'flex'}`}>
           <CardHeader className="py-3 px-4 border-b">
-            <CardTitle className="text-base">المحادثات</CardTitle>
+            <CardTitle className="text-base text-right">المحادثات</CardTitle>
           </CardHeader>
           <CardContent className="flex-1 p-0 overflow-hidden">
             <ScrollArea className="h-full">
-              {loadingConvs ? (
-                <div className="p-3 space-y-3">
-                  {[...Array(4)].map((_, i) => (
-                    <div key={i} className="flex items-center gap-3">
-                      <Skeleton className="h-10 w-10 rounded-full flex-shrink-0" />
-                      <div className="space-y-1 flex-1">
-                        <Skeleton className="h-3 w-24" />
-                        <Skeleton className="h-3 w-32" />
+              {/* Explicit dir inside ScrollArea viewport */}
+              <div dir="rtl">
+                {loadingConvs ? (
+                  <div className="p-3 space-y-3">
+                    {[...Array(4)].map((_, i) => (
+                      <div key={i} className="flex items-center gap-3">
+                        <Skeleton className="h-10 w-10 rounded-full flex-shrink-0" />
+                        <div className="space-y-1 flex-1">
+                          <Skeleton className="h-3 w-24" /><Skeleton className="h-3 w-32" />
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              ) : conversations.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground gap-2">
-                  <MessageSquare className="h-8 w-8 opacity-40" />
-                  <p className="text-sm">لا توجد محادثات</p>
-                  <Button variant="outline" size="sm" onClick={() => setShowNewChat(true)} className="mt-1 text-xs gap-1">
-                    <PlusCircle className="h-3 w-3" />
-                    ابدأ محادثة
-                  </Button>
-                </div>
-              ) : (
-                conversations.map(conv => (
-                  <button
-                    key={conv.id}
-                    onClick={() => selectConversation(conv)}
-                    className={`w-full flex items-center gap-3 p-3 hover:bg-accent/50 transition-colors border-b text-right ${selectedConv?.id === conv.id ? 'bg-accent' : ''}`}
-                  >
-                    <Avatar className="h-10 w-10 flex-shrink-0">
-                      <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                        {conv.otherUser.name?.charAt(0) || '؟'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="font-medium text-sm truncate">{conv.otherUser.name}</span>
-                        {conv.unreadCount > 0 && (
-                          <Badge variant="destructive" className="h-5 min-w-5 flex items-center justify-center p-0 px-1 text-xs flex-shrink-0">
-                            {conv.unreadCount > 9 ? '9+' : conv.unreadCount}
-                          </Badge>
-                        )}
+                    ))}
+                  </div>
+                ) : conversations.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-muted-foreground gap-2">
+                    <MessageSquare className="h-8 w-8 opacity-40" />
+                    <p className="text-sm">لا توجد محادثات</p>
+                    <Button variant="outline" size="sm" onClick={() => setShowNewChat(true)} className="mt-1 text-xs gap-1">
+                      <PlusCircle className="h-3 w-3" />ابدأ محادثة
+                    </Button>
+                  </div>
+                ) : (
+                  conversations.map(conv => (
+                    <button
+                      key={conv.id}
+                      onClick={() => selectConversation(conv)}
+                      className={`w-full flex items-center gap-3 p-3 hover:bg-accent/50 transition-colors border-b text-right ${selectedConv?.id === conv.id ? 'bg-accent' : ''}`}
+                      dir="rtl"
+                    >
+                      <Avatar className="h-10 w-10 flex-shrink-0">
+                        <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                          {conv.otherUser.name?.charAt(0) || '؟'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0 text-right">
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="font-medium text-sm truncate">{conv.otherUser.name}</span>
+                          {conv.unreadCount > 0 && (
+                            <Badge variant="destructive" className="h-5 min-w-5 flex items-center justify-center p-0 px-1 text-xs flex-shrink-0">
+                              {conv.unreadCount > 9 ? '9+' : conv.unreadCount}
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {ROLE_LABELS[conv.otherUser.role] || conv.otherUser.role}
+                          {blockedUsers.includes(conv.otherUser.id) && <span className="mr-1 text-destructive">• محظور</span>}
+                        </p>
+                        {conv.lastMessage && <p className="text-xs text-muted-foreground truncate mt-0.5">{conv.lastMessage}</p>}
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        {ROLE_LABELS[conv.otherUser.role] || conv.otherUser.role}
-                        {blockedUsers.includes(conv.otherUser.id) && (
-                          <span className="mr-1 text-destructive">• محظور</span>
-                        )}
-                      </p>
-                      {conv.lastMessage && (
-                        <p className="text-xs text-muted-foreground truncate mt-0.5">{conv.lastMessage}</p>
-                      )}
-                    </div>
-                  </button>
-                ))
-              )}
+                    </button>
+                  ))
+                )}
+              </div>
             </ScrollArea>
           </CardContent>
         </Card>
@@ -382,15 +373,14 @@ export default function MessagesCenter({ title = 'الرسائل' }: MessagesCen
         <Card className={`flex-1 flex flex-col overflow-hidden ${mobileView === 'list' ? 'hidden md:flex' : 'flex'}`}>
           {selectedConv ? (
             <>
-              {/* Chat header */}
-              <div className="flex items-center gap-3 p-4 border-b flex-shrink-0">
+              {/* Chat header — explicit dir="rtl" so Avatar appears on right */}
+              <div className="flex items-center gap-3 p-4 border-b flex-shrink-0" dir="rtl">
                 <Button
-                  variant="ghost"
-                  size="icon"
+                  variant="ghost" size="icon"
                   className="md:hidden h-8 w-8 flex-shrink-0"
                   onClick={() => setMobileView('list')}
                 >
-                  <ArrowRight className="h-4 w-4" />
+                  <ArrowLeft className="h-4 w-4" />
                 </Button>
                 <Avatar className="h-9 w-9 flex-shrink-0">
                   <AvatarFallback className="bg-primary/10 text-primary font-semibold">
@@ -410,72 +400,67 @@ export default function MessagesCenter({ title = 'الرسائل' }: MessagesCen
                       <MoreVertical className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start"><div dir="rtl">
+                  <DropdownMenuContent align="end"><div dir="rtl" className="py-1">
                     {isBlocked ? (
-                      <DropdownMenuItem
-                        className="gap-2 text-green-600 focus:text-green-600"
-                        onClick={() => setShowUnblockConfirm(true)}
-                      >
-                        <ShieldOff className="h-4 w-4" />
-                        إلغاء الحظر
+                      <DropdownMenuItem className="gap-2 text-green-600 focus:text-green-600" onClick={() => setShowUnblockConfirm(true)}>
+                        <ShieldOff className="h-4 w-4" />إلغاء الحظر
                       </DropdownMenuItem>
                     ) : (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="gap-2 text-destructive focus:text-destructive"
-                          onClick={() => setShowBlockConfirm(true)}
-                        >
-                          <Ban className="h-4 w-4" />
-                          حظر المستخدم
-                        </DropdownMenuItem>
-                      </>
+                      <DropdownMenuItem className="gap-2 text-destructive focus:text-destructive" onClick={() => setShowBlockConfirm(true)}>
+                        <Ban className="h-4 w-4" />حظر المستخدم
+                      </DropdownMenuItem>
                     )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="gap-2 text-destructive focus:text-destructive" onClick={() => setShowDeleteConvConfirm(true)}>
+                      <Trash2 className="h-4 w-4" />حذف المحادثة
+                    </DropdownMenuItem>
                   </div></DropdownMenuContent>
                 </DropdownMenu>
               </div>
 
-              {/* Messages */}
+              {/* Messages — explicit dir="rtl" inside ScrollArea */}
               <ScrollArea className="flex-1 p-4">
-                {loadingMsgs ? (
-                  <div className="space-y-3">
-                    {[...Array(3)].map((_, i) => (
-                      <div key={i} className={`flex ${i % 2 === 0 ? 'justify-start' : 'justify-end'}`}>
-                        <Skeleton className="h-10 w-40 rounded-lg" />
-                      </div>
-                    ))}
-                  </div>
-                ) : messages.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-2">
-                    <MessageSquare className="h-8 w-8 opacity-30" />
-                    <p className="text-sm">ابدأ المحادثة بإرسال رسالة</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {messages.map(msg => {
+                <div dir="rtl" className="space-y-2 min-h-full">
+                  {loadingMsgs ? (
+                    <>
+                      <Skeleton className="h-10 w-40 rounded-2xl ml-auto" />
+                      <Skeleton className="h-10 w-48 rounded-2xl mr-auto" />
+                      <Skeleton className="h-10 w-36 rounded-2xl ml-auto" />
+                    </>
+                  ) : messages.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-2">
+                      <MessageSquare className="h-8 w-8 opacity-30" />
+                      <p className="text-sm">ابدأ المحادثة بإرسال رسالة</p>
+                    </div>
+                  ) : (
+                    messages.map(msg => {
                       const isOwn = msg.senderId === user?.uid;
                       if (!msg.content) return null;
                       return (
                         <div
                           key={msg.id}
-                          className={`flex items-end gap-1 ${isOwn ? 'justify-start' : 'justify-end'}`}
+                          className="flex items-end gap-1"
                           onMouseEnter={() => isOwn && setHoveredMsgId(msg.id)}
                           onMouseLeave={() => setHoveredMsgId(null)}
                         >
-                          {/* Delete button for own messages — appears on hover */}
+                          {/* Trash button — left of own message bubble */}
                           {isOwn && hoveredMsgId === msg.id && (
                             <Button
-                              variant="ghost"
-                              size="icon"
+                              variant="ghost" size="icon"
                               className="h-6 w-6 text-muted-foreground hover:text-destructive flex-shrink-0 mb-1"
                               onClick={() => deleteMessage(msg.id)}
                             >
                               <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           )}
-                          <div className={`max-w-[72%] rounded-2xl px-4 py-2 ${isOwn ? 'bg-primary text-primary-foreground rounded-tr-sm' : 'bg-muted rounded-tl-sm'}`}>
+                          {/* ml-auto pushes own bubbles to the physical RIGHT */}
+                          <div className={`max-w-[72%] rounded-2xl px-4 py-2 ${
+                            isOwn
+                              ? 'ml-auto bg-primary text-primary-foreground rounded-tr-sm'
+                              : 'mr-auto bg-muted rounded-tl-sm'
+                          }`}>
                             <p className="text-sm leading-relaxed">{msg.content}</p>
-                            <p className={`text-xs mt-1 ${isOwn ? 'text-primary-foreground/60' : 'text-muted-foreground'}`}>
+                            <p className={`text-xs mt-1 ${isOwn ? 'text-primary-foreground/60 text-left' : 'text-muted-foreground text-right'}`}>
                               {(() => {
                                 try { return new Date(msg.createdAt).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }); }
                                 catch { return ''; }
@@ -484,28 +469,25 @@ export default function MessagesCenter({ title = 'الرسائل' }: MessagesCen
                           </div>
                         </div>
                       );
-                    })}
-                    <div ref={messagesEndRef} />
-                  </div>
-                )}
+                    })
+                  )}
+                  <div ref={messagesEndRef} />
+                </div>
               </ScrollArea>
 
-              {/* Input */}
+              {/* Input area */}
               {isBlocked ? (
-                <div className="p-3 border-t flex items-center justify-center bg-muted/30 flex-shrink-0">
+                <div className="p-3 border-t flex items-center justify-center bg-muted/30 flex-shrink-0" dir="rtl">
                   <p className="text-sm text-muted-foreground flex items-center gap-2">
                     <Ban className="h-4 w-4 text-destructive" />
                     لقد قمت بحظر هذا المستخدم —
-                    <button
-                      className="text-primary underline text-sm"
-                      onClick={() => setShowUnblockConfirm(true)}
-                    >
+                    <button className="text-primary underline text-sm" onClick={() => setShowUnblockConfirm(true)}>
                       إلغاء الحظر
                     </button>
                   </p>
                 </div>
               ) : (
-                <div className="p-3 border-t flex gap-2 flex-shrink-0 bg-background">
+                <div className="p-3 border-t flex gap-2 flex-shrink-0 bg-background" dir="rtl">
                   <Input
                     value={newMessage}
                     onChange={e => setNewMessage(e.target.value)}
@@ -523,12 +505,11 @@ export default function MessagesCenter({ title = 'الرسائل' }: MessagesCen
               )}
             </>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-3">
+            <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-3" dir="rtl">
               <MessageSquare className="h-12 w-12 opacity-20" />
               <p className="text-sm">اختر محادثة أو ابدأ محادثة جديدة</p>
               <Button variant="outline" size="sm" onClick={() => setShowNewChat(true)} className="gap-2">
-                <PlusCircle className="h-4 w-4" />
-                رسالة جديدة
+                <PlusCircle className="h-4 w-4" />رسالة جديدة
               </Button>
             </div>
           )}
@@ -539,86 +520,78 @@ export default function MessagesCenter({ title = 'الرسائل' }: MessagesCen
       <Dialog open={showNewChat} onOpenChange={v => { setShowNewChat(v); if (!v) setContactSearch(''); }}>
         <DialogContent dir="rtl" className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              اختر جهة الاتصال
+            <DialogTitle className="flex items-center gap-2 text-right">
+              <Users className="h-5 w-5" />اختر جهة الاتصال
             </DialogTitle>
           </DialogHeader>
-
           <div className="relative mt-1">
-            <Search className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              value={contactSearch}
-              onChange={e => setContactSearch(e.target.value)}
-              placeholder="ابحث بالاسم أو الدور..."
-              className="pr-9"
-              dir="rtl"
-            />
+            <Search className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <Input value={contactSearch} onChange={e => setContactSearch(e.target.value)}
+              placeholder="ابحث بالاسم أو الدور..." className="pr-9" dir="rtl" />
           </div>
-
           <ScrollArea className="max-h-96 mt-2">
-            {Object.keys(groupedContacts).length === 0 ? (
-              <p className="text-center text-muted-foreground py-8 text-sm">
-                {contacts.length === 0 ? 'لا يوجد أعضاء للتواصل معهم بعد' : 'لا نتائج'}
-              </p>
-            ) : (
-              <div className="space-y-4 px-1">
-                {Object.entries(groupedContacts).map(([label, members]) => (
-                  <div key={label}>
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1">{label}</p>
-                    <div className="space-y-1">
-                      {members.map(contact => (
-                        <button
-                          key={contact.id}
-                          onClick={() => startNewConversation(contact)}
-                          className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-accent transition-colors text-right border border-transparent hover:border-border"
-                        >
-                          <Avatar className="h-9 w-9 flex-shrink-0">
-                            <AvatarFallback className="bg-primary/10 text-primary font-semibold text-sm">
-                              {contact.name.charAt(0)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm">{contact.name}</p>
-                            <p className="text-xs text-muted-foreground">{contact.roleLabel}</p>
-                          </div>
-                          {conversations.some(c => c.otherUser.id === contact.id) && (
-                            <Badge variant="secondary" className="text-xs flex-shrink-0">محادثة موجودة</Badge>
-                          )}
-                        </button>
-                      ))}
+            <div dir="rtl">
+              {Object.keys(groupedContacts).length === 0 ? (
+                <p className="text-center text-muted-foreground py-8 text-sm">
+                  {contacts.length === 0 ? 'لا يوجد أعضاء للتواصل معهم بعد' : 'لا نتائج'}
+                </p>
+              ) : (
+                <div className="space-y-4 px-1">
+                  {Object.entries(groupedContacts).map(([label, members]) => (
+                    <div key={label}>
+                      <p className="text-xs font-semibold text-muted-foreground mb-2 px-1">{label}</p>
+                      <div className="space-y-1">
+                        {members.map(contact => (
+                          <button
+                            key={contact.id}
+                            onClick={() => startNewConversation(contact)}
+                            className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-accent transition-colors text-right border border-transparent hover:border-border"
+                            dir="rtl"
+                          >
+                            <Avatar className="h-9 w-9 flex-shrink-0">
+                              <AvatarFallback className="bg-primary/10 text-primary font-semibold text-sm">
+                                {contact.name.charAt(0)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm">{contact.name}</p>
+                              <p className="text-xs text-muted-foreground">{contact.roleLabel}</p>
+                            </div>
+                            {conversations.some(c => c.otherUser.id === contact.id) && (
+                              <Badge variant="secondary" className="text-xs flex-shrink-0">محادثة موجودة</Badge>
+                            )}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
+            </div>
           </ScrollArea>
         </DialogContent>
       </Dialog>
 
-      {/* ── Block Confirmation ── */}
+      {/* ── Confirm Block ── */}
       <AlertDialog open={showBlockConfirm} onOpenChange={setShowBlockConfirm}>
         <AlertDialogContent dir="rtl">
           <AlertDialogHeader>
             <AlertDialogTitle>حظر المستخدم</AlertDialogTitle>
             <AlertDialogDescription>
               هل أنت متأكد من حظر <strong>{selectedConv?.otherUser.name}</strong>؟
-              لن يتمكن من إرسال رسائل إليك وسيُزال من قائمة جهات الاتصال.
+              لن يتمكن من إرسال رسائل إليك وسيُزال من جهات الاتصال.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-row-reverse gap-2">
             <AlertDialogCancel>إلغاء</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={blockUser}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
+            <AlertDialogAction onClick={blockUser} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               حظر
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* ── Unblock Confirmation ── */}
+      {/* ── Confirm Unblock ── */}
       <AlertDialog open={showUnblockConfirm} onOpenChange={setShowUnblockConfirm}>
         <AlertDialogContent dir="rtl">
           <AlertDialogHeader>
@@ -631,6 +604,25 @@ export default function MessagesCenter({ title = 'الرسائل' }: MessagesCen
           <AlertDialogFooter className="flex-row-reverse gap-2">
             <AlertDialogCancel>إلغاء</AlertDialogCancel>
             <AlertDialogAction onClick={unblockUser}>إلغاء الحظر</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ── Confirm Delete Conversation ── */}
+      <AlertDialog open={showDeleteConvConfirm} onOpenChange={setShowDeleteConvConfirm}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>حذف المحادثة</AlertDialogTitle>
+            <AlertDialogDescription>
+              هل أنت متأكد من حذف محادثتك مع <strong>{selectedConv?.otherUser.name}</strong>؟
+              ستُحذف جميع الرسائل نهائياً ولا يمكن التراجع.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row-reverse gap-2">
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction onClick={deleteConversation} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              حذف
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -49,22 +49,35 @@ export async function DELETE(req: NextRequest, { params }: { params: { convId: s
     const uid = decoded.uid;
     const { convId } = params;
 
+    // Verify the user is a participant
+    const convDoc = await adminDb.collection('conversations').doc(convId).get();
+    if (!convDoc.exists) return NextResponse.json({ error: 'not found' }, { status: 404 });
+    if (!convDoc.data()?.participants?.includes(uid)) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+
     const { searchParams } = new URL(req.url);
     const msgId = searchParams.get('msgId');
-    if (!msgId) return NextResponse.json({ error: 'msgId required' }, { status: 400 });
 
-    const msgRef = adminDb.collection('conversations').doc(convId).collection('msgs').doc(msgId);
-    const msgDoc = await msgRef.get();
-    if (!msgDoc.exists) return NextResponse.json({ error: 'not found' }, { status: 404 });
-    if (msgDoc.data()?.senderId !== uid) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+    if (msgId) {
+      // Delete single message
+      const msgRef = adminDb.collection('conversations').doc(convId).collection('msgs').doc(msgId);
+      const msgDoc = await msgRef.get();
+      if (!msgDoc.exists) return NextResponse.json({ error: 'not found' }, { status: 404 });
+      if (msgDoc.data()?.senderId !== uid) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
 
-    await msgRef.delete();
+      await msgRef.delete();
 
-    // Update conversation lastMessage if this was the last message
-    const lastSnap = await adminDb.collection('conversations').doc(convId)
-      .collection('msgs').orderBy('createdAt', 'desc').limit(1).get();
-    const lastMsg = lastSnap.empty ? '' : (lastSnap.docs[0].data().content || '');
-    await adminDb.collection('conversations').doc(convId).update({ lastMessage: lastMsg });
+      const lastSnap = await adminDb.collection('conversations').doc(convId)
+        .collection('msgs').orderBy('createdAt', 'desc').limit(1).get();
+      const lastMsg = lastSnap.empty ? '' : (lastSnap.docs[0].data().content || '');
+      await adminDb.collection('conversations').doc(convId).update({ lastMessage: lastMsg });
+    } else {
+      // Delete entire conversation and all its messages
+      const msgSnap = await adminDb.collection('conversations').doc(convId).collection('msgs').get();
+      const batch = adminDb.batch();
+      msgSnap.docs.forEach(d => batch.delete(d.ref));
+      batch.delete(adminDb.collection('conversations').doc(convId));
+      await batch.commit();
+    }
 
     return NextResponse.json({ success: true });
   } catch (e: any) {
