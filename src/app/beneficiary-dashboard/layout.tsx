@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Bell, LayoutGrid, Search, Settings, MessageSquare, BookOpen, Calendar, TrendingUp, ShoppingBag, ClipboardList } from "lucide-react";
+import {
+  LayoutGrid, Search, Settings, MessageSquare,
+  BookOpen, Calendar, TrendingUp, ShoppingBag, ClipboardList, LogOut,
+} from "lucide-react";
 import { signOut } from "firebase/auth";
 import { useState, useEffect, useCallback } from "react";
 import {
@@ -45,7 +48,7 @@ export default function BeneficiaryDashboardLayout({ children }: { children: Rea
   const [menuItems, setMenuItems] = useState(allMenuItems);
   const [platformLogo, setPlatformLogo] = useState('');
 
-  const fetchAvatar = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     if (!authUser) return;
     try {
       const token = await authUser.getIdToken();
@@ -64,7 +67,7 @@ export default function BeneficiaryDashboardLayout({ children }: { children: Rea
     } catch { /* silent */ }
   }, [authUser]);
 
-  useEffect(() => { fetchAvatar(); }, [fetchAvatar]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   const handleLogout = async () => {
     if (auth) await signOut(auth);
@@ -74,18 +77,20 @@ export default function BeneficiaryDashboardLayout({ children }: { children: Rea
   return (
     <SidebarProvider dir="rtl">
       <Sidebar side="right">
-        <SidebarHeader>
-          <div className="flex flex-col items-center text-center gap-2 p-2">
-            {platformLogo ? (
-              <img src={platformLogo} alt="logo" className="h-16 w-16 object-contain rounded-xl" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-            ) : <Logo className="h-16 w-16" />}
-            <span className="text-lg font-semibold">EmpowerHub</span>
+        <SidebarHeader className="border-b border-sidebar-border">
+          <div className="flex items-center gap-3 px-3 py-4">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg overflow-hidden bg-sidebar-accent">
+              {platformLogo
+                ? <img src={platformLogo} alt="logo" className="h-full w-full object-contain" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                : <Logo className="h-6 w-6" />}
+            </div>
+            <div className="flex flex-col">
+              <span className="text-sm font-semibold text-sidebar-accent-foreground">EmpowerHub</span>
+              <span className="text-xs text-sidebar-foreground">لوحة تحكم المستفيد</span>
+            </div>
           </div>
         </SidebarHeader>
         <SidebarContent>
-          <div className="p-2 text-center text-sm bg-primary/10 mx-2 rounded-md border border-primary/20">
-            <p className="font-semibold text-primary">لوحة تحكم المستفيد</p>
-          </div>
           <SidebarMenu>
             {menuItems.map((item) => (
               <SidebarMenuItem key={item.label}>
@@ -103,44 +108,60 @@ export default function BeneficiaryDashboardLayout({ children }: { children: Rea
             ))}
           </SidebarMenu>
         </SidebarContent>
-        <SidebarFooter>
+        <SidebarFooter className="border-t border-sidebar-border p-2">
+          <div className="flex items-center gap-2 rounded-lg px-2 py-2 hover:bg-sidebar-accent transition-colors">
+            <Avatar className="h-7 w-7 shrink-0">
+              <AvatarImage src={avatarUrl || userProfile?.avatarUrl} alt={displayName} />
+              <AvatarFallback className="text-xs bg-sidebar-accent text-sidebar-accent-foreground">{displayName.charAt(0)}</AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col flex-1 min-w-0">
+              <span className="text-xs font-medium text-sidebar-accent-foreground truncate">{displayName}</span>
+              <span className="text-xs text-sidebar-foreground truncate">{displayEmail}</span>
+            </div>
+            <button onClick={handleLogout} className="shrink-0 text-sidebar-foreground hover:text-sidebar-accent-foreground transition-colors" title="تسجيل الخروج">
+              <LogOut className="h-4 w-4" />
+            </button>
+          </div>
           <SidebarMenuButton asChild tooltip="الإعدادات">
             <Link href="/beneficiary-dashboard/settings"><Settings /><span>الإعدادات</span></Link>
           </SidebarMenuButton>
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
-        <header className="flex h-14 items-center gap-4 border-b bg-background/95 px-4 lg:h-[60px] lg:px-6 sticky top-0 z-30 backdrop-blur-sm">
-          <SidebarTrigger className="md:hidden" />
-          <div className="w-full flex-1">
-            <form><div className="relative">
+        <header className="flex h-14 items-center gap-3 border-b bg-background px-4 lg:px-6 sticky top-0 z-30 shadow-sm">
+          <SidebarTrigger />
+          <div className="flex-1">
+            <div className="relative max-w-sm">
               <Search className="absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input type="search" placeholder="بحث..." className="w-full appearance-none bg-background pr-8 shadow-none md:w-2/3 lg:w-1/3" />
-            </div></form>
+              <Input type="search" placeholder="بحث..." className="pr-8 bg-muted/50 border-0 focus-visible:ring-1 h-9 w-full" />
+            </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <MessageBell href="/beneficiary-dashboard/messages" />
             <NotificationBell />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="h-8 w-8 rounded-full p-0 ml-1">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={avatarUrl || userProfile?.avatarUrl} alt={displayName} />
+                    <AvatarFallback>{displayName.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuLabel className="font-normal text-right">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">{displayName}</p>
+                    <p className="text-xs leading-none text-muted-foreground">{displayEmail}</p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={() => router.push('/beneficiary-dashboard/settings')} className="text-right cursor-pointer">الملف الشخصي</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={handleLogout} className="text-right cursor-pointer">تسجيل الخروج</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0">
-                <Avatar><AvatarImage src={avatarUrl || userProfile?.avatarUrl} alt={displayName} /><AvatarFallback>{displayName.charAt(0)}</AvatarFallback></Avatar>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align="end" forceMount>
-              <DropdownMenuLabel className="font-normal text-right">
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">{displayName}</p>
-                  <p className="text-xs leading-none text-muted-foreground">{displayEmail}</p>
-                </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={() => router.push('/beneficiary-dashboard/settings')} className="text-right cursor-pointer">الملف الشخصي</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={handleLogout} className="text-right cursor-pointer">تسجيل الخروج</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </header>
         <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-background" dir="rtl">
           {children}
