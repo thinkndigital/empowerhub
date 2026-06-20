@@ -1,15 +1,5 @@
-"use client";
-
-import { ChatInterface } from "@/components/chat-interface";
-import { useUser } from "@/firebase/auth/use-user";
-
-export default function BeneficiaryMessagesPage() {
-  const { userProfile } = useUser();
-  return (
-    <ChatInterface
-      title="مركز الرسائل"
-      description="التواصل مع مرشدك ومدير منظمتك."
-      organizationId={userProfile?.organizationId}
-    />
-  );
+'use client';
+import MessagesCenter from '@/components/messages-center';
+export default function DashboardMessagesPage() {
+  return <MessagesCenter title="الرسائل" />;
 }

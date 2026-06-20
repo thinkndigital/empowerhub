@@ -1,12 +1,5 @@
-"use client";
-
-import { ChatInterface } from "@/components/chat-interface";
-
+'use client';
+import MessagesCenter from '@/components/messages-center';
 export default function AdminMessagesPage() {
-  return (
-    <ChatInterface 
-      title="مركز رسائل المشرف"
-      description="التواصل المباشر مع مدراء المنظمات الشريكة."
-    />
-  );
+  return <MessagesCenter title="مركز الرسائل" />;
 }
