@@ -69,7 +69,7 @@ export default function BeneficiaryDashboardPage() {
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         {[
           { title: "تقدمي العام", value: loading ? "..." : `${progress}%`, sub: "نسبة الإنجاز", icon: <TrendingUp className="h-5 w-5 text-white" />, color: "bg-primary" },
-          { title: "الدورات", value: loading ? "..." : (enrolledCourses !== null ? String(enrolledCourses) : "—"), sub: "دورة مسجلة", icon: <BookOpen className="h-5 w-5 text-white" />, color: "bg-accent" },
+          { title: "الدورات", value: loading ? "..." : (enrolledCourses !== null ? String(enrolledCourses) : "—"), sub: "دورة مسجلة", icon: <BookOpen className="h-5 w-5 text-white" />, color: "bg-sky-500" },
           { title: "الجلسات", value: loading ? "..." : (upcomingSessions !== null ? String(upcomingSessions) : "—"), sub: "جلسة قادمة", icon: <Calendar className="h-5 w-5 text-white" />, color: "bg-amber-500" },
           { title: "المجموعة", value: loading ? "..." : (profile?.groupId ? "مُنضم" : "—"), sub: "حالة المجموعة", icon: <Users className="h-5 w-5 text-white" />, color: "bg-purple-500" },
         ].map((s, i) => (

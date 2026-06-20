@@ -169,14 +169,14 @@ export default function CoachSettingsPage() {
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       <div>
-        <h1 className="text-lg font-semibold md:text-2xl">إعدادات الملف الشخصي والمحفظة</h1>
-        <p className="text-muted-foreground">إدارة معلوماتك المهنية وتفاصيل الدفع.</p>
+        <h1 className="text-2xl font-bold tracking-tight">إعدادات الملف الشخصي والمحفظة</h1>
+        <p className="text-sm text-muted-foreground">إدارة معلوماتك المهنية وتفاصيل الدفع.</p>
       </div>
 
       {/* Professional Profile */}
       <Form {...profileForm}>
         <form onSubmit={profileForm.handleSubmit(onSubmitProfile)} className="space-y-6">
-          <Card>
+          <Card className="border-0 shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2"><User className="h-5 w-5" /> المعلومات الشخصية</CardTitle>
               <CardDescription>معلوماتك المعروضة للمستفيدين على المنصة</CardDescription>
@@ -242,7 +242,7 @@ export default function CoachSettingsPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-0 shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2"><BookOpen className="h-5 w-5" /> التخصصات والشهادات</CardTitle>
             </CardHeader>
@@ -293,7 +293,7 @@ export default function CoachSettingsPage() {
 
       <Form {...payoutForm}>
         <form onSubmit={payoutForm.handleSubmit(onSubmitPayout)} className="space-y-8">
-          <Card>
+          <Card className="border-0 shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2"><Banknote className="h-5 w-5" /> معلومات الدفع</CardTitle>
               <CardDescription>أدخل معلومات حسابك البنكي لاستلام أرباحك.</CardDescription>

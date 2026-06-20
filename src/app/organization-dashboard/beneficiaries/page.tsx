@@ -343,8 +343,8 @@ export default function BeneficiariesPage() {
   return (
     <div dir="rtl" className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">إدارة المستفيدين</h1>
-        <p className="text-muted-foreground">عرض وإدارة المستفيدين وإضافتهم ودعوتهم لمنظمتك.</p>
+        <h1 className="text-2xl font-bold tracking-tight">إدارة المستفيدين</h1>
+        <p className="text-sm text-muted-foreground">عرض وإدارة المستفيدين وإضافتهم ودعوتهم لمنظمتك.</p>
       </div>
 
       <Tabs defaultValue="org" dir="rtl">

@@ -17,8 +17,7 @@ import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage
 import { Skeleton } from "@/components/ui/skeleton";
 import { Save, Building, Facebook, Instagram, Twitter, MessageCircle } from "lucide-react";
 
-
-const schema = z.object({
+const storeSettingsSchema = z.object({
   name: z.string().min(2, { message: "يجب أن يكون اسم المتجر حرفين على الأقل." }),
   description: z.string().optional(),
   logoUrl: z.string().optional(),
@@ -33,11 +32,11 @@ const schema = z.object({
   }).optional(),
 });
 
-type FormValues = z.infer<typeof schema>;
+type StoreSettingsFormValues = z.infer<typeof storeSettingsSchema>;
 
 export default function StoreSettingsPage() {
   const { toast } = useToast();
-  const { user: authUser } = useUser();
+  const { user: authUser, loading: authLoading } = useUser();
   const storage = useStorage();
 
   const [storeId, setStoreId] = useState<string | null>(null);
@@ -48,81 +47,115 @@ export default function StoreSettingsPage() {
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
 
-  const form = useForm<FormValues>({
-    resolver: zodResolver(schema),
-    defaultValues: { name: "", description: "", logoUrl: "", coverUrl: "", location: "", phone: "", whatsapp: "", socials: { facebook: "", instagram: "", twitter: "" } },
+  const form = useForm<StoreSettingsFormValues>({
+    resolver: zodResolver(storeSettingsSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+      logoUrl: "",
+      coverUrl: "",
+      location: "",
+      phone: "",
+      whatsapp: "",
+      socials: { facebook: "", instagram: "", twitter: "" },
+    },
   });
 
   const fetchStore = useCallback(async () => {
     if (!authUser) return;
+    setLoading(true);
     try {
       const token = await authUser.getIdToken();
-      const res = await fetch('/api/beneficiary/store', { headers: { Authorization: `Bearer ${token}` } });
-      const { store } = await res.json();
-      if (store) {
-        setStoreId(store.id);
-        form.reset(store);
-        if (store.logoUrl) setLogoPreview(store.logoUrl);
-        if (store.coverUrl) setCoverPreview(store.coverUrl);
+      const res = await fetch('/api/beneficiary/store', { headers: { authorization: `Bearer ${token}` } });
+      const json = await res.json();
+      if (json.store) {
+        setStoreId(json.store.id);
+        form.reset({
+          name: json.store.name || "",
+          description: json.store.description || "",
+          logoUrl: json.store.logoUrl || "",
+          coverUrl: json.store.coverUrl || "",
+          location: json.store.location || "",
+          phone: json.store.phone || "",
+          whatsapp: json.store.whatsapp || "",
+          socials: {
+            facebook: json.store.socials?.facebook || "",
+            instagram: json.store.socials?.instagram || "",
+            twitter: json.store.socials?.twitter || "",
+          },
+        });
+        if (json.store.logoUrl) setLogoPreview(json.store.logoUrl);
+        if (json.store.coverUrl) setCoverPreview(json.store.coverUrl);
       }
-    } catch (e) {
-      console.error(e);
+    } catch {
       toast({ variant: "destructive", title: "خطأ", description: "فشل في جلب بيانات المتجر." });
     } finally {
       setLoading(false);
     }
   }, [authUser, form, toast]);
 
-  useEffect(() => { fetchStore(); }, [fetchStore]);
+  useEffect(() => {
+    if (!authLoading && authUser) fetchStore();
+  }, [authLoading, authUser, fetchStore]);
 
-  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) { setLogoFile(file); const r = new FileReader(); r.onloadend = () => setLogoPreview(r.result as string); r.readAsDataURL(file); }
+  const handleLogoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setLogoFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => setLogoPreview(reader.result as string);
+      reader.readAsDataURL(file);
+    }
   };
 
-  const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) { setCoverFile(file); const r = new FileReader(); r.onloadend = () => setCoverPreview(r.result as string); r.readAsDataURL(file); }
+  const handleCoverChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setCoverFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => setCoverPreview(reader.result as string);
+      reader.readAsDataURL(file);
+    }
   };
 
-  async function onSubmit(values: FormValues) {
+  async function onSubmit(values: StoreSettingsFormValues) {
     if (!authUser) return;
     setIsSaving(true);
-    try {
-      let logoUrl = values.logoUrl || "";
-      let coverUrl = values.coverUrl || "";
 
+    let finalLogoUrl = values.logoUrl || "";
+    let finalCoverUrl = values.coverUrl || "";
+
+    try {
       if (logoFile && storage) {
-        const ref = storageRef(storage, `store-logos/${authUser.uid}/${Date.now()}-${logoFile.name}`);
-        const snap = await uploadBytes(ref, logoFile);
-        logoUrl = await getDownloadURL(snap.ref);
+        const imageRef = storageRef(storage, `store-logos/${authUser.uid}/${Date.now()}-${logoFile.name}`);
+        const snapshot = await uploadBytes(imageRef, logoFile);
+        finalLogoUrl = await getDownloadURL(snapshot.ref);
       }
+
       if (coverFile && storage) {
-        const ref = storageRef(storage, `store-covers/${authUser.uid}/${Date.now()}-${coverFile.name}`);
-        const snap = await uploadBytes(ref, coverFile);
-        coverUrl = await getDownloadURL(snap.ref);
+        const imageRef = storageRef(storage, `store-covers/${authUser.uid}/${Date.now()}-${coverFile.name}`);
+        const snapshot = await uploadBytes(imageRef, coverFile);
+        finalCoverUrl = await getDownloadURL(snapshot.ref);
       }
 
       const token = await authUser.getIdToken();
-      const body = { ...values, logoUrl, coverUrl };
-      const method = storeId ? 'PUT' : 'POST';
-      const payload = storeId ? { ...body, id: storeId } : body;
+      const storeData = { ...values, logoUrl: finalLogoUrl, coverUrl: finalCoverUrl, ...(storeId ? { id: storeId } : {}) };
 
+      const method = storeId ? 'PUT' : 'POST';
       const res = await fetch('/api/beneficiary/store-settings', {
         method,
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify(storeData),
       });
 
-      if (!res.ok) throw new Error(await res.text());
+      if (!res.ok) throw new Error((await res.json()).error || 'فشل الحفظ');
 
-      const data = await res.json();
-      if (!storeId && data.id) setStoreId(data.id);
+      const json = await res.json();
+      if (!storeId && json.id) setStoreId(json.id);
 
-      toast({ title: "تم الحفظ بنجاح", description: storeId ? "تم تحديث إعدادات متجرك." : "تم إنشاء متجرك!" });
-    } catch (e) {
-      console.error(e);
-      toast({ variant: "destructive", title: "حدث خطأ!", description: "لم نتمكن من حفظ الإعدادات." });
+      toast({ title: storeId ? "تم الحفظ بنجاح" : "تم إنشاء متجرك!", description: "تم حفظ إعدادات متجرك." });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "حدث خطأ!", description: e.message || "لم نتمكن من حفظ الإعدادات." });
     } finally {
       setIsSaving(false);
     }
@@ -131,8 +164,8 @@ export default function StoreSettingsPage() {
   if (loading) {
     return (
       <div className="max-w-4xl mx-auto space-y-6">
-        <Skeleton className="h-8 w-1/3" /><Skeleton className="h-6 w-2/3" />
-        <Card><CardContent className="p-6 space-y-4"><Skeleton className="h-10 w-full" /><Skeleton className="h-20 w-full" /><Skeleton className="h-10 w-full" /></CardContent></Card>
+        <Skeleton className="h-8 w-1/3" />
+        <Card><CardContent className="p-6 space-y-4"><Skeleton className="h-10 w-full" /><Skeleton className="h-20 w-full" /></CardContent></Card>
       </div>
     );
   }
@@ -150,7 +183,7 @@ export default function StoreSettingsPage() {
                 <FormItem><FormLabel>اسم المتجر</FormLabel><FormControl><Input placeholder="مثال: إبداعات سارة" {...field} /></FormControl><FormMessage /></FormItem>
               )} />
               <FormField control={form.control} name="description" render={({ field }) => (
-                <FormItem><FormLabel>وصف المتجر</FormLabel><FormControl><Textarea placeholder="وصف موجز عن متجرك..." {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>وصف المتجر</FormLabel><FormControl><Textarea placeholder="وصف موجز عن متجرك وما تقدمه..." {...field} /></FormControl><FormMessage /></FormItem>
               )} />
               <FormItem>
                 <FormLabel>شعار المتجر</FormLabel>

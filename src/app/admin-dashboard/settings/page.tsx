@@ -67,11 +67,11 @@ export default function AdminSettingsPage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <h1 className="text-lg font-semibold md:text-2xl">إعدادات النظام</h1>
+      <h1 className="text-2xl font-bold tracking-tight">إعدادات النظام</h1>
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <Card>
+          <Card className="border-0 shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2"><Settings className="h-5 w-5" />إعدادات عامة</CardTitle>
               <CardDescription>الإعدادات الأساسية للمنصة.</CardDescription>
@@ -104,7 +104,7 @@ export default function AdminSettingsPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-0 shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2"><Bell className="h-5 w-5" />إعدادات الإشعارات</CardTitle>
               <CardDescription>تحكم في الإشعارات التلقائية للمنصة.</CardDescription>

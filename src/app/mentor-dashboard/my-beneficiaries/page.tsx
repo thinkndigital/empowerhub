@@ -76,17 +76,23 @@ export default function MyBeneficiariesPage() {
 
   return (
     <>
-      <Card>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">مستفيدوني</h1>
+          <p className="text-sm text-muted-foreground">قائمة المستفيدين الذين تشرف على إرشادهم.</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={handleExport}>
+          <Download className="ml-2 h-4 w-4" />
+          تصدير
+        </Button>
+      </div>
+      <Card className="border-0 shadow-sm">
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <CardTitle>المستفيدون</CardTitle>
-              <CardDescription>قائمة المستفيدين الذين تشرف على إرشادهم.</CardDescription>
+              <CardTitle className="text-base">قائمة المستفيدين</CardTitle>
+              <CardDescription>{!loading && beneficiaries ? `${beneficiaries.length} مستفيد` : 'جاري التحميل...'}</CardDescription>
             </div>
-            <Button variant="outline" size="sm" onClick={handleExport}>
-              <Download className="ml-2 h-4 w-4" />
-              تصدير
-            </Button>
           </div>
         </CardHeader>
         <CardContent>

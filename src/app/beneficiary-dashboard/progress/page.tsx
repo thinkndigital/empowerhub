@@ -58,8 +58,8 @@ export default function BeneficiaryProgressPage() {
   return (
     <div className="space-y-6" dir="rtl">
       <div>
-        <h1 className="text-2xl font-bold">تقدمي</h1>
-        <p className="text-muted-foreground">تتبع مسيرتك التعليمية وإنجازاتك على المنصة.</p>
+        <h1 className="text-2xl font-bold tracking-tight">تقدمي</h1>
+        <p className="text-sm text-muted-foreground">تتبع مسيرتك التعليمية وإنجازاتك على المنصة.</p>
       </div>
 
       {/* Overview Stats */}

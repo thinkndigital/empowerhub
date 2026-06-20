@@ -176,12 +176,13 @@ export default function CoachSessionsPage() {
 
   return (
     <>
-      <div className="space-y-8">
-        <Card>
-          <CardHeader>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div><CardTitle>الجلسات</CardTitle><CardDescription>إدارة وجدولة جلسات التدريب مع المتدربين.</CardDescription></div>
-              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">الجلسات</h1>
+            <p className="text-sm text-muted-foreground">إدارة وجدولة جلسات التدريب مع المتدربين.</p>
+          </div>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogTrigger asChild><Button><PlusCircle className="ml-2 h-4 w-4" />جدولة جلسة جديدة</Button></DialogTrigger>
                 <DialogContent dir="rtl" className="sm:max-w-[90vw] md:max-w-[600px]" onPointerDownOutside={(e) => { if (e.target instanceof Element && e.target.closest('.rdp')) e.preventDefault(); }}>
                   <DialogHeader><DialogTitle>جدولة جلسة جديدة</DialogTitle><DialogDescription>املأ التفاصيل لجدولة جلسة تدريبية جديدة.</DialogDescription></DialogHeader>
@@ -246,11 +247,9 @@ export default function CoachSessionsPage() {
                   </Form>
                 </DialogContent>
               </Dialog>
-            </div>
-          </CardHeader>
-        </Card>
+        </div>
 
-        <Card>
+        <Card className="border-0 shadow-sm">
           <CardHeader><CardTitle>الجلسات القادمة</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             {loading && [...Array(1)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
@@ -280,7 +279,7 @@ export default function CoachSessionsPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-0 shadow-sm">
           <CardHeader><CardTitle>الجلسات السابقة</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             {loading && [...Array(2)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}

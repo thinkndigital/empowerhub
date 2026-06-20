@@ -49,7 +49,7 @@ const AssessmentViewer = ({ title, questions }: { title: string; questions: Asse
   };
 
   return (
-    <Card>
+    <Card className="border-0 shadow-sm">
       <CardHeader>
         <CardTitle className="flex items-center gap-2"><BookCheck className="h-5 w-5" />{title}</CardTitle>
         <CardDescription>الرجاء الإجابة على الأسئلة التالية بصدق لمساعدتنا على فهم احتياجاتك وقياس تقدمك.</CardDescription>
@@ -250,7 +250,7 @@ export default function CourseDetailsPage({ params }: { params: { courseId: stri
             <div className="flex-1 space-y-4">
               {selectedLesson && (
                 <>
-                  <Card>
+                  <Card className="border-0 shadow-sm">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
                         <ChevronLeft className="h-4 w-4" />
@@ -281,7 +281,7 @@ export default function CourseDetailsPage({ params }: { params: { courseId: stri
             </div>
           </div>
         ) : singleVideoUrl ? (
-          <Card>
+          <Card className="border-0 shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2"><Film className="h-5 w-5" />محتوى الفيديو</CardTitle>
             </CardHeader>
@@ -301,7 +301,7 @@ export default function CourseDetailsPage({ params }: { params: { courseId: stri
 
         {/* Quiz */}
         {course.quiz?.question && course.quiz?.options && (
-          <Card>
+          <Card className="border-0 shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2"><HelpCircle className="h-5 w-5" />اختبار قصير</CardTitle>
               <CardDescription>{course.quiz.question}</CardDescription>

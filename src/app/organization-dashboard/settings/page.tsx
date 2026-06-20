@@ -180,13 +180,13 @@ export default function OrgSettingsPage() {
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       <div>
-        <h1 className="text-lg font-semibold md:text-2xl">إعدادات المنظمة</h1>
-        <p className="text-muted-foreground">إدارة تفاصيل منظمتك، المظهر، وإعدادات الحساب.</p>
+        <h1 className="text-2xl font-bold tracking-tight">إعدادات المنظمة</h1>
+        <p className="text-sm text-muted-foreground">إدارة تفاصيل منظمتك، المظهر، وإعدادات الحساب.</p>
       </div>
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-          <Card>
+          <Card className="border-0 shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Palette className="h-5 w-5" />
@@ -259,7 +259,7 @@ export default function OrgSettingsPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-0 shadow-sm">
             <CardHeader>
               <CardTitle>تسعير الخدمات</CardTitle>
               <CardDescription>

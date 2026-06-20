@@ -1,15 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
 
-async function getUid(req: NextRequest) {
-  const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-  const decoded = await adminAuth.verifyIdToken(token);
-  return decoded.uid;
-}
-
 export async function GET(req: NextRequest) {
   try {
-    const uid = await getUid(req);
+    const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
+    const decoded = await adminAuth.verifyIdToken(token);
+    const uid = decoded.uid;
 
     const [storeSnap, productsSnap, ordersSnap] = await Promise.all([
       adminDb.collection('stores').where('beneficiaryId', '==', uid).limit(1).get(),
@@ -17,21 +13,9 @@ export async function GET(req: NextRequest) {
       adminDb.collection('orders').where('beneficiaryId', '==', uid).get(),
     ]);
 
-    const normalizeTs = (v: any): any => {
-      if (!v || typeof v === 'string' || typeof v === 'number') return v;
-      const s = v._seconds ?? v.seconds;
-      if (s != null) return new Date(s * 1000).toISOString();
-      return v;
-    };
-    const normalizeDoc = (data: any) => {
-      const out: any = {};
-      for (const k of Object.keys(data)) out[k] = normalizeTs(data[k]);
-      return out;
-    };
-
-    const store = storeSnap.empty ? null : { id: storeSnap.docs[0].id, ...normalizeDoc(storeSnap.docs[0].data()) };
-    const products = productsSnap.docs.map(d => ({ id: d.id, ...normalizeDoc(d.data()) }));
-    const orders = ordersSnap.docs.map(d => ({ id: d.id, ...normalizeDoc(d.data()) }));
+    const store = storeSnap.empty ? null : { id: storeSnap.docs[0].id, ...storeSnap.docs[0].data() };
+    const products = productsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const orders = ordersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
     return NextResponse.json({ store, products, orders });
   } catch (e: any) {
@@ -39,9 +23,12 @@ export async function GET(req: NextRequest) {
   }
 }
 
+// إضافة منتج جديد
 export async function POST(req: NextRequest) {
   try {
-    const uid = await getUid(req);
+    const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
+    const decoded = await adminAuth.verifyIdToken(token);
+    const uid = decoded.uid;
     const body = await req.json();
 
     const userDoc = await adminDb.collection('users').doc(uid).get();
@@ -55,49 +42,44 @@ export async function POST(req: NextRequest) {
       createdAt: new Date().toISOString(),
     };
 
+    delete productData.id;
+
     const ref = await adminDb.collection('products').add(productData);
-    return NextResponse.json({ id: ref.id, ...productData });
+    return NextResponse.json({ id: ref.id });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
 
+// تعديل منتج أو تحديث حالة طلب
 export async function PUT(req: NextRequest) {
   try {
-    const uid = await getUid(req);
+    const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
+    await adminAuth.verifyIdToken(token);
     const body = await req.json();
-    const { id, _collection, ...data } = body;
-    const collectionName = _collection || 'products';
+    const { id, _collection, ...fields } = body;
 
-    const docRef = adminDb.collection(collectionName).doc(id);
-    const docSnap = await docRef.get();
-    if (!docSnap.exists || docSnap.data()?.beneficiaryId !== uid) {
-      return NextResponse.json({ error: 'Not found or forbidden' }, { status: 403 });
-    }
+    if (!id) return NextResponse.json({ error: 'id مطلوب' }, { status: 400 });
 
-    await docRef.update(data);
+    const col = _collection === 'orders' ? 'orders' : 'products';
+    delete fields.id;
+
+    await adminDb.collection(col).doc(id).update({ ...fields, updatedAt: new Date().toISOString() });
     return NextResponse.json({ success: true });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
 
+// حذف منتج أو طلب
 export async function DELETE(req: NextRequest) {
   try {
-    const uid = await getUid(req);
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get('id');
-    const collectionName = searchParams.get('collection') || 'products';
-
-    if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
-
-    const docRef = adminDb.collection(collectionName).doc(id);
-    const docSnap = await docRef.get();
-    if (!docSnap.exists || docSnap.data()?.beneficiaryId !== uid) {
-      return NextResponse.json({ error: 'Not found or forbidden' }, { status: 403 });
-    }
-
-    await docRef.delete();
+    const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
+    await adminAuth.verifyIdToken(token);
+    const id = req.nextUrl.searchParams.get('id') || '';
+    const type = req.nextUrl.searchParams.get('type') || 'product';
+    const col = type === 'order' ? 'orders' : 'products';
+    await adminDb.collection(col).doc(id).delete();
     return NextResponse.json({ success: true });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });

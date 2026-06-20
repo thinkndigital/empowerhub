@@ -86,7 +86,7 @@ export default function CoachAnalyticsPage() {
   return (
     <>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-lg font-semibold md:text-2xl">تحليلات التدريب</h1>
+        <h1 className="text-2xl font-bold tracking-tight">تحليلات التدريب</h1>
         <Dialog open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen}>
           <DialogTrigger asChild>
             <Button variant="outline" size="sm"><Download className="ml-2 h-4 w-4" />تصدير التقارير</Button>
@@ -119,7 +119,7 @@ export default function CoachAnalyticsPage() {
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         {[
           { label: "إجمالي المتدربين", value: stats.totalBeneficiaries, sub: "متدرب نشط", icon: <Users className="h-5 w-5 text-white" />, color: "bg-primary" },
-          { label: "متوسط تقدم المتدربين", value: `${stats.avgProgress}%`, sub: "نسبة الإنجاز الكلية", icon: <BarChart3 className="h-5 w-5 text-white" />, color: "bg-accent" },
+          { label: "متوسط تقدم المتدربين", value: `${stats.avgProgress}%`, sub: "نسبة الإنجاز الكلية", icon: <BarChart3 className="h-5 w-5 text-white" />, color: "bg-emerald-500" },
           { label: "جلسات هذا الشهر", value: stats.sessionsThisMonth, sub: `بإجمالي ${stats.totalHours} ساعة`, icon: <Clock className="h-5 w-5 text-white" />, color: "bg-amber-500" },
           { label: "أرباح هذا الشهر", value: "—", sub: "راجع قسم المحفظة", icon: <DollarSign className="h-5 w-5 text-white" />, color: "bg-purple-500" },
         ].map((s, i) => (

@@ -95,10 +95,8 @@ export default function OrgCoachesPage() {
   return (
     <div className="space-y-6" dir="rtl">
       <div>
-        <h1 className="text-2xl font-bold">إدارة المدربين</h1>
-        <p className="text-muted-foreground">
-          استعرض مدربي منظمتك أو ادعُ مدربين جدد
-        </p>
+        <h1 className="text-2xl font-bold tracking-tight">إدارة المدربين</h1>
+        <p className="text-sm text-muted-foreground">استعرض مدربي منظمتك أو ادعُ مدربين جدد</p>
       </div>
 
       <Tabs defaultValue="org-coaches" dir="rtl">

@@ -216,7 +216,7 @@ export default function AdminCourseEditPage({ params }: { params: { courseId: st
         <div className="space-y-6">
             <Skeleton className="h-10 w-1/4" />
             <Skeleton className="h-8 w-1/2" />
-            <Card>
+            <Card className="border-0 shadow-sm">
                 <CardHeader><Skeleton className="h-6 w-1/4" /></CardHeader>
                 <CardContent className="space-y-4">
                     <Skeleton className="h-8 w-full" />
@@ -224,7 +224,7 @@ export default function AdminCourseEditPage({ params }: { params: { courseId: st
                     <Skeleton className="h-20 w-full" />
                 </CardContent>
             </Card>
-            <Card>
+            <Card className="border-0 shadow-sm">
                 <CardHeader><Skeleton className="h-6 w-1/4" /></CardHeader>
                 <CardContent className="space-y-4">
                     <Skeleton className="h-8 w-full" />
@@ -251,8 +251,8 @@ export default function AdminCourseEditPage({ params }: { params: { courseId: st
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-                 <h1 className="text-lg font-semibold md:text-2xl">تحرير محتوى الدورة (المشرف)</h1>
-                 <p className="text-muted-foreground">أنت تقوم بتعديل دورة: <span className="font-bold text-primary">{course.title}</span></p>
+                 <h1 className="text-2xl font-bold tracking-tight">تحرير محتوى الدورة (المشرف)</h1>
+                 <p className="text-sm text-muted-foreground">أنت تقوم بتعديل دورة: <span className="font-bold text-primary">{course.title}</span></p>
             </div>
             <div className="flex flex-wrap gap-2">
                 <Button variant="outline" asChild>

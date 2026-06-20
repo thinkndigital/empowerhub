@@ -117,7 +117,7 @@ export default function AnalyticsPage() {
   return (
     <>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-lg font-semibold md:text-2xl">تحليلات المنصة</h1>
+        <h1 className="text-2xl font-bold tracking-tight">تحليلات المنصة</h1>
         <Dialog open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen}>
           <DialogTrigger asChild>
             <Button variant="outline" size="sm"><Download className="ml-2 h-4 w-4" />تصدير التقارير</Button>
@@ -156,7 +156,7 @@ export default function AnalyticsPage() {
         {[
           { label: "إجمالي المستخدمين", value: stats.totalUsers.toLocaleString(), sub: "مستخدم مسجل", icon: <Users className="h-5 w-5 text-white" />, color: "bg-primary", loading: usersLoading },
           { label: "إجمالي المنظمات", value: stats.totalOrgs, sub: "منظمة مسجلة", icon: <Building className="h-5 w-5 text-white" />, color: "bg-purple-500", loading: orgsLoading },
-          { label: "المستخدمون النشطون", value: stats.activeUsers, sub: `${stats.totalUsers > 0 ? Math.round(stats.activeUsers / stats.totalUsers * 100) : 0}% من الإجمالي`, icon: <Activity className="h-5 w-5 text-white" />, color: "bg-accent", loading: usersLoading },
+          { label: "المستخدمون النشطون", value: stats.activeUsers, sub: `${stats.totalUsers > 0 ? Math.round(stats.activeUsers / stats.totalUsers * 100) : 0}% من الإجمالي`, icon: <Activity className="h-5 w-5 text-white" />, color: "bg-emerald-500", loading: usersLoading },
           { label: "إجمالي المنتجات", value: stats.totalProducts, sub: "منتج في المتجر", icon: <ShoppingCart className="h-5 w-5 text-white" />, color: "bg-amber-500", loading: false },
           { label: "إجمالي الدورات", value: stats.totalCourses, sub: "دورة منشورة", icon: <BookOpen className="h-5 w-5 text-white" />, color: "bg-rose-500", loading: coursesLoading },
         ].map((s, i) => (

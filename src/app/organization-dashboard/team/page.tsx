@@ -140,70 +140,69 @@ export default function TeamPage() {
     }
 
   return (
-    <>
-     <Card>
-      <CardHeader>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-                <CardTitle>فريق العمل</CardTitle>
-                <CardDescription>
-                إدارة أعضاء فريق منظمتك وأدوارهم.
-                </CardDescription>
-            </div>
-             <div className="flex items-center gap-2 flex-wrap">
-                <Button variant="outline" onClick={handleExport}>
-                    <Download className="ml-2 h-4 w-4" />
-                    تصدير
-                </Button>
-                <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                    <DialogTrigger asChild>
-                        <Button>
-                            <PlusCircle className="ml-2 h-4 w-4" />
-                            إضافة عضو
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent dir="rtl">
-                        <DialogHeader>
-                            <DialogTitle>إضافة عضو جديد للفريق</DialogTitle>
-                            <DialogDescription>
-                                أدخل معلومات العضو الجديد وأرسل له دعوة.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <Form {...form}>
-                            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
-                                <FormField control={form.control} name="name" render={({ field }) => (
-                                    <FormItem><FormLabel>الاسم الكامل</FormLabel><FormControl><Input placeholder="مثال: خالد الأحمد" {...field} /></FormControl><FormMessage /></FormItem>
-                                )}/>
-                                <FormField control={form.control} name="email" render={({ field }) => (
-                                    <FormItem><FormLabel>البريد الإلكتروني</FormLabel><FormControl><Input dir="ltr" placeholder="khaled@example.com" {...field} /></FormControl><FormMessage /></FormItem>
-                                )}/>
-                                <FormField control={form.control} name="role" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>الدور</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                            <FormControl><SelectTrigger><SelectValue placeholder="اختر دورًا" /></SelectTrigger></FormControl>
-                                            <SelectContent>
-                                                <SelectItem value="organization">مدير منظمة</SelectItem>
-                                                <SelectItem value="team_member">عضو فريق</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}/>
-                                 <DialogFooter>
-                                    <DialogClose asChild><Button variant="ghost">إلغاء</Button></DialogClose>
-                                    <Button type="submit">إرسال دعوة</Button>
-                                 </DialogFooter>
-                            </form>
-                        </Form>
-                    </DialogContent>
-                 </Dialog>
-            </div>
+    <div dir="rtl" className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">فريق العمل</h1>
+          <p className="text-sm text-muted-foreground">إدارة أعضاء فريق منظمتك وأدوارهم.</p>
         </div>
-      </CardHeader>
-      <CardContent>
-        <div className="overflow-x-auto">
-        <Table>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button variant="outline" onClick={handleExport}>
+            <Download className="ml-2 h-4 w-4" />
+            تصدير
+          </Button>
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <PlusCircle className="ml-2 h-4 w-4" />
+                إضافة عضو
+              </Button>
+            </DialogTrigger>
+            <DialogContent dir="rtl">
+              <DialogHeader>
+                <DialogTitle>إضافة عضو جديد للفريق</DialogTitle>
+                <DialogDescription>أدخل معلومات العضو الجديد وأرسل له دعوة.</DialogDescription>
+              </DialogHeader>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
+                  <FormField control={form.control} name="name" render={({ field }) => (
+                    <FormItem><FormLabel>الاسم الكامل</FormLabel><FormControl><Input placeholder="مثال: خالد الأحمد" {...field} /></FormControl><FormMessage /></FormItem>
+                  )}/>
+                  <FormField control={form.control} name="email" render={({ field }) => (
+                    <FormItem><FormLabel>البريد الإلكتروني</FormLabel><FormControl><Input dir="ltr" placeholder="khaled@example.com" {...field} /></FormControl><FormMessage /></FormItem>
+                  )}/>
+                  <FormField control={form.control} name="role" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>الدور</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl><SelectTrigger><SelectValue placeholder="اختر دورًا" /></SelectTrigger></FormControl>
+                        <SelectContent>
+                          <SelectItem value="organization">مدير منظمة</SelectItem>
+                          <SelectItem value="team_member">عضو فريق</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}/>
+                  <DialogFooter>
+                    <DialogClose asChild><Button variant="ghost">إلغاء</Button></DialogClose>
+                    <Button type="submit">إرسال دعوة</Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+
+      <Card className="border-0 shadow-sm">
+        <CardHeader>
+          <CardTitle className="text-base">قائمة أعضاء الفريق</CardTitle>
+          <CardDescription>{!loading ? `${team.length} عضو` : 'جاري التحميل...'}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+          <Table>
           <TableHeader>
             <TableRow>
               <TableHead>الاسم</TableHead>
@@ -292,6 +291,6 @@ export default function TeamPage() {
             </AlertDialogFooter>
         </AlertDialogContent>
     </AlertDialog>
-   </>
+    </div>
   );
 }

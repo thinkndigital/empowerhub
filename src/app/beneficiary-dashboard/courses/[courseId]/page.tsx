@@ -63,14 +63,14 @@ export default function CourseDetailPage() {
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" onClick={() => router.back()}><ArrowRight className="h-4 w-4" /></Button>
         <div>
-          <h1 className="text-2xl font-bold">{loading ? "جاري التحميل..." : (course?.title || "الدورة")}</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{loading ? "جاري التحميل..." : (course?.title || "الدورة")}</h1>
           <p className="text-sm text-muted-foreground">تفاصيل الدورة وتتبع تقدمك</p>
         </div>
       </div>
 
       {loading ? <Skeleton className="h-48 w-full" /> : (
         <div className="grid gap-4 md:grid-cols-3">
-          <Card className="md:col-span-1">
+          <Card className="border-0 shadow-sm md:col-span-1">
             <CardHeader><CardTitle className="text-base">معلومات الدورة</CardTitle></CardHeader>
             <CardContent className="space-y-3">
               <div className="h-24 bg-primary/10 rounded-lg flex items-center justify-center">
@@ -82,7 +82,7 @@ export default function CourseDetailPage() {
             </CardContent>
           </Card>
 
-          <Card className="md:col-span-2">
+          <Card className="border-0 shadow-sm md:col-span-2">
             <CardHeader><CardTitle className="text-base">تقدمي في الدورة</CardTitle></CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-2">

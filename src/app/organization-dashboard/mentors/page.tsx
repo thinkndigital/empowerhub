@@ -95,10 +95,8 @@ export default function OrgMentorsPage() {
   return (
     <div className="space-y-6" dir="rtl">
       <div>
-        <h1 className="text-2xl font-bold">إدارة المرشدين</h1>
-        <p className="text-muted-foreground">
-          استعرض مرشدي منظمتك أو ادعُ مرشدين جدد
-        </p>
+        <h1 className="text-2xl font-bold tracking-tight">إدارة المرشدين</h1>
+        <p className="text-sm text-muted-foreground">استعرض مرشدي منظمتك أو ادعُ مرشدين جدد</p>
       </div>
 
       <Tabs defaultValue="org-mentors" dir="rtl">

@@ -146,60 +146,59 @@ export default function CoursesPage() {
     }
 
   return (
-    <>
-    <Card>
-      <CardHeader>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 flex-wrap">
-            <div>
-                <CardTitle>الدورات التدريبية</CardTitle>
-                <CardDescription>
-                إدارة جميع الدورات التدريبية المتاحة على المنصة.
-                </CardDescription>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-                <Button variant="outline" size="sm" onClick={handleExport}>
-                    <Download className="ml-2 h-4 w-4" />
-                    تصدير
-                </Button>
-                <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button>
-                        <PlusCircle className="ml-2 h-4 w-4" />
-                        إضافة دورة جديدة
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-[425px]" dir="rtl">
-                    <DialogHeader>
-                      <DialogTitle>إضافة دورة جديدة</DialogTitle>
-                      <DialogDescription>
-                        أدخل تفاصيل الدورة الجديدة هنا. انقر على "حفظ" عند الانتهاء.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onAddSubmit)} className="space-y-4 pt-4">
-                            <FormField control={form.control} name="title" render={({ field }) => (
-                                <FormItem><FormLabel>عنوان الدورة</FormLabel><FormControl><Input placeholder="مثال: أساسيات البرمجة" {...field} /></FormControl><FormMessage /></FormItem>
-                            )}/>
-                            <FormField control={form.control} name="category" render={({ field }) => (
-                                <FormItem><FormLabel>الفئة</FormLabel><FormControl><Input placeholder="مثال: التكنولوجيا" {...field} /></FormControl><FormMessage /></FormItem>
-                            )}/>
-                            <FormField control={form.control} name="description" render={({ field }) => (
-                                <FormItem><FormLabel>وصف الدورة (اختياري)</FormLabel><FormControl><Textarea placeholder="وصف موجز لمحتوى الدورة..." {...field} /></FormControl><FormMessage /></FormItem>
-                            )}/>
-                            <DialogFooter>
-                                <DialogClose asChild><Button variant="ghost">إلغاء</Button></DialogClose>
-                                <Button type="submit">حفظ الدورة</Button>
-                            </DialogFooter>
-                        </form>
-                    </Form>
-                  </DialogContent>
-                </Dialog>
-            </div>
+    <div dir="rtl" className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">الدورات التدريبية</h1>
+          <p className="text-sm text-muted-foreground">إدارة جميع الدورات التدريبية المتاحة على المنصة.</p>
         </div>
-      </CardHeader>
-      <CardContent>
-        <div className="overflow-x-auto">
-        <Table>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" size="sm" onClick={handleExport}>
+            <Download className="ml-2 h-4 w-4" />
+            تصدير
+          </Button>
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <PlusCircle className="ml-2 h-4 w-4" />
+                إضافة دورة جديدة
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]" dir="rtl">
+              <DialogHeader>
+                <DialogTitle>إضافة دورة جديدة</DialogTitle>
+                <DialogDescription>أدخل تفاصيل الدورة الجديدة هنا. انقر على "حفظ" عند الانتهاء.</DialogDescription>
+              </DialogHeader>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onAddSubmit)} className="space-y-4 pt-4">
+                  <FormField control={form.control} name="title" render={({ field }) => (
+                    <FormItem><FormLabel>عنوان الدورة</FormLabel><FormControl><Input placeholder="مثال: أساسيات البرمجة" {...field} /></FormControl><FormMessage /></FormItem>
+                  )}/>
+                  <FormField control={form.control} name="category" render={({ field }) => (
+                    <FormItem><FormLabel>الفئة</FormLabel><FormControl><Input placeholder="مثال: التكنولوجيا" {...field} /></FormControl><FormMessage /></FormItem>
+                  )}/>
+                  <FormField control={form.control} name="description" render={({ field }) => (
+                    <FormItem><FormLabel>وصف الدورة (اختياري)</FormLabel><FormControl><Textarea placeholder="وصف موجز لمحتوى الدورة..." {...field} /></FormControl><FormMessage /></FormItem>
+                  )}/>
+                  <DialogFooter>
+                    <DialogClose asChild><Button variant="ghost">إلغاء</Button></DialogClose>
+                    <Button type="submit">حفظ الدورة</Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+
+      <Card className="border-0 shadow-sm">
+        <CardHeader>
+          <CardTitle className="text-base">قائمة الدورات</CardTitle>
+          <CardDescription>{!loading ? `${courses?.length || 0} دورة` : 'جاري التحميل...'}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+          <Table>
           <TableHeader>
             <TableRow>
               <TableHead>عنوان الدورة</TableHead>
@@ -282,7 +281,7 @@ export default function CoursesPage() {
             </AlertDialogFooter>
         </AlertDialogContent>
     </AlertDialog>
-    </>
+    </div>
   );
 }
 

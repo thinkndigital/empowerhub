@@ -151,10 +151,8 @@ export default function OrgCoursesPage() {
   return (
     <div className="space-y-6" dir="rtl">
       <div>
-        <h1 className="text-2xl font-bold">الدورات التدريبية</h1>
-        <p className="text-muted-foreground">
-          جميع الدورات الخاصة بمنظمتك
-        </p>
+        <h1 className="text-2xl font-bold tracking-tight">الدورات التدريبية</h1>
+        <p className="text-sm text-muted-foreground">جميع الدورات الخاصة بمنظمتك</p>
       </div>
 
       {isLoading ? (

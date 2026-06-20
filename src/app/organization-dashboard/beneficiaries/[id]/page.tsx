@@ -73,7 +73,7 @@ export default function BeneficiaryProfilePage() {
           <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
             {[
               { label: "التقدم العام", value: `${progress}%`, icon: <TrendingUp className="h-5 w-5 text-white" />, color: "bg-primary" },
-              { label: "الدورات", value: profile?.enrolledCourses?.length ?? 0, icon: <BookOpen className="h-5 w-5 text-white" />, color: "bg-accent" },
+              { label: "الدورات", value: profile?.enrolledCourses?.length ?? 0, icon: <BookOpen className="h-5 w-5 text-white" />, color: "bg-sky-500" },
               { label: "الجلسات", value: profile?.sessions?.length ?? 0, icon: <Calendar className="h-5 w-5 text-white" />, color: "bg-amber-500" },
               { label: "الحالة", value: progress >= 100 ? "مكتمل" : progress > 0 ? "نشط" : "جديد", icon: <UserCheck className="h-5 w-5 text-white" />, color: "bg-purple-500" },
             ].map((s, i) => (

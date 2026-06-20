@@ -52,7 +52,7 @@ export default function BeneficiarySessionsPage() {
         <p className="text-muted-foreground text-sm mt-1">جلسات الإرشاد والتدريب المجدولة لك</p>
       </div>
 
-      <Card>
+      <Card className="border-0 shadow-sm">
         <CardHeader><CardTitle className="text-base">الجلسات القادمة ({loading ? "..." : upcoming.length})</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           {loading && [...Array(2)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
@@ -76,7 +76,7 @@ export default function BeneficiarySessionsPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="border-0 shadow-sm">
         <CardHeader><CardTitle className="text-base">الجلسات السابقة ({loading ? "..." : past.length})</CardTitle></CardHeader>
         <CardContent className="space-y-2">
           {loading && [...Array(2)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}

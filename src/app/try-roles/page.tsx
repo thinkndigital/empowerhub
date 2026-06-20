@@ -35,7 +35,7 @@ const roles = [
     title: "مرشد",
     description: "متابعة المستفيدين، جدولة الجلسات، وتقديم التوجيه والدعم.",
     link: "/mentor-dashboard",
-    color: "bg-accent",
+    color: "bg-sky-500",
     badge: null,
   },
   {

@@ -153,8 +153,8 @@ export default function BeneficiaryStorePage() {
   return (
     <div className="space-y-6" dir="rtl">
       <div>
-        <h1 className="text-2xl font-bold">متجري</h1>
-        <p className="text-muted-foreground text-sm">أدر متجرك ومنتجاتك هنا.</p>
+        <h1 className="text-2xl font-bold tracking-tight">متجري</h1>
+        <p className="text-sm text-muted-foreground">أدر متجرك ومنتجاتك هنا.</p>
       </div>
 
       <Tabs defaultValue="store">
@@ -165,7 +165,7 @@ export default function BeneficiaryStorePage() {
 
         {/* Store Setup */}
         <TabsContent value="store" className="mt-4">
-          <Card>
+          <Card className="border-0 shadow-sm">
             <CardHeader>
               <CardTitle className="text-base">معلومات المتجر</CardTitle>
               <CardDescription>أدخل معلومات متجرك ثم اضغط الزر أدناه</CardDescription>

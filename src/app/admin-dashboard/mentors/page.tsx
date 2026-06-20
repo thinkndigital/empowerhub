@@ -79,19 +79,25 @@ export default function MentorsPage() {
 
   return (
     <>
-    <Card>
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">المرشدون</h1>
+        <p className="text-sm text-muted-foreground">إدارة المرشدين في المنصة وتتبع أدائهم.</p>
+      </div>
+      <Button variant="outline" size="sm" onClick={handleExport}>
+        <Download className="ml-2 h-4 w-4" />
+        تصدير
+      </Button>
+    </div>
+    <Card className="border-0 shadow-sm">
       <CardHeader>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <CardTitle>المرشدون</CardTitle>
+            <CardTitle className="text-base">قائمة المرشدين</CardTitle>
             <CardDescription>
-              إدارة المرشدين في المنصة وتتبع أدائهم.
+              {!loading && mentors ? `${mentors.length} مرشد مسجل` : 'جاري التحميل...'}
             </CardDescription>
           </div>
-          <Button variant="outline" size="sm" onClick={handleExport}>
-            <Download className="ml-2 h-4 w-4" />
-            تصدير
-          </Button>
         </div>
       </CardHeader>
       <CardContent>

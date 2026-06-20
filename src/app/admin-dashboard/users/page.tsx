@@ -148,19 +148,25 @@ export default function UsersPage() {
 
   return (
     <>
-    <Card>
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">المستخدمون</h1>
+        <p className="text-sm text-muted-foreground">عرض وإدارة جميع المستخدمين المسجلين على المنصة.</p>
+      </div>
+      <Button variant="outline" size="sm" onClick={handleExport}>
+        <Download className="ml-2 h-4 w-4" />
+        تصدير
+      </Button>
+    </div>
+    <Card className="border-0 shadow-sm">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>المستخدمون</CardTitle>
+            <CardTitle>قائمة المستخدمين</CardTitle>
             <CardDescription>
-              عرض وإدارة جميع المستخدمين المسجلين على المنصة.
+              {!loading && users ? `${users.length} مستخدم مسجل` : 'جاري التحميل...'}
             </CardDescription>
           </div>
-          <Button variant="outline" size="sm" onClick={handleExport}>
-            <Download className="ml-2 h-4 w-4" />
-            تصدير
-          </Button>
         </div>
       </CardHeader>
       <CardContent>

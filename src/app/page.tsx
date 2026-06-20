@@ -79,7 +79,7 @@ const iconMap: Record<string, React.ReactNode> = {
   MessageSquare: <MessageSquare className="h-6 w-6" />,
 };
 
-const featureColors = ['bg-primary', 'bg-accent', 'bg-amber-500', 'bg-purple-500', 'bg-rose-500', 'bg-teal-600'];
+const featureColors = ['bg-primary', 'bg-sky-500', 'bg-amber-500', 'bg-purple-500', 'bg-rose-500', 'bg-teal-600'];
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 

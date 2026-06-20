@@ -84,7 +84,7 @@ export default function BeneficiaryOrdersPage() {
     <div className="space-y-6" dir="rtl">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold">طلبات متجري</h1>
+          <h1 className="text-2xl font-bold tracking-tight">طلبات متجري</h1>
           <p className="text-muted-foreground text-sm">إدارة وتتبع طلبات العملاء</p>
         </div>
         <Button variant="outline" onClick={load} disabled={loading} className="gap-2">

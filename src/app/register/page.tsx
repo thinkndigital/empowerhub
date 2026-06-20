@@ -7,7 +7,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Check, Star, Zap, Building2, Crown, Loader2, CreditCard } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,78 +20,41 @@ import { Badge } from "@/components/ui/badge";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { Logo } from "@/components/logo";
 import { useToast } from "@/hooks/use-toast";
-import { Skeleton } from "@/components/ui/skeleton";
 
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { useAuth, useFirestore } from "@/firebase/provider";
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
 import { ORG_TYPES } from "@/lib/org-types";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-interface Plan {
-  id: string;
-  name: string;
-  nameEn: string;
-  key: string;
-  description: string;
-  priceMonthly: number;
-  priceAnnual: number;
-  currency: string;
-  color: string;
-  icon: string;
-  highlighted: boolean;
-  features: string[];
-  limits: Record<string, number>;
-}
-
-interface GatewayInfo {
-  enabled: boolean;
-  label: string;
-}
-
-interface PaymentConfig {
-  allowCOD: boolean;
-  codLabel: string;
-  currency: string;
-  moyasar: GatewayInfo;
-  stripe: GatewayInfo;
-  paypal: GatewayInfo;
-  paytabs: GatewayInfo;
-  hyperpay: GatewayInfo;
-  tamara: GatewayInfo;
-  tabby: GatewayInfo;
-}
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-const iconMap: Record<string, any> = { Star, Zap, Building2, Crown };
-
-function PlanIcon({ icon, color }: { icon: string; color: string }) {
-  const Comp = iconMap[icon] || Star;
-  return <Comp className="h-5 w-5" style={{ color }} />;
-}
-
-function formatPrice(plan: Plan, period: "monthly" | "annual" = "monthly") {
-  if (plan.priceMonthly === 0) return "مجاني";
-  if (period === "annual" && plan.priceAnnual > 0) {
-    return `${plan.priceAnnual.toLocaleString()} ${plan.currency} / سنة`;
-  }
-  return `${plan.priceMonthly.toLocaleString()} ${plan.currency} / شهر`;
-}
-
-function getSavingPercent(plan: Plan): number {
-  if (!plan.priceAnnual || !plan.priceMonthly || plan.priceMonthly === 0) return 0;
-  return Math.round((1 - plan.priceAnnual / (plan.priceMonthly * 12)) * 100);
-}
-
-const LIMIT_LABELS: Record<string, string> = {
-  maxUsers: "مستفيد",
-  maxMentors: "مرشد",
-  maxCourses: "دورة",
-  maxProducts: "منتج",
-  maxStorage: "GB تخزين",
-};
+const PLANS = [
+  {
+    id: "basic",
+    label: "الخطة الأساسية",
+    price: "مجاني",
+    priceNum: 0,
+    features: ["حتى 20 مستفيداً", "الدورات التدريبية", "دعم عبر البريد الإلكتروني"],
+    badge: "",
+  },
+  {
+    id: "pro",
+    label: "الخطة الاحترافية",
+    price: "299 ر.س / شهر",
+    priceNum: 299,
+    features: ["حتى 100 مستفيد", "الدورات + الإرشاد", "متجر إلكتروني", "دعم أولوية"],
+    badge: "الأكثر شيوعاً",
+  },
+  {
+    id: "enterprise",
+    label: "الخطة المؤسسية",
+    price: "999 ر.س / شهر",
+    priceNum: 999,
+    features: ["مستفيدون غير محدودين", "جميع الميزات", "تخصيص كامل", "مدير حساب مخصص"],
+    badge: "الأفضل للمؤسسات",
+  },
+];
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
@@ -116,9 +78,9 @@ const formSchema = z
     { message: "يجب إدخال اسم الجهة (حرفان على الأقل).", path: ["organizationName"] }
   );
 
-type Step = "form" | "plan" | "gateway";
+// ─── Steps ────────────────────────────────────────────────────────────────────
 
-// ─── Component ────────────────────────────────────────────────────────────────
+type Step = "form" | "plan";
 
 function RegisterForm() {
   const registerImage = PlaceHolderImages.find((img) => img.id === "register-background");
@@ -130,16 +92,8 @@ function RegisterForm() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [step, setStep] = useState<Step>("form");
-  const [selectedPlanId, setSelectedPlanId] = useState<string>("");
-  const [selectedGateway, setSelectedGateway] = useState<string>("");
+  const [selectedPlan, setSelectedPlan] = useState("basic");
   const [pendingValues, setPendingValues] = useState<z.infer<typeof formSchema> | null>(null);
-  const [billingPeriod, setBillingPeriod] = useState<"monthly" | "annual">("monthly");
-  const [expandedPlanId, setExpandedPlanId] = useState<string>("");
-
-  // live data from API
-  const [plans, setPlans] = useState<Plan[]>([]);
-  const [plansLoading, setPlansLoading] = useState(false);
-  const [paymentConfig, setPaymentConfig] = useState<PaymentConfig | null>(null);
 
   const roleFromQuery = searchParams.get("role");
   const orgInviteParam = searchParams.get("orgInvite");
@@ -170,71 +124,33 @@ function RegisterForm() {
     }
   }, [searchParams, form]);
 
-  // Load plans + payment config when user reaches plan step
-  useEffect(() => {
-    if (step !== "plan") return;
-    setPlansLoading(true);
-    Promise.all([
-      fetch("/api/public/plans").then((r) => r.json()),
-      fetch("/api/public/payment-config").then((r) => r.json()),
-    ]).then(([plansData, payData]) => {
-      const loadedPlans: Plan[] = plansData.plans || [];
-      setPlans(loadedPlans);
-      setPaymentConfig(payData.config || null);
-      // pre-select highlighted or first plan
-      const highlighted = loadedPlans.find((p) => p.highlighted) || loadedPlans[0];
-      if (highlighted) setSelectedPlanId(highlighted.id);
-    }).catch(() => {
-      // fallback to empty — user can still proceed
-    }).finally(() => setPlansLoading(false));
-  }, [step]);
+  const getDashboardLink = (role: string) => {
+    switch (role) {
+      case "organization": return "/organization-dashboard";
+      case "admin": return "/admin-dashboard";
+      case "mentor": return "/mentor-dashboard";
+      case "coach": return "/coach-dashboard";
+      default: return "/dashboard";
+    }
+  };
 
-  // ── handlers ──────────────────────────────────────────────────────────────
-
+  // Step 1: validate form → if org → go to plan selection → else register
   async function onFormSubmit(values: z.infer<typeof formSchema>) {
     if (values.role === "organization") {
       setPendingValues(values);
       setStep("plan");
       return;
     }
-    await doRegister(values, "", "");
+    await doRegister(values, "");
   }
 
-  function onPlanNext() {
-    const plan = plans.find((p) => p.id === selectedPlanId);
-    if (!plan) return;
-    const effectivePrice = billingPeriod === "annual" && plan.priceAnnual > 0
-      ? plan.priceAnnual
-      : plan.priceMonthly;
-    if (effectivePrice > 0) {
-      const enabledGateways = getEnabledGateways();
-      if (enabledGateways.length > 0) {
-        setSelectedGateway(enabledGateways[0].key);
-        setStep("gateway");
-        return;
-      }
-    }
-    onGatewayConfirm(selectedPlanId, "");
-  }
-
-  async function onGatewayConfirm(planId: string, gateway: string) {
+  // Step 2: plan selected → register
+  async function onPlanConfirm() {
     if (!pendingValues) return;
-    await doRegister(pendingValues, planId, gateway);
+    await doRegister(pendingValues, selectedPlan);
   }
 
-  function getEnabledGateways() {
-    if (!paymentConfig) return [];
-    const keys = ["moyasar", "stripe", "paypal", "paytabs", "hyperpay", "tamara", "tabby"] as const;
-    return keys
-      .filter((k) => paymentConfig[k]?.enabled)
-      .map((k) => ({ key: k, label: paymentConfig[k].label || k }));
-  }
-
-  async function doRegister(
-    values: z.infer<typeof formSchema>,
-    planId: string,
-    gateway: string
-  ) {
+  async function doRegister(values: z.infer<typeof formSchema>, plan: string) {
     setIsLoading(true);
     try {
       const controller = new AbortController();
@@ -253,8 +169,7 @@ function RegisterForm() {
             organizationName: values.organizationName,
             orgType: values.orgType,
             orgInviteCode: values.orgInviteCode,
-            plan: planId || undefined,
-            billingPeriod: planId ? billingPeriod : undefined,
+            plan: plan || undefined,
           }),
           signal: controller.signal,
         });
@@ -302,8 +217,12 @@ function RegisterForm() {
           await setDoc(
             doc(firestore, "users", signedInUid),
             {
-              id: signedInUid, name: values.name, email: values.email,
-              role: values.role, status: "نشط", progress: 0,
+              id: signedInUid,
+              name: values.name,
+              email: values.email,
+              role: values.role,
+              status: "نشط",
+              progress: 0,
               createdAt: new Date().toISOString(),
               ...(data.organizationId ? { organizationId: data.organizationId } : {}),
             },
@@ -312,16 +231,14 @@ function RegisterForm() {
         } catch { /* non-fatal */ }
       }
 
-      const plan = plans.find((p) => p.id === planId);
-      if (values.role === "organization" && plan && plan.priceMonthly > 0) {
-        toast({ title: "تم إنشاء الحساب!", description: "سيتم توجيهك لإتمام الدفع وتفعيل منصتك." });
-        const params = new URLSearchParams({
-          plan: planId,
-          billing: billingPeriod,
-          gateway,
-          orgId: data.organizationId || "",
+      // Org with paid plan → pending payment
+      const planObj = PLANS.find((p) => p.id === plan);
+      if (values.role === "organization" && planObj && planObj.priceNum > 0) {
+        toast({
+          title: "تم إنشاء الحساب!",
+          description: "يرجى إتمام الدفع لتفعيل منصتك.",
         });
-        router.push(`/payment?${params.toString()}`);
+        router.push(`/payment?plan=${plan}&orgId=${data.organizationId || ""}`);
         return;
       }
 
@@ -338,57 +255,23 @@ function RegisterForm() {
     }
   }
 
-  // ── derived ───────────────────────────────────────────────────────────────
-
-  const selectedPlan = plans.find((p) => p.id === selectedPlanId);
-  const enabledGateways = getEnabledGateways();
-
-  const stepTitle = step === "form"
-    ? "إنشاء حساب جديد"
-    : step === "plan"
-    ? "اختر خطتك"
-    : "طريقة الدفع";
-
-  const stepSub = step === "form"
-    ? "انضم إلى منصة EmpowerHub"
-    : step === "plan"
-    ? "اختر الخطة المناسبة لجهتك"
-    : `الخطة: ${selectedPlan?.name || ""} — ${formatPrice(selectedPlan!, billingPeriod)}`;
-
-  // ─── Render ───────────────────────────────────────────────────────────────
-
   return (
-    <div className="flex min-h-screen" dir="rtl">
-      <div className="flex flex-1 flex-col items-center justify-center px-6 py-12 bg-background">
-        <div className="w-full max-w-[440px] space-y-8">
-
-          {/* Logo + title */}
-          <div className="flex flex-col items-center gap-4 text-center">
-            <Link href="/" className="flex items-center justify-center">
-              <Logo className="w-14 h-14" />
+    <div className="w-full lg:grid lg:min-h-screen lg:grid-cols-2" dir="rtl">
+      <div className="flex items-center justify-center py-12 px-4">
+        <div className="mx-auto grid w-full max-w-[420px] gap-6">
+          <div className="grid gap-2 text-center">
+            <Link href="/" className="flex justify-center items-center gap-2 mb-2">
+              <Logo className="w-12 h-12 mx-auto" />
             </Link>
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight">{stepTitle}</h1>
-              <p className="mt-1.5 text-sm text-muted-foreground">{stepSub}</p>
-            </div>
-
-            {/* Progress dots */}
-            {selectedRole === "organization" && (
-              <div className="flex gap-2">
-                {(["form", "plan", "gateway"] as Step[]).map((s) => (
-                  <span
-                    key={s}
-                    className={`h-1.5 rounded-full transition-all ${
-                      step === s ? "w-6 bg-primary" : "w-1.5 bg-muted-foreground/30"
-                    }`}
-                  />
-                ))}
-              </div>
-            )}
+            <h1 className="text-3xl font-bold">
+              {step === "plan" ? "اختر خطتك" : "إنشاء حساب جديد"}
+            </h1>
+            <p className="text-balance text-muted-foreground">
+              {step === "plan"
+                ? "اختر الخطة المناسبة للبدء"
+                : "انضم إلى منصة EmpowerHub"}
+            </p>
           </div>
-
-          <div className="rounded-2xl border bg-card shadow-sm overflow-hidden">
-          <div className="p-5 space-y-4">
 
           {/* ── Step 1: Registration Form ── */}
           {step === "form" && (
@@ -455,6 +338,7 @@ function RegisterForm() {
                             ))}
                           </SelectContent>
                         </Select>
+                        <FormDescription className="text-xs">اختر النوع الذي يمثل جهتك.</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )} />
@@ -483,13 +367,11 @@ function RegisterForm() {
                 )}
 
                 <Button type="submit" className="w-full shadow-md" disabled={isLoading}>
-                  {isLoading ? (
-                    <><Loader2 className="ml-2 h-4 w-4 animate-spin" />جاري المعالجة...</>
-                  ) : selectedRole === "organization" ? (
-                    "التالي — اختيار الخطة ←"
-                  ) : (
-                    "إنشاء حساب مجاناً"
-                  )}
+                  {isLoading
+                    ? "جاري إنشاء الحساب..."
+                    : selectedRole === "organization"
+                    ? "التالي — اختيار الخطة"
+                    : "إنشاء حساب مجاناً"}
                 </Button>
               </form>
             </Form>
@@ -498,336 +380,76 @@ function RegisterForm() {
           {/* ── Step 2: Plan Selection ── */}
           {step === "plan" && (
             <div className="space-y-4">
-              {plansLoading ? (
-                <div className="space-y-3">
-                  {[1, 2, 3].map((i) => (
-                    <Skeleton key={i} className="h-36 w-full rounded-xl" />
-                  ))}
-                </div>
-              ) : plans.length === 0 ? (
-                <div className="text-center py-8 space-y-3">
-                  <p className="text-muted-foreground text-sm">لا توجد خطط متاحة حالياً.</p>
-                  <Button onClick={() => onGatewayConfirm("", "")} disabled={isLoading} className="w-full">
-                    {isLoading && <Loader2 className="h-4 w-4 animate-spin ml-2" />}
-                    إنشاء حساب والمتابعة
-                  </Button>
-                </div>
-              ) : (
-                <>
-                  {/* ── Billing period toggle ── */}
-                  {plans.some((p) => p.priceAnnual > 0 && p.priceMonthly > 0) && (
-                    <div className="flex items-center justify-center">
-                      <div className="flex items-center gap-1 rounded-xl border p-1 bg-muted/40">
-                        <button
-                          type="button"
-                          onClick={() => setBillingPeriod("monthly")}
-                          className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                            billingPeriod === "monthly"
-                              ? "bg-background shadow text-foreground"
-                              : "text-muted-foreground hover:text-foreground"
-                          }`}
-                        >
-                          شهري
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setBillingPeriod("annual")}
-                          className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${
-                            billingPeriod === "annual"
-                              ? "bg-background shadow text-foreground"
-                              : "text-muted-foreground hover:text-foreground"
-                          }`}
-                        >
-                          سنوي
-                          <span className="text-xs bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-semibold">
-                            وفّر حتى {Math.max(...plans.map(getSavingPercent))}%
-                          </span>
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* ── Plan cards ── */}
-                  <div className="grid gap-3">
-                    {plans.map((plan) => {
-                      const isSelected = selectedPlanId === plan.id;
-                      const isExpanded = expandedPlanId === plan.id;
-                      const savingPct = getSavingPercent(plan);
-                      const hasAnnual = plan.priceAnnual > 0 && plan.priceMonthly > 0;
-                      const limits = plan.limits || {};
-                      const limitEntries = Object.entries(LIMIT_LABELS).filter(
-                        ([key]) => limits[key] !== undefined
-                      );
-
-                      return (
-                        <div
-                          key={plan.id}
-                          className={`rounded-xl border-2 transition-all relative ${
-                            isSelected
-                              ? "border-primary bg-primary/5 shadow-sm"
-                              : "border-border hover:border-primary/30"
-                          }`}
-                        >
-                          {/* Highlighted badge */}
-                          {plan.highlighted && (
-                            <span
-                              className="absolute -top-2.5 right-4 text-xs px-2.5 py-0.5 rounded-full text-white font-medium"
-                              style={{ backgroundColor: plan.color }}
-                            >
-                              الأكثر شعبية
-                            </span>
-                          )}
-
-                          {/* Main row — click to select */}
-                          <button
-                            type="button"
-                            onClick={() => setSelectedPlanId(plan.id)}
-                            className="w-full text-right p-4"
-                          >
-                            <div className="flex items-center gap-3">
-                              {/* Icon */}
-                              <div
-                                className="p-2 rounded-xl flex-shrink-0"
-                                style={{ backgroundColor: `${plan.color}18` }}
-                              >
-                                <PlanIcon icon={plan.icon} color={plan.color} />
-                              </div>
-
-                              {/* Name + price */}
-                              <div className="flex-1 min-w-0 text-right">
-                                <div className="flex items-baseline justify-between gap-2 flex-wrap">
-                                  <span className="font-bold text-base">{plan.name}</span>
-                                  <div className="text-left">
-                                    <span className="font-bold text-lg" style={{ color: plan.color }}>
-                                      {plan.priceMonthly === 0
-                                        ? "مجاني"
-                                        : billingPeriod === "annual" && hasAnnual
-                                        ? plan.priceAnnual.toLocaleString()
-                                        : plan.priceMonthly.toLocaleString()}
-                                    </span>
-                                    {plan.priceMonthly > 0 && (
-                                      <span className="text-xs text-muted-foreground mr-1">
-                                        {plan.currency} / {billingPeriod === "annual" ? "سنة" : "شهر"}
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-
-                                {/* Annual saving note */}
-                                {billingPeriod === "annual" && hasAnnual && savingPct > 0 && (
-                                  <p className="text-xs text-emerald-600 font-medium mt-0.5">
-                                    ✓ توفير {savingPct}% مقارنة بالاشتراك الشهري
-                                  </p>
-                                )}
-                                {billingPeriod === "monthly" && hasAnnual && savingPct > 0 && (
-                                  <p className="text-xs text-muted-foreground mt-0.5">
-                                    اشترك سنوياً ووفّر {savingPct}%
-                                  </p>
-                                )}
-
-                                {/* Description */}
-                                {plan.description && (
-                                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                                    {plan.description}
-                                  </p>
-                                )}
-                              </div>
-
-                              {/* Radio dot */}
-                              <div
-                                className={`h-5 w-5 rounded-full border-2 flex-shrink-0 transition-all ${
-                                  isSelected
-                                    ? "border-primary bg-primary"
-                                    : "border-muted-foreground/40"
-                                }`}
-                              />
-                            </div>
-                          </button>
-
-                          {/* Specs section (always visible when selected, toggle-able otherwise) */}
-                          {(isSelected || isExpanded) && (
-                            <div className="px-4 pb-4 space-y-3 border-t pt-3">
-                              {/* Limits grid */}
-                              {limitEntries.length > 0 && (
-                                <div className="grid grid-cols-3 gap-2">
-                                  {limitEntries.map(([key, label]) => (
-                                    <div
-                                      key={key}
-                                      className="text-center rounded-lg bg-background border py-2 px-1"
-                                    >
-                                      <p
-                                        className="font-bold text-sm"
-                                        style={{ color: plan.color }}
-                                      >
-                                        {limits[key] === -1 ? "∞" : limits[key]?.toLocaleString?.() ?? limits[key]}
-                                      </p>
-                                      <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-
-                              {/* Features list */}
-                              {plan.features.length > 0 && (
-                                <ul className="space-y-1.5">
-                                  {plan.features.map((f, i) => (
-                                    <li
-                                      key={i}
-                                      className="flex items-start gap-2 text-xs text-muted-foreground"
-                                    >
-                                      <Check
-                                        className="h-3.5 w-3.5 flex-shrink-0 mt-0.5"
-                                        style={{ color: plan.color }}
-                                      />
-                                      {f}
-                                    </li>
-                                  ))}
-                                </ul>
-                              )}
-                            </div>
-                          )}
-
-                          {/* "Show specs" toggle for non-selected plans */}
-                          {!isSelected && (plan.features.length > 0 || Object.keys(limits).length > 0) && (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setExpandedPlanId(isExpanded ? "" : plan.id)
-                              }
-                              className="w-full text-center text-xs text-muted-foreground hover:text-primary py-2 border-t transition-colors"
-                            >
-                              {isExpanded ? "إخفاء المواصفات ▲" : "عرض المواصفات ▼"}
-                            </button>
+              <div className="grid gap-3">
+                {PLANS.map((plan) => (
+                  <button
+                    key={plan.id}
+                    type="button"
+                    onClick={() => setSelectedPlan(plan.id)}
+                    className={`text-right w-full rounded-xl border-2 p-4 transition-all ${
+                      selectedPlan === plan.id
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/40"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-sm">{plan.label}</span>
+                          {plan.badge && (
+                            <Badge variant="secondary" className="text-xs">
+                              {plan.badge}
+                            </Badge>
                           )}
                         </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      className="flex-1"
-                      onClick={() => setStep("form")}
-                      disabled={isLoading}
-                    >
-                      رجوع
-                    </Button>
-                    <Button
-                      className="flex-1"
-                      onClick={onPlanNext}
-                      disabled={isLoading || !selectedPlanId}
-                    >
-                      {isLoading && <Loader2 className="h-4 w-4 animate-spin ml-2" />}
-                      {(() => {
-                        if (!selectedPlan) return "التالي";
-                        const price = billingPeriod === "annual" && selectedPlan.priceAnnual > 0
-                          ? selectedPlan.priceAnnual
-                          : selectedPlan.priceMonthly;
-                        if (price === 0) return "إنشاء الحساب مجاناً";
-                        if (enabledGateways.length > 0) return "التالي — طريقة الدفع ←";
-                        return "إنشاء الحساب";
-                      })()}
-                    </Button>
-                  </div>
-
-                  <p className="text-xs text-center text-muted-foreground">
-                    الخطط المدفوعة تُفعَّل تلقائياً بعد إتمام الدفع.
-                  </p>
-                </>
-              )}
-            </div>
-          )}
-
-          {/* ── Step 3: Gateway Selection ── */}
-          {step === "gateway" && (
-            <div className="space-y-4">
-              <div className="rounded-xl border p-4 bg-muted/30 text-sm space-y-1">
-                <p className="font-medium">ملخص الطلب</p>
-                <p className="text-muted-foreground">
-                  الخطة: <span className="font-semibold text-foreground">{selectedPlan?.name}</span>
-                </p>
-                <p className="text-muted-foreground">
-                  المبلغ:{" "}
-                  <span className="font-bold text-foreground" style={{ color: selectedPlan?.color }}>
-                    {selectedPlan ? formatPrice(selectedPlan) : ""}
-                  </span>
-                </p>
-              </div>
-
-              <p className="text-sm font-medium">اختر طريقة الدفع:</p>
-
-              <div className="grid gap-2">
-                {enabledGateways.map((gw) => (
-                  <button
-                    key={gw.key}
-                    type="button"
-                    onClick={() => setSelectedGateway(gw.key)}
-                    className={`flex items-center gap-3 w-full rounded-xl border-2 p-3.5 text-right transition-all ${
-                      selectedGateway === gw.key
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-primary/40"
-                    }`}
-                  >
-                    <CreditCard className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                    <span className="flex-1 text-sm font-medium">{gw.label}</span>
-                    <div
-                      className={`h-4 w-4 rounded-full border-2 flex-shrink-0 ${
-                        selectedGateway === gw.key
-                          ? "border-primary bg-primary"
-                          : "border-muted-foreground/40"
-                      }`}
-                    />
+                        <p className="text-primary font-bold mt-0.5">{plan.price}</p>
+                        <ul className="mt-2 space-y-0.5">
+                          {plan.features.map((f) => (
+                            <li key={f} className="text-xs text-muted-foreground flex items-center gap-1">
+                              <span className="text-primary">✓</span> {f}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div
+                        className={`mt-1 h-4 w-4 rounded-full border-2 flex-shrink-0 ${
+                          selectedPlan === plan.id
+                            ? "border-primary bg-primary"
+                            : "border-muted-foreground"
+                        }`}
+                      />
+                    </div>
                   </button>
                 ))}
-
-                {paymentConfig?.allowCOD && (
-                  <button
-                    type="button"
-                    onClick={() => setSelectedGateway("cod")}
-                    className={`flex items-center gap-3 w-full rounded-xl border-2 p-3.5 text-right transition-all ${
-                      selectedGateway === "cod"
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-primary/40"
-                    }`}
-                  >
-                    <CreditCard className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                    <span className="flex-1 text-sm font-medium">
-                      {paymentConfig.codLabel || "الدفع لاحقاً"}
-                    </span>
-                    <div
-                      className={`h-4 w-4 rounded-full border-2 flex-shrink-0 ${
-                        selectedGateway === "cod"
-                          ? "border-primary bg-primary"
-                          : "border-muted-foreground/40"
-                      }`}
-                    />
-                  </button>
-                )}
               </div>
 
               <div className="flex gap-2">
-                <Button variant="outline" className="flex-1" onClick={() => setStep("plan")} disabled={isLoading}>
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setStep("form")}
+                  disabled={isLoading}
+                >
                   رجوع
                 </Button>
                 <Button
                   className="flex-1"
-                  onClick={() => onGatewayConfirm(selectedPlanId, selectedGateway)}
-                  disabled={isLoading || !selectedGateway}
+                  onClick={onPlanConfirm}
+                  disabled={isLoading}
                 >
-                  {isLoading ? (
-                    <><Loader2 className="h-4 w-4 animate-spin ml-2" />جاري المعالجة...</>
-                  ) : (
-                    "تأكيد وإنشاء الحساب"
-                  )}
+                  {isLoading
+                    ? "جاري الإنشاء..."
+                    : PLANS.find((p) => p.id === selectedPlan)?.priceNum === 0
+                    ? "إنشاء الحساب مجاناً"
+                    : "إنشاء الحساب والانتقال للدفع"}
                 </Button>
               </div>
+
+              <p className="text-xs text-center text-muted-foreground">
+                الخطة الأساسية مجانية تماماً. الخطط المدفوعة تُفعَّل بعد إتمام الدفع.
+              </p>
             </div>
           )}
-
-          </div>{/* /p-5 */}
-          </div>{/* /card */}
 
           <p className="text-xs text-center text-muted-foreground">
             بالتسجيل أنت توافق على{" "}
@@ -845,7 +467,7 @@ function RegisterForm() {
         </div>
       </div>
 
-      <div className="hidden lg:relative lg:flex lg:w-[480px] lg:flex-col lg:shrink-0 overflow-hidden">
+      <div className="hidden bg-muted lg:block relative overflow-hidden">
         {registerImage && (
           <Image
             src={registerImage.imageUrl}
@@ -855,33 +477,12 @@ function RegisterForm() {
             data-ai-hint={registerImage.imageHint}
           />
         )}
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-900/95 via-blue-950/85 to-slate-900/90" />
-        <div className="relative z-10 flex flex-col justify-between h-full p-10">
-          <div className="flex items-center gap-3">
-            <Logo className="h-8 w-8" />
-            <span className="text-xl font-bold text-white">EmpowerHub</span>
-          </div>
-          <div>
-            <h2 className="text-3xl font-bold text-white mb-3 leading-snug">
-              ابدأ رحلتك نحو النجاح
-            </h2>
-            <p className="text-white/65 text-sm leading-relaxed mb-8">
-              انضم إلى آلاف المستفيدين والجهات التي تثق بـ EmpowerHub لتحقيق أهدافها
-            </p>
-            <div className="space-y-3">
-              {[
-                'إعداد سريع في دقائق',
-                'دعم متعدد الأدوار: مستفيد، مرشد، مدرب، منظمة',
-                'لوحة تحكم متكاملة لكل دور',
-                'تقارير وتحليلات فورية',
-              ].map(feature => (
-                <div key={feature} className="flex items-center gap-3 text-sm text-white/75">
-                  <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-blue-400" />
-                  {feature}
-                </div>
-              ))}
-            </div>
-          </div>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+        <div className="absolute bottom-10 right-10 text-white max-w-xs">
+          <h2 className="text-2xl font-bold mb-2">ابدأ رحلتك نحو النجاح</h2>
+          <p className="text-white/80 text-sm leading-relaxed">
+            انضم إلى منصة EmpowerHub وابدأ التغيير اليوم
+          </p>
         </div>
       </div>
     </div>

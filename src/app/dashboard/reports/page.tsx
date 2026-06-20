@@ -167,7 +167,7 @@ export default function ReportsPage() {
         <Card className="border-0 shadow-sm card-hover">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">جلسات الإرشاد المكتملة</CardTitle>
-            <div className="h-9 w-9 rounded-lg bg-accent flex items-center justify-center"><BookOpenCheck className="h-5 w-5 text-white" /></div>
+            <div className="h-9 w-9 rounded-lg bg-emerald-500 flex items-center justify-center"><BookOpenCheck className="h-5 w-5 text-white" /></div>
           </CardHeader>
           <CardContent>
             {loading ? <Skeleton className="h-8 w-16" /> : <div className="text-2xl font-bold">{stats.completedSessions}</div>}

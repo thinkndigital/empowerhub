@@ -4,15 +4,15 @@ import Image from "next/image";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Package, DollarSign, ShoppingCart, PlusCircle, Trash2, Edit, Settings, Truck, CheckCircle, XCircle, Tag } from "lucide-react";
+import { Package, DollarSign, Users, ShoppingCart, PlusCircle, MoreVertical, MoreHorizontal, MapPin, Trash2, Edit, Settings, Truck, CheckCircle, XCircle, Tag } from "lucide-react";
 import { useState, useMemo, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -27,387 +27,405 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 
-import { MoreHorizontal } from "lucide-react";
-
-const productSchema = z.object({
+const formSchema = z.object({
+  id: z.string().optional(),
   name: z.string().min(2, { message: "يجب أن يكون اسم المنتج حرفين على الأقل." }),
-  description: z.string().refine(v => !v || v.length >= 10, { message: "يجب أن يكون الوصف 10 أحرف على الأقل." }).optional(),
+  description: z.string().optional().refine(val => !val || val.length >= 10, { message: "يجب أن يكون الوصف 10 أحرف على الأقل." }),
+  location: z.string().optional().refine(val => !val || val.length >= 2, { message: "يجب أن يكون الموقع حرفين على الأقل." }),
   price: z.coerce.number().positive({ message: "يجب أن يكون السعر رقمًا موجبًا." }),
   stock: z.coerce.number().int().min(0, { message: "يجب أن يكون المخزون رقمًا صحيحًا." }),
   deliveryCost: z.coerce.number().min(0).optional(),
   imageUrl: z.string().optional(),
   category: z.string().optional(),
 });
-type ProductForm = z.infer<typeof productSchema>;
 
-type Product = ProductForm & { id: string; beneficiaryId: string; beneficiaryName: string };
-type Order = { id: string; status: string; total?: number; price?: number; productName?: string; buyerName?: string; createdAt?: any };
-type Store = { id: string; name: string; logoUrl?: string; location?: string };
+type Product = z.infer<typeof formSchema> & { id: string; beneficiaryId?: string; beneficiaryName?: string };
+type Order = {
+  id: string;
+  productName: string;
+  customerName: string;
+  orderDate?: any;
+  total?: number;
+  status: 'pending' | 'shipped' | 'delivered' | 'cancelled';
+};
 
-const statusConfig: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
-  pending: { label: "قيد الانتظار", color: "bg-yellow-100 text-yellow-800", icon: <ShoppingCart className="h-3 w-3" /> },
-  confirmed: { label: "مؤكد", color: "bg-blue-100 text-blue-800", icon: <CheckCircle className="h-3 w-3" /> },
-  shipped: { label: "تم الشحن", color: "bg-purple-100 text-purple-800", icon: <Truck className="h-3 w-3" /> },
-  delivered: { label: "تم التسليم", color: "bg-green-100 text-green-800", icon: <CheckCircle className="h-3 w-3" /> },
-  cancelled: { label: "ملغى", color: "bg-red-100 text-red-800", icon: <XCircle className="h-3 w-3" /> },
+const statusMap: { [key in Order['status']]: { text: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' } } = {
+  pending: { text: "قيد الانتظار", variant: "secondary" },
+  shipped: { text: "تم الشحن", variant: "default" },
+  delivered: { text: "تم التوصيل", variant: "outline" },
+  cancelled: { text: "ملغي", variant: "destructive" },
 };
 
 export default function MyStorePage() {
   const { toast } = useToast();
-  const { user: authUser } = useUser();
+  const { user: authUser, userProfile, loading: authLoading } = useUser();
   const storage = useStorage();
 
-  const [store, setStore] = useState<Store | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editProduct, setEditProduct] = useState<Product | null>(null);
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-
-  const form = useForm<ProductForm>({
-    resolver: zodResolver(productSchema),
-    defaultValues: { name: "", description: "", price: 0, stock: 0, deliveryCost: 0, imageUrl: "", category: "" },
-  });
-
-  const getToken = useCallback(async () => authUser?.getIdToken(), [authUser]);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!authUser) return;
+    setIsLoading(true);
     try {
-      const token = await getToken();
-      const res = await fetch('/api/beneficiary/store', { headers: { Authorization: `Bearer ${token}` } });
-      const { store: s, products: p, orders: o } = await res.json();
-      setStore(s);
-      setProducts(p || []);
-      setOrders(o || []);
-    } catch (e) {
-      console.error(e);
-      toast({ variant: "destructive", title: "خطأ", description: "فشل في جلب بيانات المتجر." });
+      const token = await authUser.getIdToken();
+      const res = await fetch('/api/beneficiary/store', { headers: { authorization: `Bearer ${token}` } });
+      const json = await res.json();
+      setProducts(json.products || []);
+      setOrders(json.orders || []);
+    } catch {
+      // silent
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
-  }, [authUser, getToken, toast]);
+  }, [authUser]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    if (!authLoading && authUser) fetchData();
+  }, [authLoading, authUser, fetchData]);
 
-  const openAddDialog = () => {
-    setEditingProduct(null);
-    setImageFile(null);
-    setImagePreview(null);
-    form.reset({ name: "", description: "", price: 0, stock: 0, deliveryCost: 0, imageUrl: "", category: "" });
-    setIsProductDialogOpen(true);
+  const storeStats = useMemo(() => {
+    const totalRevenue = orders.filter(o => o.status === 'delivered').reduce((sum, o) => sum + (o.total || 0), 0);
+    return {
+      totalProducts: products.length,
+      totalRevenue: totalRevenue.toFixed(2),
+      totalOrders: `${orders.length}`,
+      newCustomers: `${new Set(orders.map(o => o.customerName)).size}`,
+    };
+  }, [products, orders]);
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: { name: "", price: 0, stock: 0, description: "", location: "", deliveryCost: 0, imageUrl: "", category: "" },
+  });
+
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => setImagePreview(reader.result as string);
+      reader.readAsDataURL(file);
+    }
   };
 
-  const openEditDialog = (product: Product) => {
-    setEditingProduct(product);
-    setImageFile(null);
+  const openDialogForEdit = (product: Product) => {
+    setEditProduct(product);
+    form.reset(product);
     setImagePreview(product.imageUrl || null);
-    form.reset({ name: product.name, description: product.description || "", price: product.price, stock: product.stock, deliveryCost: product.deliveryCost || 0, imageUrl: product.imageUrl || "", category: product.category || "" });
-    setIsProductDialogOpen(true);
+    setImageFile(null);
+    setIsDialogOpen(true);
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) { setImageFile(file); const r = new FileReader(); r.onloadend = () => setImagePreview(r.result as string); r.readAsDataURL(file); }
+  const openDialogForAdd = () => {
+    setEditProduct(null);
+    form.reset({ name: "", price: 0, stock: 0, description: "", location: "", deliveryCost: 0, imageUrl: "", category: "" });
+    setImagePreview(null);
+    setImageFile(null);
+    setIsDialogOpen(true);
   };
 
-  const onSubmitProduct = async (values: ProductForm) => {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!authUser) return;
-    setIsSaving(true);
-    try {
-      let imageUrl = values.imageUrl || editingProduct?.imageUrl || "";
-      if (imageFile && storage) {
-        const ref = storageRef(storage, `products/${authUser.uid}/${Date.now()}-${imageFile.name}`);
-        const snap = await uploadBytes(ref, imageFile);
-        imageUrl = await getDownloadURL(snap.ref);
+    setIsUploading(true);
+
+    let finalImageUrl = editProduct?.imageUrl || "";
+
+    if (imageFile && storage) {
+      try {
+        const uniqueFileName = `${authUser.uid}/${Date.now()}-${imageFile.name}`;
+        const imageRef = storageRef(storage, `product-images/${uniqueFileName}`);
+        const snapshot = await uploadBytes(imageRef, imageFile);
+        finalImageUrl = await getDownloadURL(snapshot.ref);
+      } catch {
+        toast({ variant: "destructive", title: "خطأ في رفع الصورة", description: "لم نتمكن من رفع صورة المنتج." });
+        setIsUploading(false);
+        return;
       }
-
-      const token = await getToken();
-      const payload = { ...values, imageUrl };
-
-      if (editingProduct) {
-        const res = await fetch('/api/beneficiary/store', {
-          method: 'PUT',
-          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...payload, id: editingProduct.id, _collection: 'products' }),
-        });
-        if (!res.ok) throw new Error(await res.text());
-        setProducts(prev => prev.map(p => p.id === editingProduct.id ? { ...p, ...payload } : p));
-        toast({ title: "تم التحديث", description: "تم تحديث المنتج بنجاح." });
-      } else {
-        const res = await fetch('/api/beneficiary/store', {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-        if (!res.ok) throw new Error(await res.text());
-        const newProduct = await res.json();
-        setProducts(prev => [...prev, newProduct]);
-        toast({ title: "تم الإضافة!", description: "تم إضافة المنتج بنجاح." });
-      }
-      setIsProductDialogOpen(false);
-    } catch (e) {
-      console.error(e);
-      toast({ variant: "destructive", title: "خطأ", description: "فشل حفظ المنتج." });
-    } finally {
-      setIsSaving(false);
     }
-  };
 
-  const handleDeleteProduct = async () => {
-    if (!deleteTarget) return;
     try {
-      const token = await getToken();
-      const res = await fetch(`/api/beneficiary/store?id=${deleteTarget.id}&collection=products`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
-      if (!res.ok) throw new Error(await res.text());
-      setProducts(prev => prev.filter(p => p.id !== deleteTarget.id));
-      toast({ title: "تم الحذف", description: "تم حذف المنتج." });
-    } catch (e) {
-      toast({ variant: "destructive", title: "خطأ", description: "فشل حذف المنتج." });
-    } finally {
-      setDeleteTarget(null);
-    }
-  };
+      const token = await authUser.getIdToken();
+      const productData = {
+        ...values,
+        imageUrl: finalImageUrl,
+        beneficiaryId: authUser.uid,
+        beneficiaryName: userProfile?.name || '',
+        ...(editProduct?.id ? { id: editProduct.id } : {}),
+      };
 
-  const handleUpdateOrderStatus = async (orderId: string, status: string) => {
-    try {
-      const token = await getToken();
-      const res = await fetch('/api/beneficiary/store', {
-        method: 'PUT',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: orderId, _collection: 'orders', status }),
+      const method = editProduct?.id ? 'PUT' : 'POST';
+      const endpoint = editProduct?.id
+        ? `/api/beneficiary/store`
+        : `/api/beneficiary/store`;
+
+      const res = await fetch(endpoint, {
+        method: editProduct?.id ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify(editProduct?.id
+          ? { id: editProduct.id, ...values, imageUrl: finalImageUrl }
+          : productData
+        ),
       });
-      if (!res.ok) throw new Error(await res.text());
-      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
-      toast({ title: "تم التحديث", description: "تم تحديث حالة الطلب." });
-    } catch (e) {
+
+      if (!res.ok) throw new Error((await res.json()).error || 'فشل الحفظ');
+
+      toast({ title: editProduct ? "تم التعديل بنجاح!" : "تمت الإضافة بنجاح!", description: `"${values.name}"` });
+      form.reset();
+      setIsDialogOpen(false);
+      setEditProduct(null);
+      setImagePreview(null);
+      setImageFile(null);
+      fetchData();
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "خطأ", description: e.message || "فشل حفظ المنتج." });
+    } finally {
+      setIsUploading(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!productToDelete?.id || !authUser) return;
+    try {
+      const token = await authUser.getIdToken();
+      await fetch(`/api/beneficiary/store?id=${productToDelete.id}&type=product`, {
+        method: 'DELETE',
+        headers: { authorization: `Bearer ${token}` },
+      });
+      toast({ variant: "destructive", title: "تم الحذف!", description: `تم حذف "${productToDelete.name}".` });
+      setProductToDelete(null);
+      fetchData();
+    } catch {
+      toast({ variant: "destructive", title: "خطأ", description: "فشل حذف المنتج." });
+      setProductToDelete(null);
+    }
+  }
+
+  async function handleUpdateOrderStatus(orderId: string, status: Order['status']) {
+    if (!authUser) return;
+    try {
+      const token = await authUser.getIdToken();
+      await fetch('/api/beneficiary/store', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify({ id: orderId, status, _collection: 'orders' }),
+      });
+      toast({ title: "تم تحديث حالة الطلب", description: `"${statusMap[status].text}"` });
+      fetchData();
+    } catch {
       toast({ variant: "destructive", title: "خطأ", description: "فشل تحديث حالة الطلب." });
     }
-  };
-
-  const totalRevenue = useMemo(() => orders.filter(o => o.status === 'delivered').reduce((s, o) => s + (o.total || o.price || 0), 0), [orders]);
-  const pendingOrders = orders.filter(o => o.status === 'pending').length;
-
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="flex justify-between items-center"><Skeleton className="h-8 w-48" /><Skeleton className="h-10 w-32" /></div>
-        <div className="grid grid-cols-3 gap-4">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-24" />)}</div>
-        <Skeleton className="h-64 w-full" />
-      </div>
-    );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">{store?.name || 'متجري'}</h1>
-          {store?.location && <p className="text-muted-foreground text-sm mt-1">{store.location}</p>}
+    <>
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">لوحة تحكم متجري</h1>
+        <p className="text-muted-foreground">نظرة عامة على أداء متجرك الإلكتروني.</p>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">إجمالي الإيرادات</CardTitle><DollarSign className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{isLoading ? '...' : `${storeStats.totalRevenue} د.أ`}</div><p className="text-xs text-muted-foreground">من الطلبات المكتملة</p></CardContent></Card>
+        <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">إجمالي المنتجات</CardTitle><Package className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{isLoading ? '...' : storeStats.totalProducts}</div><p className="text-xs text-muted-foreground">منتج معروض في المتجر</p></CardContent></Card>
+        <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">الطلبات</CardTitle><ShoppingCart className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{isLoading ? '...' : storeStats.totalOrders}</div><p className="text-xs text-muted-foreground">إجمالي الطلبات المستلمة</p></CardContent></Card>
+        <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">العملاء</CardTitle><Users className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{isLoading ? '...' : storeStats.newCustomers}</div><p className="text-xs text-muted-foreground">إجمالي عدد العملاء</p></CardContent></Card>
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">منتجاتك</h2>
+            <p className="text-muted-foreground">إدارة منتجات متجرك.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button asChild variant="outline">
+              <Link href="/dashboard/my-store/settings"><Settings className="ml-2 h-4 w-4" />إعدادات المتجر</Link>
+            </Button>
+            <Button onClick={openDialogForAdd}><PlusCircle className="ml-2 h-4 w-4" />إضافة منتج جديد</Button>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" asChild><Link href="/dashboard/my-store/settings"><Settings className="ml-2 h-4 w-4" />إعدادات المتجر</Link></Button>
-          <Button onClick={openAddDialog}><PlusCircle className="ml-2 h-4 w-4" />إضافة منتج</Button>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mt-4">
+          {isLoading && [...Array(3)].map((_, i) => (
+            <Card key={i}><CardContent className="p-4"><Skeleton className="h-[300px]" /></CardContent></Card>
+          ))}
+          {!isLoading && products.map((product) => (
+            <Card key={product.id} className="group flex flex-col">
+              <CardHeader className="p-0 relative">
+                <Image src={product.imageUrl || `https://picsum.photos/seed/${product.id}/400/300`} alt={product.name} width={400} height={300} className="rounded-t-lg object-cover" />
+                <div className="absolute top-2 left-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="secondary" size="icon" className="h-8 w-8 opacity-80 group-hover:opacity-100 transition-opacity">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => openDialogForEdit(product)}><Edit className="ml-2 h-4 w-4" />تعديل المنتج</DropdownMenuItem>
+                      <DropdownMenuItem className="text-red-500" onSelect={() => setProductToDelete(product)}><Trash2 className="ml-2 h-4 w-4" />حذف المنتج</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </CardHeader>
+              <CardContent className="p-4 flex-grow">
+                <CardTitle className="text-lg">{product.name}</CardTitle>
+                <p className="text-sm text-muted-foreground line-clamp-2 mt-1 h-[40px]">{product.description}</p>
+                <p className="text-sm text-muted-foreground mt-2">المخزون: {product.stock} قطعة</p>
+              </CardContent>
+              <CardFooter className="flex justify-between items-center p-4 pt-0">
+                <div>
+                  <p className="text-lg font-semibold">{product.price?.toFixed(2)} د.أ</p>
+                  {product.deliveryCost && product.deliveryCost > 0 && (
+                    <p className="text-xs text-muted-foreground">+ {product.deliveryCost.toFixed(2)} د.أ توصيل</p>
+                  )}
+                </div>
+                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                  <MapPin className="h-4 w-4" />{product.location || 'غير محدد'}
+                </div>
+              </CardFooter>
+            </Card>
+          ))}
+          {!isLoading && products.length === 0 && (
+            <div className="col-span-full text-center h-40 flex items-center justify-center">
+              <p>لم تقم بإضافة أي منتجات بعد. انقر على "إضافة منتج جديد" للبدء.</p>
+            </div>
+          )}
         </div>
       </div>
 
-      {!store && (
-        <Card className="border-dashed border-2">
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <Package className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">لم يتم إنشاء متجرك بعد</h3>
-            <p className="text-muted-foreground text-sm mb-4">أنشئ متجرك الآن وابدأ ببيع منتجاتك.</p>
-            <Button asChild><Link href="/dashboard/my-store/settings">إنشاء المتجر</Link></Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {store && (
-        <>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4" dir="rtl">
-            <Card className="border-0 shadow-sm">
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-green-100 flex items-center justify-center"><DollarSign className="h-5 w-5 text-green-600" /></div>
-                  <div><p className="text-2xl font-bold">{totalRevenue.toFixed(0)} د.أ</p><p className="text-xs text-muted-foreground">إجمالي الإيرادات</p></div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-0 shadow-sm">
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center"><Package className="h-5 w-5 text-blue-600" /></div>
-                  <div><p className="text-2xl font-bold">{products.length}</p><p className="text-xs text-muted-foreground">المنتجات</p></div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-0 shadow-sm">
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-yellow-100 flex items-center justify-center"><ShoppingCart className="h-5 w-5 text-yellow-600" /></div>
-                  <div><p className="text-2xl font-bold">{pendingOrders}</p><p className="text-xs text-muted-foreground">طلبات معلقة</p></div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card className="border-0 shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>المنتجات</CardTitle>
-              <Button size="sm" onClick={openAddDialog}><PlusCircle className="ml-2 h-4 w-4" />إضافة</Button>
-            </CardHeader>
-            <CardContent>
-              {products.length === 0 ? (
-                <div className="text-center py-10 text-muted-foreground"><Package className="h-10 w-10 mx-auto mb-3 opacity-30" /><p>لا توجد منتجات. أضف منتجك الأول!</p></div>
-              ) : (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {products.map(product => (
-                    <Card key={product.id} className="border shadow-sm">
-                      {product.imageUrl && (
-                        <div className="relative h-40 w-full overflow-hidden rounded-t-lg">
-                          <Image src={product.imageUrl} alt={product.name} fill className="object-cover" />
-                        </div>
-                      )}
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <h3 className="font-semibold">{product.name}</h3>
-                            {product.category && <Badge variant="outline" className="text-xs mt-1">{product.category}</Badge>}
-                          </div>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>خيارات</DropdownMenuLabel>
-                              <DropdownMenuItem onClick={() => openEditDialog(product)}><Edit className="ml-2 h-4 w-4" />تعديل</DropdownMenuItem>
-                              <DropdownMenuItem className="text-destructive" onClick={() => setDeleteTarget({ id: product.id, name: product.name })}><Trash2 className="ml-2 h-4 w-4" />حذف</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                        <div className="flex items-center justify-between mt-3">
-                          <span className="font-bold text-primary">{product.price} د.أ</span>
-                          <span className="text-xs text-muted-foreground">المخزون: {product.stock}</span>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+      <Card>
+        <CardHeader><CardTitle>الطلبات الواردة</CardTitle><CardDescription>إدارة الطلبات الجديدة على منتجاتك.</CardDescription></CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>المنتج</TableHead>
+                <TableHead>الزبون</TableHead>
+                <TableHead>تاريخ الطلب</TableHead>
+                <TableHead>الحالة</TableHead>
+                <TableHead className="text-right"><span className="sr-only">الإجراءات</span></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading && <TableRow><TableCell colSpan={5} className="h-24 text-center">جاري تحميل الطلبات...</TableCell></TableRow>}
+              {!isLoading && orders.map(order => (
+                <TableRow key={order.id}>
+                  <TableCell className="font-medium">{order.productName}</TableCell>
+                  <TableCell>{order.customerName}</TableCell>
+                  <TableCell>{order.orderDate ? format(new Date(order.orderDate._seconds ? order.orderDate._seconds * 1000 : order.orderDate), "d MMMM yyyy", { locale: ar }) : 'غير محدد'}</TableCell>
+                  <TableCell>
+                    <Badge variant={statusMap[order.status]?.variant} className={order.status === 'delivered' ? 'text-green-600 border-green-600' : ''}>
+                      {statusMap[order.status]?.text}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>تغيير الحالة</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => handleUpdateOrderStatus(order.id, 'shipped')}><Truck className="ml-2 h-4 w-4" />تمييز كـ تم الشحن</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleUpdateOrderStatus(order.id, 'delivered')}><CheckCircle className="ml-2 h-4 w-4" />تمييز كـ تم التوصيل</DropdownMenuItem>
+                        <DropdownMenuItem className="text-red-500" onClick={() => handleUpdateOrderStatus(order.id, 'cancelled')}><XCircle className="ml-2 h-4 w-4" />إلغاء الطلب</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {!isLoading && orders.length === 0 && (
+                <TableRow><TableCell colSpan={5} className="text-center h-24">لا توجد طلبات حالية.</TableCell></TableRow>
               )}
-            </CardContent>
-          </Card>
-
-          <Card className="border-0 shadow-sm">
-            <CardHeader><CardTitle>الطلبات</CardTitle></CardHeader>
-            <CardContent>
-              {orders.length === 0 ? (
-                <div className="text-center py-10 text-muted-foreground"><ShoppingCart className="h-10 w-10 mx-auto mb-3 opacity-30" /><p>لا توجد طلبات حتى الآن.</p></div>
-              ) : (
-                <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>المنتج</TableHead>
-                      <TableHead className="hidden md:table-cell">المشتري</TableHead>
-                      <TableHead>المبلغ</TableHead>
-                      <TableHead>الحالة</TableHead>
-                      <TableHead className="hidden md:table-cell">التاريخ</TableHead>
-                      <TableHead></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {orders.map(order => {
-                      const cfg = statusConfig[order.status] || statusConfig.pending;
-                      return (
-                        <TableRow key={order.id}>
-                          <TableCell className="font-medium truncate max-w-[100px]">{order.productName || '—'}</TableCell>
-                          <TableCell className="hidden md:table-cell">{order.buyerName || '—'}</TableCell>
-                          <TableCell>{(order.total || order.price || 0).toFixed(0)} د.أ</TableCell>
-                          <TableCell>
-                            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${cfg.color}`}>
-                              {cfg.icon}{cfg.label}
-                            </span>
-                          </TableCell>
-                          <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
-                            {(() => { try { const d = new Date(order.createdAt?.seconds ? order.createdAt.seconds * 1000 : order.createdAt?._seconds ? order.createdAt._seconds * 1000 : order.createdAt); return d && !isNaN(d.getTime()) ? format(d, 'd MMM yyyy', { locale: ar }) : '—'; } catch { return '—'; } })()}
-                          </TableCell>
-                          <TableCell>
-                            <Select value={order.status} onValueChange={v => handleUpdateOrderStatus(order.id, v)}>
-                              <SelectTrigger className="h-8 w-32 text-xs"><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                {Object.entries(statusConfig).map(([k, v]) => <SelectItem key={k} value={k} className="text-xs">{v.label}</SelectItem>)}
-                              </SelectContent>
-                            </Select>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </>
-      )}
-
-      <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
-        <DialogContent className="w-[90vw] sm:max-w-lg" dir="rtl">
-          <DialogHeader><DialogTitle>{editingProduct ? 'تعديل المنتج' : 'إضافة منتج جديد'}</DialogTitle></DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmitProduct)} className="space-y-4">
-              <FormField control={form.control} name="name" render={({ field }) => (
-                <FormItem><FormLabel>اسم المنتج</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-              )} />
-              <FormField control={form.control} name="description" render={({ field }) => (
-                <FormItem><FormLabel>الوصف</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
-              )} />
-              <div className="grid grid-cols-2 gap-4">
-                <FormField control={form.control} name="price" render={({ field }) => (
-                  <FormItem><FormLabel>السعر (د.أ)</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField control={form.control} name="stock" render={({ field }) => (
-                  <FormItem><FormLabel>المخزون</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
-                )} />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <FormField control={form.control} name="deliveryCost" render={({ field }) => (
-                  <FormItem><FormLabel>تكلفة التوصيل</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField control={form.control} name="category" render={({ field }) => (
-                  <FormItem><FormLabel>الفئة</FormLabel><FormControl><Input placeholder="مثال: ملابس" {...field} /></FormControl><FormMessage /></FormItem>
-                )} />
-              </div>
-              <FormItem>
-                <FormLabel>صورة المنتج</FormLabel>
-                <FormControl><Input type="file" accept="image/*" onChange={handleImageChange} /></FormControl>
-                {imagePreview && <div className="mt-2 relative h-32 w-full rounded-md overflow-hidden border"><Image src={imagePreview} alt="معاينة" fill className="object-cover" /></div>}
-              </FormItem>
-              <DialogFooter>
-                <DialogClose asChild><Button type="button" variant="outline">إلغاء</Button></DialogClose>
-                <Button type="submit" disabled={isSaving}>{isSaving ? 'جاري الحفظ...' : editingProduct ? 'حفظ التعديلات' : 'إضافة المنتج'}</Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
-
-      <AlertDialog open={!!deleteTarget} onOpenChange={open => !open && setDeleteTarget(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle>
-            <AlertDialogDescription>سيتم حذف منتج "{deleteTarget?.name}" نهائياً.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>إلغاء</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteProduct} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">حذف</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
+
+    <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
+      setIsDialogOpen(isOpen);
+      if (!isOpen) { setEditProduct(null); setImagePreview(null); setImageFile(null); form.reset(); }
+    }}>
+      <DialogContent className="sm:max-w-lg" dir="rtl">
+        <DialogHeader>
+          <DialogTitle>{editProduct ? 'تعديل المنتج' : 'إضافة منتج جديد'}</DialogTitle>
+          <DialogDescription>{editProduct ? 'قم بتحديث تفاصيل المنتج.' : 'أدخل تفاصيل المنتج الجديد.'}</DialogDescription>
+        </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4 max-h-[70vh] overflow-y-auto px-2">
+            <FormField control={form.control} name="name" render={({ field }) => (
+              <FormItem><FormLabel>اسم المنتج</FormLabel><FormControl><Input placeholder="مثال: خاتم فضة" {...field} /></FormControl><FormMessage /></FormItem>
+            )} />
+            <FormField control={form.control} name="description" render={({ field }) => (
+              <FormItem><FormLabel>وصف المنتج</FormLabel><FormControl><Textarea placeholder="وصف موجز للمنتج ومميزاته..." {...field} /></FormControl><FormMessage /></FormItem>
+            )} />
+            <FormItem>
+              <FormLabel>صورة المنتج</FormLabel>
+              <FormControl><Input type="file" accept="image/png, image/jpeg, image/gif" onChange={handleImageChange} /></FormControl>
+            </FormItem>
+            {imagePreview && (
+              <div><FormLabel>معاينة الصورة</FormLabel><div className="mt-2"><Image src={imagePreview} alt="معاينة" width={100} height={100} className="rounded-md object-cover border" /></div></div>
+            )}
+            <FormField control={form.control} name="location" render={({ field }) => (
+              <FormItem><FormLabel>الموقع (المدينة)</FormLabel><FormControl><Input placeholder="مثال: الرياض" {...field} /></FormControl><FormMessage /></FormItem>
+            )} />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField control={form.control} name="price" render={({ field }) => (
+                <FormItem><FormLabel>السعر (د.أ)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="150.00" {...field} /></FormControl><FormMessage /></FormItem>
+              )} />
+              <FormField control={form.control} name="deliveryCost" render={({ field }) => (
+                <FormItem><FormLabel>تكلفة التوصيل (د.أ)</FormLabel><FormControl><Input type="number" step="0.1" placeholder="3.00" {...field} /></FormControl><FormMessage /></FormItem>
+              )} />
+            </div>
+            <FormField control={form.control} name="stock" render={({ field }) => (
+              <FormItem><FormLabel>الكمية في المخزون</FormLabel><FormControl><Input type="number" placeholder="25" {...field} /></FormControl><FormMessage /></FormItem>
+            )} />
+            <FormField control={form.control} name="category" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center gap-2"><Tag className="h-4 w-4" /> التصنيف</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl><SelectTrigger><SelectValue placeholder="اختر تصنيف..." /></SelectTrigger></FormControl>
+                  <SelectContent>
+                    <SelectItem value="handmade">مصنوعات يدوية</SelectItem>
+                    <SelectItem value="food">طعام ومشروبات</SelectItem>
+                    <SelectItem value="clothing">ملابس وأزياء</SelectItem>
+                    <SelectItem value="crafts">حرف يدوية</SelectItem>
+                    <SelectItem value="services">خدمات</SelectItem>
+                    <SelectItem value="agriculture">منتجات زراعية</SelectItem>
+                    <SelectItem value="home">منزل وديكور</SelectItem>
+                    <SelectItem value="other">أخرى</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )} />
+            <DialogFooter className="sticky bottom-0 bg-background pt-4">
+              <DialogClose asChild><Button variant="ghost">إلغاء</Button></DialogClose>
+              <Button type="submit" disabled={isUploading}>{isUploading ? 'جاري الحفظ...' : editProduct ? 'حفظ التغييرات' : 'إضافة المنتج'}</Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+
+    <AlertDialog open={!!productToDelete} onOpenChange={(isOpen) => !isOpen && setProductToDelete(null)}>
+      <AlertDialogContent dir="rtl">
+        <AlertDialogHeader>
+          <AlertDialogTitle>هل أنت متأكد تمامًا؟</AlertDialogTitle>
+          <AlertDialogDescription>هذا الإجراء سيقوم بحذف المنتج "{productToDelete?.name}" نهائيًا من متجرك.</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>إلغاء</AlertDialogCancel>
+          <AlertDialogAction onClick={handleDelete}>نعم، قم بالحذف</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }

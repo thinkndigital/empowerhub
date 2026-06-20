@@ -210,15 +210,13 @@ export default function MentorSessionsPage() {
 
   return (
     <>
-      <div className="space-y-8">
-        <Card>
-          <CardHeader>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                <CardTitle>الجلسات</CardTitle>
-                <CardDescription>إدارة وجدولة جلسات الإرشاد مع المستفيدين.</CardDescription>
-              </div>
-              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">الجلسات</h1>
+            <p className="text-sm text-muted-foreground">إدارة وجدولة جلسات الإرشاد مع المستفيدين.</p>
+          </div>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogTrigger asChild>
                   <Button><PlusCircle className="ml-2 h-4 w-4" />جدولة جلسة جديدة</Button>
                 </DialogTrigger>
@@ -308,11 +306,9 @@ export default function MentorSessionsPage() {
                   </Form>
                 </DialogContent>
               </Dialog>
-            </div>
-          </CardHeader>
-        </Card>
+        </div>
 
-        <Card>
+        <Card className="border-0 shadow-sm">
           <CardHeader><CardTitle>الجلسات القادمة</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             {loading && [...Array(1)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
@@ -344,7 +340,7 @@ export default function MentorSessionsPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-0 shadow-sm">
           <CardHeader><CardTitle>الجلسات السابقة</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             {loading && [...Array(2)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}

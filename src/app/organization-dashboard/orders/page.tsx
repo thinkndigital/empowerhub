@@ -72,7 +72,7 @@ export default function OrgOrdersPage() {
     <div className="space-y-6" dir="rtl">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold">طلبات المتاجر</h1>
+          <h1 className="text-2xl font-bold tracking-tight">طلبات المتاجر</h1>
           <p className="text-muted-foreground text-sm">متابعة طلبات جميع متاجر المستفيدين في المنظمة</p>
         </div>
         <Button variant="outline" onClick={load} disabled={loading} className="gap-2">

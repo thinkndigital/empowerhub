@@ -81,14 +81,14 @@ export default function CoachInvitationsPage() {
   return (
     <div className="space-y-6" dir="rtl">
       <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
+        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
           <Bell className="h-6 w-6" /> الدعوات
         </h1>
         <p className="text-muted-foreground text-sm mt-1">دعوات المنظمات للانضمام إليها</p>
       </div>
 
       {/* Pending */}
-      <Card>
+      <Card className="border-0 shadow-sm">
         <CardHeader>
           <CardTitle className="text-base">الدعوات المعلّقة ({loading ? "..." : pending.length})</CardTitle>
         </CardHeader>
