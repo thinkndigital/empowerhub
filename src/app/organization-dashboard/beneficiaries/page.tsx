@@ -349,7 +349,7 @@ export default function BeneficiariesPage() {
 
       <Tabs defaultValue="org" dir="rtl">
         <TabsList className="mb-4 w-full justify-start">
-          <TabsTrigger value="org">مستفيدو منظمتي</TabsTrigger>
+          <TabsTrigger value="org">المستفيدون</TabsTrigger>
           <TabsTrigger value="explore">استكشاف المستفيدين</TabsTrigger>
           <TabsTrigger value="invite">دعوة ومجموعات</TabsTrigger>
         </TabsList>
@@ -361,7 +361,7 @@ export default function BeneficiariesPage() {
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div>
                   <CardTitle className="flex items-center gap-2">
-                    <Users className="h-5 w-5" /> مستفيدو منظمتي
+                    <Users className="h-5 w-5" /> المستفيدون
                   </CardTitle>
                   <CardDescription>قائمة بجميع المستفيدين المنتسبين لمنظمتك.</CardDescription>
                 </div>

@@ -44,7 +44,8 @@ export default function OrganizationDashboardLayout({ children }: { children: Re
   const router = useRouter();
   const { user: authUser, userProfile } = useUser();
   const auth = useAuth();
-  const [orgName, setOrgName] = useState("منظمتي");
+  const [orgName, setOrgName] = useState('');
+  const [orgLogo, setOrgLogo] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [menuItems, setMenuItems] = useState(allMenuItems);
   const [platformLogo, setPlatformLogo] = useState('');
@@ -59,7 +60,8 @@ export default function OrganizationDashboardLayout({ children }: { children: Re
         fetch('/api/public/platform-config'),
       ]);
       const orgData = await orgRes.json();
-      if (orgData.settings?.name) setOrgName(orgData.settings.name);
+      if (orgData.org?.name) setOrgName(orgData.org.name);
+      if (orgData.org?.logoUrl) setOrgLogo(orgData.org.logoUrl);
       const profileData = await profileRes.json();
       if (profileData.profile?.avatarUrl) setAvatarUrl(profileData.profile.avatarUrl);
       const platformData = await platformRes.json();
@@ -72,6 +74,11 @@ export default function OrganizationDashboardLayout({ children }: { children: Re
   }, [authUser]);
 
   useEffect(() => { fetchOrg(); }, [fetchOrg]);
+
+  useEffect(() => {
+    window.addEventListener('org-settings-change', fetchOrg);
+    return () => window.removeEventListener('org-settings-change', fetchOrg);
+  }, [fetchOrg]);
 
   const handleLogout = async () => {
     if (auth) await signOut(auth);
@@ -86,10 +93,10 @@ export default function OrganizationDashboardLayout({ children }: { children: Re
       <Sidebar side="right">
         <SidebarHeader>
           <div className="flex flex-col items-center text-center gap-2 p-2">
-            {platformLogo ? (
-              <img src={platformLogo} alt="logo" className="h-16 w-16 object-contain rounded-xl" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+            {(orgLogo || platformLogo) ? (
+              <img src={orgLogo || platformLogo} alt="logo" className="h-16 w-16 object-contain rounded-xl" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
             ) : <Logo className="h-16 w-16" />}
-            <span className="text-lg font-semibold">{orgName}</span>
+            {orgName && <span className="text-lg font-semibold">{orgName}</span>}
           </div>
         </SidebarHeader>
         <SidebarContent>

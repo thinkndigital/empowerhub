@@ -103,7 +103,7 @@ export default function OrgCoachesPage() {
 
       <Tabs defaultValue="org-coaches" dir="rtl">
         <TabsList className="mb-4 w-full justify-start">
-          <TabsTrigger value="org-coaches">مدربو منظمتي</TabsTrigger>
+          <TabsTrigger value="org-coaches">المدربون</TabsTrigger>
           <TabsTrigger value="explore">استكشاف المدربين</TabsTrigger>
         </TabsList>
 

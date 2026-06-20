@@ -12,8 +12,6 @@ import { Palette, Save, BookOpen, Users, Copy, Key, Loader2 } from "lucide-react
 import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import { useUser } from "@/firebase/auth/use-user";
-import { useStorage } from "@/firebase/provider";
-import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 
 const settingsSchema = z.object({
   name: z.string().min(2, { message: "يجب أن يكون اسم المنظمة حرفين على الأقل." }),
@@ -49,7 +47,6 @@ const hexToHsl = (hex: string): string => {
 export default function OrgSettingsPage() {
   const { toast } = useToast();
   const { user, userProfile } = useUser();
-  const storage = useStorage();
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [logoUploading, setLogoUploading] = useState(false);
@@ -123,15 +120,22 @@ export default function OrgSettingsPage() {
         mentorshipSessionPrice: values.mentorshipSessionPrice,
       };
 
-      // Upload logo to Firebase Storage if provided
-      if (values.logo && values.logo.length > 0 && storage && user) {
+      // Upload logo via server media API
+      if (values.logo && values.logo.length > 0 && user) {
         const file = values.logo[0] as File;
-        const path = `org-logos/${userProfile?.organizationId || user.uid}/${Date.now()}-${file.name}`;
-        const ref = storageRef(storage, path);
-        await uploadBytes(ref, file);
-        const downloadUrl = await getDownloadURL(ref);
-        updateData.logoUrl = downloadUrl;
-        setLogoPreview(downloadUrl);
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('folder', 'org-logos');
+        const token = await user.getIdToken();
+        const uploadRes = await fetch('/api/media', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          body: fd,
+        });
+        const uploadJson = await uploadRes.json();
+        if (!uploadRes.ok) throw new Error(uploadJson.error || 'فشل رفع الشعار');
+        updateData.logoUrl = uploadJson.url;
+        setLogoPreview(uploadJson.url);
         localStorage.removeItem('orgLogo');
       }
 

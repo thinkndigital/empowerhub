@@ -103,7 +103,7 @@ export default function OrgMentorsPage() {
 
       <Tabs defaultValue="org-mentors" dir="rtl">
         <TabsList className="mb-4 w-full justify-start">
-          <TabsTrigger value="org-mentors">مرشدو منظمتي</TabsTrigger>
+          <TabsTrigger value="org-mentors">المرشدون</TabsTrigger>
           <TabsTrigger value="explore">استكشاف المرشدين</TabsTrigger>
         </TabsList>
 
