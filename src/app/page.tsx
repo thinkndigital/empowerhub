@@ -49,15 +49,17 @@ interface SiteConfig {
   hero: { title: string; subtitle: string; ctaText: string; ctaSecondaryText: string; backgroundImage: string };
   stats: { label: string; value: string; icon: string }[];
   features: { title: string; description: string; icon: string }[];
+  opportunities?: { title: string; description: string; icon: string; badge?: string; color?: string; link?: string }[];
   howItWorks: { step: string; title: string; desc: string; icon: string }[];
   testimonials: { name: string; role: string; text: string; stars: number }[];
+  blogPosts?: { title: string; excerpt: string; category: string; imageUrl?: string; link?: string }[];
   contact: { phone: string; whatsapp: string; whatsappLink: string; email: string };
   ctaBanner: { title: string; subtitle: string; primaryText: string; secondaryText: string };
   roles: { title: string; description: string; icon: string; badge: string; link: string }[];
   sections: {
-    showStats: boolean; showFeatures: boolean; showHowItWorks: boolean; showRoles: boolean;
-    showMentors: boolean; showCoaches: boolean; showTestimonials: boolean; showProducts: boolean;
-    showStores: boolean; showContact: boolean; showCTA: boolean;
+    showStats: boolean; showFeatures: boolean; showOpportunities: boolean; showHowItWorks: boolean;
+    showRoles: boolean; showMentors: boolean; showCoaches: boolean; showBlog: boolean;
+    showTestimonials: boolean; showProducts: boolean; showStores: boolean; showContact: boolean; showCTA: boolean;
   };
   footer: { description: string; email: string; phone: string; twitter: string; linkedin: string; instagram: string; copyright: string };
 }
@@ -247,6 +249,55 @@ const ProductCard = ({ product }: { product: Product }) => {
   );
 };
 
+const OpportunityCard = ({ icon, title, description, badge, color, link }: {
+  icon: React.ReactNode, title: string, description: string, badge?: string, color: string, link?: string
+}) => (
+  <Card className="card-hover border-0 shadow-md bg-card group overflow-hidden flex flex-col">
+    <div className={`h-1 w-full ${color}`} />
+    <CardContent className="pt-5 pb-6 flex flex-col flex-grow">
+      <div className={`h-12 w-12 rounded-xl ${color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
+        <span className="text-white">{icon}</span>
+      </div>
+      {badge && (
+        <Badge className="self-start mb-3 text-xs bg-primary/10 text-primary border-primary/20">{badge}</Badge>
+      )}
+      <h3 className="font-bold text-base mb-2">{title}</h3>
+      <p className="text-sm text-muted-foreground leading-relaxed flex-grow">{description}</p>
+      {link && (
+        <Link href={link} className="inline-flex items-center gap-1 text-primary text-sm font-medium mt-4 hover:underline">
+          اكتشف المزيد <ArrowLeft className="h-3 w-3" />
+        </Link>
+      )}
+    </CardContent>
+  </Card>
+);
+
+const BlogCard = ({ title, excerpt, category, imageUrl, link }: {
+  title: string, excerpt: string, category: string, imageUrl?: string, link?: string
+}) => (
+  <Card className="card-hover border-0 shadow-md bg-card overflow-hidden flex flex-col group">
+    <div className="h-36 overflow-hidden bg-gradient-to-br from-primary/10 via-primary/5 to-accent/10 flex items-center justify-center relative">
+      {imageUrl ? (
+        <img src={imageUrl} alt={title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 absolute inset-0" />
+      ) : (
+        <BookOpen className="h-10 w-10 text-primary/25" />
+      )}
+    </div>
+    <CardContent className="pt-4 pb-5 flex flex-col flex-grow">
+      <Badge variant="secondary" className="self-start mb-3 text-xs">{category}</Badge>
+      <h3 className="font-bold text-sm mb-2 line-clamp-2 leading-snug">{title}</h3>
+      <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed flex-grow">{excerpt}</p>
+      {link ? (
+        <Link href={link} className="inline-flex items-center gap-1 text-primary text-xs font-medium mt-4 hover:underline">
+          اقرأ المزيد <ArrowLeft className="h-3 w-3" />
+        </Link>
+      ) : (
+        <span className="inline-flex items-center gap-1 text-muted-foreground text-xs mt-4">قريباً</span>
+      )}
+    </CardContent>
+  </Card>
+);
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
@@ -337,10 +388,11 @@ export default function LandingPage() {
 
   // Derived values from config (with fallbacks)
   const cfg = siteConfig;
-  const sections = cfg?.sections ?? {
-    showStats: true, showFeatures: true, showHowItWorks: true, showRoles: true,
-    showMentors: true, showCoaches: true, showTestimonials: true, showProducts: true,
-    showStores: true, showContact: true, showCTA: true,
+  const sections = {
+    showStats: true, showFeatures: true, showOpportunities: true, showHowItWorks: true,
+    showRoles: true, showMentors: true, showCoaches: true, showBlog: true,
+    showTestimonials: true, showProducts: true, showStores: true, showContact: true, showCTA: true,
+    ...(cfg?.sections ?? {}),
   };
 
   const heroTitle = cfg?.hero?.title || 'بوابتك للتمكين والنجاح';
@@ -385,6 +437,19 @@ export default function LandingPage() {
   ];
 
   const ctaBanner = cfg?.ctaBanner ?? { title: 'جاهز للبدء؟ انضم إلى آلاف المستفيدين', subtitle: 'سجّل مجاناً اليوم وابدأ رحلتك نحو التمكين والنجاح مع EmpowerHub', primaryText: 'ابدأ مجاناً الآن', secondaryText: 'تجربة المنصة أولاً' };
+
+  const opportunitiesData = cfg?.opportunities?.length ? cfg.opportunities : [
+    { title: 'برامج التدريب المهني', description: 'دورات متخصصة في التقنية، الأعمال والتصميم لتزويدك بمهارات سوق العمل الحديث.', icon: 'GraduationCap', badge: 'متاح الآن', color: 'bg-primary', link: '/register' },
+    { title: 'الإرشاد الفردي', description: 'جلسات مخصصة مع مرشدين خبراء لمساعدتك في رسم مسارك المهني وتحقيق أهدافك.', icon: 'Users', badge: 'مجاني', color: 'bg-sky-500', link: '/register' },
+    { title: 'ريادة الأعمال', description: 'ابدأ مشروعك، أطلق متجرك الإلكتروني، وابنِ مصدر دخل مستدام مع دعم متكامل.', icon: 'Store', badge: 'جديد', color: 'bg-amber-500', link: '/register' },
+    { title: 'المواطنة الفاعلة', description: 'انضم لبرامج التمكين المجتمعي وكن عضواً فاعلاً ومؤثراً في مجتمعك.', icon: 'Globe', badge: '', color: 'bg-purple-500', link: '/register' },
+  ];
+
+  const blogPostsData = cfg?.blogPosts?.length ? cfg.blogPosts : [
+    { title: 'كيف تبني مسارك المهني في عالم رقمي متسارع', excerpt: 'تعرف على أهم المهارات المطلوبة في سوق العمل الحديث وكيف تكتسبها.', category: 'مسار مهني', imageUrl: '' },
+    { title: '٥ خطوات لإطلاق متجرك الإلكتروني بنجاح', excerpt: 'دليل عملي للمبتدئين في التجارة الإلكترونية من الفكرة حتى أول عملية بيع ناجحة.', category: 'ريادة أعمال', imageUrl: '' },
+    { title: 'قصص نجاح: التدريب الذي غيّر مساراتنا', excerpt: 'قصص ملهمة لأشخاص حققوا أهدافهم بفضل التدريب الصحيح والإرشاد المتخصص.', category: 'قصص نجاح', imageUrl: '' },
+  ];
 
   const contactInfo = cfg?.contact ?? { phone: '+966 XX XXX XXXX', whatsapp: '+966 XX XXX XXXX', whatsappLink: 'https://wa.me/966XXXXXXXXX', email: 'info@empowerhub.com' };
   const footerData = cfg?.footer ?? { description: 'منصة متكاملة للتمكين الرقمي تجمع التدريب، الإرشاد، والتجارة الإلكترونية في مكان واحد.', email: 'info@empowerhub.com', phone: '', twitter: '', linkedin: '', instagram: '', copyright: '© 2024 EmpowerHub. جميع الحقوق محفوظة.' };
@@ -478,6 +543,34 @@ export default function LandingPage() {
               <div className={`grid grid-cols-2 md:grid-cols-${Math.min(4, statsData.length)} gap-8`}>
                 {statsData.map((s, i) => (
                   <StatCard key={i} number={s.value} label={s.label} icon={iconMap[s.icon] ?? <Star className="h-6 w-6" />} />
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Opportunities Section */}
+        {sections.showOpportunities && opportunitiesData.length > 0 && (
+          <section id="opportunities" className="py-16 md:py-24">
+            <div className="container px-4 md:px-6">
+              <div className="text-center mb-14">
+                <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">الفرص المتاحة</Badge>
+                <h2 className="text-3xl font-bold tracking-tight md:text-4xl">اكتشف ما يمكنك تحقيقه</h2>
+                <p className="mt-3 text-lg text-muted-foreground max-w-2xl mx-auto">
+                  برامج ومسارات متنوعة مصممة لتناسب طموحاتك وتحقق أهدافك المهنية والشخصية.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {opportunitiesData.map((opp, i) => (
+                  <OpportunityCard
+                    key={i}
+                    icon={iconMap[opp.icon] ?? <Sparkles className="h-6 w-6" />}
+                    title={opp.title}
+                    description={opp.description}
+                    badge={opp.badge}
+                    color={opp.color || featureColors[i % featureColors.length]}
+                    link={opp.link}
+                  />
                 ))}
               </div>
             </div>
@@ -620,6 +713,33 @@ export default function LandingPage() {
                 <Button variant="outline" asChild>
                   <Link href="/register?role=coach">انضم كمدرب</Link>
                 </Button>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Blog / Resources Section */}
+        {sections.showBlog && blogPostsData.length > 0 && (
+          <section id="blog" className="py-16 md:py-24">
+            <div className="container px-4 md:px-6">
+              <div className="text-center mb-14">
+                <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">الموارد والمقالات</Badge>
+                <h2 className="text-3xl font-bold tracking-tight">تعلم وتطور مع محتوانا</h2>
+                <p className="mt-3 text-lg text-muted-foreground max-w-2xl mx-auto">
+                  مقالات ونصائح من خبراء المنصة لمساعدتك في رحلة التمكين والنجاح.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {blogPostsData.map((post, i) => (
+                  <BlogCard
+                    key={i}
+                    title={post.title}
+                    excerpt={post.excerpt}
+                    category={post.category}
+                    imageUrl={post.imageUrl}
+                    link={post.link}
+                  />
+                ))}
               </div>
             </div>
           </section>

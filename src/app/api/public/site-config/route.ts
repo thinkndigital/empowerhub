@@ -59,13 +59,26 @@ const defaultConfig = {
     { title: 'كمرشد', description: 'ساهم في نجاح الآخرين من خلال تقديم الإرشاد والتوجيه الشخصي.', icon: 'Users', badge: '', link: '/register?role=mentor' },
     { title: 'كمنظمة', description: 'أدر برامج التمكين الخاصة بك، وتابع تقدم المستفيدين بفعالية.', icon: 'Building', badge: '', link: '/register?role=organization' },
   ],
+  opportunities: [
+    { title: 'برامج التدريب المهني', description: 'دورات متخصصة في التقنية، الأعمال والتصميم لتزويدك بمهارات سوق العمل الحديث.', icon: 'GraduationCap', badge: 'متاح الآن', color: 'bg-primary', link: '/register' },
+    { title: 'الإرشاد الفردي', description: 'جلسات مخصصة مع مرشدين خبراء لمساعدتك في رسم مسارك المهني وتحقيق أهدافك.', icon: 'Users', badge: 'مجاني', color: 'bg-sky-500', link: '/register' },
+    { title: 'ريادة الأعمال', description: 'ابدأ مشروعك، أطلق متجرك الإلكتروني، وابنِ مصدر دخل مستدام مع دعم متكامل.', icon: 'Store', badge: 'جديد', color: 'bg-amber-500', link: '/register' },
+    { title: 'المواطنة الفاعلة', description: 'انضم لبرامج التمكين المجتمعي وكن عضواً فاعلاً ومؤثراً في مجتمعك ومحيطك.', icon: 'Globe', badge: '', color: 'bg-purple-500', link: '/register' },
+  ],
+  blogPosts: [
+    { title: 'كيف تبني مسارك المهني في عالم رقمي متسارع', excerpt: 'تعرف على أهم المهارات المطلوبة في سوق العمل الحديث وكيف تكتسبها.', category: 'مسار مهني', imageUrl: '', link: '' },
+    { title: '٥ خطوات لإطلاق متجرك الإلكتروني بنجاح', excerpt: 'دليل عملي للمبتدئين في التجارة الإلكترونية من الفكرة حتى أول عملية بيع ناجحة.', category: 'ريادة أعمال', imageUrl: '', link: '' },
+    { title: 'قصص نجاح: التدريب الذي غيّر مساراتنا', excerpt: 'قصص ملهمة لأشخاص حققوا أهدافهم بفضل التدريب الصحيح والإرشاد المتخصص.', category: 'قصص نجاح', imageUrl: '', link: '' },
+  ],
   sections: {
     showStats: true,
     showFeatures: true,
+    showOpportunities: true,
     showHowItWorks: true,
     showRoles: true,
     showMentors: true,
     showCoaches: true,
+    showBlog: true,
     showTestimonials: true,
     showProducts: true,
     showStores: true,
@@ -97,8 +110,10 @@ export async function GET() {
       ctaBanner: { ...defaultConfig.ctaBanner, ...data?.ctaBanner },
       stats: data?.stats ?? defaultConfig.stats,
       features: data?.features ?? defaultConfig.features,
+      opportunities: data?.opportunities ?? defaultConfig.opportunities,
       howItWorks: data?.howItWorks ?? defaultConfig.howItWorks,
       testimonials: data?.testimonials ?? defaultConfig.testimonials,
+      blogPosts: data?.blogPosts ?? defaultConfig.blogPosts,
       roles: data?.roles ?? defaultConfig.roles,
     };
     return NextResponse.json({ config });

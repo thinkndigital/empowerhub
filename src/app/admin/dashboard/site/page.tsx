@@ -24,15 +24,17 @@ interface SiteConfig {
   hero: { title: string; subtitle: string; ctaText: string; ctaSecondaryText: string; backgroundImage: string };
   stats: { label: string; value: string; icon: string }[];
   features: { title: string; description: string; icon: string }[];
+  opportunities: { title: string; description: string; icon: string; badge: string; color: string; link: string }[];
   howItWorks: { step: string; title: string; desc: string; icon: string }[];
   testimonials: { name: string; role: string; text: string; stars: number }[];
+  blogPosts: { title: string; excerpt: string; category: string; imageUrl: string; link: string }[];
   contact: { phone: string; whatsapp: string; whatsappLink: string; email: string };
   ctaBanner: { title: string; subtitle: string; primaryText: string; secondaryText: string };
   roles: { title: string; description: string; icon: string; badge: string; link: string }[];
   sections: {
-    showStats: boolean; showFeatures: boolean; showHowItWorks: boolean; showRoles: boolean;
-    showMentors: boolean; showCoaches: boolean; showTestimonials: boolean; showProducts: boolean;
-    showStores: boolean; showContact: boolean; showCTA: boolean;
+    showStats: boolean; showFeatures: boolean; showOpportunities: boolean; showHowItWorks: boolean;
+    showRoles: boolean; showMentors: boolean; showCoaches: boolean; showBlog: boolean;
+    showTestimonials: boolean; showProducts: boolean; showStores: boolean; showContact: boolean; showCTA: boolean;
   };
   footer: { description: string; email: string; phone: string; twitter: string; linkedin: string; instagram: string; copyright: string };
 }
@@ -42,14 +44,14 @@ const defaultConfig: SiteConfig = {
   primaryColor: '#3b82f6',
   logoUrl: '', faviconUrl: '',
   hero: { title: '', subtitle: '', ctaText: 'ابدأ الآن', ctaSecondaryText: 'تعرف على المزيد', backgroundImage: '' },
-  stats: [], features: [], howItWorks: [], testimonials: [],
+  stats: [], features: [], opportunities: [], howItWorks: [], testimonials: [], blogPosts: [],
   contact: { phone: '', whatsapp: '', whatsappLink: '', email: '' },
   ctaBanner: { title: '', subtitle: '', primaryText: 'ابدأ مجاناً الآن', secondaryText: 'تجربة المنصة أولاً' },
   roles: [],
   sections: {
-    showStats: true, showFeatures: true, showHowItWorks: true, showRoles: true,
-    showMentors: true, showCoaches: true, showTestimonials: true, showProducts: true,
-    showStores: true, showContact: true, showCTA: true,
+    showStats: true, showFeatures: true, showOpportunities: true, showHowItWorks: true,
+    showRoles: true, showMentors: true, showCoaches: true, showBlog: true,
+    showTestimonials: true, showProducts: true, showStores: true, showContact: true, showCTA: true,
   },
   footer: { description: '', email: '', phone: '', twitter: '', linkedin: '', instagram: '', copyright: '' },
 };
@@ -125,9 +127,11 @@ export default function SiteEditorPage() {
           ctaBanner: { ...defaultConfig.ctaBanner, ...d.config.ctaBanner },
           howItWorks: d.config.howItWorks ?? defaultConfig.howItWorks,
           testimonials: d.config.testimonials ?? defaultConfig.testimonials,
+          blogPosts: d.config.blogPosts ?? defaultConfig.blogPosts,
           roles: d.config.roles ?? defaultConfig.roles,
           stats: d.config.stats ?? defaultConfig.stats,
           features: d.config.features ?? defaultConfig.features,
+          opportunities: d.config.opportunities ?? defaultConfig.opportunities,
         }));
       }
       setLoading(false);
@@ -192,6 +196,20 @@ export default function SiteEditorPage() {
   const removeRole = (i: number) =>
     setConfig(c => ({ ...c, roles: c.roles.filter((_, idx) => idx !== i) }));
 
+  // Opportunities
+  const addOpportunity = () => setConfig(c => ({ ...c, opportunities: [...c.opportunities, { title: '', description: '', icon: 'Star', badge: '', color: 'bg-primary', link: '/register' }] }));
+  const updateOpportunity = (i: number, k: string, v: string) =>
+    setConfig(c => { const o = [...c.opportunities]; o[i] = { ...o[i], [k]: v }; return { ...c, opportunities: o }; });
+  const removeOpportunity = (i: number) =>
+    setConfig(c => ({ ...c, opportunities: c.opportunities.filter((_, idx) => idx !== i) }));
+
+  // Blog Posts
+  const addBlogPost = () => setConfig(c => ({ ...c, blogPosts: [...c.blogPosts, { title: '', excerpt: '', category: '', imageUrl: '', link: '' }] }));
+  const updateBlogPost = (i: number, k: string, v: string) =>
+    setConfig(c => { const b = [...c.blogPosts]; b[i] = { ...b[i], [k]: v }; return { ...c, blogPosts: b }; });
+  const removeBlogPost = (i: number) =>
+    setConfig(c => ({ ...c, blogPosts: c.blogPosts.filter((_, idx) => idx !== i) }));
+
   if (loading) return <div className="text-slate-400 text-center py-16">جاري التحميل...</div>;
 
   return (
@@ -211,8 +229,10 @@ export default function SiteEditorPage() {
               { value: 'hero', label: 'الترحيب', icon: ImageIcon },
               { value: 'stats', label: 'الإحصائيات', icon: BarChart3 },
               { value: 'features', label: 'المميزات', icon: Sparkles },
+              { value: 'opportunities', label: 'الفرص', icon: UserCheck },
               { value: 'howitworks', label: 'كيف تعمل', icon: Layout },
               { value: 'roles', label: 'الأدوار', icon: Users },
+              { value: 'blog', label: 'المقالات', icon: MessageSquare },
               { value: 'testimonials', label: 'الآراء', icon: Star },
               { value: 'contact', label: 'التواصل', icon: Phone },
               { value: 'cta', label: 'CTA بانر', icon: MessageSquare },
@@ -388,6 +408,55 @@ export default function SiteEditorPage() {
             </Card>
           </TabsContent>
 
+          {/* OPPORTUNITIES */}
+          <TabsContent value="opportunities" className="mt-4">
+            <Card className="bg-slate-800/50 border-white/10">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-white text-base">قسم الفرص المتاحة</CardTitle>
+                <Button size="sm" onClick={addOpportunity} className="gap-1"><Plus className="h-3.5 w-3.5" />إضافة فرصة</Button>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-slate-500 text-xs">الألوان المتاحة: bg-primary | bg-sky-500 | bg-amber-500 | bg-purple-500 | bg-rose-500 | bg-teal-600</p>
+                {config.opportunities.length === 0 ? (
+                  <p className="text-slate-500 text-center py-6">لا توجد فرص. أضف واحدة!</p>
+                ) : config.opportunities.map((opp, i) => (
+                  <div key={i} className="p-3 bg-slate-700/30 rounded-xl border border-white/5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400 text-xs font-medium">فرصة {i + 1}</span>
+                      <Button size="sm" variant="ghost" onClick={() => removeOpportunity(i)} className="h-7 w-7 p-0 text-slate-500 hover:text-red-400">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label className="text-xs text-slate-500">العنوان</Label>
+                        <input value={opp.title} onChange={e => updateOpportunity(i, 'title', e.target.value)} placeholder="اسم الفرصة" className="mt-1 w-full h-8 text-sm bg-slate-900/60 border border-white/10 rounded-md px-2 text-white placeholder-slate-500" />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-slate-500">الشارة (اختياري)</Label>
+                        <input value={opp.badge} onChange={e => updateOpportunity(i, 'badge', e.target.value)} placeholder="متاح الآن" className="mt-1 w-full h-8 text-sm bg-slate-900/60 border border-white/10 rounded-md px-2 text-white placeholder-slate-500" />
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-slate-500">الوصف</Label>
+                      <input value={opp.description} onChange={e => updateOpportunity(i, 'description', e.target.value)} placeholder="وصف الفرصة..." className="mt-1 w-full h-8 text-sm bg-slate-900/60 border border-white/10 rounded-md px-2 text-white placeholder-slate-500" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label className="text-xs text-slate-500">اللون (Tailwind class)</Label>
+                        <input value={opp.color} onChange={e => updateOpportunity(i, 'color', e.target.value)} placeholder="bg-primary" className="mt-1 w-full h-8 text-sm bg-slate-900/60 border border-white/10 rounded-md px-2 text-white placeholder-slate-500 font-mono" dir="ltr" />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-slate-500">الرابط (اختياري)</Label>
+                        <input value={opp.link} onChange={e => updateOpportunity(i, 'link', e.target.value)} placeholder="/register" className="mt-1 w-full h-8 text-sm bg-slate-900/60 border border-white/10 rounded-md px-2 text-white placeholder-slate-500" dir="ltr" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           {/* HOW IT WORKS */}
           <TabsContent value="howitworks" className="mt-4">
             <Card className="bg-slate-800/50 border-white/10">
@@ -461,6 +530,54 @@ export default function SiteEditorPage() {
                     <div>
                       <Label className="text-xs text-slate-500">رابط التسجيل</Label>
                       <Input value={role.link} onChange={e => updateRole(i, 'link', e.target.value)} placeholder="/register?role=beneficiary" className="mt-1 h-8 text-sm" dir="ltr" />
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* BLOG POSTS */}
+          <TabsContent value="blog" className="mt-4">
+            <Card className="bg-slate-800/50 border-white/10">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-white text-base">قسم الموارد والمقالات</CardTitle>
+                <Button size="sm" onClick={addBlogPost} className="gap-1"><Plus className="h-3.5 w-3.5" />إضافة مقال</Button>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {config.blogPosts.length === 0 ? (
+                  <p className="text-slate-500 text-center py-6">لا توجد مقالات. أضف واحداً!</p>
+                ) : config.blogPosts.map((post, i) => (
+                  <div key={i} className="p-3 bg-slate-700/30 rounded-xl border border-white/5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400 text-xs font-medium">مقال {i + 1}</span>
+                      <Button size="sm" variant="ghost" onClick={() => removeBlogPost(i)} className="h-7 w-7 p-0 text-slate-500 hover:text-red-400">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label className="text-xs text-slate-500">العنوان</Label>
+                        <input value={post.title} onChange={e => updateBlogPost(i, 'title', e.target.value)} placeholder="عنوان المقال" className="mt-1 w-full h-8 text-sm bg-slate-900/60 border border-white/10 rounded-md px-2 text-white placeholder-slate-500" />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-slate-500">التصنيف</Label>
+                        <input value={post.category} onChange={e => updateBlogPost(i, 'category', e.target.value)} placeholder="مسار مهني" className="mt-1 w-full h-8 text-sm bg-slate-900/60 border border-white/10 rounded-md px-2 text-white placeholder-slate-500" />
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-slate-500">المقتطف</Label>
+                      <input value={post.excerpt} onChange={e => updateBlogPost(i, 'excerpt', e.target.value)} placeholder="وصف مختصر للمقال..." className="mt-1 w-full h-8 text-sm bg-slate-900/60 border border-white/10 rounded-md px-2 text-white placeholder-slate-500" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label className="text-xs text-slate-500">رابط الصورة (اختياري)</Label>
+                        <input value={post.imageUrl} onChange={e => updateBlogPost(i, 'imageUrl', e.target.value)} placeholder="https://..." className="mt-1 w-full h-8 text-sm bg-slate-900/60 border border-white/10 rounded-md px-2 text-white placeholder-slate-500 font-mono" dir="ltr" />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-slate-500">رابط المقال (اختياري)</Label>
+                        <input value={post.link} onChange={e => updateBlogPost(i, 'link', e.target.value)} placeholder="https://..." className="mt-1 w-full h-8 text-sm bg-slate-900/60 border border-white/10 rounded-md px-2 text-white placeholder-slate-500 font-mono" dir="ltr" />
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -593,10 +710,12 @@ export default function SiteEditorPage() {
                 {[
                   { key: 'showStats' as const, label: 'قسم الإحصائيات', desc: 'أرقام الإنجازات والإحصائيات' },
                   { key: 'showFeatures' as const, label: 'قسم المميزات', desc: 'بطاقات ميزات المنصة' },
+                  { key: 'showOpportunities' as const, label: 'قسم الفرص المتاحة', desc: 'بطاقات الفرص والبرامج (مستوحى من Scholarships)' },
                   { key: 'showHowItWorks' as const, label: 'قسم كيف تعمل', desc: 'خطوات البدء بالمنصة' },
                   { key: 'showRoles' as const, label: 'قسم الأدوار', desc: 'بطاقات مستفيد / مدرب / مرشد / منظمة' },
                   { key: 'showMentors' as const, label: 'قسم المرشدون', desc: 'عرض المرشدين' },
                   { key: 'showCoaches' as const, label: 'قسم المدربون', desc: 'عرض المدربين' },
+                  { key: 'showBlog' as const, label: 'قسم الموارد والمقالات', desc: 'بطاقات المقالات والموارد التعليمية' },
                   { key: 'showTestimonials' as const, label: 'قسم الآراء', desc: 'شهادات وتقييمات المستخدمين' },
                   { key: 'showProducts' as const, label: 'قسم المنتجات', desc: 'عرض منتجات المستفيدين' },
                   { key: 'showStores' as const, label: 'قسم المتاجر', desc: 'عرض متاجر رواد الأعمال' },
