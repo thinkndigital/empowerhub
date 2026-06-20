@@ -89,7 +89,7 @@ export default function BeneficiaryProfilePage() {
 
           <div className="grid gap-4 md:grid-cols-3">
             {/* Profile Info */}
-            <Card className="md:col-span-1">
+            <Card className="md:col-span-1 border-0 shadow-sm">
               <CardHeader><CardTitle className="text-base">المعلومات الشخصية</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex flex-col items-center gap-3 pb-4 border-b">

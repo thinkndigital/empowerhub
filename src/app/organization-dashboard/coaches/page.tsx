@@ -204,7 +204,7 @@ export default function OrgCoachesPage() {
               {availableCoaches.map((coach) => {
                 const isSent = sentInvites.has(coach.id);
                 return (
-                  <Card key={coach.id}>
+                  <Card key={coach.id} className="border-0 shadow-sm">
                     <CardContent className="pt-6 flex flex-col items-center gap-3 text-center">
                       <Avatar className="h-14 w-14">
                         <AvatarImage src={coach.avatarUrl} />

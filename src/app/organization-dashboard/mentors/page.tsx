@@ -204,7 +204,7 @@ export default function OrgMentorsPage() {
               {availableMentors.map((mentor) => {
                 const isSent = sentInvites.has(mentor.id);
                 return (
-                  <Card key={mentor.id}>
+                  <Card key={mentor.id} className="border-0 shadow-sm">
                     <CardContent className="pt-6 flex flex-col items-center gap-3 text-center">
                       <Avatar className="h-14 w-14">
                         <AvatarImage src={mentor.avatarUrl} />

@@ -174,7 +174,7 @@ export default function AnalyticsPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="lg:col-span-4">
+        <Card className="lg:col-span-4 border-0 shadow-sm">
           <CardHeader>
             <CardTitle>نمو المستخدمين والمنظمات</CardTitle>
             <CardDescription>المستخدمون والمنظمات الجدد على مدار 6 أشهر.</CardDescription>
@@ -198,7 +198,7 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-3">
+        <Card className="lg:col-span-3 border-0 shadow-sm">
           <CardHeader>
             <CardTitle>توزيع أدوار المستخدمين</CardTitle>
             <CardDescription>توزيع المستخدمين حسب الدور.</CardDescription>

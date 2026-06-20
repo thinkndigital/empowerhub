@@ -356,7 +356,7 @@ export default function BeneficiariesPage() {
 
         {/* ── Tab 1: Org Beneficiaries ── */}
         <TabsContent value="org">
-          <Card>
+          <Card className="border-0 shadow-sm">
             <CardHeader>
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div>
@@ -498,7 +498,7 @@ export default function BeneficiariesPage() {
 
         {/* ── Tab 2: Explore ── */}
         <TabsContent value="explore">
-          <Card>
+          <Card className="border-0 shadow-sm">
             <CardHeader>
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div>
@@ -578,7 +578,7 @@ export default function BeneficiariesPage() {
         <TabsContent value="invite" className="space-y-6">
 
           {/* Section A: Email Invite */}
-          <Card>
+          <Card className="border-0 shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Mail className="h-5 w-5" /> دعوة عبر البريد
@@ -616,7 +616,7 @@ export default function BeneficiariesPage() {
           </Card>
 
           {/* Section B: CSV Import */}
-          <Card>
+          <Card className="border-0 shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Upload className="h-5 w-5" /> استيراد CSV
@@ -689,7 +689,7 @@ export default function BeneficiariesPage() {
           </Card>
 
           {/* Section C: Groups */}
-          <Card>
+          <Card className="border-0 shadow-sm">
             <CardHeader>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>

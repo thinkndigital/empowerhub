@@ -255,10 +255,10 @@ export default function MyStorePage() {
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mt-4">
           {isLoading && [...Array(3)].map((_, i) => (
-            <Card key={i}><CardContent className="p-4"><Skeleton className="h-[300px]" /></CardContent></Card>
+            <Card key={i} className="border-0 shadow-sm"><CardContent className="p-4"><Skeleton className="h-[300px]" /></CardContent></Card>
           ))}
           {!isLoading && products.map((product) => (
-            <Card key={product.id} className="group flex flex-col">
+            <Card key={product.id} className="group flex flex-col border-0 shadow-sm">
               <CardHeader className="p-0 relative">
                 <Image src={product.imageUrl || `https://picsum.photos/seed/${product.id}/400/300`} alt={product.name} width={400} height={300} className="rounded-t-lg object-cover" />
                 <div className="absolute top-2 left-2">
