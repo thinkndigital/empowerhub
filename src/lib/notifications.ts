@@ -11,8 +11,11 @@ type NotificationData = {
 
 export function sendNotification(db: Firestore, data: NotificationData) {
     const notificationPayload = {
-        ...data,
-        isRead: false,
+        userId: data.userId,
+        title: data.title,
+        body: data.description,
+        link: data.link,
+        read: false,
         createdAt: serverTimestamp(),
     };
     addDoc(collection(db, 'notifications'), notificationPayload)

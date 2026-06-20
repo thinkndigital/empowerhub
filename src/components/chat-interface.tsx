@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, MessageSquare, PlusCircle } from 'lucide-react';
+import { Send, MessageSquare, PlusCircle, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUser, type UserProfile } from '@/firebase/auth/use-user';
 import { useFirestore, useMemoFirebase } from '@/firebase/provider';
@@ -58,15 +58,14 @@ export function ChatInterface({ title, description, organizationId }: ChatInterf
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [isNewChatOpen, setIsNewChatOpen] = useState(false);
+  const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
 
-  // 1. Fetch conversations for the current user
   const conversationsQuery = useMemoFirebase(() => {
     if (!authUser || !firestore) return null;
     return query(collection(firestore, "conversations"), where("participants", "array-contains", authUser.uid), orderBy("lastUpdated", "desc"));
   }, [firestore, authUser]);
   const { data: conversations, isLoading: conversationsLoading } = useCollection<Conversation>(conversationsQuery);
 
-  // 2. Fetch org members for new conversation dialog
   const orgMembersQuery = useMemoFirebase(() => {
     if (!firestore || !organizationId || !authUser) return null;
     return query(collection(firestore, "users"), where("organizationId", "==", organizationId));
@@ -78,7 +77,6 @@ export function ChatInterface({ title, description, organizationId }: ChatInterf
     [orgMembers, authUser]
   );
 
-  // 3. When conversations are fetched, fetch details of the other participants
   useEffect(() => {
     if (!conversations || !authUser || !firestore) {
         if (!conversationsLoading) {
@@ -106,11 +104,8 @@ export function ChatInterface({ title, description, organizationId }: ChatInterf
     }
 
     fetchParticipantDetails();
+  }, [conversations, authUser, firestore, conversationsLoading]);
 
-}, [conversations, authUser, firestore, conversationsLoading]);
-
-
-  // 4. Auto-select the first conversation
   useEffect(() => {
     if (!selectedConversationId && conversationsWithDetails.length > 0) {
         setSelectedConversationId(conversationsWithDetails[0].id);
@@ -119,14 +114,17 @@ export function ChatInterface({ title, description, organizationId }: ChatInterf
 
   const selectedConversation = useMemo(() => conversationsWithDetails.find(c => c.id === selectedConversationId), [conversationsWithDetails, selectedConversationId]);
 
-  // 5. Fetch messages for the selected conversation
   const messagesQuery = useMemoFirebase(() => {
     if (!firestore || !selectedConversationId) return null;
     return query(collection(firestore, "conversations", selectedConversationId, "messages"), orderBy("timestamp", "asc"));
   }, [firestore, selectedConversationId]);
   const { data: messages, isLoading: messagesLoading } = useCollection<Message>(messagesQuery);
 
-  // 6. Start or find existing conversation
+  const handleSelectConversation = (id: string) => {
+    setSelectedConversationId(id);
+    setMobileView('chat');
+  };
+
   const startConversation = async (otherUserId: string) => {
     if (!firestore || !authUser) return;
 
@@ -134,6 +132,7 @@ export function ChatInterface({ title, description, organizationId }: ChatInterf
     if (existingConvo) {
       setSelectedConversationId(existingConvo.id);
       setIsNewChatOpen(false);
+      setMobileView('chat');
       return;
     }
 
@@ -145,9 +144,9 @@ export function ChatInterface({ title, description, organizationId }: ChatInterf
 
     setSelectedConversationId(newConvo.id);
     setIsNewChatOpen(false);
+    setMobileView('chat');
   };
 
-  // 7. Handle sending a new message
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newMessage.trim() === '' || !selectedConversation || !authUser || !firestore) return;
@@ -155,17 +154,16 @@ export function ChatInterface({ title, description, organizationId }: ChatInterf
     const messagesColRef = collection(firestore, "conversations", selectedConversation.id, "messages");
     const convoRef = doc(firestore, "conversations", selectedConversation.id);
 
-    const messageData = {
-        senderId: authUser.uid,
-        text: newMessage,
-        timestamp: serverTimestamp(),
-    };
-
+    const text = newMessage;
     setNewMessage('');
 
-    await addDoc(messagesColRef, messageData);
+    await addDoc(messagesColRef, {
+        senderId: authUser.uid,
+        text,
+        timestamp: serverTimestamp(),
+    });
     await updateDoc(convoRef, {
-        lastMessage: newMessage,
+        lastMessage: text,
         lastUpdated: serverTimestamp(),
     });
 
@@ -173,7 +171,7 @@ export function ChatInterface({ title, description, organizationId }: ChatInterf
         sendNotification(firestore, {
             userId: selectedConversation.otherUser.id,
             title: `رسالة جديدة من ${userProfile.name}`,
-            description: newMessage,
+            description: text,
             link: '/messages'
         });
     }
@@ -186,10 +184,15 @@ export function ChatInterface({ title, description, organizationId }: ChatInterf
           <CardTitle>{title}</CardTitle>
           <CardDescription>{description}</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 h-[calc(100vh-220px)] md:h-[650px]">
-            {/* Conversations List */}
-            <div className="col-span-1 border-l rounded-lg flex flex-col">
+        <CardContent className="p-0 sm:p-6">
+          <div className="flex flex-col md:grid md:grid-cols-3 lg:grid-cols-4 gap-0 md:gap-4 h-[calc(100vh-280px)] min-h-[400px] md:h-[650px]">
+
+            {/* Conversations List — hidden on mobile when chat is open */}
+            <div className={cn(
+              "col-span-1 border-l flex flex-col",
+              "md:flex",
+              mobileView === 'chat' ? "hidden md:flex" : "flex"
+            )}>
               {organizationId && (
                 <div className="p-2 border-b">
                   <Button size="sm" variant="outline" className="w-full" onClick={() => setIsNewChatOpen(true)}>
@@ -199,7 +202,7 @@ export function ChatInterface({ title, description, organizationId }: ChatInterf
                 </div>
               )}
               <ScrollArea className="flex-1">
-                <div className="p-2 space-y-2">
+                <div className="p-2 space-y-1">
                   {convLoading && [...Array(4)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
                   {!convLoading && conversationsWithDetails.length === 0 && (
                     <div className="text-center py-8 text-muted-foreground text-sm">
@@ -210,7 +213,7 @@ export function ChatInterface({ title, description, organizationId }: ChatInterf
                   {!convLoading && conversationsWithDetails.map((convo) => (
                     <button
                       key={convo.id}
-                      onClick={() => setSelectedConversationId(convo.id)}
+                      onClick={() => handleSelectConversation(convo.id)}
                       className={cn(
                         'w-full text-right p-3 rounded-lg flex items-center gap-3 transition-colors',
                         selectedConversationId === convo.id ? 'bg-muted' : 'hover:bg-muted/50'
@@ -230,11 +233,24 @@ export function ChatInterface({ title, description, organizationId }: ChatInterf
               </ScrollArea>
             </div>
 
-            {/* Chat Window */}
-            <div className="col-span-1 md:col-span-2 lg:col-span-3 flex flex-col border rounded-lg">
+            {/* Chat Window — hidden on mobile when list is open */}
+            <div className={cn(
+              "col-span-1 md:col-span-2 lg:col-span-3 flex flex-col border rounded-lg",
+              "md:flex",
+              mobileView === 'list' ? "hidden md:flex" : "flex"
+            )}>
               {selectedConversation ? (
                 <>
                   <div className="p-4 border-b flex items-center gap-3">
+                    {/* Back button — mobile only */}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="md:hidden h-8 w-8 flex-shrink-0"
+                      onClick={() => setMobileView('list')}
+                    >
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
                     <Avatar>
                       <AvatarImage src={selectedConversation.otherUser.avatarUrl || `https://picsum.photos/seed/${selectedConversation.otherUser.id}/40/40`} alt={selectedConversation.otherUser.name} />
                       <AvatarFallback>{selectedConversation.otherUser.name?.charAt(0)}</AvatarFallback>
@@ -270,7 +286,7 @@ export function ChatInterface({ title, description, organizationId }: ChatInterf
                           )}
                           <div
                             className={cn(
-                              'p-3 rounded-lg max-w-xs lg:max-w-md break-words',
+                              'p-3 rounded-lg max-w-[75%] break-words',
                                msg.senderId === authUser?.uid
                                 ? 'bg-primary text-primary-foreground'
                                 : 'bg-muted'
@@ -322,7 +338,6 @@ export function ChatInterface({ title, description, organizationId }: ChatInterf
         </CardContent>
       </Card>
 
-      {/* New Conversation Dialog */}
       <Dialog open={isNewChatOpen} onOpenChange={setIsNewChatOpen}>
         <DialogContent dir="rtl" className="sm:max-w-md">
           <DialogHeader>

@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
     const decoded = await adminAuth.verifyIdToken(token);
     const snap = await adminDb.collection('conversations')
       .where('participants', 'array-contains', decoded.uid)
-      .orderBy('updatedAt', 'desc').get();
+      .orderBy('lastUpdated', 'desc').get();
     const conversations = await Promise.all(snap.docs.map(async d => {
       const data = d.data();
       const otherId = data.participants.find((p: string) => p !== decoded.uid);
@@ -34,12 +34,12 @@ export async function POST(req: NextRequest) {
     let convId: string;
     if (convQuery.empty) {
       const ref = await adminDb.collection('conversations').add({
-        participants, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(), lastMessage: content,
+        participants, createdAt: FieldValue.serverTimestamp(), lastUpdated: FieldValue.serverTimestamp(), lastMessage: content,
       });
       convId = ref.id;
     } else {
       convId = convQuery.docs[0].id;
-      await adminDb.collection('conversations').doc(convId).update({ updatedAt: FieldValue.serverTimestamp(), lastMessage: content });
+      await adminDb.collection('conversations').doc(convId).update({ lastUpdated: FieldValue.serverTimestamp(), lastMessage: content });
     }
     const msgRef = await adminDb.collection('conversations').doc(convId).collection('msgs').add({
       senderId: decoded.uid, content, createdAt: FieldValue.serverTimestamp(),
