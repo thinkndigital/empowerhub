@@ -42,7 +42,7 @@ export function AiRecommender() {
   };
 
   return (
-    <Card className="col-span-1 lg:col-span-2">
+    <Card className="col-span-1 lg:col-span-2 border-0 shadow-sm">
       <CardHeader>
         <div className="flex items-center gap-2">
            <Sparkles className="h-6 w-6 text-primary" />

@@ -167,7 +167,7 @@ export default function CourseDetailsPage({ params }: { params: { courseId: stri
       <div className="space-y-8 max-w-4xl mx-auto" dir="rtl">
         <Skeleton className="h-10 w-3/4" />
         <Skeleton className="h-6 w-full" />
-        <Card><CardHeader><Skeleton className="h-6 w-1/4" /></CardHeader><CardContent><Skeleton className="aspect-video w-full" /></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardHeader><Skeleton className="h-6 w-1/4" /></CardHeader><CardContent><Skeleton className="aspect-video w-full" /></CardContent></Card>
       </div>
     );
   }

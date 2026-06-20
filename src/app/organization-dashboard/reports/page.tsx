@@ -214,7 +214,7 @@ export default function OrgReportsPage() {
 
       {/* Beneficiary Progress List */}
       {!loading && beneficiaries.length > 0 && (
-        <Card>
+        <Card className="border-0 shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><TrendingUp className="h-5 w-5" /> تقدم المستفيدين</CardTitle>
           </CardHeader>
@@ -259,7 +259,7 @@ export default function OrgReportsPage() {
         const coachCoverage = totalBeneficiaries > 0 ? Math.round((withCoach / totalBeneficiaries) * 100) : 0;
 
         return (
-          <Card>
+          <Card className="border-0 shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2"><BookUser className="h-5 w-5" /> متابعة الإرشاد</CardTitle>
               <CardDescription>نظرة عامة على جلسات الإرشاد وتغطية المرشدين والمدربين.</CardDescription>
@@ -323,7 +323,7 @@ export default function OrgReportsPage() {
       })()}
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Card>
+        <Card className="border-0 shadow-sm">
           <CardHeader>
             <CardTitle>مشاركة المستفيدين</CardTitle>
             <CardDescription>المستفيدون النشطون على مدار 6 أشهر.</CardDescription>
@@ -342,7 +342,7 @@ export default function OrgReportsPage() {
             </ChartContainer>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-0 shadow-sm">
           <CardHeader>
             <CardTitle>توزيع التقدم</CardTitle>
             <CardDescription>توزيع المستفيدين حسب نسبة إنجازهم.</CardDescription>
