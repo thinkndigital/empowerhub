@@ -10,8 +10,6 @@ export async function GET(req: NextRequest) {
     const snapshot = await adminDb
       .collection('notifications')
       .where('userId', '==', uid)
-      .orderBy('createdAt', 'desc')
-      .limit(20)
       .get();
 
     const notifications = snapshot.docs.map((doc) => {
@@ -25,7 +23,9 @@ export async function GET(req: NextRequest) {
         createdAt: data.createdAt?.toDate?.()?.toISOString?.() || new Date().toISOString(),
         link: data.link || '',
       };
-    });
+    })
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .slice(0, 20);
 
     return NextResponse.json({ notifications });
   } catch (error) {

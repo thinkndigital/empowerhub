@@ -10,10 +10,9 @@ export async function GET(req: NextRequest) {
 
     const snap = await adminDb.collection('conversations')
       .where('participants', 'array-contains', uid)
-      .orderBy('lastUpdated', 'desc')
       .get();
 
-    const conversations = await Promise.all(snap.docs.map(async d => {
+    const conversations = (await Promise.all(snap.docs.map(async d => {
       const data = d.data();
       const otherId = data.participants.find((p: string) => p !== uid);
       let otherUser = { id: otherId || '', name: 'مستخدم', role: '' };
@@ -33,7 +32,7 @@ export async function GET(req: NextRequest) {
         unreadCount,
         otherUser,
       };
-    }));
+    }))).sort((a, b) => (b.lastUpdated || '').localeCompare(a.lastUpdated || ''));
 
     return NextResponse.json({ conversations });
   } catch (e: any) {
