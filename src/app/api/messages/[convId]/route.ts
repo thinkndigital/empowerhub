@@ -41,3 +41,34 @@ export async function GET(req: NextRequest, { params }: { params: { convId: stri
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
+
+export async function DELETE(req: NextRequest, { params }: { params: { convId: string } }) {
+  try {
+    const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
+    const decoded = await adminAuth.verifyIdToken(token);
+    const uid = decoded.uid;
+    const { convId } = params;
+
+    const { searchParams } = new URL(req.url);
+    const msgId = searchParams.get('msgId');
+    if (!msgId) return NextResponse.json({ error: 'msgId required' }, { status: 400 });
+
+    const msgRef = adminDb.collection('conversations').doc(convId).collection('msgs').doc(msgId);
+    const msgDoc = await msgRef.get();
+    if (!msgDoc.exists) return NextResponse.json({ error: 'not found' }, { status: 404 });
+    if (msgDoc.data()?.senderId !== uid) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+
+    await msgRef.delete();
+
+    // Update conversation lastMessage if this was the last message
+    const lastSnap = await adminDb.collection('conversations').doc(convId)
+      .collection('msgs').orderBy('createdAt', 'desc').limit(1).get();
+    const lastMsg = lastSnap.empty ? '' : (lastSnap.docs[0].data().content || '');
+    await adminDb.collection('conversations').doc(convId).update({ lastMessage: lastMsg });
+
+    return NextResponse.json({ success: true });
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 500 });
+  }
+}
+

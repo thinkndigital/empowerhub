@@ -12,7 +12,15 @@ import { Skeleton } from '@/components/ui/skeleton';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
-import { Send, PlusCircle, ArrowRight, MessageSquare, Search, Users } from 'lucide-react';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
+import { Send, PlusCircle, ArrowRight, MessageSquare, Search, Users, Trash2, MoreVertical, Ban, ShieldOff } from 'lucide-react';
 
 const ROLE_LABELS: Record<string, string> = {
   beneficiary: 'مستفيد',
@@ -69,6 +77,10 @@ export default function MessagesCenter({ title = 'الرسائل' }: MessagesCen
   const [showNewChat, setShowNewChat] = useState(false);
   const [contactSearch, setContactSearch] = useState('');
   const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
+  const [blockedUsers, setBlockedUsers] = useState<string[]>([]);
+  const [showBlockConfirm, setShowBlockConfirm] = useState(false);
+  const [showUnblockConfirm, setShowUnblockConfirm] = useState(false);
+  const [hoveredMsgId, setHoveredMsgId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const convIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const msgIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -104,6 +116,18 @@ export default function MessagesCenter({ title = 'الرسائل' }: MessagesCen
     } catch { /* silent */ }
   }, [getToken]);
 
+  const fetchBlockedUsers = useCallback(async () => {
+    const token = await getToken();
+    if (!token) return;
+    try {
+      const res = await fetch('/api/messages/block', { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) {
+        const data = await res.json();
+        setBlockedUsers(data.blockedUsers || []);
+      }
+    } catch { /* silent */ }
+  }, [getToken]);
+
   const fetchMessages = useCallback(async (convId: string) => {
     const token = await getToken();
     if (!token) return;
@@ -119,19 +143,17 @@ export default function MessagesCenter({ title = 'الرسائل' }: MessagesCen
     }
   }, [getToken]);
 
-  // Initial load
   useEffect(() => {
     fetchConversations();
     fetchContacts();
-  }, [fetchConversations, fetchContacts]);
+    fetchBlockedUsers();
+  }, [fetchConversations, fetchContacts, fetchBlockedUsers]);
 
-  // Poll conversations every 8s
   useEffect(() => {
     convIntervalRef.current = setInterval(fetchConversations, 8000);
     return () => { if (convIntervalRef.current) clearInterval(convIntervalRef.current); };
   }, [fetchConversations]);
 
-  // Poll messages for selected conversation every 5s
   useEffect(() => {
     if (msgIntervalRef.current) clearInterval(msgIntervalRef.current);
     if (!selectedConv) return;
@@ -140,7 +162,6 @@ export default function MessagesCenter({ title = 'الرسائل' }: MessagesCen
     return () => { if (msgIntervalRef.current) clearInterval(msgIntervalRef.current); };
   }, [selectedConv, fetchMessages]);
 
-  // Scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -157,7 +178,6 @@ export default function MessagesCenter({ title = 'الرسائل' }: MessagesCen
     const token = await getToken();
     if (!token) return;
 
-    // Check if conversation already exists
     const existing = conversations.find(c => c.otherUser.id === contact.id);
     if (existing) {
       selectConversation(existing);
@@ -214,6 +234,55 @@ export default function MessagesCenter({ title = 'الرسائل' }: MessagesCen
     }
   };
 
+  const deleteMessage = async (msgId: string) => {
+    if (!selectedConv) return;
+    const token = await getToken();
+    if (!token) return;
+    setMessages(prev => prev.filter(m => m.id !== msgId));
+    setHoveredMsgId(null);
+    try {
+      await fetch(`/api/messages/${selectedConv.id}?msgId=${msgId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      await fetchConversations();
+    } catch { /* silent */ }
+  };
+
+  const blockUser = async () => {
+    if (!selectedConv) return;
+    const userId = selectedConv.otherUser.id;
+    const token = await getToken();
+    if (!token) return;
+    setBlockedUsers(prev => [...prev, userId]);
+    setShowBlockConfirm(false);
+    try {
+      await fetch('/api/messages/block', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      });
+      fetchContacts();
+    } catch { /* silent */ }
+  };
+
+  const unblockUser = async () => {
+    if (!selectedConv) return;
+    const userId = selectedConv.otherUser.id;
+    const token = await getToken();
+    if (!token) return;
+    setBlockedUsers(prev => prev.filter(id => id !== userId));
+    setShowUnblockConfirm(false);
+    try {
+      await fetch('/api/messages/block', {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      });
+      fetchContacts();
+    } catch { /* silent */ }
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   };
@@ -229,6 +298,8 @@ export default function MessagesCenter({ title = 'الرسائل' }: MessagesCen
     acc[label].push(c);
     return acc;
   }, {});
+
+  const isBlocked = selectedConv ? blockedUsers.includes(selectedConv.otherUser.id) : false;
 
   return (
     <div className="flex flex-col gap-4 h-[calc(100vh-120px)] min-h-[500px]" dir="rtl">
@@ -292,6 +363,9 @@ export default function MessagesCenter({ title = 'الرسائل' }: MessagesCen
                       </div>
                       <p className="text-xs text-muted-foreground">
                         {ROLE_LABELS[conv.otherUser.role] || conv.otherUser.role}
+                        {blockedUsers.includes(conv.otherUser.id) && (
+                          <span className="mr-1 text-destructive">• محظور</span>
+                        )}
                       </p>
                       {conv.lastMessage && (
                         <p className="text-xs text-muted-foreground truncate mt-0.5">{conv.lastMessage}</p>
@@ -323,12 +397,42 @@ export default function MessagesCenter({ title = 'الرسائل' }: MessagesCen
                     {selectedConv.otherUser.name?.charAt(0) || '؟'}
                   </AvatarFallback>
                 </Avatar>
-                <div>
+                <div className="flex-1 min-w-0">
                   <p className="font-semibold text-sm">{selectedConv.otherUser.name}</p>
                   <p className="text-xs text-muted-foreground">
                     {ROLE_LABELS[selectedConv.otherUser.role] || selectedConv.otherUser.role}
+                    {isBlocked && <span className="mr-1 text-destructive font-medium">• محظور</span>}
                   </p>
                 </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start"><div dir="rtl">
+                    {isBlocked ? (
+                      <DropdownMenuItem
+                        className="gap-2 text-green-600 focus:text-green-600"
+                        onClick={() => setShowUnblockConfirm(true)}
+                      >
+                        <ShieldOff className="h-4 w-4" />
+                        إلغاء الحظر
+                      </DropdownMenuItem>
+                    ) : (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="gap-2 text-destructive focus:text-destructive"
+                          onClick={() => setShowBlockConfirm(true)}
+                        >
+                          <Ban className="h-4 w-4" />
+                          حظر المستخدم
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </div></DropdownMenuContent>
+                </DropdownMenu>
               </div>
 
               {/* Messages */}
@@ -352,10 +456,26 @@ export default function MessagesCenter({ title = 'الرسائل' }: MessagesCen
                       const isOwn = msg.senderId === user?.uid;
                       if (!msg.content) return null;
                       return (
-                        <div key={msg.id} className={`flex ${isOwn ? 'justify-start' : 'justify-end'}`}>
+                        <div
+                          key={msg.id}
+                          className={`flex items-end gap-1 ${isOwn ? 'justify-start' : 'justify-end'}`}
+                          onMouseEnter={() => isOwn && setHoveredMsgId(msg.id)}
+                          onMouseLeave={() => setHoveredMsgId(null)}
+                        >
+                          {/* Delete button for own messages — appears on hover */}
+                          {isOwn && hoveredMsgId === msg.id && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-muted-foreground hover:text-destructive flex-shrink-0 mb-1"
+                              onClick={() => deleteMessage(msg.id)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
                           <div className={`max-w-[72%] rounded-2xl px-4 py-2 ${isOwn ? 'bg-primary text-primary-foreground rounded-tr-sm' : 'bg-muted rounded-tl-sm'}`}>
                             <p className="text-sm leading-relaxed">{msg.content}</p>
-                            <p className={`text-xs mt-1 ${isOwn ? 'text-primary-foreground/60' : 'text-muted-foreground'} text-left`}>
+                            <p className={`text-xs mt-1 ${isOwn ? 'text-primary-foreground/60' : 'text-muted-foreground'}`}>
                               {(() => {
                                 try { return new Date(msg.createdAt).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }); }
                                 catch { return ''; }
@@ -371,20 +491,36 @@ export default function MessagesCenter({ title = 'الرسائل' }: MessagesCen
               </ScrollArea>
 
               {/* Input */}
-              <div className="p-3 border-t flex gap-2 flex-shrink-0 bg-background">
-                <Button size="icon" onClick={sendMessage} disabled={sending || !newMessage.trim()} className="flex-shrink-0">
-                  <Send className="h-4 w-4" />
-                </Button>
-                <Input
-                  value={newMessage}
-                  onChange={e => setNewMessage(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="اكتب رسالتك..."
-                  className="flex-1"
-                  disabled={sending}
-                  autoComplete="off"
-                />
-              </div>
+              {isBlocked ? (
+                <div className="p-3 border-t flex items-center justify-center bg-muted/30 flex-shrink-0">
+                  <p className="text-sm text-muted-foreground flex items-center gap-2">
+                    <Ban className="h-4 w-4 text-destructive" />
+                    لقد قمت بحظر هذا المستخدم —
+                    <button
+                      className="text-primary underline text-sm"
+                      onClick={() => setShowUnblockConfirm(true)}
+                    >
+                      إلغاء الحظر
+                    </button>
+                  </p>
+                </div>
+              ) : (
+                <div className="p-3 border-t flex gap-2 flex-shrink-0 bg-background">
+                  <Input
+                    value={newMessage}
+                    onChange={e => setNewMessage(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="اكتب رسالتك..."
+                    className="flex-1"
+                    disabled={sending}
+                    autoComplete="off"
+                    dir="rtl"
+                  />
+                  <Button size="icon" onClick={sendMessage} disabled={sending || !newMessage.trim()} className="flex-shrink-0">
+                    <Send className="h-4 w-4 scale-x-[-1]" />
+                  </Button>
+                </div>
+              )}
             </>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-3">
@@ -416,6 +552,7 @@ export default function MessagesCenter({ title = 'الرسائل' }: MessagesCen
               onChange={e => setContactSearch(e.target.value)}
               placeholder="ابحث بالاسم أو الدور..."
               className="pr-9"
+              dir="rtl"
             />
           </div>
 
@@ -458,6 +595,45 @@ export default function MessagesCenter({ title = 'الرسائل' }: MessagesCen
           </ScrollArea>
         </DialogContent>
       </Dialog>
+
+      {/* ── Block Confirmation ── */}
+      <AlertDialog open={showBlockConfirm} onOpenChange={setShowBlockConfirm}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>حظر المستخدم</AlertDialogTitle>
+            <AlertDialogDescription>
+              هل أنت متأكد من حظر <strong>{selectedConv?.otherUser.name}</strong>؟
+              لن يتمكن من إرسال رسائل إليك وسيُزال من قائمة جهات الاتصال.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row-reverse gap-2">
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={blockUser}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              حظر
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ── Unblock Confirmation ── */}
+      <AlertDialog open={showUnblockConfirm} onOpenChange={setShowUnblockConfirm}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>إلغاء الحظر</AlertDialogTitle>
+            <AlertDialogDescription>
+              هل تريد إلغاء حظر <strong>{selectedConv?.otherUser.name}</strong>؟
+              سيتمكن من إرسال رسائل إليك مجدداً.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row-reverse gap-2">
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction onClick={unblockUser}>إلغاء الحظر</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

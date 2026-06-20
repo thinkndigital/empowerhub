@@ -21,6 +21,7 @@ export async function GET(req: NextRequest) {
     const me = userDoc.data()!;
     const role = me.role || decoded.role;
     const orgId = me.organizationId || decoded.organizationId;
+    const blockedUsers: string[] = me.blockedUsers || [];
 
     let contacts: any[] = [];
 
@@ -53,6 +54,9 @@ export async function GET(req: NextRequest) {
         contacts = orgUsers.filter(u => ['mentor', 'coach', 'organization', 'admin'].includes(u.role));
       }
     }
+
+    // Filter out blocked users
+    contacts = contacts.filter(c => !blockedUsers.includes(c.id));
 
     // Sort by role priority then name
     const rolePriority: Record<string, number> = { organization: 0, admin: 1, mentor: 2, coach: 3, beneficiary: 4 };

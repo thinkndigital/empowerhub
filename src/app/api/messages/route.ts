@@ -49,6 +49,13 @@ export async function POST(req: NextRequest) {
     const { toUserId, content } = await req.json();
     if (!toUserId) return NextResponse.json({ error: 'toUserId is required' }, { status: 400 });
 
+    // Check if recipient has blocked sender
+    const recipientDoc = await adminDb.collection('users').doc(toUserId).get();
+    const recipientBlocked: string[] = recipientDoc.data()?.blockedUsers || [];
+    if (recipientBlocked.includes(uid)) {
+      return NextResponse.json({ error: 'تعذر إرسال الرسالة' }, { status: 403 });
+    }
+
     const participants = [uid, toUserId].sort();
 
     // Find or create conversation
