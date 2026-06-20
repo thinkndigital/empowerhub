@@ -3,6 +3,7 @@ import { adminAuth, adminStorage } from '@/lib/firebase-admin';
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
 const MAX_SIZE = 5 * 1024 * 1024; // 5 MB
+const STORAGE_BUCKET = process.env.FIREBASE_STORAGE_BUCKET || 'studio-4511819966-bc14f.firebasestorage.app';
 
 export async function POST(req: NextRequest) {
   try {
@@ -32,12 +33,14 @@ export async function POST(req: NextRequest) {
     const storagePath = `${folder}/${fileName}`;
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    const bucket = adminStorage.bucket();
+
+    // Explicitly pass bucket name — avoids issues when Admin SDK app was
+    // previously initialised without storageBucket and bucket() returns null.
+    const bucket = adminStorage.bucket(STORAGE_BUCKET);
     const fileRef = bucket.file(storagePath);
 
     await fileRef.save(buffer, { contentType: file.type, resumable: false });
 
-    // Generate a long-lived signed URL (10 years)
     const [url] = await fileRef.getSignedUrl({
       action: 'read',
       expires: new Date(Date.now() + 10 * 365 * 24 * 60 * 60 * 1000),

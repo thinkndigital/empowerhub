@@ -12,6 +12,8 @@ import { Palette, Save, BookOpen, Users, Copy, Key, Loader2 } from "lucide-react
 import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import { useUser } from "@/firebase/auth/use-user";
+import { useStorage } from "@/firebase/provider";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 const settingsSchema = z.object({
   name: z.string().min(2, { message: "يجب أن يكون اسم المنظمة حرفين على الأقل." }),
@@ -47,6 +49,7 @@ const hexToHsl = (hex: string): string => {
 export default function OrgSettingsPage() {
   const { toast } = useToast();
   const { user, userProfile } = useUser();
+  const storage = useStorage();
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [logoUploading, setLogoUploading] = useState(false);
@@ -120,21 +123,14 @@ export default function OrgSettingsPage() {
         mentorshipSessionPrice: values.mentorshipSessionPrice,
       };
 
-      // Upload logo via server media API
-      if (values.logo && values.logo.length > 0) {
+      // Upload logo via Firebase Storage Client SDK (browser-side)
+      if (values.logo && values.logo.length > 0 && storage) {
         const file = values.logo[0] as File;
-        const fd = new FormData();
-        fd.append('file', file);
-        fd.append('folder', 'org-logos');
-        const uploadRes = await fetch('/api/media', {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
-          body: fd,
-        });
-        const uploadJson = await uploadRes.json();
-        if (!uploadRes.ok) throw new Error(uploadJson.error || 'فشل رفع الشعار');
-        updateData.logoUrl = uploadJson.url;
-        setLogoPreview(uploadJson.url);
+        const storageRef = ref(storage, `org-logos/${Date.now()}-${file.name}`);
+        const snap = await uploadBytes(storageRef, file);
+        const logoUrl = await getDownloadURL(snap.ref);
+        updateData.logoUrl = logoUrl;
+        setLogoPreview(logoUrl);
         localStorage.removeItem('orgLogo');
       }
 
