@@ -224,8 +224,9 @@ export function CourseEnrollDialog({
             </DialogFooter>
           </div>
         ) : (
-          /* Paid course OR free + not logged in */
+          /* Paid course OR free + guest */
           <form onSubmit={handlePaidSubmit} id="course-pay-form" className="space-y-4">
+            {/* Course summary */}
             <div className="bg-muted/50 rounded-xl p-3">
               <p className="font-semibold text-sm">{courseTitle}</p>
               <p className="text-primary font-bold text-lg mt-1">
@@ -235,6 +236,7 @@ export function CourseEnrollDialog({
               </p>
             </div>
 
+            {/* Buyer info */}
             <div className="space-y-3">
               <div className="space-y-1.5">
                 <Label>الاسم الكامل <span className="text-red-500">*</span></Label>
@@ -246,20 +248,21 @@ export function CourseEnrollDialog({
               </div>
             </div>
 
-            {!isFree && (config.allowCOD || enabledGateways.length > 0) && (
+            {/* Payment method — always show COD for paid courses */}
+            {!isFree && (
               <div className="space-y-2">
                 <Label>طريقة الدفع</Label>
                 <RadioGroup value={method} onValueChange={v => setMethod(v as any)} className="space-y-2">
-                  {config.allowCOD && (
-                    <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${method === 'cod' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/40'}`}>
-                      <RadioGroupItem value="cod" id="ce-cod" />
-                      <Banknote className="h-5 w-5 text-emerald-600" />
-                      <div>
-                        <p className="text-sm font-medium">{config.codLabel}</p>
-                        <p className="text-xs text-muted-foreground">سيتم التواصل معك للتأكيد</p>
-                      </div>
-                    </label>
-                  )}
+                  {/* COD always available */}
+                  <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${method === 'cod' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/40'}`}>
+                    <RadioGroupItem value="cod" id="ce-cod" />
+                    <Banknote className="h-5 w-5 text-emerald-600" />
+                    <div>
+                      <p className="text-sm font-medium">الدفع عند التأكيد</p>
+                      <p className="text-xs text-muted-foreground">سيتواصل معك فريقنا لإتمام الدفع</p>
+                    </div>
+                  </label>
+                  {/* Online gateways if configured */}
                   {enabledGateways.map(gk => (
                     <label key={gk} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${method === gk ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/40'}`}>
                       <RadioGroupItem value={gk} id={`ce-${gk}`} />
@@ -281,7 +284,7 @@ export function CourseEnrollDialog({
                 {loading
                   ? 'جاري المعالجة...'
                   : isFree
-                    ? 'تأكيد الطلب'
+                    ? 'تأكيد التسجيل'
                     : method === 'cod'
                       ? 'تأكيد الطلب'
                       : `ادفع ${coursePrice} ${currency}`}

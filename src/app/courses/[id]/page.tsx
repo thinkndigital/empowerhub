@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useUser } from "@/firebase/auth/use-user";
 import { Button } from "@/components/ui/button";
@@ -31,7 +31,6 @@ interface Course {
 
 export default function CourseDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const router = useRouter();
   const { user: authUser, loading: authLoading } = useUser();
   const [course, setCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);
@@ -104,30 +103,13 @@ export default function CourseDetailPage() {
       );
     }
 
-    if (!authUser) {
-      // Not logged in → redirect to register with returnTo
-      return (
-        <Button
-          className="w-full"
-          size="lg"
-          onClick={() => router.push(`/register?returnTo=/courses/${course.id}`)}
-        >
-          {isFree ? (
-            <><BookOpen className="h-5 w-5 ml-2" />سجّل للوصول مجاناً</>
-          ) : (
-            <><ShoppingCart className="h-5 w-5 ml-2" />سجّل وشارِك الآن</>
-          )}
-        </Button>
-      );
-    }
-
-    // Logged in, not enrolled
+    // Both guests and logged-in users → open dialog directly
     return (
       <Button className="w-full" size="lg" onClick={() => setEnrollOpen(true)}>
         {isFree ? (
-          <><GraduationCap className="h-5 w-5 ml-2" />التسجيل مجاناً</>
+          <><GraduationCap className="h-5 w-5 ml-2" />اشترك مجاناً</>
         ) : (
-          <><ShoppingCart className="h-5 w-5 ml-2" />اشترِ الآن</>
+          <><ShoppingCart className="h-5 w-5 ml-2" />اشترك الآن</>
         )}
       </Button>
     );
@@ -277,7 +259,7 @@ export default function CourseDetailPage() {
 
                 {!isEnrolled && (
                   <p className="text-xs text-muted-foreground text-center">
-                    {authUser ? 'اشترِ الدورة واحصل على وصول فوري.' : 'سجّل في المنصة للوصول الكامل للدورة.'}
+                    أدخل بياناتك للتسجيل الفوري في الدورة.
                   </p>
                 )}
               </CardContent>
