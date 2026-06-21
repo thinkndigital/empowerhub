@@ -84,11 +84,17 @@ export async function PATCH(req: NextRequest) {
     }
 
     const updates: any = { status };
+    const courseData = courseDoc.data()!;
+    const courseTitle = courseData.title || 'الدورة';
+    const courseUrl = `https://empowerhub.thinkndigital.com/courses/${orderData.courseId}`;
+
     if (status === 'confirmed') {
       updates.paymentStatus = 'paid';
       updates.confirmedAt = new Date();
 
-      // Enroll the user if we have userId
+      const { FieldValue } = await import('firebase-admin/firestore');
+
+      // Enroll the registered user and send in-app notification
       if (orderData.userId) {
         try {
           await adminDb.collection('courses').doc(orderData.courseId)
@@ -97,16 +103,34 @@ export async function PATCH(req: NextRequest) {
               progress: 0,
               enrolledBy: 'coach_order',
             }, { merge: true });
-          const { FieldValue } = await import('firebase-admin/firestore');
           await adminDb.collection('users').doc(orderData.userId).update({
             enrolledCourses: FieldValue.arrayUnion(orderData.courseId),
           });
-        } catch { /* non-fatal if user doc doesn't exist */ }
+          // In-app notification with course link
+          await adminDb.collection('notifications').add({
+            userId: orderData.userId,
+            type: 'course_enrolled',
+            title: 'تم تأكيد اشتراكك في الدورة',
+            body: `تم قبول طلبك والتسجيل في دورة "${courseTitle}". يمكنك بدء الدورة الآن.`,
+            link: `/dashboard/training/${orderData.courseId}`,
+            read: false,
+            createdAt: new Date(),
+          });
+        } catch { /* non-fatal */ }
       }
     }
 
     await adminDb.collection('orders').doc(orderId).update(updates);
-    return NextResponse.json({ ok: true });
+
+    // Return course info so the client can build a WhatsApp link for guests
+    return NextResponse.json({
+      ok: true,
+      courseUrl,
+      courseTitle,
+      isGuest: !orderData.userId,
+      buyerPhone: orderData.buyerPhone || '',
+      buyerName: orderData.buyerName || '',
+    });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }

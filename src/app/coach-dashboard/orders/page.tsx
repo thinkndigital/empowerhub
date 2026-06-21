@@ -2,12 +2,12 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useUser } from "@/firebase/auth/use-user";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { ShoppingBag, CheckCircle, XCircle, Clock, Phone, User } from "lucide-react";
+import { ShoppingBag, CheckCircle, XCircle, Clock, Phone, User, MessageCircle, Copy } from "lucide-react";
 
 type Order = {
   id: string;
@@ -20,6 +20,14 @@ type Order = {
   paymentStatus: string;
   status: string;
   createdAt: string;
+};
+
+type ConfirmResult = {
+  courseUrl: string;
+  courseTitle: string;
+  isGuest: boolean;
+  buyerPhone: string;
+  buyerName: string;
 };
 
 const statusLabel: Record<string, { label: string; className: string }> = {
@@ -39,12 +47,21 @@ const payMethodLabel: Record<string, string> = {
   tabby: 'تابي',
 };
 
+function buildWhatsAppLink(phone: string, name: string, courseTitle: string, courseUrl: string) {
+  const cleaned = phone.replace(/\s+/g, '').replace(/^00/, '+');
+  const msg = encodeURIComponent(
+    `مرحباً ${name}،\n\nتم تأكيد اشتراكك في دورة "${courseTitle}".\n\nرابط الدورة:\n${courseUrl}\n\nأهلاً وسهلاً بك!`
+  );
+  return `https://wa.me/${cleaned.replace('+', '')}?text=${msg}`;
+}
+
 export default function CoachOrdersPage() {
   const { user: authUser } = useUser();
   const { toast } = useToast();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
+  const [guestAlert, setGuestAlert] = useState<ConfirmResult | null>(null);
 
   const fetchOrders = useCallback(async () => {
     if (!authUser) return;
@@ -75,8 +92,19 @@ export default function CoachOrdersPage() {
       });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || 'فشل التحديث');
-      toast({ title: status === 'confirmed' ? 'تم تأكيد الطلب' : 'تم رفض الطلب' });
+
       setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
+
+      if (status === 'confirmed') {
+        if (data.isGuest) {
+          // Guest: show WhatsApp prompt
+          setGuestAlert(data as ConfirmResult);
+        } else {
+          toast({ title: 'تم تأكيد الطلب', description: 'تم إرسال إشعار للمشترك برابط الدورة.' });
+        }
+      } else {
+        toast({ title: 'تم رفض الطلب' });
+      }
     } catch (e: any) {
       toast({ variant: 'destructive', title: 'خطأ', description: e.message });
     } finally {
@@ -93,6 +121,49 @@ export default function CoachOrdersPage() {
         <h1 className="text-2xl font-bold">طلبات الدورات</h1>
         <p className="text-muted-foreground text-sm mt-1">طلبات الاشتراك في دوراتك التدريبية</p>
       </div>
+
+      {/* Guest WhatsApp alert */}
+      {guestAlert && (
+        <Card className="border border-emerald-200 bg-emerald-50 shadow-sm">
+          <CardContent className="pt-4 pb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <div className="flex-1">
+                <p className="font-semibold text-sm text-emerald-800">تم تأكيد الطلب ✓</p>
+                <p className="text-xs text-emerald-700 mt-0.5">
+                  هذا المشترك زائر (غير مسجّل). أرسل له رابط الدورة عبر واتساب.
+                </p>
+                <p className="text-xs text-emerald-600 mt-1 font-mono break-all">{guestAlert.courseUrl}</p>
+              </div>
+              <div className="flex gap-2 shrink-0 flex-wrap">
+                <Button
+                  size="sm"
+                  className="bg-[#25D366] hover:bg-[#1ebe5d] text-white gap-1"
+                  onClick={() => window.open(buildWhatsAppLink(
+                    guestAlert.buyerPhone, guestAlert.buyerName,
+                    guestAlert.courseTitle, guestAlert.courseUrl
+                  ), '_blank')}
+                >
+                  <MessageCircle className="h-3.5 w-3.5" />
+                  إرسال واتساب
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1"
+                  onClick={() => {
+                    navigator.clipboard.writeText(guestAlert.courseUrl);
+                    toast({ title: 'تم نسخ الرابط' });
+                  }}
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                  نسخ الرابط
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setGuestAlert(null)}>إغلاق</Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Summary */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -200,7 +271,7 @@ function OrderCard({
                 className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1"
               >
                 <CheckCircle className="h-3.5 w-3.5" />
-                تأكيد
+                {updating ? 'جاري...' : 'تأكيد'}
               </Button>
               <Button
                 size="sm"
