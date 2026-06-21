@@ -10,97 +10,97 @@ body {
 
 @layer base {
   :root {
-    /* ─── Base ─────────────────────────────────────── */
-    --background:          210 40% 98%;   /* #F8FAFC */
-    --foreground:          222 47% 11%;   /* #0F172A */
+    /* ─── Surface ────────────────────────────────────── */
+    --background:          220 20% 97%;   /* #F5F6FA – cool near-white */
+    --foreground:          240 10% 8%;    /* #111118 – near-black */
 
     /* ─── Card / Popover ───────────────────────────── */
     --card:                0   0%  100%;
-    --card-foreground:     222 47% 11%;
+    --card-foreground:     240 10% 8%;
     --popover:             0   0%  100%;
-    --popover-foreground:  222 47% 11%;
+    --popover-foreground:  240 10% 8%;
 
-    /* ─── Primary – Blue ───────────────────────────── */
-    --primary:             221 83% 53%;   /* #2563EB */
+    /* ─── Primary – Indigo ─────────────────────────── */
+    --primary:             243 75% 59%;   /* #4F46E5 */
     --primary-foreground:  0   0%  100%;
 
     /* ─── Secondary ────────────────────────────────── */
-    --secondary:           210 40% 96%;   /* #F1F5F9 */
-    --secondary-foreground:222 47% 20%;
+    --secondary:           220 14% 94%;   /* #EEF0F5 */
+    --secondary-foreground:240 10% 25%;
 
     /* ─── Muted ────────────────────────────────────── */
-    --muted:               210 40% 96%;
-    --muted-foreground:    215 16% 47%;   /* #64748B */
+    --muted:               220 14% 94%;
+    --muted-foreground:    240 5% 47%;    /* #737380 */
 
     /* ─── Accent ───────────────────────────────────── */
-    --accent:              210 40% 96%;
-    --accent-foreground:   222 47% 11%;
+    --accent:              220 14% 94%;
+    --accent-foreground:   240 10% 8%;
 
     /* ─── Destructive ──────────────────────────────── */
     --destructive:         0   84% 60%;
     --destructive-foreground: 0 0% 100%;
 
     /* ─── Border / Input / Ring ────────────────────── */
-    --border:              214 32% 91%;   /* #E2E8F0 */
-    --input:               214 32% 91%;
-    --ring:                221 83% 53%;
+    --border:              220 13% 88%;   /* #DDDEE8 */
+    --input:               220 13% 88%;
+    --ring:                243 75% 59%;
 
     /* ─── Radius ───────────────────────────────────── */
     --radius:              0.5rem;
 
     /* ─── Charts ───────────────────────────────────── */
-    --chart-1:   221 83% 53%;   /* blue    */
+    --chart-1:   243 75% 59%;   /* indigo  */
     --chart-2:   262 83% 60%;   /* purple  */
     --chart-3:    32 95% 53%;   /* orange  */
     --chart-4:   142 71% 45%;   /* green   */
     --chart-5:   346 77% 58%;   /* red     */
 
-    /* ─── Sidebar – Deep Navy ──────────────────────── */
-    --sidebar-background:          222 47% 11%;   /* #0F172A */
-    --sidebar-foreground:          215 20% 56%;   /* #8496A9 */
-    --sidebar-primary:             213 94% 68%;   /* #60A5FA */
+    /* ─── Sidebar – Near-Black Graphite ─────────────── */
+    --sidebar-background:          240 14% 7%;    /* #0E0E14 */
+    --sidebar-foreground:          240 6%  52%;   /* #7F7F8E */
+    --sidebar-primary:             243 85% 72%;   /* #7C76F3 */
     --sidebar-primary-foreground:  0   0%  100%;
-    --sidebar-accent:              222 47% 17%;   /* #1E293B */
-    --sidebar-accent-foreground:   210 40% 90%;
-    --sidebar-border:              222 47% 17%;
-    --sidebar-ring:                213 94% 68%;
+    --sidebar-accent:              240 10% 13%;   /* #1C1C26 */
+    --sidebar-accent-foreground:   240 10% 88%;   /* #DDDDE8 */
+    --sidebar-border:              240 10% 13%;
+    --sidebar-ring:                243 85% 72%;
   }
 
   .dark {
-    --background:           222 47%  5%;
-    --foreground:           210 40% 95%;
-    --card:                 222 47%  8%;
-    --card-foreground:      210 40% 95%;
-    --popover:              222 47%  8%;
-    --popover-foreground:   210 40% 95%;
-    --primary:              213 94% 68%;
-    --primary-foreground:   222 47% 11%;
-    --secondary:            222 47% 14%;
-    --secondary-foreground: 210 40% 90%;
-    --muted:                222 47% 14%;
-    --muted-foreground:     215 20% 52%;
-    --accent:               222 47% 14%;
-    --accent-foreground:    210 40% 95%;
+    --background:           240 10%  5%;
+    --foreground:           220 14% 94%;
+    --card:                 240 10%  8%;
+    --card-foreground:      220 14% 94%;
+    --popover:              240 10%  8%;
+    --popover-foreground:   220 14% 94%;
+    --primary:              243 85% 72%;
+    --primary-foreground:   240 10%  8%;
+    --secondary:            240 10% 13%;
+    --secondary-foreground: 220 14% 88%;
+    --muted:                240 10% 13%;
+    --muted-foreground:     240 6%  52%;
+    --accent:               240 10% 13%;
+    --accent-foreground:    220 14% 94%;
     --destructive:          0   62% 48%;
     --destructive-foreground: 0 0% 100%;
-    --border:               222 47% 18%;
-    --input:                222 47% 18%;
-    --ring:                 213 94% 68%;
+    --border:               240 10% 16%;
+    --input:                240 10% 16%;
+    --ring:                 243 85% 72%;
 
-    --chart-1:   213 94% 68%;
+    --chart-1:   243 85% 72%;
     --chart-2:   262 83% 70%;
     --chart-3:    32 95% 63%;
     --chart-4:   142 71% 55%;
     --chart-5:   346 77% 68%;
 
-    --sidebar-background:         222 47%  4%;
-    --sidebar-foreground:         215 20% 50%;
-    --sidebar-primary:            213 94% 68%;
+    --sidebar-background:         240 14%  5%;
+    --sidebar-foreground:         240 6%  45%;
+    --sidebar-primary:            243 85% 72%;
     --sidebar-primary-foreground: 0   0%  100%;
-    --sidebar-accent:             222 47% 10%;
-    --sidebar-accent-foreground:  210 40% 90%;
-    --sidebar-border:             222 47% 12%;
-    --sidebar-ring:               213 94% 68%;
+    --sidebar-accent:             240 10% 10%;
+    --sidebar-accent-foreground:  220 14% 88%;
+    --sidebar-border:             240 10% 12%;
+    --sidebar-ring:               243 85% 72%;
   }
 }
 
@@ -114,16 +114,41 @@ body {
 ═══════════════════════════════════════════════════ */
 html { scroll-behavior: smooth; }
 
-::-webkit-scrollbar              { width: 5px; height: 5px; }
+::-webkit-scrollbar              { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track        { background: transparent; }
 ::-webkit-scrollbar-thumb        { background: hsl(var(--border)); border-radius: 999px; }
-::-webkit-scrollbar-thumb:hover  { background: hsl(var(--muted-foreground) / 0.45); }
+::-webkit-scrollbar-thumb:hover  { background: hsl(var(--muted-foreground) / 0.35); }
+
+/* ═══════════════════════════════════════════════════
+   SIDEBAR ACTIVE INDICATOR
+═══════════════════════════════════════════════════ */
+[data-sidebar="menu-button"][data-active="true"] {
+  background-color: hsl(var(--sidebar-primary) / 0.1) !important;
+  color: hsl(var(--sidebar-primary)) !important;
+  position: relative;
+}
+
+[data-sidebar="menu-button"][data-active="true"]::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 55%;
+  background: hsl(var(--sidebar-primary));
+  border-radius: 0 2px 2px 0;
+}
+
+[data-sidebar="menu-button"] {
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
 
 /* ═══════════════════════════════════════════════════
    ANIMATIONS
 ═══════════════════════════════════════════════════ */
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(10px); }
+  from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
@@ -137,33 +162,164 @@ html { scroll-behavior: smooth; }
   100% { background-position:  400% 0; }
 }
 
-.animate-fade-in-up { animation: fadeInUp 0.35s ease-out forwards; }
-.animate-fade-in    { animation: fadeIn   0.25s ease-out forwards; }
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: scale(1); }
+}
 
-.delay-100 { animation-delay:  80ms; }
-.delay-200 { animation-delay: 160ms; }
-.delay-300 { animation-delay: 240ms; }
-.delay-400 { animation-delay: 320ms; }
-.delay-500 { animation-delay: 400ms; }
+.animate-fade-in-up { animation: fadeInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.animate-fade-in    { animation: fadeIn   0.2s ease-out forwards; }
+.animate-scale-in   { animation: scaleIn  0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+.delay-100 { animation-delay:  60ms; }
+.delay-200 { animation-delay: 120ms; }
+.delay-300 { animation-delay: 180ms; }
+.delay-400 { animation-delay: 240ms; }
+.delay-500 { animation-delay: 300ms; }
 
 /* ═══════════════════════════════════════════════════
-   CARD EFFECTS
+   METRIC DISPLAY
 ═══════════════════════════════════════════════════ */
+.metric-number {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.metric-number-lg {
+  font-size: 2.75rem;
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.metric-label {
+  font-size: 0.75rem;
+  color: hsl(var(--muted-foreground));
+  margin-top: 0.375rem;
+  font-weight: 500;
+}
+
+/* ═══════════════════════════════════════════════════
+   METRIC STRIP (4-column borderless grid)
+═══════════════════════════════════════════════════ */
+.metric-strip {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  background-color: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+@media (min-width: 1024px) {
+  .metric-strip { grid-template-columns: repeat(4, 1fr); }
+}
+
+.metric-cell {
+  padding: 1.25rem 1.5rem;
+  border-left: 1px solid hsl(var(--border));
+  position: relative;
+}
+
+/* In RTL: right cell border = left visual divider */
+[dir="rtl"] .metric-cell {
+  border-left: none;
+  border-right: 1px solid hsl(var(--border));
+}
+
+.metric-cell:first-child {
+  border-right: none !important;
+  border-left: none !important;
+}
+
+/* ═══════════════════════════════════════════════════
+   DATA ROWS (clean list items)
+═══════════════════════════════════════════════════ */
+.data-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: 0.5rem;
+  transition: background-color 0.1s ease;
+  cursor: default;
+}
+
+.data-row:hover {
+  background-color: hsl(var(--muted) / 0.6);
+}
+
+/* ═══════════════════════════════════════════════════
+   PAGE LAYOUT
+═══════════════════════════════════════════════════ */
+.page-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.page-header .eyebrow {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: hsl(var(--muted-foreground));
+}
+
+.page-header h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+
+.section-title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+  letter-spacing: -0.01em;
+}
+
+/* ═══════════════════════════════════════════════════
+   CARD SURFACES
+═══════════════════════════════════════════════════ */
+.surface {
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.75rem;
+}
+
+.surface-interactive {
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.75rem;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.surface-interactive:hover {
+  border-color: hsl(var(--primary) / 0.25);
+  box-shadow: 0 4px 16px hsl(var(--primary) / 0.06);
+}
+
 .card-hover {
   transition: box-shadow 0.15s ease, transform 0.15s ease;
 }
 .card-hover:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.09);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08);
 }
 
 .stat-card {
-  transition: box-shadow 0.15s ease, transform 0.15s ease;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition: box-shadow 0.15s ease;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
 }
 .stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.1);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
 }
 
 /* ═══════════════════════════════════════════════════
@@ -184,14 +340,14 @@ html { scroll-behavior: smooth; }
    GRADIENT TEXT
 ═══════════════════════════════════════════════════ */
 .gradient-text {
-  background: linear-gradient(135deg, hsl(var(--primary)), hsl(213 94% 72%));
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(262 83% 65%));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 /* ═══════════════════════════════════════════════════
-   GLASS MORPHISM
+   GLASS
 ═══════════════════════════════════════════════════ */
 .glass {
   background: rgba(255, 255, 255, 0.82);
@@ -200,8 +356,50 @@ html { scroll-behavior: smooth; }
 }
 
 /* ═══════════════════════════════════════════════════
-   PAGE HEADER DIVIDER UTILITY
+   SESSION NEXT-UP CARD
+═══════════════════════════════════════════════════ */
+.next-session-card {
+  background: linear-gradient(135deg, hsl(var(--primary) / 0.04) 0%, hsl(262 83% 60% / 0.04) 100%);
+  border: 1px solid hsl(var(--primary) / 0.15);
+  border-radius: 0.75rem;
+  padding: 1.25rem 1.5rem;
+}
+
+/* ═══════════════════════════════════════════════════
+   QUICK ACTION LIST ITEMS
+═══════════════════════════════════════════════════ */
+.quick-action-item {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 0.625rem;
+  border-radius: 0.375rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: hsl(var(--foreground));
+  transition: background-color 0.1s ease, color 0.1s ease;
+  text-decoration: none;
+  width: 100%;
+}
+
+.quick-action-item:hover {
+  background-color: hsl(var(--muted));
+  color: hsl(var(--foreground));
+}
+
+.quick-action-item .qa-icon {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 0.375rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════
+   PAGE SECTION (legacy support)
 ═══════════════════════════════════════════════════ */
 .page-section {
-  @apply rounded-xl border bg-card p-5 shadow-sm;
+  @apply rounded-xl border bg-card p-5;
 }
