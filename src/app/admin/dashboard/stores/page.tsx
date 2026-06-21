@@ -103,6 +103,7 @@ function StoresTab() {
   return (
     <div className="space-y-4">
       <div className="flex gap-3 items-center">
+        <span className="text-slate-400 text-sm shrink-0">{stores.length} متجر</span>
         <div className="relative flex-1 max-w-xs">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
           <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="بحث عن متجر..." className="pr-9" />
@@ -110,7 +111,6 @@ function StoresTab() {
         <Button variant="outline" size="icon" onClick={load} disabled={loading}>
           <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
         </Button>
-        <span className="text-slate-400 text-sm">{stores.length} متجر</span>
       </div>
 
       {loading ? (
@@ -280,6 +280,7 @@ function ProductsTab() {
   return (
     <div className="space-y-4">
       <div className="flex gap-3 items-center">
+        <span className="text-slate-400 text-sm shrink-0">{products.length} منتج</span>
         <div className="relative flex-1 max-w-xs">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
           <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="بحث عن منتج..." className="pr-9" />
@@ -287,7 +288,6 @@ function ProductsTab() {
         <Button variant="outline" size="icon" onClick={load} disabled={loading}>
           <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
         </Button>
-        <span className="text-slate-400 text-sm">{products.length} منتج</span>
       </div>
 
       {loading ? (

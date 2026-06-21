@@ -59,11 +59,11 @@ const defaultConfig: SiteConfig = {
 function SaveBar({ onSave, saving, saved }: { onSave: () => void; saving: boolean; saved: boolean }) {
   return (
     <div className="sticky top-14 z-20 bg-slate-900/95 backdrop-blur border-b border-white/10 px-4 py-3 flex items-center justify-between">
-      <p className="text-slate-400 text-sm">تعديل محتوى الموقع</p>
       <Button onClick={onSave} disabled={saving} className={`gap-2 ${saved ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-primary hover:bg-primary/90'}`}>
         <Save className="h-4 w-4" />
         {saving ? 'جاري الحفظ...' : saved ? 'تم الحفظ ✓' : 'حفظ جميع التغييرات'}
       </Button>
+      <p className="text-slate-400 text-sm">تعديل محتوى الموقع</p>
     </div>
   );
 }

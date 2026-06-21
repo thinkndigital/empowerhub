@@ -155,16 +155,16 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top bar */}
         <header className="h-14 bg-slate-900/80 backdrop-blur border-b border-white/10 flex items-center gap-4 px-4 lg:px-6 sticky top-0 z-30">
-          <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-slate-400 hover:text-white">
-            <Menu className="h-5 w-5" />
-          </button>
-          <div className="flex-1" />
           <div className="flex items-center gap-2">
             <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
               <Shield className="h-4 w-4 text-primary" />
             </div>
             <span className="text-slate-300 text-sm hidden sm:block">المشرف العام</span>
           </div>
+          <div className="flex-1" />
+          <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-slate-400 hover:text-white">
+            <Menu className="h-5 w-5" />
+          </button>
         </header>
 
         {/* Content */}
