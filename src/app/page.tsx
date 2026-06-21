@@ -658,39 +658,47 @@ export default function LandingPage() {
         )}
 
         {/* Combined Opportunities + Features Section */}
-        {(sections.showOpportunities || sections.showFeatures) && (
-          <section id="features" className="py-16 md:py-24">
-            <div className="container px-4 md:px-6">
-              <div className="text-center mb-14">
-                <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">ما نقدمه</Badge>
-                <h2 className="text-3xl font-bold tracking-tight md:text-4xl">كل ما تحتاجه للنجاح في مكان واحد</h2>
-                <p className="mt-3 text-lg text-muted-foreground max-w-2xl mx-auto">
-                  فرص متنوعة وأدوات متكاملة مصممة لتناسب طموحاتك وتحقق أهدافك المهنية والشخصية.
-                </p>
+        {(sections.showOpportunities || sections.showFeatures) && (() => {
+          // When opportunities are shown, exclude features with same or conceptually overlapping icons
+          const oppIcons = new Set(opportunitiesData.map(o => o.icon));
+          // BookOpen ~ GraduationCap (both = training), Store ~ Store (marketplace)
+          const conceptualOverlap: Record<string, string> = { GraduationCap: 'BookOpen', BookOpen: 'GraduationCap' };
+          Object.keys(conceptualOverlap).forEach(k => { if (oppIcons.has(k)) oppIcons.add(conceptualOverlap[k]); });
+
+          const filteredFeatures = sections.showOpportunities
+            ? featuresData.filter(f => !oppIcons.has(f.icon))
+            : featuresData;
+
+          const allCards = [
+            ...(sections.showOpportunities ? opportunitiesData.map((o, i) => ({ title: o.title, description: o.description, icon: o.icon, color: o.color || featureColors[i % featureColors.length] })) : []),
+            ...filteredFeatures.map((f, i) => ({ title: f.title, description: f.description, icon: f.icon, color: featureColors[(i + (sections.showOpportunities ? opportunitiesData.length : 0)) % featureColors.length] })),
+          ];
+
+          return (
+            <section id="features" className="py-16 md:py-24">
+              <div className="container px-4 md:px-6">
+                <div className="text-center mb-14">
+                  <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">ما نقدمه</Badge>
+                  <h2 className="text-3xl font-bold tracking-tight md:text-4xl">كل ما تحتاجه للنجاح في مكان واحد</h2>
+                  <p className="mt-3 text-lg text-muted-foreground max-w-2xl mx-auto">
+                    فرص متنوعة وأدوات متكاملة مصممة لتناسب طموحاتك وتحقق أهدافك المهنية والشخصية.
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {allCards.map((card, i) => (
+                    <FeatureCard
+                      key={i}
+                      title={card.title}
+                      description={card.description}
+                      color={card.color}
+                      icon={<span className="text-white">{iconMap[card.icon] ?? <Sparkles className="h-6 w-6" />}</span>}
+                    />
+                  ))}
+                </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {sections.showOpportunities && opportunitiesData.map((opp, i) => (
-                  <FeatureCard
-                    key={`opp-${i}`}
-                    title={opp.title}
-                    description={opp.description}
-                    color={opp.color || featureColors[i % featureColors.length]}
-                    icon={<span className="text-white">{iconMap[opp.icon] ?? <Sparkles className="h-6 w-6" />}</span>}
-                  />
-                ))}
-                {sections.showFeatures && featuresData.map((f, i) => (
-                  <FeatureCard
-                    key={`feat-${i}`}
-                    title={f.title}
-                    description={f.description}
-                    color={featureColors[(i + (sections.showOpportunities ? opportunitiesData.length : 0)) % featureColors.length]}
-                    icon={<span className="text-white">{iconMap[f.icon] ?? <Sparkles className="h-6 w-6" />}</span>}
-                  />
-                ))}
-              </div>
-            </div>
-          </section>
-        )}
+            </section>
+          );
+        })()}
 
         {/* How it works */}
         {sections.showHowItWorks && howItWorksData.length > 0 && (
