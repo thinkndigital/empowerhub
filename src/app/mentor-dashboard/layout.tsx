@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Bell, LayoutGrid, Settings, Users,
-  MessageSquare, Calendar, BarChart3, LogOut, ShoppingBag, ChevronRight,
+  MessageSquare, Calendar, BarChart3, LogOut, ShoppingBag, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { doc } from "firebase/firestore";
@@ -207,7 +207,7 @@ export default function MentorDashboardLayout({ children }: { children: React.Re
             <span className="hidden sm:block text-xs text-muted-foreground/50">المرشد</span>
             {currentPage && currentPage.href !== '/mentor-dashboard' && (
               <>
-                <ChevronRight className="h-3.5 w-3.5 opacity-30 hidden sm:block" />
+                <ChevronLeft className="h-3.5 w-3.5 opacity-30 hidden sm:block" />
                 <span className="text-xs font-medium text-foreground truncate">{currentPage.label}</span>
               </>
             )}

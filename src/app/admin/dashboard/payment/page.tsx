@@ -115,9 +115,9 @@ function SecretInput({ value, onChange, placeholder }: { value: string; onChange
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder || '••••••••'}
         dir="ltr"
-        className="font-mono text-sm pl-10"
+        className="font-mono text-sm pr-10"
       />
-      <button type="button" onClick={() => setShow(s => !s)} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white">
+      <button type="button" onClick={() => setShow(s => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white">
         {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
       </button>
     </div>

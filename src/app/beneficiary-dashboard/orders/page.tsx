@@ -167,7 +167,7 @@ export default function BeneficiaryOrdersPage() {
                       </div>
                     </div>
 
-                    <div className="text-left flex-shrink-0">
+                    <div className="text-right flex-shrink-0">
                       <p className="text-xl font-bold text-primary">{(order.totalAmount || order.productPrice || 0).toFixed(2)} ر.س</p>
                       {order.createdAt && (
                         <p className="text-xs text-muted-foreground mt-0.5">

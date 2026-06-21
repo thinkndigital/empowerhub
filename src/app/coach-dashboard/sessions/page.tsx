@@ -206,9 +206,9 @@ export default function CoachSessionsPage() {
                           <FormItem className="flex flex-col"><FormLabel>التاريخ</FormLabel>
                             <Popover><PopoverTrigger asChild>
                               <FormControl>
-                                <Button variant="outline" className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                <Button variant="outline" className={cn("pr-3 text-right font-normal", !field.value && "text-muted-foreground")}>
                                   {field.value ? format(field.value, "PPP", { locale: ar }) : <span>اختر تاريخًا</span>}
-                                  <CalendarIcon className="mr-auto h-4 w-4 opacity-50" />
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                                 </Button>
                               </FormControl></PopoverTrigger>
                               <PopoverContent className="w-auto p-0" align="start">

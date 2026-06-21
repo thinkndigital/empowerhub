@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutGrid, Settings, Users, BarChart3,
-  BookOpen, Store, MessageSquare, GraduationCap, ClipboardList, LogOut, ChevronRight,
+  BookOpen, Store, MessageSquare, GraduationCap, ClipboardList, LogOut, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { signOut } from "firebase/auth";
@@ -186,7 +186,7 @@ export default function OrganizationDashboardLayout({ children }: { children: Re
             <span className="hidden sm:block text-xs text-muted-foreground/50">لوحة التحكم</span>
             {currentPage && currentPage.href !== '/organization-dashboard' && (
               <>
-                <ChevronRight className="h-3.5 w-3.5 opacity-30 hidden sm:block" />
+                <ChevronLeft className="h-3.5 w-3.5 opacity-30 hidden sm:block" />
                 <span className="text-xs font-medium text-foreground truncate">{currentPage.label}</span>
               </>
             )}

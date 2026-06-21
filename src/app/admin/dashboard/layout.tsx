@@ -143,7 +143,7 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
         <div className="lg:hidden fixed inset-0 z-50 flex">
           <div className="fixed inset-0 bg-black/60" onClick={() => setSidebarOpen(false)} />
           <aside className="relative w-60 bg-slate-900 flex flex-col z-10">
-            <button onClick={() => setSidebarOpen(false)} className="absolute top-4 left-4 text-slate-400 hover:text-white">
+            <button onClick={() => setSidebarOpen(false)} className="absolute top-4 right-4 text-slate-400 hover:text-white">
               <X className="h-5 w-5" />
             </button>
             <SidebarContent />
