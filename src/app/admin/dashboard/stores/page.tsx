@@ -143,7 +143,7 @@ function StoresTab() {
 
                 <div className="flex items-center justify-between text-xs text-slate-500 mb-3">
                   <span>{store.productsCount} منتج</span>
-                  {store.createdAt && <span>{new Date(store.createdAt).toLocaleDateString('ar-SA')}</span>}
+                  {store.createdAt && <span>{new Date(store.createdAt).toLocaleDateString('ar-EG')}</span>}
                 </div>
 
                 <div className="flex gap-2">

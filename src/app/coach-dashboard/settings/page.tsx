@@ -25,6 +25,9 @@ const mentorProfileSchema = z.object({
   certifications: z.string().optional(),
   phone: z.string().optional(),
   linkedIn: z.string().optional(),
+  website: z.string().optional(),
+  twitter: z.string().optional(),
+  instagram: z.string().optional(),
   yearsOfExperience: z.coerce.number().min(0).optional(),
 });
 
@@ -45,6 +48,9 @@ type MentorProfile = {
   certifications?: string;
   phone?: string;
   linkedIn?: string;
+  website?: string;
+  twitter?: string;
+  instagram?: string;
   yearsOfExperience?: number;
   wallet?: {
     balance?: number;
@@ -83,6 +89,9 @@ export default function CoachSettingsPage() {
       certifications: '',
       phone: '',
       linkedIn: '',
+      website: '',
+      twitter: '',
+      instagram: '',
       yearsOfExperience: 0,
     },
   });
@@ -106,6 +115,9 @@ export default function CoachSettingsPage() {
         certifications: profile.certifications || '',
         phone: profile.phone || '',
         linkedIn: profile.linkedIn || '',
+        website: profile.website || '',
+        twitter: profile.twitter || '',
+        instagram: profile.instagram || '',
         yearsOfExperience: profile.yearsOfExperience || 0,
       });
       if (profile.wallet?.payoutInfo) {
@@ -232,6 +244,15 @@ export default function CoachSettingsPage() {
                     )} />
                     <FormField control={profileForm.control} name="linkedIn" render={({ field }) => (
                       <FormItem><FormLabel>رابط LinkedIn</FormLabel><FormControl><Input dir="ltr" placeholder="https://linkedin.com/in/..." {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={profileForm.control} name="website" render={({ field }) => (
+                      <FormItem><FormLabel>الموقع الشخصي</FormLabel><FormControl><Input dir="ltr" placeholder="https://..." {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={profileForm.control} name="twitter" render={({ field }) => (
+                      <FormItem><FormLabel>حساب X / Twitter</FormLabel><FormControl><Input dir="ltr" placeholder="https://x.com/..." {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={profileForm.control} name="instagram" render={({ field }) => (
+                      <FormItem><FormLabel>حساب Instagram</FormLabel><FormControl><Input dir="ltr" placeholder="https://instagram.com/..." {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
                   </div>
                   <FormField control={profileForm.control} name="bio" render={({ field }) => (

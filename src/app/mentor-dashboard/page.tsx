@@ -31,7 +31,7 @@ function formatSessionDate(dateStr: string): string {
   if (diffH === 1) return 'خلال ساعة';
   if (diffH < 24 && diffH > 0) return `خلال ${diffH} ساعة`;
   if (diffD === 1) return 'غداً';
-  return d.toLocaleDateString('ar-SA', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleDateString('ar-EG', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 export default function MentorDashboardPage() {

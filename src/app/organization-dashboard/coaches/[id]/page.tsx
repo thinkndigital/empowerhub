@@ -24,14 +24,14 @@ function formatDate(dateVal?: any): string {
   try {
     // Firestore Timestamp object
     if (typeof dateVal === 'object' && dateVal._seconds) {
-      return new Date(dateVal._seconds * 1000).toLocaleDateString('ar-SA');
+      return new Date(dateVal._seconds * 1000).toLocaleDateString('ar-EG');
     }
     if (typeof dateVal === 'object' && dateVal.seconds) {
-      return new Date(dateVal.seconds * 1000).toLocaleDateString('ar-SA');
+      return new Date(dateVal.seconds * 1000).toLocaleDateString('ar-EG');
     }
     const d = new Date(dateVal);
     if (isNaN(d.getTime())) return String(dateVal);
-    return d.toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' });
+    return d.toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric' });
   } catch { return String(dateVal); }
 }
 

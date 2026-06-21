@@ -16,6 +16,7 @@ import { collection, query, where } from "firebase/firestore";
 import { useFirestore, useMemoFirebase } from "@/firebase/provider";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Product } from "@/lib/products-data";
+import { useCurrency } from "@/hooks/use-currency";
 
 
 type Store = {
@@ -30,6 +31,7 @@ type Store = {
 export default function StorePage({ params }: { params: { storeId: string } }) {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const firestore = useFirestore();
+  const { symbol: currencySymbol } = useCurrency();
 
   // Fetch all stores to find the one matching the slug
   const allStoresQuery = useMemoFirebase(() => {
@@ -137,7 +139,7 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
                         </p>
                     </CardContent>
                     <CardFooter className="flex justify-between items-center p-4 pt-0 mt-auto">
-                        <p className="text-lg font-semibold">{product.price.toFixed(2)} د.أ</p>
+                        <p className="text-lg font-semibold">{product.price.toFixed(2)} {currencySymbol}</p>
                         <Button size="sm" onClick={() => setSelectedProduct(product)}>
                             <ShoppingCart className="ml-2 h-4 w-4" />
                             اطلب الآن

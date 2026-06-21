@@ -241,7 +241,7 @@ function OrderCard({
   updating?: boolean;
 }) {
   const st = statusLabel[order.status] ?? { label: order.status, className: 'bg-muted text-muted-foreground' };
-  const date = order.createdAt ? new Date(order.createdAt).toLocaleDateString('ar-SA') : '';
+  const date = order.createdAt ? new Date(order.createdAt).toLocaleDateString('ar-EG') : '';
 
   return (
     <Card className="border-0 shadow-sm">

@@ -9,7 +9,7 @@ function checkAuth() {
 const defaultConfig = {
   allowCOD: true,
   codLabel: 'الدفع عند الاستلام',
-  currency: 'SAR',
+  currency: 'JOD',
   moyasar: { enabled: false, publishableKey: '', secretKey: '', label: 'موياسر (Mada / Visa / STC Pay)' },
   stripe: { enabled: false, publishableKey: '', secretKey: '', label: 'Stripe (بطاقة بنكية دولية)' },
   paypal: { enabled: false, clientId: '', clientSecret: '', mode: 'sandbox', label: 'PayPal' },

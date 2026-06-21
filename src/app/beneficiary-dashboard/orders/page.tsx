@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useUser } from "@/firebase/auth/use-user";
+import { useCurrency } from "@/hooks/use-currency";
 
 interface Order {
   id: string;
@@ -40,6 +41,7 @@ const nextStatus: Record<string, string> = {
 
 export default function BeneficiaryOrdersPage() {
   const { user } = useUser();
+  const { symbol: currencySymbol } = useCurrency();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
@@ -168,10 +170,10 @@ export default function BeneficiaryOrdersPage() {
                     </div>
 
                     <div className="text-right flex-shrink-0">
-                      <p className="text-xl font-bold text-primary">{(order.totalAmount || order.productPrice || 0).toFixed(2)} ر.س</p>
+                      <p className="text-xl font-bold text-primary">{(order.totalAmount || order.productPrice || 0).toFixed(2)} {currencySymbol}</p>
                       {order.createdAt && (
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {new Date(order.createdAt).toLocaleDateString('ar-SA', { day: 'numeric', month: 'short' })}
+                          {new Date(order.createdAt).toLocaleDateString('ar-EG', { day: 'numeric', month: 'short' })}
                         </p>
                       )}
                       <p className="text-xs text-muted-foreground">{order.paymentMethod === 'cod' ? 'الدفع عند الاستلام' : 'دفع أونلاين'}</p>

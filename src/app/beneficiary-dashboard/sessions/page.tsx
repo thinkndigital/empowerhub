@@ -14,12 +14,12 @@ type Session = {
 
 function fmtDate(d?: string) {
   if (!d) return "—";
-  try { return new Date(d).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' }); }
+  try { return new Date(d).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' }); }
   catch { return d; }
 }
 function fmtTime(d?: string) {
   if (!d) return "";
-  try { return new Date(d).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }); }
+  try { return new Date(d).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }); }
   catch { return ""; }
 }
 

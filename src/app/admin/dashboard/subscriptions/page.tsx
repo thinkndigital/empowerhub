@@ -46,7 +46,7 @@ const statusConfig: Record<string, { label: string; color: string; icon: any }> 
 
 function formatDate(d?: string) {
   if (!d) return '—';
-  return new Date(d).toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' });
+  return new Date(d).toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 function daysLeft(endDate?: string) {

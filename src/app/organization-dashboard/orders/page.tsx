@@ -158,7 +158,7 @@ export default function OrgOrdersPage() {
                     </td>
                     <td className="p-3"><Badge className={sc.color + ' text-xs'}>{sc.label}</Badge></td>
                     <td className="p-3 text-xs text-muted-foreground">
-                      {order.createdAt ? new Date(order.createdAt).toLocaleDateString('ar-SA') : '—'}
+                      {order.createdAt ? new Date(order.createdAt).toLocaleDateString('ar-EG') : '—'}
                     </td>
                   </tr>
                 );

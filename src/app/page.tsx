@@ -12,6 +12,7 @@ import {
   Star, MessageSquare, Phone, Mail, Globe, Menu, X,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useCurrency } from '@/hooks/use-currency';
 import { OrderDialog } from '@/components/order-dialog';
 import { SessionBookingDialog } from '@/components/session-booking-dialog';
 import { CourseEnrollDialog } from '@/components/course-enroll-dialog';
@@ -25,9 +26,13 @@ interface MentorUser {
   bio?: string;
   description?: string;
   specializations?: string[];
+  avatarUrl?: string;
   sessionPrice?: number | null;
   whatsapp?: string;
   linkedin?: string;
+  instagram?: string;
+  website?: string;
+  twitter?: string;
   email?: string;
 }
 
@@ -82,28 +87,45 @@ interface SiteConfig {
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 const ExpertCard = ({
-  expert, role, onBook,
-}: { expert: MentorUser; role: 'mentor' | 'coach'; onBook?: () => void }) => {
+  expert, role, onBook, currencySymbol,
+}: { expert: MentorUser; role: 'mentor' | 'coach'; onBook?: () => void; currencySymbol: string }) => {
   const name = expert.displayName || expert.name || 'بدون اسم';
   const bio = expert.bio || expert.description || '';
   const specializations = Array.isArray(expert.specializations) ? expert.specializations : [];
   const hasPrice = expert.sessionPrice != null && expert.sessionPrice > 0;
   const accent = role === 'mentor' ? 'bg-primary/10 text-primary' : 'bg-sky-500/10 text-sky-600';
+  const initial = name[0] || '?';
   return (
     <div className="group p-4 sm:p-5 rounded-2xl border border-border bg-card hover:border-primary/30 hover:shadow-sm transition-all flex flex-col gap-3">
       <div className="flex items-center gap-3">
-        <div className={`h-10 w-10 rounded-full ${accent} flex items-center justify-center font-bold text-sm shrink-0`}>
-          {name[0]}
-        </div>
-        <div className="min-w-0">
+        {expert.avatarUrl ? (
+          <img src={expert.avatarUrl} alt={name} className="h-12 w-12 rounded-full object-cover shrink-0 border border-border" />
+        ) : (
+          <div className={`h-12 w-12 rounded-full ${accent} flex items-center justify-center font-bold text-base shrink-0`}>
+            {initial}
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
           <p className="font-semibold text-sm text-foreground truncate">{name}</p>
-          {hasPrice && <p className="text-xs text-muted-foreground tabular-nums">{expert.sessionPrice} د.أ / جلسة</p>}
+          {hasPrice && <p className="text-xs text-muted-foreground tabular-nums">{expert.sessionPrice} {currencySymbol} / جلسة</p>}
+        </div>
+        <div className="flex gap-1.5 shrink-0">
+          {expert.linkedin && (
+            <a href={expert.linkedin} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors" title="LinkedIn">
+              <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+            </a>
+          )}
+          {expert.website && (
+            <a href={expert.website} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors" title="الموقع">
+              <Globe className="h-4 w-4" />
+            </a>
+          )}
         </div>
       </div>
       {bio && <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2 flex-grow">{bio}</p>}
       {specializations.length > 0 && (
         <div className="flex flex-wrap gap-1">
-          {specializations.slice(0, 2).map((s, i) => (
+          {specializations.slice(0, 3).map((s, i) => (
             <span key={i} className="text-[10px] font-medium bg-muted text-muted-foreground rounded-full px-2 py-0.5">{s}</span>
           ))}
         </div>
@@ -120,7 +142,7 @@ const ExpertCard = ({
   );
 };
 
-const CourseCard = ({ course, onEnroll }: { course: CourseItem; onEnroll?: (c: CourseItem) => void }) => (
+const CourseCard = ({ course, onEnroll, currencySymbol }: { course: CourseItem; onEnroll?: (c: CourseItem) => void; currencySymbol: string }) => (
   <div className="group rounded-xl border border-border bg-card overflow-hidden hover:border-primary/30 hover:shadow-sm transition-all flex flex-col">
     <div className="relative h-36 bg-muted overflow-hidden">
       {course.coverImageUrl ? (
@@ -132,7 +154,7 @@ const CourseCard = ({ course, onEnroll }: { course: CourseItem; onEnroll?: (c: C
       )}
       {course.price != null && (
         <div className="absolute top-2 left-2 bg-background/90 backdrop-blur-sm text-foreground text-xs font-semibold rounded-full px-2.5 py-0.5 border border-border/50">
-          {course.price === 0 ? 'مجاني' : `${course.price} د.أ`}
+          {course.price === 0 ? 'مجاني' : `${course.price} ${currencySymbol}`}
         </div>
       )}
     </div>
@@ -151,7 +173,7 @@ const CourseCard = ({ course, onEnroll }: { course: CourseItem; onEnroll?: (c: C
   </div>
 );
 
-const ProductCard = ({ product, onOrder }: { product: Product; onOrder: (p: Product) => void }) => {
+const ProductCard = ({ product, onOrder, currencySymbol }: { product: Product; onOrder: (p: Product) => void; currencySymbol: string }) => {
   const name = product.name || 'منتج';
   const imageUrl = product.imageUrl || product.image || '';
   return (
@@ -173,7 +195,7 @@ const ProductCard = ({ product, onOrder }: { product: Product; onOrder: (p: Prod
       <div className="p-4 flex flex-col gap-1 flex-grow">
         <h3 className="font-semibold text-sm line-clamp-2 text-foreground">{name}</h3>
         {product.price != null && (
-          <p className="text-primary font-bold text-sm">{product.price} د.أ</p>
+          <p className="text-primary font-bold text-sm">{product.price} {currencySymbol}</p>
         )}
       </div>
       <div className="px-4 pb-4">
@@ -187,6 +209,7 @@ const ProductCard = ({ product, onOrder }: { product: Product; onOrder: (p: Prod
 
 export default function LandingPage() {
   const { toast } = useToast();
+  const { symbol: currencySymbol } = useCurrency();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const [siteConfig, setSiteConfig] = useState<SiteConfig | null>(null);
@@ -745,7 +768,7 @@ export default function LandingPage() {
                   ) : mentors.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                       {mentors.map(m => (
-                        <ExpertCard key={m.id} expert={m} role="mentor" onBook={() => { setBookingHost(m); setBookingRole('mentor'); }} />
+                        <ExpertCard key={m.id} expert={m} role="mentor" currencySymbol={currencySymbol} onBook={() => { setBookingHost(m); setBookingRole('mentor'); }} />
                       ))}
                     </div>
                   ) : (
@@ -765,7 +788,7 @@ export default function LandingPage() {
                   ) : coaches.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                       {coaches.map(c => (
-                        <ExpertCard key={c.id} expert={c} role="coach" onBook={() => { setBookingHost(c); setBookingRole('coach'); }} />
+                        <ExpertCard key={c.id} expert={c} role="coach" currencySymbol={currencySymbol} onBook={() => { setBookingHost(c); setBookingRole('coach'); }} />
                       ))}
                     </div>
                   ) : (
@@ -798,7 +821,7 @@ export default function LandingPage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                  {courses.map(c => <CourseCard key={c.id} course={c} onEnroll={setSelectedCourse} />)}
+                  {courses.map(c => <CourseCard key={c.id} course={c} currencySymbol={currencySymbol} onEnroll={setSelectedCourse} />)}
                 </div>
               )}
             </div>
@@ -834,7 +857,7 @@ export default function LandingPage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                  {products.map(p => <ProductCard key={p.id} product={p} onOrder={setSelectedProduct} />)}
+                  {products.map(p => <ProductCard key={p.id} product={p} currencySymbol={currencySymbol} onOrder={setSelectedProduct} />)}
                 </div>
               )}
             </div>
