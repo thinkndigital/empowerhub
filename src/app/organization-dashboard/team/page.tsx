@@ -144,7 +144,7 @@ export default function TeamPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">فريق العمل</h1>
-          <p className="text-sm text-muted-foreground">إدارة أعضاء فريق منظمتك وأدوارهم.</p>
+          <p className="text-sm text-muted-foreground">إدارة أعضاء الفريق وأدوارهم.</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <Button variant="outline" onClick={handleExport}>

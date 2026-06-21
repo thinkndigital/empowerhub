@@ -181,7 +181,7 @@ export default function BeneficiariesPage() {
     setRemovingUser(true);
     try {
       await apiAction(user, { action: "removeFromOrg", userId: removeTarget.id });
-      toast({ title: "تمت الإزالة", description: `تمت إزالة ${removeTarget.name} من المنظمة.` });
+      toast({ title: "تمت الإزالة", description: `تمت إزالة ${removeTarget.name}.` });
       refetchOrg();
       refetchAll();
     } catch {
@@ -197,7 +197,7 @@ export default function BeneficiariesPage() {
     setAddingUserId(u.id);
     try {
       await apiAction(user, { action: "addToOrg", userId: u.id });
-      toast({ title: "تمت الإضافة", description: `تم إضافة ${u.name} إلى منظمتك.` });
+      toast({ title: "تمت الإضافة", description: `تمت إضافة ${u.name}.` });
       refetchOrg();
       refetchAll();
     } catch {
@@ -344,7 +344,7 @@ export default function BeneficiariesPage() {
     <div dir="rtl" className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">إدارة المستفيدين</h1>
-        <p className="text-sm text-muted-foreground">عرض وإدارة المستفيدين وإضافتهم ودعوتهم لمنظمتك.</p>
+        <p className="text-sm text-muted-foreground">عرض وإدارة المستفيدين وإضافتهم ودعوتهم.</p>
       </div>
 
       <Tabs defaultValue="org" dir="rtl">
@@ -363,7 +363,7 @@ export default function BeneficiariesPage() {
                   <CardTitle className="flex items-center gap-2">
                     <Users className="h-5 w-5" /> المستفيدون
                   </CardTitle>
-                  <CardDescription>قائمة بجميع المستفيدين المنتسبين لمنظمتك.</CardDescription>
+                  <CardDescription>قائمة بجميع المستفيدين المسجلين.</CardDescription>
                 </div>
                 <Select value={groupFilter} onValueChange={setGroupFilter}>
                   <SelectTrigger className="w-44">
@@ -396,7 +396,7 @@ export default function BeneficiariesPage() {
                   {!orgLoading && filteredOrgUsers.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
-                        لا يوجد مستفيدون في منظمتك حتى الآن.
+                        لا يوجد مستفيدون مسجلون حتى الآن.
                       </TableCell>
                     </TableRow>
                   )}
@@ -481,7 +481,7 @@ export default function BeneficiariesPage() {
                                 className="text-red-500"
                                 onSelect={() => setRemoveTarget(u)}
                               >
-                                إزالة من المنظمة
+                                إزالة
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -505,7 +505,7 @@ export default function BeneficiariesPage() {
                   <CardTitle className="flex items-center gap-2">
                     <Search className="h-5 w-5" /> استكشاف المستفيدين
                   </CardTitle>
-                  <CardDescription>ابحث عن مستفيدين وأضفهم إلى منظمتك.</CardDescription>
+                  <CardDescription>ابحث عن مستفيدين وأضفهم.</CardDescription>
                 </div>
                 <div className="relative">
                   <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -583,7 +583,7 @@ export default function BeneficiariesPage() {
               <CardTitle className="flex items-center gap-2">
                 <Mail className="h-5 w-5" /> دعوة عبر البريد
               </CardTitle>
-              <CardDescription>أرسل دعوة بالبريد الإلكتروني لمستفيد جديد للانضمام لمنظمتك.</CardDescription>
+              <CardDescription>أرسل دعوة بالبريد الإلكتروني لمستفيد جديد للانضمام.</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSendInvite} className="flex flex-wrap gap-3 items-end">
@@ -694,7 +694,7 @@ export default function BeneficiariesPage() {
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                   <CardTitle>المجموعات</CardTitle>
-                  <CardDescription>إدارة مجموعات المستفيدين في منظمتك.</CardDescription>
+                  <CardDescription>إدارة مجموعات المستفيدين.</CardDescription>
                 </div>
                 <Button onClick={() => setIsCreateGroupOpen(true)}>
                   <PlusCircle className="ml-2 h-4 w-4" /> إنشاء مجموعة
@@ -741,7 +741,7 @@ export default function BeneficiariesPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle>
             <AlertDialogDescription>
-              سيتم إزالة "{removeTarget?.name}" من منظمتك. يمكنه إعادة الانضمام لاحقاً.
+              سيتم إزالة "{removeTarget?.name}". يمكنه إعادة الانضمام لاحقاً.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

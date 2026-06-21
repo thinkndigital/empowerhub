@@ -107,7 +107,7 @@ export default function OrganizationDashboardLayout({ children }: { children: Re
               <span className="text-sm font-semibold text-sidebar-accent-foreground truncate leading-tight">
                 {orgName || 'EmpowerHub'}
               </span>
-              <span className="text-[10px] text-sidebar-foreground leading-tight opacity-60">لوحة المنظمة</span>
+              <span className="text-[10px] text-sidebar-foreground leading-tight opacity-60">لوحة التحكم</span>
             </div>
           </div>
         </SidebarHeader>
@@ -181,7 +181,7 @@ export default function OrganizationDashboardLayout({ children }: { children: Re
         <header className="flex h-12 items-center gap-3 border-b bg-card/80 backdrop-blur-sm px-4 lg:px-5 sticky top-0 z-30">
           <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
           <div className="flex items-center gap-1.5 text-sm text-muted-foreground flex-1 min-w-0">
-            <span className="hidden sm:block text-xs text-muted-foreground/50">المنظمة</span>
+            <span className="hidden sm:block text-xs text-muted-foreground/50">لوحة التحكم</span>
             {currentPage && currentPage.href !== '/organization-dashboard' && (
               <>
                 <ChevronRight className="h-3.5 w-3.5 opacity-30 hidden sm:block" />

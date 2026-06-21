@@ -136,7 +136,7 @@ export default function OrgCoachesPage() {
     try {
       const result = await apiAction(user, { action: "removeFromOrg", userId: coachId });
       if (result.error) throw new Error(result.error);
-      toast({ title: "تمت الإزالة", description: "تم إزالة المدرب من المنظمة." });
+      toast({ title: "تمت الإزالة", description: "تم إزالة المدرب." });
       refetchOrg();
     } catch {
       toast({ title: "خطأ", description: "فشل في إزالة المدرب.", variant: "destructive" });
@@ -172,7 +172,7 @@ export default function OrgCoachesPage() {
     <div className="space-y-6" dir="rtl">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">إدارة المدربين</h1>
-        <p className="text-sm text-muted-foreground">استعرض مدربي منظمتك أو ادعُ مدربين جدد</p>
+        <p className="text-sm text-muted-foreground">استعرض المدربين أو ادعُ مدربين جدد</p>
       </div>
 
       <Tabs defaultValue="org-coaches" dir="rtl">
@@ -193,7 +193,7 @@ export default function OrgCoachesPage() {
           ) : !orgCoaches || orgCoaches.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-2">
               <UserX className="h-10 w-10" />
-              <p>لا يوجد مدربون في منظمتك بعد</p>
+              <p>لا يوجد مدربون بعد</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -325,7 +325,7 @@ export default function OrgCoachesPage() {
                 ) : billingCoaches.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-muted-foreground gap-2">
                     <UserX className="h-10 w-10" />
-                    <p>لا يوجد مدربون في منظمتك بعد</p>
+                    <p>لا يوجد مدربون بعد</p>
                   </div>
                 ) : (
                   <div className="overflow-x-auto">

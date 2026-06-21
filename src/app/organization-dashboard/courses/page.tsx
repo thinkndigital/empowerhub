@@ -152,7 +152,7 @@ export default function OrgCoursesPage() {
     <div className="space-y-6" dir="rtl">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">الدورات التدريبية</h1>
-        <p className="text-sm text-muted-foreground">جميع الدورات الخاصة بمنظمتك</p>
+        <p className="text-sm text-muted-foreground">جميع الدورات التدريبية</p>
       </div>
 
       {isLoading ? (
@@ -165,7 +165,7 @@ export default function OrgCoursesPage() {
         <div className="flex flex-col items-center justify-center py-24 text-muted-foreground gap-3">
           <BookOpen className="h-12 w-12 opacity-50" />
           <p className="text-lg">لا توجد دورات بعد</p>
-          <p className="text-sm">ستظهر هنا الدورات المرتبطة بمنظمتك</p>
+          <p className="text-sm">ستظهر هنا الدورات عند إضافتها</p>
         </div>
       ) : (
         <div className="overflow-x-auto">
@@ -277,7 +277,7 @@ export default function OrgCoursesPage() {
                 {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-10 w-full rounded" />)}
               </div>
             ) : beneficiaries.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">لا يوجد مستفيدون في منظمتك</p>
+              <p className="text-center text-muted-foreground py-8">لا يوجد مستفيدون بعد</p>
             ) : (
               beneficiaries.map(b => (
                 <div

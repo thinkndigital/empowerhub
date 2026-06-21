@@ -124,7 +124,7 @@ export default function OrgReportsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">تقارير الأثر والتحليلات</h1>
-          <p className="text-muted-foreground text-sm">قياس أثر برامج التمكين في منظمتك</p>
+          <p className="text-muted-foreground text-sm">قياس أثر برامج التمكين</p>
         </div>
         <Dialog open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen}>
           <DialogTrigger asChild>

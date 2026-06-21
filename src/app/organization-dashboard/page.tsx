@@ -104,7 +104,7 @@ export default function OrganizationDashboardPage() {
             {displayName ? `مرحباً، ${displayName.split(' ')[0]}` : 'نظرة عامة'}
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            متابعة أداء المستفيدين وموارد المنظمة
+            متابعة أداء المستفيدين والموارد
           </p>
         </div>
         <Button size="sm" asChild className="gap-1.5 shrink-0">
@@ -216,7 +216,7 @@ export default function OrganizationDashboardPage() {
         <div className="space-y-5">
           {/* Org Summary */}
           <div className="surface p-5">
-            <h2 className="section-title mb-4">ملخص المنظمة</h2>
+            <h2 className="section-title mb-4">الملخص العام</h2>
             <div className="space-y-3">
               {summaryItems.map((item, i) => (
                 <div key={i} className="flex items-center justify-between">

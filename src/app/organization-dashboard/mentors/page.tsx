@@ -125,7 +125,7 @@ export default function OrgMentorsPage() {
     try {
       const result = await apiAction(user, { action: "removeFromOrg", userId: mentorId });
       if (result.error) throw new Error(result.error);
-      toast({ title: "تمت الإزالة", description: "تم إزالة المرشد من المنظمة." });
+      toast({ title: "تمت الإزالة", description: "تم إزالة المرشد." });
       refetchOrg();
     } catch {
       toast({ title: "خطأ", description: "فشل في إزالة المرشد.", variant: "destructive" });
@@ -161,7 +161,7 @@ export default function OrgMentorsPage() {
     <div className="space-y-6" dir="rtl">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">إدارة المرشدين</h1>
-        <p className="text-sm text-muted-foreground">استعرض مرشدي منظمتك أو ادعُ مرشدين جدد</p>
+        <p className="text-sm text-muted-foreground">استعرض المرشدين أو ادعُ مرشدين جدد</p>
       </div>
 
       <Tabs defaultValue="org-mentors" dir="rtl">
@@ -182,7 +182,7 @@ export default function OrgMentorsPage() {
           ) : !orgMentors || orgMentors.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-2">
               <UserX className="h-10 w-10" />
-              <p>لا يوجد مرشدون في منظمتك بعد</p>
+              <p>لا يوجد مرشدون بعد</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -295,7 +295,7 @@ export default function OrgMentorsPage() {
                 ) : billingMentors.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-muted-foreground gap-2">
                     <UserX className="h-10 w-10" />
-                    <p>لا يوجد مرشدون في منظمتك بعد</p>
+                    <p>لا يوجد مرشدون بعد</p>
                   </div>
                 ) : (
                   <div className="overflow-x-auto">

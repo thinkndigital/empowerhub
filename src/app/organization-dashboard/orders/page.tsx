@@ -73,7 +73,7 @@ export default function OrgOrdersPage() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">طلبات المتاجر</h1>
-          <p className="text-muted-foreground text-sm">متابعة طلبات جميع متاجر المستفيدين في المنظمة</p>
+          <p className="text-muted-foreground text-sm">متابعة طلبات جميع متاجر المستفيدين</p>
         </div>
         <Button variant="outline" onClick={load} disabled={loading} className="gap-2">
           <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
