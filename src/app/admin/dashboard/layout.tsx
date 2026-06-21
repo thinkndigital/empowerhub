@@ -132,7 +132,7 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 flex" dir="rtl">
+    <div className="dark min-h-screen bg-slate-950 flex" dir="rtl">
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex w-60 flex-shrink-0 bg-slate-900 border-l border-white/10 flex-col">
         <SidebarContent />
