@@ -25,6 +25,11 @@ const courseEditSchema = z.object({
   title: z.string().min(2, { message: "يجب أن يكون العنوان حرفين على الأقل." }),
   category: z.string().min(2, { message: "يجب أن تكون الفئة حرفين على الأقل." }),
   description: z.string().optional(),
+  price: z.coerce.number().min(0).optional(),
+  duration: z.string().optional(),
+  coverImageUrl: z.string().url({ message: "رابط غير صحيح" }).optional().or(z.literal('')),
+  objectives: z.array(z.object({ value: z.string() })).optional(),
+  requirements: z.array(z.object({ value: z.string() })).optional(),
   videoUrl: z.string().url({ message: "الرجاء إدخال رابط فيديو صحيح." }).optional().or(z.literal('')),
   quiz: z.object({
     question: z.string().optional(),
@@ -47,6 +52,11 @@ interface CourseDataFromDB {
   title: string;
   category: string;
   description?: string;
+  price?: number;
+  duration?: string;
+  coverImageUrl?: string;
+  objectives?: string[];
+  requirements?: string[];
   videoUrl?: string;
   materials?: Material[];
   quiz?: { question: string; options: string[]; correctAnswer: string; };
@@ -173,18 +183,27 @@ export default function CourseEditPage({ params }: { params: { courseId: string 
     resolver: zodResolver(courseEditSchema),
     defaultValues: {
       title: "", category: "", description: "", videoUrl: "",
+      price: undefined, duration: "", coverImageUrl: "",
+      objectives: [], requirements: [],
       quiz: { question: "", options: [{ value: "" }, { value: "" }], correctAnswer: "" },
       preAssessment: [], postAssessment: [],
     },
   });
 
   const { fields, append, remove } = useFieldArray({ control: form.control, name: "quiz.options" });
+  const { fields: objectiveFields, append: appendObjective, remove: removeObjective } = useFieldArray({ control: form.control, name: "objectives" });
+  const { fields: reqFields, append: appendReq, remove: removeReq } = useFieldArray({ control: form.control, name: "requirements" });
 
   useEffect(() => {
     if (course) {
       form.reset({
         title: course.title, category: course.category,
         description: course.description || "", videoUrl: course.videoUrl || "",
+        price: course.price ?? undefined,
+        duration: course.duration || "",
+        coverImageUrl: course.coverImageUrl || "",
+        objectives: (course.objectives || []).map(v => ({ value: v })),
+        requirements: (course.requirements || []).map(v => ({ value: v })),
         quiz: {
           question: course.quiz?.question || "",
           options: course.quiz?.options?.map(opt => ({ value: opt })) || [{ value: "" }, { value: "" }],
@@ -200,6 +219,8 @@ export default function CourseEditPage({ params }: { params: { courseId: string 
     if (!authUser) return;
     const dataToUpdate = {
       ...values,
+      objectives: (values.objectives || []).map(o => o.value).filter(Boolean),
+      requirements: (values.requirements || []).map(r => r.value).filter(Boolean),
       materials,
       quiz: values.quiz ? {
         ...values.quiz,
@@ -368,23 +389,84 @@ export default function CourseEditPage({ params }: { params: { courseId: string 
         <Card className="border-0 shadow-sm">
           <CardHeader><CardTitle>المعلومات الأساسية</CardTitle></CardHeader>
           <CardContent className="space-y-4">
-            <FormField control={form.control} name="title" render={({ field }) => (
-              <FormItem><FormLabel>عنوان الدورة</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-            )} />
-            <FormField control={form.control} name="category" render={({ field }) => (
-              <FormItem><FormLabel>الفئة</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-            )} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField control={form.control} name="title" render={({ field }) => (
+                <FormItem><FormLabel>عنوان الدورة <span className="text-red-500">*</span></FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+              )} />
+              <FormField control={form.control} name="category" render={({ field }) => (
+                <FormItem><FormLabel>الفئة <span className="text-red-500">*</span></FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+              )} />
+            </div>
             <FormField control={form.control} name="description" render={({ field }) => (
-              <FormItem><FormLabel>الوصف</FormLabel><FormControl><Textarea rows={5} {...field} /></FormControl><FormMessage /></FormItem>
+              <FormItem><FormLabel>الوصف</FormLabel><FormControl><Textarea rows={4} {...field} /></FormControl><FormMessage /></FormItem>
             )} />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <FormField control={form.control} name="price" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>السعر (د.أ)</FormLabel>
+                  <FormControl><Input type="number" min={0} placeholder="0 = مجاني" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="duration" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>المدة الإجمالية</FormLabel>
+                  <FormControl><Input placeholder="مثال: 10 ساعات" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="coverImageUrl" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>رابط صورة الغلاف</FormLabel>
+                  <FormControl><Input dir="ltr" placeholder="https://..." {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+            </div>
             <FormField control={form.control} name="videoUrl" render={({ field }) => (
               <FormItem>
-                <FormLabel>رابط الفيديو الرئيسي (اختياري)</FormLabel>
-                <FormDescription>إذا لم تضف دروسًا، سيُستخدم هذا الرابط كمحتوى الدورة.</FormDescription>
+                <FormLabel>رابط الفيديو التعريفي (اختياري)</FormLabel>
+                <FormDescription>فيديو تعريفي يظهر في صفحة الدورة العامة.</FormDescription>
                 <FormControl><Input dir="ltr" placeholder="https://www.youtube.com/watch?v=..." {...field} /></FormControl>
                 <FormMessage />
               </FormItem>
             )} />
+
+            {/* Objectives */}
+            <div className="space-y-2">
+              <FormLabel>أهداف الدورة (ما سيتعلمه المشارك)</FormLabel>
+              {objectiveFields.map((item, index) => (
+                <div key={item.id} className="flex gap-2">
+                  <FormField control={form.control} name={`objectives.${index}.value`} render={({ field }) => (
+                    <FormItem className="flex-1"><FormControl><Input placeholder={`هدف ${index + 1}`} {...field} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                  <Button type="button" variant="ghost" size="icon" onClick={() => removeObjective(index)}>
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              ))}
+              <Button type="button" variant="outline" size="sm" onClick={() => appendObjective({ value: '' })}>
+                <PlusCircle className="ml-2 h-4 w-4" /> إضافة هدف
+              </Button>
+            </div>
+
+            {/* Requirements */}
+            <div className="space-y-2">
+              <FormLabel>المتطلبات الأساسية</FormLabel>
+              {reqFields.map((item, index) => (
+                <div key={item.id} className="flex gap-2">
+                  <FormField control={form.control} name={`requirements.${index}.value`} render={({ field }) => (
+                    <FormItem className="flex-1"><FormControl><Input placeholder={`متطلب ${index + 1}`} {...field} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                  <Button type="button" variant="ghost" size="icon" onClick={() => removeReq(index)}>
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              ))}
+              <Button type="button" variant="outline" size="sm" onClick={() => appendReq({ value: '' })}>
+                <PlusCircle className="ml-2 h-4 w-4" /> إضافة متطلب
+              </Button>
+            </div>
           </CardContent>
         </Card>
 

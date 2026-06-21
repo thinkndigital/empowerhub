@@ -75,6 +75,9 @@ type Course = {
   description?: string;
   status?: "منشورة" | "مسودة";
   enrolledCount?: number;
+  price?: number;
+  duration?: string;
+  coverImageUrl?: string;
 };
 
 type Beneficiary = { id: string; name?: string };
@@ -84,6 +87,9 @@ const addCourseFormSchema = z.object({
     title: z.string().min(2, { message: "يجب أن يكون العنوان حرفين على الأقل." }),
     category: z.string().min(2, { message: "يجب أن تكون الفئة حرفين على الأقل." }),
     description: z.string().optional(),
+    price: z.coerce.number().min(0).optional(),
+    duration: z.string().optional(),
+    coverImageUrl: z.string().url({ message: "رابط غير صحيح" }).optional().or(z.literal('')),
 });
 
 const addSessionFormSchema = z.object({
@@ -136,7 +142,7 @@ export default function CoachCoursesPage() {
 
     const addCourseForm = useForm<z.infer<typeof addCourseFormSchema>>({
         resolver: zodResolver(addCourseFormSchema),
-        defaultValues: { title: "", category: "", description: "" },
+        defaultValues: { title: "", category: "", description: "", price: undefined, duration: "", coverImageUrl: "" },
     });
 
     const addSessionForm = useForm<z.infer<typeof addSessionFormSchema>>({
@@ -243,28 +249,39 @@ export default function CoachCoursesPage() {
                 إنشاء دورة جديدة
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[90vw] md:max-w-[425px]" dir="rtl">
+            <DialogContent className="sm:max-w-lg" dir="rtl">
               <DialogHeader>
                 <DialogTitle>إنشاء دورة جديدة</DialogTitle>
-                <DialogDescription>أدخل تفاصيل الدورة الجديدة هنا. انقر على "حفظ" عند الانتهاء.</DialogDescription>
+                <DialogDescription>أدخل تفاصيل الدورة. يمكنك تعديل المحتوى والدروس لاحقاً.</DialogDescription>
               </DialogHeader>
               <Form {...addCourseForm}>
-                <form onSubmit={addCourseForm.handleSubmit(onAddCourseSubmit)} className="space-y-4 pt-4">
+                <form onSubmit={addCourseForm.handleSubmit(onAddCourseSubmit)} id="add-course-form" className="space-y-4 pt-2 max-h-[70vh] overflow-y-auto px-1">
                   <FormField control={addCourseForm.control} name="title" render={({ field }) => (
-                    <FormItem><FormLabel>عنوان الدورة</FormLabel><FormControl><Input placeholder="مثال: أساسيات البرمجة" {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>عنوان الدورة <span className="text-red-500">*</span></FormLabel><FormControl><Input placeholder="مثال: أساسيات البرمجة بلغة Python" {...field} /></FormControl><FormMessage /></FormItem>
                   )}/>
                   <FormField control={addCourseForm.control} name="category" render={({ field }) => (
-                    <FormItem><FormLabel>الفئة</FormLabel><FormControl><Input placeholder="مثال: التكنولوجيا" {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>الفئة <span className="text-red-500">*</span></FormLabel><FormControl><Input placeholder="مثال: التكنولوجيا، التسويق، ريادة الأعمال" {...field} /></FormControl><FormMessage /></FormItem>
                   )}/>
                   <FormField control={addCourseForm.control} name="description" render={({ field }) => (
-                    <FormItem><FormLabel>وصف الدورة (اختياري)</FormLabel><FormControl><Textarea placeholder="وصف موجز لمحتوى الدورة..." {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>وصف الدورة</FormLabel><FormControl><Textarea placeholder="وصف موجز يشرح محتوى الدورة وما سيتعلمه المشارك..." rows={3} {...field} /></FormControl><FormMessage /></FormItem>
                   )}/>
-                  <DialogFooter>
-                    <DialogClose asChild><Button variant="ghost">إلغاء</Button></DialogClose>
-                    <Button type="submit">حفظ الدورة</Button>
-                  </DialogFooter>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField control={addCourseForm.control} name="price" render={({ field }) => (
+                      <FormItem><FormLabel>السعر (د.أ)</FormLabel><FormControl><Input type="number" min={0} placeholder="0 = مجاني" {...field} /></FormControl><FormMessage /></FormItem>
+                    )}/>
+                    <FormField control={addCourseForm.control} name="duration" render={({ field }) => (
+                      <FormItem><FormLabel>المدة</FormLabel><FormControl><Input placeholder="مثال: 10 ساعات" {...field} /></FormControl><FormMessage /></FormItem>
+                    )}/>
+                  </div>
+                  <FormField control={addCourseForm.control} name="coverImageUrl" render={({ field }) => (
+                    <FormItem><FormLabel>رابط صورة الغلاف</FormLabel><FormControl><Input dir="ltr" placeholder="https://..." {...field} /></FormControl><FormDescription>رابط URL لصورة الغلاف (اختياري)</FormDescription><FormMessage /></FormItem>
+                  )}/>
                 </form>
               </Form>
+              <DialogFooter>
+                <DialogClose asChild><Button variant="ghost">إلغاء</Button></DialogClose>
+                <Button type="submit" form="add-course-form">حفظ الدورة</Button>
+              </DialogFooter>
             </DialogContent>
           </Dialog>
         </div>
@@ -282,18 +299,20 @@ export default function CoachCoursesPage() {
             <TableRow>
               <TableHead>عنوان الدورة</TableHead>
               <TableHead className="hidden md:table-cell">الفئة</TableHead>
+              <TableHead className="hidden lg:table-cell text-center">السعر</TableHead>
+              <TableHead className="hidden lg:table-cell text-center">المدة</TableHead>
               <TableHead className="text-center">المسجلون</TableHead>
               <TableHead className="text-center">الحالة</TableHead>
-              <TableHead>
-                <span className="sr-only">الإجراءات</span>
-              </TableHead>
+              <TableHead><span className="sr-only">الإجراءات</span></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading && [...Array(3)].map((_, i) => (
                 <TableRow key={i}>
-                    <TableCell><Skeleton className="h-4 w-[250px]" /></TableCell>
-                    <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-[100px]" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-[200px]" /></TableCell>
+                    <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-[80px]" /></TableCell>
+                    <TableCell className="hidden lg:table-cell"><Skeleton className="h-4 w-[60px] mx-auto" /></TableCell>
+                    <TableCell className="hidden lg:table-cell"><Skeleton className="h-4 w-[60px] mx-auto" /></TableCell>
                     <TableCell className="text-center"><Skeleton className="h-6 w-[40px] mx-auto" /></TableCell>
                     <TableCell className="text-center"><Skeleton className="h-6 w-[60px] mx-auto" /></TableCell>
                     <TableCell><Skeleton className="h-8 w-8" /></TableCell>
@@ -301,8 +320,21 @@ export default function CoachCoursesPage() {
             ))}
             {!loading && courses?.map((course) => (
               <TableRow key={course.id}>
-                <TableCell className="font-medium">{course.title}</TableCell>
-                 <TableCell className="hidden md:table-cell">{course.category || 'غير مصنف'}</TableCell>
+                <TableCell>
+                  <div className="font-medium">{course.title}</div>
+                  {course.status === "منشورة" && (
+                    <Link href={`/courses/${course.id}`} target="_blank" className="text-xs text-primary hover:underline">عرض على الموقع ↗</Link>
+                  )}
+                </TableCell>
+                <TableCell className="hidden md:table-cell">{course.category || 'غير مصنف'}</TableCell>
+                <TableCell className="hidden lg:table-cell text-center">
+                  {course.price != null ? (
+                    <span className="font-semibold text-primary text-sm">{course.price === 0 ? 'مجاني' : `${course.price} د.أ`}</span>
+                  ) : '—'}
+                </TableCell>
+                <TableCell className="hidden lg:table-cell text-center text-sm text-muted-foreground">
+                  {course.duration || '—'}
+                </TableCell>
                 <TableCell className="text-center">
                   <Badge variant="outline">{course.enrolledCount ?? 0}</Badge>
                 </TableCell>
