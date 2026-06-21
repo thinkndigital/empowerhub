@@ -586,7 +586,7 @@ export default function LandingPage() {
               <Link href="/login">تسجيل الدخول</Link>
             </Button>
             <Button asChild className="shadow-md">
-              <Link href="/register">ابدأ مجاناً</Link>
+              <Link href="/register">سجّل الآن</Link>
             </Button>
           </div>
         </div>
@@ -623,7 +623,7 @@ export default function LandingPage() {
                 </Link>
               </Button>
               <Button size="lg" variant="outline" asChild className="bg-white/10 border-white/30 text-white hover:bg-white/20 backdrop-blur text-base px-8 py-6">
-                <Link href="/market">{heroCtaSecondary}</Link>
+                <Link href="#features">{heroCtaSecondary}</Link>
               </Button>
             </div>
             <div className="mt-12 flex flex-wrap justify-center gap-8 text-sm text-white/70">
