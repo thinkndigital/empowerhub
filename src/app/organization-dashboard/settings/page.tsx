@@ -100,12 +100,15 @@ export default function OrgSettingsPage() {
   }, [fetchSettings]);
 
   const primaryColor = form.watch("primaryColor");
+  const isColorDirty = form.formState.dirtyFields.primaryColor;
 
+  // Only live-preview when the user actively changes the picker (not on page load)
   useEffect(() => {
+    if (!isColorDirty) return;
     if (primaryColor && /^#[0-9a-fA-F]{6}$/.test(primaryColor)) {
       document.documentElement.style.setProperty('--primary', hexToHsl(primaryColor));
     }
-  }, [primaryColor]);
+  }, [primaryColor, isColorDirty]);
 
   async function onSubmit(values: z.infer<typeof settingsSchema>) {
     if (!user) {
