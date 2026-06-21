@@ -1,4 +1,4 @@
-name: CI / Deploy to Firebase App Hosting
+name: Deploy to Firebase Hosting
 
 on:
   push:
@@ -32,32 +32,10 @@ jobs:
           NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: "822244663005"
           NEXT_PUBLIC_FIREBASE_APP_ID: "1:822244663005:web:2bbd7b3b2a819f1e2c0534"
 
-      - name: Deploy via Firebase App Hosting
+      - name: Deploy to Firebase Hosting
         run: |
           echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > /tmp/sa.json
-
-          # Get the App Hosting backend ID for this project
-          BACKENDS_JSON=$(npx firebase-tools@latest apphosting:backends:list \
-            --project studio-4511819966-bc14f --json 2>/dev/null || echo "[]")
-
-          BACKEND_ID=$(node -e "
-            try {
-              const d = require('fs').readFileSync('/dev/stdin','utf8');
-              const j = JSON.parse(d);
-              const arr = Array.isArray(j) ? j : (j.result || []);
-              const name = arr[0]?.name || '';
-              console.log(name.split('/').pop() || '');
-            } catch(e) { console.log(''); }
-          " <<< "$BACKENDS_JSON")
-
-          if [ -n "$BACKEND_ID" ]; then
-            echo "Triggering App Hosting build for backend: $BACKEND_ID"
-            npx firebase-tools@latest apphosting:builds:create "$BACKEND_ID" \
-              --project studio-4511819966-bc14f \
-              --git-branch "${{ github.ref_name }}" || \
-              echo "::warning::App Hosting build trigger failed – check FIREBASE_SERVICE_ACCOUNT permissions"
-          else
-            echo "::warning::No App Hosting backend found for project studio-4511819966-bc14f"
-          fi
+          npx firebase-tools@latest experiments:enable webframeworks
+          npx firebase-tools@latest deploy --only hosting --project studio-4511819966-bc14f
         env:
           GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa.json
