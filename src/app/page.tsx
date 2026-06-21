@@ -20,6 +20,7 @@ import { collection, query, where, getCountFromServer } from 'firebase/firestore
 import { useToast } from '@/hooks/use-toast';
 import { OrderDialog } from '@/components/order-dialog';
 import { SessionBookingDialog } from '@/components/session-booking-dialog';
+import { CourseEnrollDialog } from '@/components/course-enroll-dialog';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -279,7 +280,7 @@ const CoachCard = ({ coach, onBook }: { coach: MentorUser; onBook?: (c: MentorUs
   );
 };
 
-const CourseCard = ({ course }: { course: CourseItem }) => (
+const CourseCard = ({ course, onEnroll }: { course: CourseItem; onEnroll?: (c: CourseItem) => void }) => (
   <Card className="card-hover border-0 shadow-md bg-card flex flex-col overflow-hidden">
     <div className="relative h-36 bg-muted">
       {course.coverImageUrl ? (
@@ -304,12 +305,13 @@ const CourseCard = ({ course }: { course: CourseItem }) => (
         <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{course.description}</p>
       )}
     </CardContent>
-    <CardFooter className="pt-0">
-      <Button variant="outline" className="w-full text-xs" asChild>
-        <Link href={`/courses/${course.id}`}>
-          تفاصيل الدورة
-          <ArrowLeft className="mr-2 h-3 w-3" />
-        </Link>
+    <CardFooter className="pt-0 flex gap-2">
+      <Button variant="outline" size="sm" className="flex-1 text-xs" asChild>
+        <Link href={`/courses/${course.id}`}>تفاصيل</Link>
+      </Button>
+      <Button size="sm" className="flex-1 text-xs" onClick={() => onEnroll?.(course)}>
+        <GraduationCap className="h-3 w-3 ml-1" />
+        {course.price === 0 || course.price === null ? 'اشترك مجاناً' : 'اشترك الآن'}
       </Button>
     </CardFooter>
   </Card>
@@ -418,6 +420,7 @@ export default function LandingPage() {
   const [loadingStores, setLoadingStores] = useState(true);
   const [loadingCourses, setLoadingCourses] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedCourse, setSelectedCourse] = useState<CourseItem | null>(null);
   const [bookingHost, setBookingHost] = useState<MentorUser | null>(null);
   const [bookingRole, setBookingRole] = useState<'mentor' | 'coach'>('mentor');
 
@@ -833,7 +836,7 @@ export default function LandingPage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {courses.map(c => <CourseCard key={c.id} course={c} />)}
+                  {courses.map(c => <CourseCard key={c.id} course={c} onEnroll={setSelectedCourse} />)}
                 </div>
               )}
             </div>
@@ -1116,6 +1119,17 @@ export default function LandingPage() {
         isOpen={!!selectedProduct}
         onOpenChange={open => { if (!open) setSelectedProduct(null); }}
       />
+
+      {/* Enrollment dialog for courses */}
+      {selectedCourse && (
+        <CourseEnrollDialog
+          courseId={selectedCourse.id}
+          courseTitle={selectedCourse.title}
+          coursePrice={selectedCourse.price}
+          isOpen={!!selectedCourse}
+          onOpenChange={open => { if (!open) setSelectedCourse(null); }}
+        />
+      )}
 
       {/* Booking dialog for mentors/coaches */}
       {bookingHost && (
