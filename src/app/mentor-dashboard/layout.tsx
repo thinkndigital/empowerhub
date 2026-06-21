@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Bell, LayoutGrid, Search, Settings, Users,
-  MessageSquare, Calendar, BarChart3, LogOut,
+  MessageSquare, Calendar, BarChart3, LogOut, ShoppingBag,
 } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { doc } from "firebase/firestore";
@@ -32,6 +32,7 @@ import { MessageBell } from "@/components/message-bell";
 const allMentorMenuItems = [
   { href: "/mentor-dashboard", label: "لوحة التحكم", icon: LayoutGrid, sectionKey: null },
   { href: "/mentor-dashboard/my-beneficiaries", label: "المستفيدون", icon: Users, sectionKey: 'my_beneficiaries' },
+  { href: "/mentor-dashboard/orders", label: "الطلبات", icon: ShoppingBag, sectionKey: 'orders' },
   { href: "/mentor-dashboard/sessions", label: "الجلسات", icon: Calendar, sectionKey: 'sessions' },
   { href: "/mentor-dashboard/analytics", label: "التحليلات", icon: BarChart3, sectionKey: 'analytics' },
   { href: "/mentor-dashboard/messages", label: "الرسائل", icon: MessageSquare, sectionKey: 'messages' },
