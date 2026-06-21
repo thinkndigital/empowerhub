@@ -7,7 +7,7 @@ import { format, isPast } from "date-fns";
 import { ar } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar as CalendarIcon, Clock, Video, User, PlusCircle, MoreHorizontal, Check, X, Star, ImageIcon, Upload, Trash2 } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, Video, User, PlusCircle, MoreHorizontal, Check, X, Star, ImageIcon, Upload, Trash2, Globe, Lock } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
@@ -40,6 +40,8 @@ type Session = {
   description?: string;
   bannerUrl?: string;
   imageUrls?: string[];
+  isPublic?: boolean;
+  price?: number;
 };
 type EvaluationTarget = { sessionId: string; evaluatedId: string; evaluatedName: string };
 
@@ -51,13 +53,14 @@ function safeDate(d: any): Date {
 }
 
 const formSchema = z.object({
-  beneficiaryId: z.string({ required_error: "الرجاء اختيار مستفيد." }),
+  beneficiaryId: z.string().optional(),
   title: z.string().min(3, { message: "يجب أن يكون عنوان الجلسة 3 أحرف على الأقل." }),
   description: z.string().optional(),
   date: z.date({ required_error: "الرجاء اختيار تاريخ." }),
   time: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, { message: "صيغة الوقت غير صحيحة (مثال: 14:30)." }),
   duration: z.coerce.number().positive({ message: "يجب أن تكون المدة بالدقائق رقمًا موجبًا." }),
   meetLink: z.string().url({ message: "الرجاء إدخال رابط صحيح." }).optional().or(z.literal('')),
+  price: z.coerce.number().min(0).optional(),
 });
 
 export default function MentorSessionsPage() {
@@ -72,6 +75,7 @@ export default function MentorSessionsPage() {
   const [googleToken, setGoogleToken] = useState<string | null>(null);
   const [googleLinking, setGoogleLinking] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [isPublic, setIsPublic] = useState(false);
 
   // Image state
   const [bannerFile, setBannerFile] = useState<File | null>(null);
@@ -119,7 +123,7 @@ export default function MentorSessionsPage() {
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: { duration: 60, meetLink: "", description: "" },
+    defaultValues: { duration: 60, meetLink: "", description: "", price: 0 },
   });
 
   function handleBannerChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -203,6 +207,10 @@ export default function MentorSessionsPage() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!authUser) return;
+    if (!isPublic && !values.beneficiaryId) {
+      form.setError('beneficiaryId', { message: 'الرجاء اختيار مستفيد أو تفعيل النشر على الموقع.' });
+      return;
+    }
     setSubmitting(true);
     const [hours, minutes] = values.time.split(':').map(Number);
     const dt = new Date(values.date);
@@ -214,13 +222,11 @@ export default function MentorSessionsPage() {
         if (generated) meetLink = generated;
       }
 
-      // Upload banner
       let bannerUrl = '';
       if (bannerFile) {
         bannerUrl = await uploadFile(bannerFile, `sessions/${authUser.uid}/${Date.now()}-banner-${bannerFile.name}`);
       }
 
-      // Upload session images
       let imageUrls: string[] = [];
       if (sessionImageFiles.length > 0) {
         imageUrls = await Promise.all(
@@ -235,18 +241,21 @@ export default function MentorSessionsPage() {
         body: JSON.stringify({
           title: values.title,
           description: values.description || '',
-          attendees: [values.beneficiaryId],
+          attendees: isPublic ? [] : [values.beneficiaryId],
           date: dt.toISOString(),
           duration: values.duration,
           status: 'scheduled',
           meetLink,
+          isPublic,
+          ...(isPublic && values.price != null && { price: values.price }),
           ...(bannerUrl && { bannerUrl }),
           ...(imageUrls.length && { imageUrls }),
         }),
       });
       if (!res.ok) throw new Error((await res.json()).error);
-      toast({ title: "تمت الجدولة!", description: `تم جدولة جلستك "${values.title}".` });
+      toast({ title: "تمت الجدولة!", description: `تم جدولة جلستك "${values.title}" ${isPublic ? 'ونُشرت على الموقع' : ''}.` });
       setIsDialogOpen(false);
+      setIsPublic(false);
       form.reset();
       setBannerFile(null);
       setBannerPreview('');
@@ -312,19 +321,47 @@ export default function MentorSessionsPage() {
               </DialogHeader>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
-                  <FormField control={form.control} name="beneficiaryId" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>المستفيد</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl><SelectTrigger><SelectValue placeholder="اختر مستفيدًا" /></SelectTrigger></FormControl>
-                        <SelectContent>
-                          {loading ? <SelectItem value="loading" disabled>جاري التحميل...</SelectItem> :
-                            beneficiaries.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
+
+                  {/* Public / Private Toggle */}
+                  <div className="flex gap-2 p-1 bg-muted rounded-xl">
+                    <button
+                      type="button"
+                      onClick={() => setIsPublic(false)}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-medium transition-all ${!isPublic ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                    >
+                      <Lock className="h-4 w-4" />
+                      جلسة خاصة بمستفيد
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsPublic(true)}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-medium transition-all ${isPublic ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                    >
+                      <Globe className="h-4 w-4" />
+                      نشر على الموقع
+                    </button>
+                  </div>
+
+                  {isPublic ? (
+                    <div className="flex items-start gap-3 p-3 bg-primary/5 border border-primary/20 rounded-xl text-sm">
+                      <Globe className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                      <p className="text-muted-foreground">ستظهر هذه الجلسة للجميع على الموقع ويمكن للزوار رؤية تفاصيلها والتواصل معك للحجز.</p>
+                    </div>
+                  ) : (
+                    <FormField control={form.control} name="beneficiaryId" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>المستفيد</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl><SelectTrigger><SelectValue placeholder="اختر مستفيدًا" /></SelectTrigger></FormControl>
+                          <SelectContent>
+                            {loading ? <SelectItem value="loading" disabled>جاري التحميل...</SelectItem> :
+                              beneficiaries.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  )}
 
                   <FormField control={form.control} name="title" render={({ field }) => (
                     <FormItem>
@@ -455,6 +492,16 @@ export default function MentorSessionsPage() {
                     </FormItem>
                   )} />
 
+                  {isPublic && (
+                    <FormField control={form.control} name="price" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>سعر الجلسة (اتركه 0 للجلسات المجانية)</FormLabel>
+                        <FormControl><Input type="number" min={0} placeholder="0" {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  )}
+
                   <FormField control={form.control} name="meetLink" render={({ field }) => (
                     <FormItem>
                       <FormLabel>رابط Google Meet (اختياري)</FormLabel>
@@ -499,12 +546,19 @@ export default function MentorSessionsPage() {
                 )}
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 p-3">
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold">{session.title}</p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-semibold">{session.title}</p>
+                      {session.isPublic && (
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-primary bg-primary/10 rounded-full px-2 py-0.5">
+                          <Globe className="h-3 w-3" />عام
+                        </span>
+                      )}
+                    </div>
                     {session.description && (
                       <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">{session.description}</p>
                     )}
                     <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground mt-1">
-                      <span className="flex items-center gap-1.5"><User className="h-4 w-4" />{session.beneficiaryName}</span>
+                      {!session.isPublic && <span className="flex items-center gap-1.5"><User className="h-4 w-4" />{session.beneficiaryName}</span>}
                       <span className="flex items-center gap-1.5"><CalendarIcon className="h-4 w-4" />{format(safeDate(session.date), "d MMMM yyyy", { locale: ar })}</span>
                       <span className="flex items-center gap-1.5"><Clock className="h-4 w-4" />{format(safeDate(session.date), "p", { locale: ar })}</span>
                     </div>
@@ -559,6 +613,11 @@ export default function MentorSessionsPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="font-semibold truncate">{session.title}</p>
+                        {session.isPublic && (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-primary bg-primary/10 rounded-full px-2 py-0.5">
+                            <Globe className="h-3 w-3" />عام
+                          </span>
+                        )}
                         {isCompleted && (
                           <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">
                             <Check className="h-3 w-3" />مكتملة
@@ -574,7 +633,7 @@ export default function MentorSessionsPage() {
                         <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">{session.description}</p>
                       )}
                       <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1.5 flex-wrap">
-                        <span className="flex items-center gap-1.5"><User className="h-3.5 w-3.5" />{session.beneficiaryName}</span>
+                        {!session.isPublic && <span className="flex items-center gap-1.5"><User className="h-3.5 w-3.5" />{session.beneficiaryName}</span>}
                         <span className="flex items-center gap-1.5"><CalendarIcon className="h-3.5 w-3.5" />{format(sessionDate, "d MMMM yyyy", { locale: ar })}</span>
                         <span className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" />{format(sessionDate, "p", { locale: ar })}</span>
                         {session.duration && (

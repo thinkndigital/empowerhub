@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Logo } from '@/components/logo';
 import {
   ArrowLeft, BookOpen, Store, GraduationCap, CheckCircle,
-  Star, MessageSquare, Phone, Mail, Globe, Menu, X,
+  Star, MessageSquare, Phone, Mail, Globe, Menu, X, Calendar,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useCurrency } from '@/hooks/use-currency';
@@ -34,6 +34,20 @@ interface MentorUser {
   website?: string;
   twitter?: string;
   email?: string;
+}
+
+interface PublicSession {
+  id: string;
+  title: string;
+  description: string;
+  date: string;
+  duration: number;
+  meetLink: string;
+  bannerUrl: string;
+  hostId: string;
+  hostName: string;
+  hostAvatarUrl: string;
+  price: number | null;
 }
 
 interface CourseItem {
@@ -205,6 +219,51 @@ const ProductCard = ({ product, onOrder, currencySymbol }: { product: Product; o
   );
 };
 
+const PublicSessionCard = ({ session, currencySymbol }: { session: PublicSession; currencySymbol: string }) => {
+  const date = new Date(session.date);
+  const dateStr = date.toLocaleDateString('ar-EG', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+  const timeStr = date.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+  return (
+    <div className="group rounded-2xl border border-border bg-card hover:border-primary/30 hover:shadow-sm transition-all flex flex-col overflow-hidden">
+      {session.bannerUrl ? (
+        <div className="h-36 overflow-hidden bg-muted">
+          <img src={session.bannerUrl} alt={session.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+        </div>
+      ) : (
+        <div className="h-36 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center">
+          <GraduationCap className="h-10 w-10 text-primary/30" />
+        </div>
+      )}
+      <div className="p-4 flex flex-col gap-2 flex-grow">
+        <h3 className="font-semibold text-sm line-clamp-2 text-foreground">{session.title}</h3>
+        {session.description && <p className="text-xs text-muted-foreground line-clamp-2">{session.description}</p>}
+        <div className="flex items-center gap-2 mt-auto pt-2">
+          {session.hostAvatarUrl ? (
+            <img src={session.hostAvatarUrl} alt={session.hostName} className="h-6 w-6 rounded-full object-cover border border-border" />
+          ) : (
+            <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold">{session.hostName[0]}</div>
+          )}
+          <span className="text-xs text-muted-foreground">{session.hostName}</span>
+        </div>
+        <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t border-border/50">
+          <span>{dateStr} — {timeStr}</span>
+          <span>{session.duration} د</span>
+        </div>
+        {session.price != null && (
+          <p className="text-primary font-bold text-sm">{session.price === 0 ? 'مجاني' : `${session.price} ${currencySymbol}`}</p>
+        )}
+      </div>
+      {session.meetLink && (
+        <div className="px-4 pb-4">
+          <Button className="w-full h-9 text-sm" asChild>
+            <a href={session.meetLink} target="_blank" rel="noopener noreferrer">انضم للجلسة</a>
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
@@ -218,6 +277,7 @@ export default function LandingPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [publicStores, setPublicStores] = useState<{ id: string; name: string; logoUrl?: string; location?: string; beneficiaryName?: string }[]>([]);
   const [courses, setCourses] = useState<CourseItem[]>([]);
+  const [publicSessions, setPublicSessions] = useState<PublicSession[]>([]);
   const [loadingMentors, setLoadingMentors] = useState(true);
   const [loadingCoaches, setLoadingCoaches] = useState(true);
   const [loadingProducts, setLoadingProducts] = useState(true);
@@ -293,6 +353,12 @@ export default function LandingPage() {
     fetch('/api/public/courses').then(r => r.json()).then(d => {
       setCourses(d.courses || []);
     }).catch(() => {}).finally(() => setLoadingCourses(false));
+  }, []);
+
+  useEffect(() => {
+    fetch('/api/public/sessions').then(r => r.json()).then(d => {
+      setPublicSessions(d.sessions || []);
+    }).catch(() => {});
   }, []);
 
   const handleContactSubmit = (e: React.FormEvent) => {
@@ -824,6 +890,29 @@ export default function LandingPage() {
                   {courses.map(c => <CourseCard key={c.id} course={c} currencySymbol={currencySymbol} onEnroll={setSelectedCourse} />)}
                 </div>
               )}
+            </div>
+          </section>
+        )}
+
+        {/* ── Public Sessions ─────────────────────────────────────────────────── */}
+        {publicSessions.length > 0 && (
+          <section id="sessions" className="py-16 sm:py-20 md:py-28 bg-muted/30">
+            <div className="container">
+              <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 mb-8 sm:mb-10">
+                <div>
+                  <p className="text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-2">جلسات إرشادية</p>
+                  <h2 className="text-2xl sm:text-3xl font-bold text-foreground">الجلسات المتاحة</h2>
+                </div>
+                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                  <Calendar className="h-4 w-4" />
+                  <span>{publicSessions.length} جلسة متاحة</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                {publicSessions.map(s => (
+                  <PublicSessionCard key={s.id} session={s} currencySymbol={currencySymbol} />
+                ))}
+              </div>
             </div>
           </section>
         )}
