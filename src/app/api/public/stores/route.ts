@@ -17,7 +17,10 @@ export async function GET() {
     const productsSnap = await adminDb.collection('products').get();
     const products = productsSnap.docs
       .filter(d => !d.data().hidden)
-      .map(d => ({ id: d.id, ...d.data() }));
+      .map(d => {
+        const data = d.data();
+        return { id: d.id, storeId: data.userId || data.storeId || '', ...data };
+      });
 
     return NextResponse.json({ stores, products });
   } catch (e: any) {

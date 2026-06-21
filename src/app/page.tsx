@@ -18,6 +18,8 @@ import { Badge } from '@/components/ui/badge';
 import { useFirestore } from '@/firebase/provider';
 import { collection, query, where, getCountFromServer } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { OrderDialog } from '@/components/order-dialog';
+import { SessionBookingDialog } from '@/components/session-booking-dialog';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -28,6 +30,21 @@ interface MentorUser {
   bio?: string;
   description?: string;
   specializations?: string[];
+  sessionPrice?: number | null;
+  whatsapp?: string;
+  linkedin?: string;
+  email?: string;
+}
+
+interface CourseItem {
+  id: string;
+  title: string;
+  description: string;
+  price: number | null;
+  coverImageUrl: string;
+  duration: string;
+  coachName: string;
+  enrollmentCount: number;
 }
 
 interface Product {
@@ -38,6 +55,9 @@ interface Product {
   imageUrl?: string;
   image?: string;
   whatsapp?: string;
+  storeId?: string;
+  storeName?: string;
+  organizationId?: string;
   store?: { phone?: string };
 }
 
@@ -58,7 +78,7 @@ interface SiteConfig {
   roles: { title: string; description: string; icon: string; badge: string; link: string }[];
   sections: {
     showStats: boolean; showFeatures: boolean; showOpportunities: boolean; showHowItWorks: boolean;
-    showRoles: boolean; showMentors: boolean; showCoaches: boolean; showBlog: boolean;
+    showRoles: boolean; showMentors: boolean; showCoaches: boolean; showCourses: boolean; showBlog: boolean;
     showTestimonials: boolean; showProducts: boolean; showStores: boolean; showContact: boolean; showCTA: boolean;
   };
   footer: { description: string; email: string; phone: string; twitter: string; linkedin: string; instagram: string; copyright: string };
@@ -179,10 +199,11 @@ const ShimmerCard = () => (
   </Card>
 );
 
-const MentorCard = ({ mentor }: { mentor: MentorUser }) => {
+const MentorCard = ({ mentor, onBook }: { mentor: MentorUser; onBook?: (m: MentorUser) => void }) => {
   const name = mentor.displayName || mentor.name || 'بدون اسم';
   const bio = mentor.bio || mentor.description || '';
   const specializations = Array.isArray(mentor.specializations) ? mentor.specializations : [];
+  const hasPrice = mentor.sessionPrice != null && mentor.sessionPrice > 0;
   return (
     <Card className="card-hover border-0 shadow-md bg-card flex flex-col">
       <CardContent className="pt-6 flex flex-col items-center text-center gap-3 flex-grow">
@@ -202,19 +223,101 @@ const MentorCard = ({ mentor }: { mentor: MentorUser }) => {
             ))}
           </div>
         )}
+        {hasPrice && (
+          <p className="text-primary font-bold text-sm">{mentor.sessionPrice} د.أ / جلسة</p>
+        )}
       </CardContent>
-      <CardFooter>
-        <Button variant="outline" className="w-full">تواصل</Button>
+      <CardFooter className="flex gap-2">
+        <Button variant="outline" className="flex-1 text-xs" asChild>
+          <Link href={`/mentors/${mentor.id}`}>الملف الشخصي</Link>
+        </Button>
+        {hasPrice && (
+          <Button className="flex-1 text-xs" onClick={() => onBook?.(mentor)}>احجز جلسة</Button>
+        )}
       </CardFooter>
     </Card>
   );
 };
 
-const ProductCard = ({ product }: { product: Product }) => {
+const CoachCard = ({ coach, onBook }: { coach: MentorUser; onBook?: (c: MentorUser) => void }) => {
+  const name = coach.displayName || coach.name || 'بدون اسم';
+  const bio = coach.bio || coach.description || '';
+  const specializations = Array.isArray(coach.specializations) ? coach.specializations : [];
+  const hasPrice = coach.sessionPrice != null && coach.sessionPrice > 0;
+  return (
+    <Card className="card-hover border-0 shadow-md bg-card flex flex-col">
+      <CardContent className="pt-6 flex flex-col items-center text-center gap-3 flex-grow">
+        <div className="h-16 w-16 rounded-full bg-sky-500/20 flex items-center justify-center text-sky-600 font-bold text-2xl">
+          {name[0]}
+        </div>
+        <div>
+          <h3 className="font-bold text-base">{name}</h3>
+          {bio && (
+            <p className="text-sm text-muted-foreground mt-1 leading-relaxed line-clamp-2">{bio}</p>
+          )}
+        </div>
+        {specializations.length > 0 && (
+          <div className="flex flex-wrap gap-1 justify-center">
+            {specializations.slice(0, 3).map((s, i) => (
+              <Badge key={i} variant="secondary" className="text-xs">{s}</Badge>
+            ))}
+          </div>
+        )}
+        {hasPrice && (
+          <p className="text-sky-600 font-bold text-sm">{coach.sessionPrice} د.أ / جلسة</p>
+        )}
+      </CardContent>
+      <CardFooter className="flex gap-2">
+        <Button variant="outline" className="flex-1 text-xs" asChild>
+          <Link href={`/coaches/${coach.id}`}>الملف الشخصي</Link>
+        </Button>
+        {hasPrice && (
+          <Button className="flex-1 text-xs" onClick={() => onBook?.(coach)}>احجز جلسة</Button>
+        )}
+      </CardFooter>
+    </Card>
+  );
+};
+
+const CourseCard = ({ course }: { course: CourseItem }) => (
+  <Card className="card-hover border-0 shadow-md bg-card flex flex-col overflow-hidden">
+    <div className="relative h-36 bg-muted">
+      {course.coverImageUrl ? (
+        <img src={course.coverImageUrl} alt={course.title} className="w-full h-full object-cover" />
+      ) : (
+        <div className="h-full flex items-center justify-center">
+          <BookOpen className="h-10 w-10 text-muted-foreground/30" />
+        </div>
+      )}
+      {course.price != null && (
+        <Badge className="absolute top-2 left-2 bg-primary text-primary-foreground text-xs">
+          {course.price === 0 ? 'مجاني' : `${course.price} د.أ`}
+        </Badge>
+      )}
+    </div>
+    <CardContent className="pt-4 flex-grow">
+      <h3 className="font-bold text-sm line-clamp-2 mb-1">{course.title}</h3>
+      {course.coachName && (
+        <p className="text-xs text-muted-foreground mb-2">بقلم {course.coachName}</p>
+      )}
+      {course.description && (
+        <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{course.description}</p>
+      )}
+    </CardContent>
+    <CardFooter className="pt-0">
+      <Button variant="outline" className="w-full text-xs" asChild>
+        <Link href={`/courses/${course.id}`}>
+          تفاصيل الدورة
+          <ArrowLeft className="mr-2 h-3 w-3" />
+        </Link>
+      </Button>
+    </CardFooter>
+  </Card>
+);
+
+const ProductCard = ({ product, onOrder }: { product: Product; onOrder: (p: Product) => void }) => {
   const name = product.name || 'منتج';
   const imageUrl = product.imageUrl || product.image || '';
-  const whatsapp = product.whatsapp || product.store?.phone || '';
-  const waLink = whatsapp ? `https://wa.me/${whatsapp.replace(/\D/g, '')}` : 'https://wa.me/';
   return (
     <Card className="card-hover border-0 shadow-md bg-card flex flex-col overflow-hidden">
       <div className="relative h-40 w-full bg-muted">
@@ -234,15 +337,13 @@ const ProductCard = ({ product }: { product: Product }) => {
       <CardContent className="pt-4 flex flex-col gap-1 flex-grow">
         <h3 className="font-bold text-sm line-clamp-2">{name}</h3>
         {product.price != null && (
-          <p className="text-primary font-semibold text-sm">{product.price} ر.س</p>
+          <p className="text-primary font-semibold text-sm">{product.price} د.أ</p>
         )}
       </CardContent>
       <CardFooter className="pt-0">
-        <Button asChild className="w-full text-white font-semibold" style={{ backgroundColor: '#25D366' }}>
-          <a href={waLink} target="_blank" rel="noopener noreferrer">
-            <MessageSquare className="h-4 w-4 ml-2" />
-            تواصل عبر واتساب
-          </a>
+        <Button className="w-full" onClick={() => onOrder(product)}>
+          <Store className="h-4 w-4 ml-2" />
+          اطلب الآن
         </Button>
       </CardFooter>
     </Card>
@@ -310,10 +411,15 @@ export default function LandingPage() {
   const [coaches, setCoaches] = useState<MentorUser[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [publicStores, setPublicStores] = useState<{ id: string; name: string; logoUrl?: string; location?: string; beneficiaryName?: string }[]>([]);
+  const [courses, setCourses] = useState<CourseItem[]>([]);
   const [loadingMentors, setLoadingMentors] = useState(true);
   const [loadingCoaches, setLoadingCoaches] = useState(true);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [loadingStores, setLoadingStores] = useState(true);
+  const [loadingCourses, setLoadingCourses] = useState(true);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [bookingHost, setBookingHost] = useState<MentorUser | null>(null);
+  const [bookingRole, setBookingRole] = useState<'mentor' | 'coach'>('mentor');
 
   const [contactName, setContactName] = useState('');
   const [contactEmail, setContactEmail] = useState('');
@@ -378,6 +484,12 @@ export default function LandingPage() {
     })();
   }, []);
 
+  useEffect(() => {
+    fetch('/api/public/courses').then(r => r.json()).then(d => {
+      setCourses(d.courses || []);
+    }).catch(() => {}).finally(() => setLoadingCourses(false));
+  }, []);
+
   const handleContactSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     toast({ title: 'شكراً لتواصلك! سنرد عليك قريباً.' });
@@ -390,7 +502,7 @@ export default function LandingPage() {
   const cfg = siteConfig;
   const sections = {
     showStats: true, showFeatures: true, showOpportunities: true, showHowItWorks: true,
-    showRoles: true, showMentors: true, showCoaches: true, showBlog: true,
+    showRoles: true, showMentors: true, showCoaches: true, showCourses: true, showBlog: true,
     showTestimonials: true, showProducts: true, showStores: true, showContact: true, showCTA: true,
     ...(cfg?.sections ?? {}),
   };
@@ -676,7 +788,7 @@ export default function LandingPage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {mentors.map(m => <MentorCard key={m.id} mentor={m} />)}
+                  {mentors.map(m => <MentorCard key={m.id} mentor={m} onBook={h => { setBookingHost(h); setBookingRole('mentor'); }} />)}
                 </div>
               )}
               <div className="text-center mt-10">
@@ -705,7 +817,7 @@ export default function LandingPage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {coaches.map(c => <MentorCard key={c.id} mentor={c} />)}
+                  {coaches.map(c => <CoachCard key={c.id} coach={c} onBook={h => { setBookingHost(h); setBookingRole('coach'); }} />)}
                 </div>
               )}
               <div className="text-center mt-10">
@@ -713,6 +825,35 @@ export default function LandingPage() {
                   <Link href="/register?role=coach">انضم كمدرب</Link>
                 </Button>
               </div>
+            </div>
+          </section>
+        )}
+
+        {/* Courses Section */}
+        {sections.showCourses && (
+          <section id="courses" className="py-16 md:py-24 bg-muted/40">
+            <div className="container px-4 md:px-6">
+              <div className="text-center mb-14">
+                <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">الدورات التدريبية</Badge>
+                <h2 className="text-3xl font-bold tracking-tight">دورات تدريبية من مدربينا</h2>
+                <p className="mt-3 text-lg text-muted-foreground">
+                  طور مهاراتك مع دورات متخصصة يقدمها أفضل المدربين على المنصة.
+                </p>
+              </div>
+              {loadingCourses ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {[...Array(4)].map((_, i) => <ShimmerCard key={i} />)}
+                </div>
+              ) : courses.length === 0 ? (
+                <div className="text-center py-10 text-muted-foreground">
+                  <BookOpen className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                  <p>لا توجد دورات بعد.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {courses.map(c => <CourseCard key={c.id} course={c} />)}
+                </div>
+              )}
             </div>
           </section>
         )}
@@ -793,7 +934,7 @@ export default function LandingPage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {products.map(p => <ProductCard key={p.id} product={p} />)}
+                  {products.map(p => <ProductCard key={p.id} product={p} onOrder={setSelectedProduct} />)}
                 </div>
               )}
               <div className="text-center mt-10">
@@ -835,8 +976,8 @@ export default function LandingPage() {
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                   {publicStores.map(store => (
-                    <Card key={store.id} className="border-0 shadow-md hover:shadow-lg transition-shadow">
-                      <CardContent className="pt-6 flex flex-col gap-2">
+                    <Card key={store.id} className="border-0 shadow-md hover:shadow-lg transition-shadow flex flex-col">
+                      <CardContent className="pt-6 flex flex-col gap-2 flex-grow">
                         <div className="flex items-center gap-3 mb-2">
                           <div className="p-2 bg-primary/10 rounded-full">
                             <Store className="h-5 w-5 text-primary" />
@@ -846,6 +987,13 @@ export default function LandingPage() {
                         {store.beneficiaryName && <p className="text-sm text-muted-foreground">البائع: {store.beneficiaryName}</p>}
                         {store.location && <p className="text-sm text-muted-foreground">الموقع: {store.location}</p>}
                       </CardContent>
+                      <CardFooter className="pt-0">
+                        <Button variant="outline" className="w-full text-xs" asChild>
+                          <Link href={`/stores/${store.id}`}>
+                            تصفح المتجر <ArrowLeft className="mr-2 h-3 w-3" />
+                          </Link>
+                        </Button>
+                      </CardFooter>
                     </Card>
                   ))}
                 </div>
@@ -971,6 +1119,33 @@ export default function LandingPage() {
           </section>
         )}
       </main>
+
+      {/* Order dialog for products */}
+      <OrderDialog
+        product={selectedProduct ? {
+          id: selectedProduct.id,
+          name: selectedProduct.name || '',
+          price: selectedProduct.price ?? 0,
+          imageUrl: selectedProduct.imageUrl || selectedProduct.image || '',
+          storeId: selectedProduct.storeId || '',
+          storeName: selectedProduct.storeName || '',
+          organizationId: selectedProduct.organizationId || '',
+        } as any : null}
+        isOpen={!!selectedProduct}
+        onOpenChange={open => { if (!open) setSelectedProduct(null); }}
+      />
+
+      {/* Booking dialog for mentors/coaches */}
+      {bookingHost && (
+        <SessionBookingDialog
+          isOpen={!!bookingHost}
+          onOpenChange={open => { if (!open) setBookingHost(null); }}
+          hostId={bookingHost.id}
+          hostName={bookingHost.displayName || bookingHost.name || ''}
+          hostRole={bookingRole}
+          sessionPrice={bookingHost.sessionPrice ?? 0}
+        />
+      )}
 
       {/* Footer */}
       <footer className="py-10 border-t bg-card">
