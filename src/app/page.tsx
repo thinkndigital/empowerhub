@@ -301,9 +301,9 @@ export default function LandingPage() {
   ];
 
   const featuresData = cfg?.features?.length ? cfg.features : [
-    { title: 'تقارير وتحليلات', description: 'تابع تقدمك ونموك بتقارير مرئية شاملة تساعدك على اتخاذ قرارات أفضل.', icon: 'BarChart3' },
-    { title: 'توصيات بالذكاء الاصطناعي', description: 'احصل على توصيات مخصصة لمحتوى التدريب والموارد المناسبة لأهدافك.', icon: 'Zap' },
-    { title: 'أمان وموثوقية', description: 'بياناتك محمية بأحدث تقنيات الأمان. نضمن لك تجربة موثوقة وآمنة في كل وقت.', icon: 'Shield' },
+    { title: 'تتبع التقدم والنمو', description: 'تابع إنجازاتك خطوة بخطوة بتقارير مرئية واضحة تساعدك على معرفة ما حققته وما التالي.', icon: 'BarChart3' },
+    { title: 'توصيات ذكية بالذكاء الاصطناعي', description: 'احصل على توصيات مخصصة تناسب أهدافك وظروفك لتحقيق أقصى استفادة من المنصة.', icon: 'Zap' },
+    { title: 'أمان وخصوصية تامة', description: 'بياناتك ومعلوماتك الشخصية محمية بأحدث تقنيات التشفير. تجربة آمنة وموثوقة دائماً.', icon: 'Shield' },
   ];
 
   const howItWorksData = cfg?.howItWorks?.length ? cfg.howItWorks : [
@@ -333,9 +333,9 @@ export default function LandingPage() {
   };
 
   const opportunitiesData = cfg?.opportunities?.length ? cfg.opportunities : [
-    { title: 'برامج التدريب المهني', description: 'دورات متخصصة في التقنية، الأعمال والتصميم لتزويدك بمهارات سوق العمل الحديث.', icon: 'GraduationCap', badge: 'متاح الآن', color: 'bg-primary', link: '/register' },
-    { title: 'الإرشاد الفردي', description: 'جلسات مخصصة مع مرشدين خبراء لمساعدتك في رسم مسارك المهني وتحقيق أهدافك.', icon: 'Users', badge: 'مجاني', color: 'bg-sky-500', link: '/register' },
-    { title: 'ريادة الأعمال', description: 'ابدأ مشروعك، أطلق متجرك الإلكتروني، وابنِ مصدر دخل مستدام مع دعم متكامل.', icon: 'Store', badge: 'جديد', color: 'bg-amber-500', link: '/register' },
+    { title: 'مشاريع منزلية ناجحة', description: 'أطلق مشروعك من المنزل وابنِ متجرك الإلكتروني مع دعم متكامل من الفكرة حتى أول عملية بيع ناجحة.', icon: 'Store', badge: 'جديد', color: 'bg-amber-500', link: '/register' },
+    { title: 'التمكين الاقتصادي', description: 'مهارات مالية وأدوات عملية تساعدك على تحقيق الاستقلالية الاقتصادية وبناء مصدر دخل حقيقي ومستدام.', icon: 'TrendingUp', badge: 'متاح', color: 'bg-green-500', link: '/register' },
+    { title: 'مجتمع الدعم والتشبيك', description: 'انضم لمجتمع من المستفيدين والخبراء الذين يتشاركون التجارب ويدعمون بعضهم نحو النجاح.', icon: 'Users', badge: '', color: 'bg-primary', link: '/register' },
   ];
 
   const blogPostsData = cfg?.blogPosts?.length ? cfg.blogPosts : [
@@ -440,7 +440,7 @@ export default function LandingPage() {
       <main>
 
         {/* ── Hero ────────────────────────────────────────────────────────────── */}
-        <section className="relative min-h-[80vh] sm:min-h-[85vh] flex items-center justify-center overflow-hidden bg-background">
+        <section className="relative min-h-[85vh] lg:min-h-screen flex items-center overflow-hidden bg-background">
           {/* Subtle grid pattern */}
           <div
             className="absolute inset-0 opacity-[0.025] pointer-events-none"
@@ -450,50 +450,143 @@ export default function LandingPage() {
             }}
           />
           {/* Gradient blob */}
-          <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] md:w-[800px] md:h-[600px] bg-primary/5 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute top-1/3 left-1/4 w-[700px] h-[500px] bg-primary/5 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-sky-500/4 rounded-full blur-3xl pointer-events-none" />
 
-          <div className="relative z-10 container text-center py-16 sm:py-20 md:py-28">
-            {/* Tagline pill */}
-            <div className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground border border-border/80 rounded-full px-3.5 py-1.5 mb-6 sm:mb-8 bg-card/60 backdrop-blur-sm">
-              <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse shrink-0" />
-              <span className="truncate">{cfg?.tagline || 'منصة التمكين الرقمي الشاملة'}</span>
-            </div>
+          <div className="relative z-10 container py-16 sm:py-20 lg:py-28">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
 
-            {/* Headline */}
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-[4.5rem] font-extrabold tracking-tight text-foreground leading-[1.1] mb-5 sm:mb-6">
-              {heroTitle}
-            </h1>
-
-            {/* Subtitle */}
-            <p className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-xl sm:max-w-2xl mx-auto leading-relaxed mb-8 sm:mb-10">
-              {heroSubtitle}
-            </p>
-
-            {/* CTAs */}
-            <div className="flex flex-col sm:flex-row justify-center gap-3 mb-10 sm:mb-14">
-              <Button size="lg" asChild className="h-12 px-7 text-base font-semibold shadow-sm w-full sm:w-auto">
-                <Link href="/register">
-                  {heroCta}
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                </Link>
-              </Button>
-              <Button size="lg" variant="outline" asChild className="h-12 px-7 text-base w-full sm:w-auto">
-                <Link href="#how-it-works">{heroCtaSecondary}</Link>
-              </Button>
-            </div>
-
-            {/* Trust strip */}
-            <div className="flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs sm:text-sm text-muted-foreground">
-              {[
-                'مجاني تماماً للبدء',
-                'لا يتطلب بطاقة ائتمان',
-                'دعم باللغة العربية',
-              ].map((t, i) => (
-                <div key={i} className="flex items-center gap-1.5">
-                  <CheckCircle className="h-3.5 w-3.5 text-primary shrink-0" />
-                  <span>{t}</span>
+              {/* ── Text Column ── */}
+              <div className="text-center lg:text-right">
+                {/* Tagline pill */}
+                <div className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground border border-border/80 rounded-full px-3.5 py-1.5 mb-6 sm:mb-8 bg-card/60 backdrop-blur-sm">
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse shrink-0" />
+                  <span className="truncate">{cfg?.tagline || 'منصة التمكين الرقمي الشاملة'}</span>
                 </div>
-              ))}
+
+                {/* Headline */}
+                <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-foreground leading-[1.1] mb-5 sm:mb-6">
+                  {heroTitle}
+                </h1>
+
+                {/* Subtitle */}
+                <p className="text-base sm:text-lg text-muted-foreground max-w-xl mx-auto lg:mx-0 leading-relaxed mb-8 sm:mb-10">
+                  {heroSubtitle}
+                </p>
+
+                {/* CTAs */}
+                <div className="flex flex-col sm:flex-row justify-center lg:justify-start gap-3 mb-8 sm:mb-10">
+                  <Button size="lg" asChild className="h-12 px-7 text-base font-semibold shadow-sm w-full sm:w-auto">
+                    <Link href="/register">
+                      {heroCta}
+                      <ArrowLeft className="mr-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                  <Button size="lg" variant="outline" asChild className="h-12 px-7 text-base w-full sm:w-auto">
+                    <Link href="#how-it-works">{heroCtaSecondary}</Link>
+                  </Button>
+                </div>
+
+                {/* Trust strip */}
+                <div className="flex flex-wrap justify-center lg:justify-start gap-x-5 gap-y-2 text-xs sm:text-sm text-muted-foreground">
+                  {['مجاني تماماً للبدء', 'لا يتطلب بطاقة ائتمان', 'دعم باللغة العربية'].map((t, i) => (
+                    <div key={i} className="flex items-center gap-1.5">
+                      <CheckCircle className="h-3.5 w-3.5 text-primary shrink-0" />
+                      <span>{t}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* ── Visual Column — Dashboard mockup ── */}
+              <div className="hidden lg:flex items-center justify-center">
+                <div className="relative w-full max-w-sm xl:max-w-md">
+                  {/* Glow behind card */}
+                  <div className="absolute inset-6 bg-primary/10 rounded-3xl blur-2xl pointer-events-none" />
+
+                  {/* Main dashboard card */}
+                  <div className="relative rounded-2xl border border-border bg-card shadow-2xl p-5 flex flex-col gap-4">
+
+                    {/* Top bar */}
+                    <div className="flex items-center justify-between pb-3 border-b border-border">
+                      <span className="text-sm font-bold text-foreground">لوحة التحكم</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-full bg-green-500" />
+                        <span className="text-xs text-muted-foreground">نشط</span>
+                      </div>
+                    </div>
+
+                    {/* Profile row */}
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full bg-primary/15 flex items-center justify-center shrink-0 text-sm font-extrabold text-primary">ن</div>
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">مرحباً، نور! 👋</p>
+                        <p className="text-xs text-muted-foreground">مشروعك المنزلي ينمو</p>
+                      </div>
+                    </div>
+
+                    {/* Stats row */}
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { label: 'المبيعات', value: '١٢٤٠', color: 'text-primary' },
+                        { label: 'الدورات', value: '٥', color: 'text-sky-500' },
+                        { label: 'الجلسات', value: '١٢', color: 'text-amber-500' },
+                      ].map((s, idx) => (
+                        <div key={idx} className="bg-muted/50 rounded-xl p-2.5 text-center">
+                          <div className={`text-lg font-extrabold ${s.color} tabular-nums leading-none mb-0.5`}>{s.value}</div>
+                          <div className="text-[10px] text-muted-foreground">{s.label}</div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Progress bar */}
+                    <div>
+                      <div className="flex justify-between text-[10px] text-muted-foreground mb-1.5">
+                        <span>تقدم دورة التسويق الرقمي</span>
+                        <span className="font-semibold text-primary">٧٥٪</span>
+                      </div>
+                      <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div className="h-full w-3/4 bg-primary rounded-full" />
+                      </div>
+                    </div>
+
+                    {/* Upcoming session */}
+                    <div className="flex items-center gap-3 p-3 rounded-xl bg-primary/5 border border-primary/15">
+                      <div className="h-8 w-8 rounded-full bg-primary/15 flex items-center justify-center shrink-0 text-xs font-bold text-primary">س</div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-foreground truncate">جلسة مع المرشدة سارة</p>
+                        <p className="text-[10px] text-muted-foreground">اليوم — ٣:٠٠ مساءً</p>
+                      </div>
+                      <span className="text-[10px] font-semibold text-primary bg-primary/10 rounded-full px-2 py-0.5 shrink-0">قريباً</span>
+                    </div>
+
+                    {/* New store order */}
+                    <div className="flex items-center gap-3 p-3 rounded-xl bg-amber-500/5 border border-amber-500/15">
+                      <div className="h-8 w-8 rounded-full bg-amber-500/15 flex items-center justify-center shrink-0">
+                        <Store className="h-3.5 w-3.5 text-amber-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-foreground">طلب جديد في متجرك!</p>
+                        <p className="text-[10px] text-muted-foreground">منتج يدوي — ٢٥ د.أ</p>
+                      </div>
+                      <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
+                    </div>
+                  </div>
+
+                  {/* Floating badge top */}
+                  <div className="absolute -top-3 -right-4 bg-card border border-border rounded-xl shadow-lg px-3 py-2 flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                    <span className="text-xs font-semibold text-foreground whitespace-nowrap">٢٫٥٠٠+ مستفيدة</span>
+                  </div>
+
+                  {/* Floating badge bottom */}
+                  <div className="absolute -bottom-3 -left-4 bg-card border border-border rounded-xl shadow-lg px-3 py-2 flex items-center gap-1.5">
+                    <Star className="h-3 w-3 text-amber-400 fill-amber-400" />
+                    <span className="text-xs font-semibold text-foreground whitespace-nowrap">٤.٩ تقييم المستفيدين</span>
+                  </div>
+                </div>
+              </div>
+
             </div>
           </div>
         </section>
@@ -519,28 +612,28 @@ export default function LandingPage() {
         {sections.showHowItWorks && howItWorksData.length > 0 && (
           <section id="how-it-works" className="py-16 sm:py-20 md:py-28">
             <div className="container">
-              <div className="max-w-xl mb-12 sm:mb-16">
+              {/* Centered header */}
+              <div className="text-center mb-14 sm:mb-20">
                 <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">كيف تعمل المنصة</p>
                 <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground">
                   من الفكرة إلى النجاح في خطوات واضحة
                 </h2>
               </div>
 
-              <div className="space-y-12 sm:space-y-16">
+              {/* 3-column horizontal grid */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-10 md:gap-8 lg:gap-14">
                 {howItWorksData.map((item, i) => (
-                  <div key={i} className="flex gap-5 sm:gap-8 md:gap-12 items-start">
-                    {/* Ghost number */}
-                    <div className="shrink-0 w-14 sm:w-20 md:w-28 flex items-start justify-center pt-1">
-                      <span className="text-5xl sm:text-6xl md:text-8xl font-extrabold text-foreground/8 leading-none select-none tabular-nums">
-                        {String(i + 1).padStart(2, '0')}
-                      </span>
-                    </div>
-                    {/* Content */}
-                    <div className="flex-1 min-w-0 pt-1 sm:pt-2">
-                      <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground mb-2 sm:mb-3">
+                  <div key={i} className="flex flex-col">
+                    {/* Giant ghost number */}
+                    <span className="text-8xl sm:text-9xl md:text-[8rem] lg:text-[9rem] font-extrabold text-foreground/[0.06] leading-none select-none tabular-nums mb-4">
+                      {String(i + 1).padStart(2, '0')}
+                    </span>
+                    {/* Step content — overlaps the number slightly */}
+                    <div className="-mt-4 sm:-mt-6">
+                      <h3 className="text-xl sm:text-2xl font-bold text-foreground mb-2 sm:mb-3">
                         {item.title}
                       </h3>
-                      <p className="text-sm sm:text-base text-muted-foreground leading-relaxed max-w-xl">
+                      <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
                         {item.desc}
                       </p>
                     </div>
