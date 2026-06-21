@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Toaster } from '@/components/ui/toaster';
 import './globals.css';
 import { FirebaseProviderDynamic } from '@/components/firebase-provider-dynamic';
@@ -7,6 +7,11 @@ export const metadata: Metadata = {
   title: 'EmpowerHub | منصة التمكين الرقمي',
   description: 'منصة متكاملة للتمكين الرقمي تجمع التدريب، الإرشاد، والتجارة الإلكترونية.',
   keywords: 'تمكين, تدريب, إرشاد, تجارة إلكترونية, ريادة أعمال',
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
 };
 
 export default function RootLayout({
