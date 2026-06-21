@@ -660,57 +660,34 @@ export default function LandingPage() {
           </section>
         )}
 
-        {/* Opportunities Section */}
-        {sections.showOpportunities && opportunitiesData.length > 0 && (
-          <section id="opportunities" className="py-16 md:py-24">
-            <div className="container px-4 md:px-6">
-              <div className="text-center mb-14">
-                <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">الفرص المتاحة</Badge>
-                <h2 className="text-3xl font-bold tracking-tight md:text-4xl">اكتشف ما يمكنك تحقيقه</h2>
-                <p className="mt-3 text-lg text-muted-foreground max-w-2xl mx-auto">
-                  برامج ومسارات متنوعة مصممة لتناسب طموحاتك وتحقق أهدافك المهنية والشخصية.
-                </p>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {opportunitiesData.map((opp, i) => (
-                  <OpportunityCard
-                    key={i}
-                    icon={iconMap[opp.icon] ?? <Sparkles className="h-6 w-6" />}
-                    title={opp.title}
-                    description={opp.description}
-                    badge={opp.badge}
-                    color={opp.color || featureColors[i % featureColors.length]}
-                    link={opp.link}
-                  />
-                ))}
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* Features Section */}
-        {sections.showFeatures && (
+        {/* Combined Opportunities + Features Section */}
+        {(sections.showOpportunities || sections.showFeatures) && (
           <section id="features" className="py-16 md:py-24">
             <div className="container px-4 md:px-6">
               <div className="text-center mb-14">
-                <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">ميزاتنا</Badge>
+                <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">ما نقدمه</Badge>
                 <h2 className="text-3xl font-bold tracking-tight md:text-4xl">كل ما تحتاجه للنجاح في مكان واحد</h2>
                 <p className="mt-3 text-lg text-muted-foreground max-w-2xl mx-auto">
-                  نقدم لك الأدوات والموارد اللازمة لتنمية مهاراتك وتحقيق أهدافك المهنية والشخصية.
+                  فرص متنوعة وأدوات متكاملة مصممة لتناسب طموحاتك وتحقق أهدافك المهنية والشخصية.
                 </p>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {featuresData.map((f, i) => (
+                {sections.showOpportunities && opportunitiesData.map((opp, i) => (
                   <FeatureCard
-                    key={i}
+                    key={`opp-${i}`}
+                    title={opp.title}
+                    description={opp.description}
+                    color={opp.color || featureColors[i % featureColors.length]}
+                    icon={<span className="text-white">{iconMap[opp.icon] ?? <Sparkles className="h-6 w-6" />}</span>}
+                  />
+                ))}
+                {sections.showFeatures && featuresData.map((f, i) => (
+                  <FeatureCard
+                    key={`feat-${i}`}
                     title={f.title}
                     description={f.description}
-                    color={featureColors[i % featureColors.length]}
-                    icon={
-                      <span className="text-white">
-                        {iconMap[f.icon] ?? <Sparkles className="h-6 w-6" />}
-                      </span>
-                    }
+                    color={featureColors[(i + (sections.showOpportunities ? opportunitiesData.length : 0)) % featureColors.length]}
+                    icon={<span className="text-white">{iconMap[f.icon] ?? <Sparkles className="h-6 w-6" />}</span>}
                   />
                 ))}
               </div>
