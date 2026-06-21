@@ -24,6 +24,7 @@ import { useUser } from "@/firebase/auth/use-user";
 import { useAuth } from "@/firebase/provider";
 import { NotificationBell } from "@/components/notification-bell";
 import { MessageBell } from "@/components/message-bell";
+import { applyOrgColor } from "@/lib/apply-org-color";
 
 const allMenuItems = [
   { href: "/organization-dashboard", label: "الرئيسية", icon: LayoutGrid, sectionKey: null },
@@ -61,6 +62,7 @@ export default function OrganizationDashboardLayout({ children }: { children: Re
       const orgData = await orgRes.json();
       if (orgData.org?.name) setOrgName(orgData.org.name);
       if (orgData.org?.logoUrl) setOrgLogo(orgData.org.logoUrl);
+      if (orgData.org?.primaryColor) applyOrgColor(orgData.org.primaryColor);
       const profileData = await profileRes.json();
       if (profileData.profile?.avatarUrl) setAvatarUrl(profileData.profile.avatarUrl);
       const platformData = await platformRes.json();
