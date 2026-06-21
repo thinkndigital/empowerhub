@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase-admin';
+import { adminAuth, adminDb } from '@/lib/firebase-admin';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const snap = await adminDb.collection('courses').doc(params.id).get();
     if (!snap.exists) return NextResponse.json({ error: 'غير موجود' }, { status: 404 });
@@ -22,6 +22,19 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
       }
     }
 
+    // Check enrollment status if auth token is provided
+    let isEnrolled = false;
+    const authHeader = req.headers.get('authorization');
+    if (authHeader) {
+      try {
+        const decoded = await adminAuth.verifyIdToken(authHeader.replace('Bearer ', ''));
+        const enrollDoc = await adminDb
+          .collection('courses').doc(params.id)
+          .collection('enrollments').doc(decoded.uid).get();
+        isEnrolled = enrollDoc.exists;
+      } catch { /* unauthenticated is fine */ }
+    }
+
     return NextResponse.json({
       course: {
         id: snap.id,
@@ -36,6 +49,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
         enrollmentCount: data.enrollmentCount || 0,
         objectives: data.objectives || [],
         requirements: data.requirements || [],
+        isEnrolled,
       },
     });
   } catch (e: any) {

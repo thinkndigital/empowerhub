@@ -18,7 +18,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'بيانات ناقصة' }, { status: 400 });
     }
 
+    const { type, courseId, userId } = body;
+
     const orderRef = await adminDb.collection('orders').add({
+      type: type || 'product',
+      courseId: courseId || '',
+      userId: userId || beneficiaryId || '',
       productId,
       productName: productName || '',
       productPrice: productPrice || 0,

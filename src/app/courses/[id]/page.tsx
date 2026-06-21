@@ -1,14 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useState, useEffect, useCallback } from "react";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { useUser } from "@/firebase/auth/use-user";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { OrderDialog } from "@/components/order-dialog";
+import { CourseEnrollDialog } from "@/components/course-enroll-dialog";
 import {
-  ArrowRight, BookOpen, Users, Clock, CheckCircle, Loader2, ShoppingCart,
+  ArrowRight, BookOpen, Users, Clock, CheckCircle, Loader2,
+  ShoppingCart, PlayCircle, GraduationCap,
 } from "lucide-react";
 
 interface Course {
@@ -24,28 +26,53 @@ interface Course {
   enrollmentCount: number;
   objectives: string[];
   requirements: string[];
+  isEnrolled: boolean;
 }
 
 export default function CourseDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
+  const { user: authUser, loading: authLoading } = useUser();
   const [course, setCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-  const [orderOpen, setOrderOpen] = useState(false);
+  const [enrollOpen, setEnrollOpen] = useState(false);
+  const [isEnrolled, setIsEnrolled] = useState(false);
+
+  const fetchCourse = useCallback(async () => {
+    if (!id) return;
+    setLoading(true);
+    try {
+      const headers: Record<string, string> = {};
+      if (authUser) {
+        const token = await authUser.getIdToken();
+        headers.authorization = `Bearer ${token}`;
+      }
+      const res = await fetch(`/api/public/courses/${id}`, { headers });
+      const d = await res.json();
+      if (d.course) {
+        setCourse(d.course);
+        setIsEnrolled(d.course.isEnrolled || false);
+      } else {
+        setNotFound(true);
+      }
+    } catch {
+      setNotFound(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [id, authUser]);
 
   useEffect(() => {
-    if (!id) return;
-    fetch(`/api/public/courses/${id}`)
-      .then(r => r.json())
-      .then(d => {
-        if (d.course) setCourse(d.course);
-        else setNotFound(true);
-      })
-      .catch(() => setNotFound(true))
-      .finally(() => setLoading(false));
-  }, [id]);
+    if (!authLoading) fetchCourse();
+  }, [authLoading, fetchCourse]);
 
-  if (loading) {
+  const handleEnrolled = () => {
+    setIsEnrolled(true);
+    setEnrollOpen(false);
+  };
+
+  if (loading || authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background" dir="rtl">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -64,15 +91,47 @@ export default function CourseDetailPage() {
 
   const isFree = course.price === 0 || course.price === null;
 
-  const orderProduct = {
-    id: course.id,
-    name: course.title,
-    price: course.price ?? 0,
-    imageUrl: course.coverImageUrl || '',
-    storeId: course.createdBy,
-    storeName: course.coachName,
-    organizationId: '',
-  } as any;
+  // Determine CTA button
+  const renderCTA = () => {
+    if (isEnrolled) {
+      return (
+        <Button className="w-full" size="lg" asChild>
+          <Link href={`/dashboard/training/${course.id}`}>
+            <PlayCircle className="h-5 w-5 ml-2" />
+            تابع الدورة
+          </Link>
+        </Button>
+      );
+    }
+
+    if (!authUser) {
+      // Not logged in → redirect to register with returnTo
+      return (
+        <Button
+          className="w-full"
+          size="lg"
+          onClick={() => router.push(`/register?returnTo=/courses/${course.id}`)}
+        >
+          {isFree ? (
+            <><BookOpen className="h-5 w-5 ml-2" />سجّل للوصول مجاناً</>
+          ) : (
+            <><ShoppingCart className="h-5 w-5 ml-2" />سجّل وشارِك الآن</>
+          )}
+        </Button>
+      );
+    }
+
+    // Logged in, not enrolled
+    return (
+      <Button className="w-full" size="lg" onClick={() => setEnrollOpen(true)}>
+        {isFree ? (
+          <><GraduationCap className="h-5 w-5 ml-2" />التسجيل مجاناً</>
+        ) : (
+          <><ShoppingCart className="h-5 w-5 ml-2" />اشترِ الآن</>
+        )}
+      </Button>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
@@ -87,6 +146,14 @@ export default function CourseDetailPage() {
           </Button>
           <span className="text-muted-foreground">/</span>
           <span className="text-sm font-medium truncate">{course.title}</span>
+
+          {/* Enrolled badge in header */}
+          {isEnrolled && (
+            <Badge className="mr-auto bg-emerald-500 border-0 text-white">
+              <CheckCircle className="h-3 w-3 ml-1" />
+              مسجّل
+            </Badge>
+          )}
         </div>
       </header>
 
@@ -157,24 +224,36 @@ export default function CourseDetailPage() {
                 </ul>
               </div>
             )}
+
+            {/* Mobile CTA */}
+            <div className="lg:hidden">
+              {renderCTA()}
+            </div>
           </div>
 
           {/* Sticky sidebar */}
-          <div className="lg:sticky lg:top-20 h-fit">
+          <div className="hidden lg:block lg:sticky lg:top-20 h-fit">
             <Card className="border-0 shadow-lg">
               <CardContent className="pt-6 pb-6 space-y-4">
                 {course.coverImageUrl && (
-                  <div className="hidden lg:block relative h-32 rounded-xl overflow-hidden bg-muted mb-2">
+                  <div className="relative h-32 rounded-xl overflow-hidden bg-muted mb-2">
                     <img src={course.coverImageUrl} alt={course.title} className="w-full h-full object-cover" />
                   </div>
                 )}
 
                 {/* Price */}
                 <div>
-                  {isFree ? (
+                  {isEnrolled ? (
+                    <Badge className="text-sm px-3 py-1 bg-emerald-500 text-white border-0">
+                      <CheckCircle className="h-3 w-3 ml-1" />
+                      مسجّل في الدورة
+                    </Badge>
+                  ) : isFree ? (
                     <Badge className="text-lg px-4 py-1 bg-emerald-500 text-white border-0">مجاني</Badge>
                   ) : (
-                    <p className="text-3xl font-extrabold text-primary">{course.price} <span className="text-sm font-normal text-muted-foreground">د.أ</span></p>
+                    <p className="text-3xl font-extrabold text-primary">
+                      {course.price} <span className="text-sm font-normal text-muted-foreground">د.أ</span>
+                    </p>
                   )}
                 </div>
 
@@ -194,28 +273,27 @@ export default function CourseDetailPage() {
                   )}
                 </div>
 
-                {isFree ? (
-                  <Button asChild className="w-full" size="lg">
-                    <Link href="/register">
-                      <BookOpen className="h-5 w-5 ml-2" />
-                      سجّل وابدأ مجاناً
-                    </Link>
-                  </Button>
-                ) : (
-                  <Button className="w-full" size="lg" onClick={() => setOrderOpen(true)}>
-                    <ShoppingCart className="h-5 w-5 ml-2" />
-                    اشترِ الآن
-                  </Button>
-                )}
+                {renderCTA()}
 
-                <p className="text-xs text-muted-foreground text-center">سجّل في المنصة للوصول الكامل للدورة</p>
+                {!isEnrolled && (
+                  <p className="text-xs text-muted-foreground text-center">
+                    {authUser ? 'اشترِ الدورة واحصل على وصول فوري.' : 'سجّل في المنصة للوصول الكامل للدورة.'}
+                  </p>
+                )}
               </CardContent>
             </Card>
           </div>
         </div>
       </main>
 
-      <OrderDialog product={orderProduct} isOpen={orderOpen} onOpenChange={setOrderOpen} />
+      <CourseEnrollDialog
+        courseId={course.id}
+        courseTitle={course.title}
+        coursePrice={course.price}
+        isOpen={enrollOpen}
+        onOpenChange={setEnrollOpen}
+        onEnrolled={handleEnrolled}
+      />
     </div>
   );
 }

@@ -28,22 +28,33 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
     const courseTitle = courseDoc.data()?.title || 'الدورة';
 
     // Create enrollment
-    await adminDb
+    const enrollRef = adminDb
       .collection('courses')
       .doc(params.courseId)
       .collection('enrollments')
-      .doc(beneficiaryId)
-      .set({
-        userId: beneficiaryId,
-        enrolledAt: FieldValue.serverTimestamp(),
-        progress: 0,
-        completedLessons: [],
-      });
+      .doc(beneficiaryId);
 
-    // Update enrolledCount on course doc
-    await adminDb.collection('courses').doc(params.courseId).update({
-      enrolledCount: FieldValue.increment(1),
+    const existing = await enrollRef.get();
+    if (existing.exists) {
+      return NextResponse.json({ success: true, alreadyEnrolled: true });
+    }
+
+    await enrollRef.set({
+      userId: beneficiaryId,
+      enrolledAt: FieldValue.serverTimestamp(),
+      progress: 0,
+      completedLessons: [],
     });
+
+    // Update enrolledCount on course doc and user's enrolledCourses array
+    await Promise.all([
+      adminDb.collection('courses').doc(params.courseId).update({
+        enrolledCount: FieldValue.increment(1),
+      }),
+      adminDb.collection('users').doc(beneficiaryId).update({
+        enrolledCourses: FieldValue.arrayUnion(params.courseId),
+      }),
+    ]);
 
     // Create notification for beneficiary
     await adminDb.collection('notifications').add({
