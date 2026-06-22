@@ -33,6 +33,7 @@ export default function PublicLiveSessionsPage() {
   const { symbol: currencySymbol } = useCurrency();
   const [sessions, setSessions] = useState<LiveSession[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<'all' | 'free' | 'paid'>('all');
 
   useEffect(() => {
     fetch('/api/public/live-sessions')
@@ -45,14 +46,26 @@ export default function PublicLiveSessionsPage() {
   return (
     <div className="bg-background text-foreground min-h-screen" dir="rtl">
       <div className="container py-12 sm:py-16">
-        <div className="mb-10 sm:mb-14">
-          <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">مباشر ومتاح</p>
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground mb-3">
-            الجلسات المباشرة
-          </h1>
-          <p className="text-muted-foreground text-sm sm:text-base max-w-xl leading-relaxed">
-            انضم إلى جلسات تدريبية مباشرة مع مدربين متخصصين — تفاعلية، مجدولة، ومناسبة لجميع المستويات.
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10 sm:mb-14">
+          <div>
+            <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">مباشر ومتاح</p>
+            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground mb-3">
+              الجلسات المباشرة
+            </h1>
+            <p className="text-muted-foreground text-sm sm:text-base max-w-xl leading-relaxed">
+              انضم إلى جلسات تدريبية مباشرة مع مدربين متخصصين — تفاعلية، مجدولة، ومناسبة لجميع المستويات.
+            </p>
+          </div>
+          {!loading && sessions.length > 0 && (
+            <div className="flex items-center gap-0.5 bg-muted/70 rounded-lg p-0.5 border border-border/50 shrink-0 self-start">
+              {(['all', 'free', 'paid'] as const).map(f => (
+                <button key={f} onClick={() => setFilter(f)}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${filter === f ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
+                  {f === 'all' ? 'الكل' : f === 'free' ? 'مجاني' : 'مدفوع'}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {loading ? (
@@ -68,9 +81,20 @@ export default function PublicLiveSessionsPage() {
               <Link href="/">العودة للرئيسية</Link>
             </Button>
           </div>
-        ) : (
+        ) : (() => {
+          const filtered = sessions.filter(s => {
+            if (filter === 'free') return s.price === 0;
+            if (filter === 'paid') return s.price > 0;
+            return true;
+          });
+          return filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+              <Video className="h-12 w-12 mb-3 opacity-20" />
+              <p className="text-base font-medium">لا توجد جلسات {filter === 'free' ? 'مجانية' : 'مدفوعة'} حالياً.</p>
+            </div>
+          ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {sessions.map(session => {
+            {filtered.map(session => {
               const isFull = session.maxParticipants !== null && session.registrationsCount >= session.maxParticipants;
               return (
                 <div key={session.id} className="group rounded-2xl border border-border bg-card overflow-hidden hover:border-primary/30 hover:shadow-md transition-all flex flex-col">
@@ -131,7 +155,8 @@ export default function PublicLiveSessionsPage() {
               );
             })}
           </div>
-        )}
+          );
+        })()}
       </div>
     </div>
   );

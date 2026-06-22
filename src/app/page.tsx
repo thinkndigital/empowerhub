@@ -373,23 +373,34 @@ const ProductCard = ({ product, onOrder, currencySymbol }: { product: Product; o
   );
 };
 
-const PublicSessionCard = ({ session, currencySymbol }: { session: PublicSession; currencySymbol: string }) => {
+const PublicSessionCard = ({ session, currencySymbol, onBook }: { session: PublicSession; currencySymbol: string; onBook?: () => void }) => {
   const date = new Date(session.date);
   const dateStr = date.toLocaleDateString('ar-EG', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
   const timeStr = date.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+  const isFree = session.price === 0 || session.price == null;
   return (
-    <div className="group rounded-2xl border border-border bg-card hover:border-primary/30 hover:shadow-sm transition-all flex flex-col overflow-hidden">
-      {session.bannerUrl ? (
-        <div className="h-36 overflow-hidden bg-muted">
+    <div className="group rounded-2xl border border-border bg-card hover:border-primary/30 hover:shadow-md transition-all flex flex-col overflow-hidden">
+      {/* Banner */}
+      <div className="relative h-36 overflow-hidden bg-muted shrink-0">
+        {session.bannerUrl ? (
           <img src={session.bannerUrl} alt={session.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+        ) : (
+          <div className="h-full bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center">
+            <GraduationCap className="h-10 w-10 text-primary/30" />
+          </div>
+        )}
+        {/* Price badge */}
+        <div className={`absolute top-2.5 left-2.5 text-[11px] font-bold px-2.5 py-0.5 rounded-full shadow-sm ${
+          isFree
+            ? 'bg-emerald-500 text-white'
+            : 'bg-background/90 backdrop-blur-sm text-foreground border border-border/50'
+        }`}>
+          {isFree ? 'مجاني' : `${session.price} ${currencySymbol}`}
         </div>
-      ) : (
-        <div className="h-36 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center">
-          <GraduationCap className="h-10 w-10 text-primary/30" />
-        </div>
-      )}
+      </div>
+
       <div className="p-4 flex flex-col gap-2 flex-grow">
-        <h3 className="font-semibold text-sm line-clamp-2 text-foreground">{session.title}</h3>
+        <h3 className="font-semibold text-sm line-clamp-2 text-foreground group-hover:text-primary transition-colors">{session.title}</h3>
         {session.description && <p className="text-xs text-muted-foreground line-clamp-2">{session.description}</p>}
         <div className="flex items-center gap-2 mt-auto pt-2">
           {session.hostAvatarUrl ? (
@@ -403,17 +414,13 @@ const PublicSessionCard = ({ session, currencySymbol }: { session: PublicSession
           <span>{dateStr} — {timeStr}</span>
           <span>{session.duration} د</span>
         </div>
-        {session.price != null && (
-          <p className="text-primary font-bold text-sm">{session.price === 0 ? 'مجاني' : `${session.price} ${currencySymbol}`}</p>
-        )}
       </div>
-      {session.meetLink && (
-        <div className="px-4 pb-4">
-          <Button className="w-full h-9 text-sm" asChild>
-            <a href={session.meetLink} target="_blank" rel="noopener noreferrer">انضم للجلسة</a>
-          </Button>
-        </div>
-      )}
+
+      <div className="px-4 pb-4">
+        <Button className="w-full h-9 text-sm" onClick={onBook}>
+          {isFree ? 'احجز مجاناً' : `احجز — ${session.price} ${currencySymbol}`}
+        </Button>
+      </div>
     </div>
   );
 };
@@ -442,8 +449,11 @@ export default function LandingPage() {
   const [loadingCourses, setLoadingCourses] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedCourse, setSelectedCourse] = useState<CourseItem | null>(null);
+  const [selectedSession, setSelectedSession] = useState<PublicSession | null>(null);
   const [bookingHost, setBookingHost] = useState<MentorUser | null>(null);
   const [bookingRole, setBookingRole] = useState<'mentor' | 'coach'>('mentor');
+  const [courseFilter, setCourseFilter] = useState<'all' | 'free' | 'paid'>('all');
+  const [sessionFilter, setSessionFilter] = useState<'all' | 'free' | 'paid'>('all');
 
   const [contactName, setContactName] = useState('');
   const [contactEmail, setContactEmail] = useState('');
@@ -1121,11 +1131,23 @@ export default function LandingPage() {
         {sections.showCourses && (
           <section id="courses" className="py-16 sm:py-20 md:py-28">
             <div className="container">
-              <div className="max-w-xl mb-10 sm:mb-12">
-                <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">الدورات التدريبية</p>
-                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground">
-                  طور مهاراتك مع دوراتنا
-                </h2>
+              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10 sm:mb-12">
+                <div>
+                  <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">الدورات التدريبية</p>
+                  <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground">
+                    طور مهاراتك مع دوراتنا
+                  </h2>
+                </div>
+                {!loadingCourses && courses.length > 0 && (
+                  <div className="flex items-center gap-0.5 bg-muted/70 rounded-lg p-0.5 border border-border/50 shrink-0 self-start sm:self-auto">
+                    {(['all', 'free', 'paid'] as const).map(f => (
+                      <button key={f} onClick={() => setCourseFilter(f)}
+                        className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${courseFilter === f ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
+                        {f === 'all' ? 'الكل' : f === 'free' ? 'مجاني' : 'مدفوع'}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
               {loadingCourses ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -1136,11 +1158,23 @@ export default function LandingPage() {
                   <BookOpen className="h-10 w-10 mx-auto mb-3 opacity-20" />
                   <p className="text-sm">لا توجد دورات بعد.</p>
                 </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                  {courses.map(c => <CourseCard key={c.id} course={c} currencySymbol={currencySymbol} onEnroll={setSelectedCourse} />)}
-                </div>
-              )}
+              ) : (() => {
+                const filtered = courses.filter(c => {
+                  if (courseFilter === 'free') return c.price === 0 || c.price == null;
+                  if (courseFilter === 'paid') return c.price != null && c.price > 0;
+                  return true;
+                });
+                return filtered.length === 0 ? (
+                  <div className="py-12 text-center text-muted-foreground">
+                    <BookOpen className="h-10 w-10 mx-auto mb-3 opacity-20" />
+                    <p className="text-sm">لا توجد دورات {courseFilter === 'free' ? 'مجانية' : 'مدفوعة'} حالياً.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                    {filtered.map(c => <CourseCard key={c.id} course={c} currencySymbol={currencySymbol} onEnroll={setSelectedCourse} />)}
+                  </div>
+                );
+              })()}
             </div>
           </section>
         )}
@@ -1149,21 +1183,41 @@ export default function LandingPage() {
         {publicSessions.length > 0 && (
           <section id="sessions" className="py-16 sm:py-20 md:py-28 bg-muted/30">
             <div className="container">
-              <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 mb-8 sm:mb-10">
+              <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8 sm:mb-10">
                 <div>
-                  <p className="text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-2">جلسات إرشادية</p>
+                  <p className="text-[10px] sm:text-xs font-semibold text-primary uppercase tracking-widest mb-2">جلسات إرشادية</p>
                   <h2 className="text-2xl sm:text-3xl font-bold text-foreground">الجلسات المتاحة</h2>
                 </div>
-                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                  <Calendar className="h-4 w-4" />
-                  <span>{publicSessions.length} جلسة متاحة</span>
+                <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+                  <div className="flex items-center gap-0.5 bg-background rounded-lg p-0.5 border border-border/50">
+                    {(['all', 'free', 'paid'] as const).map(f => (
+                      <button key={f} onClick={() => setSessionFilter(f)}
+                        className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${sessionFilter === f ? 'bg-muted shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
+                        {f === 'all' ? 'الكل' : f === 'free' ? 'مجاني' : 'مدفوع'}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                {publicSessions.map(s => (
-                  <PublicSessionCard key={s.id} session={s} currencySymbol={currencySymbol} />
-                ))}
-              </div>
+              {(() => {
+                const filtered = publicSessions.filter(s => {
+                  if (sessionFilter === 'free') return s.price === 0 || s.price == null;
+                  if (sessionFilter === 'paid') return s.price != null && s.price > 0;
+                  return true;
+                });
+                return filtered.length === 0 ? (
+                  <div className="py-10 text-center text-muted-foreground">
+                    <Calendar className="h-10 w-10 mx-auto mb-3 opacity-20" />
+                    <p className="text-sm">لا توجد جلسات {sessionFilter === 'free' ? 'مجانية' : 'مدفوعة'} حالياً.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                    {filtered.map(s => (
+                      <PublicSessionCard key={s.id} session={s} currencySymbol={currencySymbol} onBook={() => setSelectedSession(s)} />
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
           </section>
         )}
@@ -1614,6 +1668,17 @@ export default function LandingPage() {
           hostName={bookingHost.displayName || bookingHost.name || ''}
           hostRole={bookingRole}
           sessionPrice={bookingHost.sessionPrice ?? 0}
+        />
+      )}
+
+      {selectedSession && (
+        <SessionBookingDialog
+          isOpen={!!selectedSession}
+          onOpenChange={open => { if (!open) setSelectedSession(null); }}
+          hostId={selectedSession.hostId}
+          hostName={selectedSession.hostName}
+          hostRole="mentor"
+          sessionPrice={selectedSession.price ?? 0}
         />
       )}
 
