@@ -4,9 +4,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { SiteHeader } from "@/components/site-header";
 import { Logo } from "@/components/logo";
 import { OrderDialog } from "@/components/order-dialog";
-import { ShoppingCart, Search, Store, MessageCircle, Menu, X, ArrowLeft, MapPin } from "lucide-react";
+import { ShoppingCart, Search, Store, MessageCircle, ArrowLeft, MapPin } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import type { Product as LibProduct } from "@/lib/products-data";
 
@@ -30,7 +31,6 @@ export default function MarketPage() {
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState("الكل");
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -68,80 +68,10 @@ export default function MarketPage() {
     return result;
   }, [allProducts, searchQuery, activeCategory]);
 
-  const navLinks = [
-    { href: '/', label: 'الرئيسية' },
-    { href: '/#how-it-works', label: 'كيف تعمل' },
-    { href: '/#experts', label: 'الخبراء' },
-    { href: '/market', label: 'المتجر' },
-  ];
-
   return (
     <div className="min-h-screen bg-background" dir="rtl">
 
-      {/* ── Navigation ──────────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 w-full bg-background/80 backdrop-blur-md border-b border-border/60 relative">
-        <div className="container flex h-14 items-center gap-4">
-          <Link href="/" className="flex items-center gap-2 font-bold text-sm shrink-0">
-            <Logo className="h-7 w-7" />
-            <span className="text-foreground">EmpowerHub</span>
-          </Link>
-
-          <nav className="flex-1 hidden md:flex items-center gap-5 text-sm text-muted-foreground">
-            {navLinks.map(l => (
-              <Link
-                key={l.href}
-                href={l.href}
-                className={`hover:text-foreground transition-colors ${l.href === '/market' ? 'text-foreground font-medium' : ''}`}
-              >
-                {l.label}
-              </Link>
-            ))}
-          </nav>
-
-          <div className="hidden md:flex items-center gap-2 mr-auto">
-            <Button variant="ghost" size="sm" asChild className="text-sm font-medium">
-              <Link href="/login">تسجيل الدخول</Link>
-            </Button>
-            <Button size="sm" asChild>
-              <Link href="/register">ابدأ مجاناً</Link>
-            </Button>
-          </div>
-
-          <div className="flex items-center gap-2 mr-auto md:hidden">
-            <Button size="sm" asChild className="text-xs px-3 h-8">
-              <Link href="/register">ابدأ</Link>
-            </Button>
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-              aria-label="القائمة"
-            >
-              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </button>
-          </div>
-        </div>
-
-        {mobileMenuOpen && (
-          <div className="md:hidden absolute top-full right-0 left-0 bg-background/98 backdrop-blur-md border-b border-border/60 shadow-lg z-50">
-            <nav className="container py-3 flex flex-col gap-0.5" dir="rtl">
-              {navLinks.map(l => (
-                <Link
-                  key={l.href}
-                  href={l.href}
-                  className="px-3 py-2.5 rounded-lg text-sm font-medium text-foreground hover:bg-muted/60 transition-colors"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  {l.label}
-                </Link>
-              ))}
-              <div className="h-px bg-border my-2 mx-3" />
-              <Link href="/login" className="px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground transition-colors" onClick={() => setMobileMenuOpen(false)}>
-                تسجيل الدخول
-              </Link>
-            </nav>
-          </div>
-        )}
-      </header>
+      <SiteHeader />
 
       <main>
 

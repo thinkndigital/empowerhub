@@ -7,9 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Logo } from '@/components/logo';
+import { SiteHeader } from '@/components/site-header';
 import {
   ArrowLeft, BookOpen, Store, GraduationCap, CheckCircle,
-  Star, MessageSquare, Phone, Mail, Globe, Menu, X, Calendar, Clock,
+  Star, MessageSquare, Phone, Mail, Globe, Calendar, Clock,
   Tag, MapPin, FileText, Briefcase, Video, Building2, Users, BarChart3,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -430,8 +431,6 @@ const PublicSessionCard = ({ session, currencySymbol, onBook }: { session: Publi
 export default function LandingPage() {
   const { toast } = useToast();
   const { symbol: currencySymbol } = useCurrency();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
   const [siteConfig, setSiteConfig] = useState<SiteConfig | null>(null);
   const [mentors, setMentors] = useState<MentorUser[]>([]);
   const [coaches, setCoaches] = useState<MentorUser[]>([]);
@@ -697,84 +696,10 @@ export default function LandingPage() {
 
   const logoSrc = cfg?.logoUrl || '';
 
-  const navLinks = [
-    { href: '#how-it-works', label: 'كيف تعمل' },
-    { href: '#services', label: 'الخدمات' },
-    { href: '#experts', label: 'الخبراء' },
-    { href: '/live-sessions', label: 'جلسات مباشرة' },
-    { href: '/articles', label: 'المقالات' },
-    { href: '/projects', label: 'الفرص' },
-    { href: '/market', label: 'المتجر' },
-  ];
-
   return (
     <div className="bg-background text-foreground" dir="rtl">
 
-      {/* ── Navigation ──────────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 w-full bg-background/80 backdrop-blur-md border-b border-border/60 relative">
-        <div className="container flex h-14 items-center gap-4">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 font-bold text-sm shrink-0">
-            {logoSrc
-              ? <img src={logoSrc} alt="logo" className="h-7 w-7 object-contain" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-              : <Logo className="h-7 w-7" />}
-            <span className="text-foreground">{cfg?.siteName || 'EmpowerHub'}</span>
-          </Link>
-
-          {/* Desktop nav */}
-          <nav className="flex-1 hidden md:flex items-center gap-5 text-sm text-muted-foreground">
-            {navLinks.map(l => (
-              <Link key={l.href} href={l.href} className="hover:text-foreground transition-colors">{l.label}</Link>
-            ))}
-          </nav>
-
-          {/* Desktop auth */}
-          <div className="hidden md:flex items-center gap-2 mr-auto">
-            <Button variant="ghost" size="sm" asChild className="text-sm font-medium">
-              <Link href="/login">تسجيل الدخول</Link>
-            </Button>
-            <Button size="sm" asChild>
-              <Link href="/register">ابدأ مجاناً</Link>
-            </Button>
-          </div>
-
-          {/* Mobile: register CTA + hamburger */}
-          <div className="flex items-center gap-2 mr-auto md:hidden">
-            <Button size="sm" asChild className="text-xs px-3 h-8">
-              <Link href="/register">ابدأ</Link>
-            </Button>
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-              aria-label="القائمة"
-            >
-              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile dropdown menu */}
-        {mobileMenuOpen && (
-          <div className="md:hidden absolute top-full right-0 left-0 bg-background/98 backdrop-blur-md border-b border-border/60 shadow-lg z-50">
-            <nav className="container py-3 flex flex-col gap-0.5" dir="rtl">
-              {navLinks.map(l => (
-                <Link
-                  key={l.href}
-                  href={l.href}
-                  className="px-3 py-2.5 rounded-lg text-sm font-medium text-foreground hover:bg-muted/60 transition-colors"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  {l.label}
-                </Link>
-              ))}
-              <div className="h-px bg-border my-2 mx-3" />
-              <Link href="/login" className="px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground transition-colors" onClick={() => setMobileMenuOpen(false)}>
-                تسجيل الدخول
-              </Link>
-            </nav>
-          </div>
-        )}
-      </header>
+      <SiteHeader />
 
       <main>
 

@@ -8,8 +8,9 @@ import { Menu, X } from "lucide-react";
 
 const navLinks = [
   { href: '/#how-it-works', label: 'كيف تعمل' },
-  { href: '/#modules', label: 'الخدمات' },
+  { href: '/#services', label: 'الخدمات' },
   { href: '/#experts', label: 'الخبراء' },
+  { href: '/live-sessions', label: 'جلسات مباشرة' },
   { href: '/articles', label: 'المقالات' },
   { href: '/projects', label: 'الفرص' },
   { href: '/market', label: 'المتجر' },
