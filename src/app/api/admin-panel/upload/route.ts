@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { adminStorage } from '@/lib/firebase-admin';
+import { getStorageBucket, buildDownloadUrl } from '@/lib/storage-bucket';
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
 const MAX_SIZE = 5 * 1024 * 1024;
-const STORAGE_BUCKET = process.env.FIREBASE_STORAGE_BUCKET || 'studio-4511819966-bc14f.firebasestorage.app';
 
 function checkAuth() {
   return cookies().get('ap_session')?.value === 'empowerhub-admin-2026-secret';
@@ -32,15 +31,14 @@ export async function POST(req: NextRequest) {
 
     const buffer = Buffer.from(await file.arrayBuffer());
     const downloadToken = crypto.randomUUID();
-    const bucket = adminStorage.bucket(STORAGE_BUCKET);
+
+    const { bucket, bucketName } = await getStorageBucket();
     const fileRef = bucket.file(storagePath);
 
     await fileRef.save(buffer, { contentType: file.type, resumable: false });
     await fileRef.setMetadata({ metadata: { firebaseStorageDownloadTokens: downloadToken } });
 
-    const encodedPath = storagePath.split('/').map(encodeURIComponent).join('%2F');
-    const url = `https://firebasestorage.googleapis.com/v0/b/${STORAGE_BUCKET}/o/${encodedPath}?alt=media&token=${downloadToken}`;
-
+    const url = buildDownloadUrl(bucketName, storagePath, downloadToken);
     return NextResponse.json({ url, path: storagePath });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });

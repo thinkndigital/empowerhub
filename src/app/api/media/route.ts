@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminStorage } from '@/lib/firebase-admin';
+import { adminAuth } from '@/lib/firebase-admin';
+import { getStorageBucket, buildDownloadUrl } from '@/lib/storage-bucket';
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
 const MAX_SIZE = 5 * 1024 * 1024; // 5 MB
-const STORAGE_BUCKET = process.env.FIREBASE_STORAGE_BUCKET || 'studio-4511819966-bc14f.firebasestorage.app';
 
 export async function POST(req: NextRequest) {
   try {
@@ -33,24 +33,17 @@ export async function POST(req: NextRequest) {
     const storagePath = `${folder}/${fileName}`;
 
     const buffer = Buffer.from(await file.arrayBuffer());
-
     const downloadToken = crypto.randomUUID();
-    const bucket = adminStorage.bucket(STORAGE_BUCKET);
+
+    const { bucket, bucketName } = await getStorageBucket();
     const fileRef = bucket.file(storagePath);
 
     await fileRef.save(buffer, { contentType: file.type, resumable: false });
-    // setMetadata must be called separately — the nested `metadata.metadata`
-    // key is the GCS convention for custom (user-defined) metadata fields.
-    // Putting firebaseStorageDownloadTokens directly inside SaveOptions.metadata
-    // treats it as a top-level GCS metadata field, which Firebase ignores.
     await fileRef.setMetadata({
       metadata: { firebaseStorageDownloadTokens: downloadToken },
     });
 
-    // Bucket name has only safe chars (no encoding needed); path segments need %2F.
-    const encodedPath = storagePath.split('/').map(encodeURIComponent).join('%2F');
-    const url = `https://firebasestorage.googleapis.com/v0/b/${STORAGE_BUCKET}/o/${encodedPath}?alt=media&token=${downloadToken}`;
-
+    const url = buildDownloadUrl(bucketName, storagePath, downloadToken);
     return NextResponse.json({ url, path: storagePath });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
