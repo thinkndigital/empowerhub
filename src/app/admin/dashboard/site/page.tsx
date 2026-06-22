@@ -14,6 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useUser } from "@/firebase/auth/use-user";
 import { uploadFile as uploadToStorage } from "@/lib/upload-file";
+import { applyOrgColor } from "@/lib/apply-org-color";
 
 interface SiteConfig {
   siteName: string;
@@ -111,6 +112,11 @@ export default function SiteEditorPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  // Live-preview brand color in the admin panel itself
+  useEffect(() => {
+    if (config.primaryColor) applyOrgColor(config.primaryColor);
+  }, [config.primaryColor]);
 
   useEffect(() => {
     fetch('/api/admin-panel/site-config').then(r => r.json()).then(d => {

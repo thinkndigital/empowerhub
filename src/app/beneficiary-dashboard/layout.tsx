@@ -24,7 +24,7 @@ import { useUser } from "@/firebase/auth/use-user";
 import { useAuth } from "@/firebase/provider";
 import { NotificationBell } from "@/components/notification-bell";
 import { MessageBell } from "@/components/message-bell";
-import { applyOrgColor } from "@/lib/apply-org-color";
+import { applyPlatformColor } from "@/lib/platform-color";
 
 const allMenuItems = [
   { href: "/beneficiary-dashboard", label: "لوحة التحكم", icon: LayoutGrid, sectionKey: null },
@@ -53,10 +53,9 @@ export default function BeneficiaryDashboardLayout({ children }: { children: Rea
     if (!authUser) return;
     try {
       const token = await authUser.getIdToken();
-      const [profileRes, platformRes, orgRes] = await Promise.all([
+      const [profileRes, platformRes] = await Promise.all([
         fetch('/api/user/profile', { headers: { authorization: `Bearer ${token}` } }),
         fetch('/api/public/platform-config'),
-        fetch('/api/org/settings', { headers: { authorization: `Bearer ${token}` } }),
       ]);
       const j = await profileRes.json();
       if (j.profile?.avatarUrl) setAvatarUrl(j.profile.avatarUrl);
@@ -66,10 +65,7 @@ export default function BeneficiaryDashboardLayout({ children }: { children: Rea
         const sections = platformData.config.dashboardSections.beneficiary;
         setMenuItems(allMenuItems.filter(item => item.sectionKey === null || sections[item.sectionKey] !== false));
       }
-      if (orgRes.ok) {
-        const orgData = await orgRes.json();
-        if (orgData.org?.primaryColor) applyOrgColor(orgData.org.primaryColor);
-      }
+      applyPlatformColor();
     } catch { /* silent */ }
   }, [authUser]);
 

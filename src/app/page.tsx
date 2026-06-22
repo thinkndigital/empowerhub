@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useCurrency } from '@/hooks/use-currency';
+import { applyOrgColor } from '@/lib/apply-org-color';
 import { OrderDialog } from '@/components/order-dialog';
 import { SessionBookingDialog } from '@/components/session-booking-dialog';
 import { CourseEnrollDialog } from '@/components/course-enroll-dialog';
@@ -465,20 +466,7 @@ export default function LandingPage() {
   }, []);
 
   useEffect(() => {
-    const hex = siteConfig?.primaryColor?.replace(/^#/, '');
-    if (!hex || hex.length !== 6) return;
-    let r = parseInt(hex.slice(0, 2), 16) / 255;
-    let g = parseInt(hex.slice(2, 4), 16) / 255;
-    let b = parseInt(hex.slice(4, 6), 16) / 255;
-    const cmin = Math.min(r, g, b), cmax = Math.max(r, g, b), delta = cmax - cmin;
-    let h = 0, s = 0, l = (cmax + cmin) / 2;
-    if (delta !== 0) {
-      s = l > 0.5 ? delta / (2 - cmax - cmin) : delta / (cmax + cmin);
-      if (cmax === r) h = ((g - b) / delta + (g < b ? 6 : 0)) * 60;
-      else if (cmax === g) h = ((b - r) / delta + 2) * 60;
-      else h = ((r - g) / delta + 4) * 60;
-    }
-    document.documentElement.style.setProperty('--primary', `${Math.round(h)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`);
+    if (siteConfig?.primaryColor) applyOrgColor(siteConfig.primaryColor);
   }, [siteConfig?.primaryColor]);
 
   useEffect(() => {

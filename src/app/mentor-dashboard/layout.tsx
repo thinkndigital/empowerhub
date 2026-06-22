@@ -27,7 +27,7 @@ import { Logo } from "@/components/logo";
 import { useUser } from "@/firebase/auth/use-user";
 import { NotificationBell } from "@/components/notification-bell";
 import { MessageBell } from "@/components/message-bell";
-import { applyOrgColor } from "@/lib/apply-org-color";
+import { applyPlatformColor } from "@/lib/platform-color";
 
 const allMentorMenuItems = [
   { href: "/mentor-dashboard", label: "الرئيسية", icon: LayoutGrid, sectionKey: null },
@@ -88,10 +88,7 @@ export default function MentorDashboardLayout({ children }: { children: React.Re
   }, [firestore, userProfile?.organizationId]);
   const { data: organization } = useDoc<any>(orgRef);
 
-  useEffect(() => {
-    if (!organization?.primaryColor) return;
-    applyOrgColor(organization.primaryColor);
-  }, [organization?.primaryColor]);
+  useEffect(() => { applyPlatformColor(); }, []);
 
   if (loading || (authUser && !userProfile && !profileTimedOut)) {
     return (

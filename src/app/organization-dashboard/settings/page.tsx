@@ -13,6 +13,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import { useUser } from "@/firebase/auth/use-user";
 import { uploadFile as uploadToStorage } from "@/lib/upload-file";
+import { applyOrgColor } from "@/lib/apply-org-color";
 
 const settingsSchema = z.object({
   name: z.string().min(2, { message: "يجب أن يكون الاسم حرفين على الأقل." }),
@@ -100,11 +101,10 @@ export default function OrgSettingsPage() {
   const primaryColor = form.watch("primaryColor");
   const isColorDirty = form.formState.dirtyFields.primaryColor;
 
-  // Only live-preview when the user actively changes the picker (not on page load)
   useEffect(() => {
     if (!isColorDirty) return;
     if (primaryColor && /^#[0-9a-fA-F]{6}$/.test(primaryColor)) {
-      document.documentElement.style.setProperty('--primary', hexToHsl(primaryColor));
+      applyOrgColor(primaryColor);
     }
   }, [primaryColor, isColorDirty]);
 
