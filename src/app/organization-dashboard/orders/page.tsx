@@ -65,7 +65,7 @@ export default function OrgOrdersPage() {
     total: orders.length,
     pending: orders.filter(o => o.status === 'pending').length,
     completed: orders.filter(o => o.status === 'completed').length,
-    revenue: orders.filter(o => o.paymentStatus === 'paid').reduce((s, o) => s + (o.totalAmount || 0), 0),
+    revenue: orders.filter(o => o.status !== 'cancelled').reduce((s, o) => s + (o.totalAmount || 0), 0),
   };
 
   return (
@@ -87,7 +87,7 @@ export default function OrgOrdersPage() {
           { label: 'إجمالي الطلبات', value: stats.total, color: 'text-primary' },
           { label: 'قيد الانتظار', value: stats.pending, color: 'text-amber-500' },
           { label: 'مكتملة', value: stats.completed, color: 'text-emerald-500' },
-          { label: 'إيرادات مدفوعة', value: `${stats.revenue.toFixed(0)} ر.س`, color: 'text-blue-500' },
+          { label: 'إجمالي الإيرادات', value: `${stats.revenue.toFixed(0)} د.أ`, color: 'text-blue-500' },
         ].map((s, i) => (
           <Card key={i} className="border-0 shadow-sm">
             <CardContent className="pt-4 pb-4">
@@ -151,7 +151,7 @@ export default function OrgOrdersPage() {
                       <div className="text-xs text-muted-foreground" dir="ltr">{order.buyerPhone}</div>
                     </td>
                     <td className="p-3 text-muted-foreground">{order.storeName || '—'}</td>
-                    <td className="p-3 font-bold text-primary">{(order.totalAmount || 0).toFixed(2)} ر.س</td>
+                    <td className="p-3 font-bold text-primary">{(order.totalAmount || 0).toFixed(2)} د.أ</td>
                     <td className="p-3">
                       <span className="text-xs text-muted-foreground">{order.paymentMethod === 'online' ? 'أونلاين' : 'استلام'}</span>
                       {order.paymentStatus === 'paid' && <Badge className="mr-1 bg-emerald-500/20 text-emerald-600 border-0 text-xs">مدفوع</Badge>}

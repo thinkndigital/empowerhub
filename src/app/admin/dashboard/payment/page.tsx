@@ -31,7 +31,7 @@ interface PaymentConfig {
 const defaultConfig: PaymentConfig = {
   allowCOD: true,
   codLabel: 'الدفع عند الاستلام',
-  currency: 'SAR',
+  currency: 'JOD',
   moyasar: { enabled: false, publishableKey: '', secretKey: '', label: 'موياسر (Mada / Visa / STC Pay)' },
   stripe: { enabled: false, publishableKey: '', secretKey: '', label: 'Stripe (بطاقة بنكية دولية)' },
   paypal: { enabled: false, clientId: '', clientSecret: '', mode: 'sandbox', label: 'PayPal' },
@@ -292,7 +292,7 @@ export default function PaymentConfigPage() {
             <Input
               value={config.currency}
               onChange={e => setConfig(c => ({ ...c, currency: e.target.value.toUpperCase() }))}
-              placeholder="SAR"
+              placeholder="JOD"
               dir="ltr"
               className="max-w-[80px] font-mono text-center"
               maxLength={3}

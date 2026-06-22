@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
 
     const configSnap = await adminDb.collection('config').doc('payment').get();
     const config = configSnap.exists ? configSnap.data() as any : {};
-    const currency = config?.currency || 'SAR';
+    const currency = config?.currency || 'JOD';
 
     const host = (req.headers.get('origin') || '').replace(/\/$/, '') || 'https://empowerhub.thinkndigital.com';
     const callbackUrl = `${host}/payment/callback?orderId=${orderId}&gateway=${gateway || 'moyasar'}`;

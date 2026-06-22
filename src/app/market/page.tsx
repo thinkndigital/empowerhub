@@ -208,7 +208,7 @@ export default function MarketPage() {
                   <div className="px-3 sm:px-4 pb-3 sm:pb-4 pt-3 border-t border-border flex items-center justify-between gap-2">
                     <p className="font-extrabold text-base sm:text-lg text-foreground tabular-nums leading-none">
                       {product.price != null ? product.price.toLocaleString('ar') : '—'}
-                      <span className="text-xs font-normal text-muted-foreground mr-0.5">ر.س</span>
+                      <span className="text-xs font-normal text-muted-foreground mr-0.5">د.أ</span>
                     </p>
                     <div className="flex gap-1.5 shrink-0">
                       {product.whatsapp && (

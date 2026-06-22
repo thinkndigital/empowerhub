@@ -311,7 +311,7 @@ export default function MentorsPage() {
             {field('email', 'البريد الإلكتروني', 'input', 'ahmed@example.com')}
             {field('bio', 'نبذة تعريفية', 'textarea', 'خبير في ...')}
             {field('specializations', 'التخصصات (افصل بـ ،)', 'input', 'القيادة، ريادة الأعمال، التسويق')}
-            {field('sessionPrice', 'سعر الجلسة (ر.س)', 'input', '200')}
+            {field('sessionPrice', 'سعر الجلسة (د.أ)', 'input', '200')}
             {field('yearsOfExperience', 'سنوات الخبرة', 'input', '10')}
             {field('whatsapp', 'واتساب (مع رمز الدولة)', 'input', '966501234567')}
             {field('linkedin', 'رابط LinkedIn', 'input', 'https://linkedin.com/in/...')}

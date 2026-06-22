@@ -64,7 +64,7 @@ export default function SubscriptionsPage() {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     planId: '', status: 'active', billingCycle: 'monthly',
-    startDate: '', endDate: '', price: 0, currency: 'SAR', notes: '',
+    startDate: '', endDate: '', price: 0, currency: 'JOD', notes: '',
   });
 
   const load = () => {
@@ -93,7 +93,7 @@ export default function SubscriptionsPage() {
       startDate: sub?.startDate?.split('T')[0] || today,
       endDate: sub?.endDate?.split('T')[0] || nextYear,
       price: sub?.price || 0,
-      currency: sub?.currency || 'SAR',
+      currency: sub?.currency || 'JOD',
       notes: sub?.notes || '',
     });
   };
@@ -104,7 +104,7 @@ export default function SubscriptionsPage() {
       setForm(f => ({
         ...f, planId,
         price: f.billingCycle === 'annual' ? plan.priceAnnual : plan.priceMonthly,
-        currency: plan.currency || 'SAR',
+        currency: plan.currency || 'JOD',
       }));
     }
   };

@@ -314,7 +314,7 @@ function ProductsTab() {
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     {product.price != null && (
-                      <span className="text-primary text-sm font-semibold">{product.price} ر.س</span>
+                      <span className="text-primary text-sm font-semibold">{product.price} د.أ</span>
                     )}
                     {product.category && (
                       <Badge className="bg-primary/10 text-primary border-0 text-xs">{product.category}</Badge>
@@ -377,7 +377,7 @@ function ProductsTab() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>السعر (ر.س)</Label>
+                <Label>السعر (د.أ)</Label>
                 <Input value={editPrice} onChange={e => setEditPrice(e.target.value)} type="number" min="0" dir="ltr" />
               </div>
               <div className="space-y-2">
