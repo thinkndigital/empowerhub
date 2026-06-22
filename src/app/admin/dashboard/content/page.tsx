@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Globe, FileEdit, Trash2, Plus, Eye, EyeOff, RefreshCw, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Globe, FileEdit, Trash2, Plus, Eye, EyeOff, RefreshCw, Upload, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,6 +56,16 @@ function formatDate(d?: string) {
   return new Date(d).toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
+async function adminUpload(file: File, folder: string): Promise<string> {
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('folder', folder);
+  const res = await fetch('/api/admin-panel/upload', { method: 'POST', body: fd });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error || 'فشل رفع الصورة');
+  return json.url as string;
+}
+
 export default function ContentPage() {
   const [items, setItems] = useState<Record<string, ContentItem[]>>({});
   const [loading, setLoading] = useState(true);
@@ -64,6 +74,9 @@ export default function ContentPage() {
   const [showAdd, setShowAdd] = useState<string | null>(null); // col name
   const [addForm, setAddForm] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const coverInputRef = useRef<HTMLInputElement>(null);
 
   const load = async () => {
     setLoading(true);
@@ -115,12 +128,29 @@ export default function ContentPage() {
     setSaving(false);
     setShowAdd(null);
     setAddForm({});
+    setCoverPreview(null);
     await load();
   };
 
   const openAdd = (col: string) => {
     setAddForm({});
+    setCoverPreview(null);
     setShowAdd(col);
+  };
+
+  const handleCoverChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCoverPreview(URL.createObjectURL(file));
+    setUploadingCover(true);
+    try {
+      const url = await adminUpload(file, 'covers');
+      setAddForm(p => ({ ...p, coverImageUrl: url }));
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setUploadingCover(false);
+    }
   };
 
   const renderTable = (col: string) => {
@@ -221,6 +251,31 @@ export default function ContentPage() {
     );
   };
 
+  const coverUploadField = (
+    <div className="space-y-2" key="coverImageUrl">
+      <Label className="text-slate-300 text-xs">صورة الغلاف</Label>
+      {(coverPreview || addForm.coverImageUrl) && (
+        <img src={coverPreview || addForm.coverImageUrl} alt="" className="w-full h-28 object-cover rounded-lg border border-white/10" />
+      )}
+      <div className="flex gap-2">
+        <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverChange} />
+        <Button type="button" size="sm" variant="outline"
+          onClick={() => coverInputRef.current?.click()}
+          disabled={uploadingCover}
+          className="border-white/20 text-slate-300 hover:text-white gap-1.5 flex-1">
+          <Upload className="h-3.5 w-3.5" />
+          {uploadingCover ? 'جاري الرفع...' : 'رفع صورة'}
+        </Button>
+      </div>
+      <Input
+        value={addForm.coverImageUrl || ''}
+        onChange={e => { setAddForm(p => ({ ...p, coverImageUrl: e.target.value })); setCoverPreview(null); }}
+        placeholder="أو أدخل رابط الصورة https://..."
+        className="bg-slate-800 border-white/10 text-white text-xs"
+      />
+    </div>
+  );
+
   // Add form fields per collection
   const renderAddForm = () => {
     if (!showAdd) return null;
@@ -251,7 +306,7 @@ export default function ContentPage() {
         f('organizationName', 'اسم المنظمة'),
         f('location', 'الموقع'),
         f('deadline', 'الموعد النهائي (YYYY-MM-DD)'),
-        f('coverImageUrl', 'رابط صورة الغلاف'),
+        coverUploadField,
       ],
       articles: [
         f('excerpt', 'مقتطف'),
@@ -259,7 +314,7 @@ export default function ContentPage() {
         f('authorName', 'اسم الكاتب'),
         f('authorRole', 'دور الكاتب', 'select', ['mentor', 'coach']),
         f('tags', 'التاغات (افصل بفاصلة)'),
-        f('coverImageUrl', 'رابط صورة الغلاف'),
+        coverUploadField,
       ],
       live_sessions: [
         f('description', 'الوصف', 'textarea'),
@@ -269,7 +324,7 @@ export default function ContentPage() {
         f('price', 'السعر'),
         f('maxParticipants', 'الحد الأقصى للمشاركين'),
         f('meetLink', 'رابط الاجتماع'),
-        f('coverImageUrl', 'رابط صورة الغلاف'),
+        coverUploadField,
       ],
       courses: [
         f('description', 'الوصف', 'textarea'),
@@ -277,7 +332,7 @@ export default function ContentPage() {
         f('price', 'السعر'),
         f('duration', 'المدة'),
         f('level', 'المستوى'),
-        f('coverImageUrl', 'رابط صورة الغلاف'),
+        coverUploadField,
       ],
     };
 
@@ -329,14 +384,14 @@ export default function ContentPage() {
       )}
 
       {/* Add Dialog */}
-      <Dialog open={!!showAdd} onOpenChange={o => { if (!o) { setShowAdd(null); setAddForm({}); } }}>
+      <Dialog open={!!showAdd} onOpenChange={o => { if (!o) { setShowAdd(null); setAddForm({}); setCoverPreview(null); } }}>
         <DialogContent dir="rtl" className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>إضافة — {showAdd ? COLLECTIONS[showAdd]?.label : ''}</DialogTitle>
           </DialogHeader>
           {renderAddForm()}
           <DialogFooter className="gap-2 mt-2">
-            <Button variant="outline" onClick={() => { setShowAdd(null); setAddForm({}); }}>إلغاء</Button>
+            <Button variant="outline" onClick={() => { setShowAdd(null); setAddForm({}); setCoverPreview(null); }}>إلغاء</Button>
             <Button onClick={handleAdd} disabled={saving || !addForm.title?.trim()} className="bg-primary hover:bg-primary/80">
               {saving ? 'جاري الحفظ...' : 'نشر مباشرة'}
             </Button>
