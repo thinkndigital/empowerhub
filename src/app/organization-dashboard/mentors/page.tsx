@@ -17,8 +17,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { UserX, Send, Eye, Save, Clock, DollarSign, RefreshCw, Users } from "lucide-react";
+import { UserX, Send, Eye, Save, Clock, DollarSign, RefreshCw, Users, Gift } from "lucide-react";
 import { useRouter } from "next/navigation";
+import {
+  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 async function apiAction(user: User, body: object) {
   const token = await user.getIdToken();
@@ -48,6 +53,11 @@ export default function OrgMentorsPage() {
   const router = useRouter();
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [sentInvites, setSentInvites] = useState<Set<string>>(new Set());
+
+  // Content offer state
+  const [offerMentor, setOfferMentor] = useState<OrgUser | null>(null);
+  const [offerNote, setOfferNote] = useState('');
+  const [sendingOffer, setSendingOffer] = useState(false);
 
   // Billing state
   const [billingMentors, setBillingMentors] = useState<BillingMentor[]>([]);
@@ -151,6 +161,36 @@ export default function OrgMentorsPage() {
       toast({ title: "خطأ", description: "فشل في إرسال الدعوة.", variant: "destructive" });
     } finally {
       setLoadingAction(null);
+    }
+  };
+
+  const handleSendMentorOffer = async () => {
+    if (!user || !offerMentor) return;
+    setSendingOffer(true);
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch('/api/org/content-offers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          targetUid: offerMentor.id,
+          targetName: offerMentor.name || '',
+          targetRole: 'mentor',
+          offerType: 'sessions',
+          contentId: '',
+          contentTitle: 'خدمات الإرشاد',
+          note: offerNote,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      toast({ title: 'تم الإرسال', description: 'تم إرسال العرض للمرشد.' });
+      setOfferMentor(null);
+      setOfferNote('');
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'خطأ', description: e.message });
+    } finally {
+      setSendingOffer(false);
     }
   };
 
@@ -415,13 +455,18 @@ export default function OrgMentorsPage() {
                           {mentor.expertise ?? "لا يوجد تخصص محدد"}
                         </p>
                       </div>
-                      {isSent ? (
-                        <Button variant="outline" size="sm" disabled>تم الإرسال</Button>
-                      ) : (
-                        <Button size="sm" disabled={loadingAction === mentor.id} onClick={() => handleInvite(mentor)}>
-                          <Send className="h-4 w-4 ml-1" />دعوة
+                      <div className="flex gap-2 justify-center flex-wrap">
+                        {isSent ? (
+                          <Button variant="outline" size="sm" disabled>تم الإرسال</Button>
+                        ) : (
+                          <Button size="sm" variant="outline" disabled={loadingAction === mentor.id} onClick={() => handleInvite(mentor)}>
+                            <Send className="h-4 w-4 ml-1" />دعوة
+                          </Button>
+                        )}
+                        <Button size="sm" onClick={() => { setOfferMentor(mentor); setOfferNote(''); }}>
+                          <Gift className="h-4 w-4 ml-1" />إرسال عرض
                         </Button>
-                      )}
+                      </div>
                     </CardContent>
                   </Card>
                 );
@@ -430,6 +475,36 @@ export default function OrgMentorsPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Mentor Offer Modal */}
+      <Dialog open={!!offerMentor} onOpenChange={(open) => !open && setOfferMentor(null)}>
+        <DialogContent dir="rtl" className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>إرسال عرض للمرشد {offerMentor?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              سيتلقى المرشد عرضاً لتقديم خدمات الإرشاد لمستفيدي منظمتك. عند القبول ستتمكنين من تعيين المستفيدين لجلساته.
+            </p>
+            <div className="space-y-1.5">
+              <Label htmlFor="mentor-offer-note">ملاحظة (اختياري)</Label>
+              <Textarea
+                id="mentor-offer-note"
+                value={offerNote}
+                onChange={e => setOfferNote(e.target.value)}
+                placeholder="رسالة للمرشد حول العرض..."
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" onClick={() => setOfferMentor(null)} disabled={sendingOffer}>إلغاء</Button>
+            <Button onClick={handleSendMentorOffer} disabled={sendingOffer}>
+              {sendingOffer ? 'جاري الإرسال...' : 'إرسال العرض'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

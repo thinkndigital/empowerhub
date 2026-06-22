@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutGrid, Settings, Users, BarChart3,
-  BookOpen, Store, MessageSquare, GraduationCap, ClipboardList, LogOut, ChevronLeft, ChevronRight, Briefcase,
+  BookOpen, Store, MessageSquare, GraduationCap, ClipboardList, LogOut, ChevronLeft, ChevronRight, Briefcase, Video,
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { signOut } from "firebase/auth";
@@ -33,6 +33,7 @@ const allMenuItems = [
   { href: "/organization-dashboard/mentors", label: "المرشدون", icon: GraduationCap, sectionKey: 'mentors' },
   { href: "/organization-dashboard/coaches", label: "المدربون", icon: BookOpen, sectionKey: 'coaches' },
   { href: "/organization-dashboard/courses", label: "الدورات", icon: BookOpen, sectionKey: 'courses' },
+  { href: "/organization-dashboard/live-sessions", label: "الجلسات المباشرة", icon: Video, sectionKey: null },
   { href: "/organization-dashboard/projects", label: "المشاريع", icon: Briefcase, sectionKey: 'projects' },
   { href: "/organization-dashboard/stores", label: "المتاجر", icon: Store, sectionKey: 'stores' },
   { href: "/organization-dashboard/orders", label: "الطلبات", icon: ClipboardList, sectionKey: 'orders' },
