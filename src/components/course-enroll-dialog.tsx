@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useUser } from "@/firebase/auth/use-user";
 import { Button } from "@/components/ui/button";
 import {
@@ -63,8 +63,6 @@ export function CourseEnrollDialog({
   const [method, setMethod] = useState<'cod' | GatewayKey>('cod');
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
-  const [awaitingPayment, setAwaitingPayment] = useState(false);
-  const popupRef = useRef<Window | null>(null);
 
   const isFree = coursePrice === null || coursePrice === 0;
   const currency = config.currency || 'JOD';
@@ -76,24 +74,8 @@ export function CourseEnrollDialog({
   }, []);
 
   useEffect(() => {
-    if (!isOpen) { setDone(false); setName(''); setPhone(''); setAwaitingPayment(false); popupRef.current?.close(); }
+    if (!isOpen) { setDone(false); setName(''); setPhone(''); }
   }, [isOpen]);
-
-  useEffect(() => {
-    const handler = (e: MessageEvent) => {
-      if (e.data?.type !== 'payment-result') return;
-      popupRef.current = null;
-      setAwaitingPayment(false);
-      if (e.data.status === 'paid') {
-        setDone(true);
-        onEnrolled?.();
-      } else {
-        toast({ variant: 'destructive', title: 'فشل الدفع', description: 'لم يتم إتمام الدفع. حاول مرة أخرى.' });
-      }
-    };
-    window.addEventListener('message', handler);
-    return () => window.removeEventListener('message', handler);
-  }, [onEnrolled, toast]);
 
   // Direct enrollment for free courses (logged-in users)
   const directEnroll = async () => {
@@ -163,9 +145,7 @@ export function CourseEnrollDialog({
         });
         const payData = await payRes.json();
         if (payData.paymentUrl) {
-          const popup = window.open(payData.paymentUrl, 'payment-gateway', 'width=520,height=680,top=80,left=200,resizable=yes,scrollbars=yes');
-          popupRef.current = popup;
-          setAwaitingPayment(true);
+          window.location.href = payData.paymentUrl;
           return;
         }
         throw new Error(payData.error || 'فشل في تهيئة الدفع');
@@ -203,23 +183,7 @@ export function CourseEnrollDialog({
           </DialogTitle>
         </DialogHeader>
 
-        {/* Awaiting payment in popup */}
-        {awaitingPayment && (
-          <div className="flex flex-col items-center gap-4 py-10 text-center">
-            <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
-              <CreditCard className="h-8 w-8 text-primary animate-pulse" />
-            </div>
-            <div>
-              <h3 className="font-bold text-base mb-1">أكمل الدفع في النافذة المفتوحة</h3>
-              <p className="text-muted-foreground text-sm">ستُغلق النافذة تلقائياً وستُحدَّث الصفحة بعد إتمام الدفع.</p>
-            </div>
-            <Button variant="outline" size="sm" onClick={() => { popupRef.current?.close(); setAwaitingPayment(false); }}>
-              إلغاء
-            </Button>
-          </div>
-        )}
-
-        {!awaitingPayment && done ? (
+        {done ? (
           <div className="flex flex-col items-center gap-4 py-8 text-center">
             <div className="h-16 w-16 rounded-full bg-emerald-100 flex items-center justify-center">
               <CheckCircle className="h-8 w-8 text-emerald-600" />
