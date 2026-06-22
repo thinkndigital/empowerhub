@@ -11,15 +11,20 @@ export async function GET(_req: NextRequest, { params }: { params: { storeId: st
     }
 
     const storeData = storeDoc.data()!;
+    const beneficiaryId = storeData.beneficiaryId || '';
 
-    // Fetch products for this store — try both userId and storeId fields
-    const [byUserId, byStoreId] = await Promise.all([
+    // Products can be linked via userId==beneficiaryId, beneficiaryId==beneficiaryId,
+    // userId==storeId, or storeId==storeId — try all combinations and deduplicate
+    const queries = [
+      adminDb.collection('products').where('userId', '==', beneficiaryId).get(),
+      adminDb.collection('products').where('beneficiaryId', '==', beneficiaryId).get(),
       adminDb.collection('products').where('userId', '==', storeDoc.id).get(),
       adminDb.collection('products').where('storeId', '==', storeDoc.id).get(),
-    ]);
+    ];
+    const results = await Promise.all(queries);
+    const allDocs = results.flatMap(s => s.docs);
 
     const seen = new Set<string>();
-    const allDocs = [...byUserId.docs, ...byStoreId.docs];
     const products = allDocs
       .filter(d => {
         if (seen.has(d.id)) return false;
