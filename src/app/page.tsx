@@ -10,6 +10,7 @@ import { Logo } from '@/components/logo';
 import {
   ArrowLeft, BookOpen, Store, GraduationCap, CheckCircle,
   Star, MessageSquare, Phone, Mail, Globe, Menu, X, Calendar, Clock,
+  Tag, MapPin, FileText, Briefcase,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useCurrency } from '@/hooks/use-currency';
@@ -327,6 +328,8 @@ export default function LandingPage() {
   const [publicStores, setPublicStores] = useState<{ id: string; name: string; logoUrl?: string; location?: string; beneficiaryName?: string }[]>([]);
   const [courses, setCourses] = useState<CourseItem[]>([]);
   const [publicSessions, setPublicSessions] = useState<PublicSession[]>([]);
+  const [latestArticles, setLatestArticles] = useState<{ id: string; title: string; excerpt: string; coverImageUrl: string; authorName: string; authorRole: string; readTime: number; tags: string[] }[]>([]);
+  const [latestProjects, setLatestProjects] = useState<{ id: string; title: string; description: string; coverImageUrl: string; organizationName: string; type: string; location: string; deadline: string }[]>([]);
   const [loadingMentors, setLoadingMentors] = useState(true);
   const [loadingCoaches, setLoadingCoaches] = useState(true);
   const [loadingProducts, setLoadingProducts] = useState(true);
@@ -407,6 +410,18 @@ export default function LandingPage() {
   useEffect(() => {
     fetch('/api/public/sessions').then(r => r.json()).then(d => {
       setPublicSessions(d.sessions || []);
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetch('/api/public/articles').then(r => r.json()).then(d => {
+      setLatestArticles((d.articles || []).slice(0, 6));
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetch('/api/public/projects').then(r => r.json()).then(d => {
+      setLatestProjects((d.projects || []).slice(0, 6));
     }).catch(() => {});
   }, []);
 
@@ -1073,6 +1088,136 @@ export default function LandingPage() {
                       </div>
                     </div>
                   </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* ── Latest Articles ─────────────────────────────────────────────────── */}
+        {latestArticles.length > 0 && (
+          <section id="articles" className="py-16 sm:py-20 md:py-28 bg-muted/30">
+            <div className="container">
+              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10 sm:mb-12">
+                <div>
+                  <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">رؤى ومعرفة</p>
+                  <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground">
+                    أحدث المقالات
+                  </h2>
+                </div>
+                <Link href="/articles" className="flex items-center gap-1 text-sm font-semibold text-primary shrink-0 self-start sm:self-auto">
+                  عرض جميع المقالات <ArrowLeft className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+                {latestArticles.map(article => (
+                  <Link
+                    key={article.id}
+                    href={`/articles/${article.id}`}
+                    className="group rounded-2xl border border-border bg-card overflow-hidden hover:border-primary/30 hover:shadow-md transition-all flex flex-col"
+                  >
+                    <div className="aspect-video bg-muted overflow-hidden">
+                      {article.coverImageUrl ? (
+                        <img
+                          src={article.coverImageUrl}
+                          alt={article.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center">
+                          <FileText className="h-8 w-8 text-primary/20" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-4 flex flex-col gap-2 flex-1">
+                      <h3 className="font-semibold text-sm text-foreground line-clamp-2 group-hover:text-primary transition-colors">
+                        {article.title}
+                      </h3>
+                      {article.excerpt && (
+                        <p className="text-xs text-muted-foreground line-clamp-2 flex-1">{article.excerpt}</p>
+                      )}
+                      {article.tags && article.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {article.tags.slice(0, 2).map(tag => (
+                            <span key={tag} className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full flex items-center gap-0.5">
+                              <Tag className="h-2 w-2" />{tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1 border-t border-border">
+                        <span>{article.authorName}</span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />{article.readTime} د
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* ── Latest Projects / Opportunities ─────────────────────────────────── */}
+        {latestProjects.length > 0 && (
+          <section id="opportunities-live" className="py-16 sm:py-20 md:py-28">
+            <div className="container">
+              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10 sm:mb-12">
+                <div>
+                  <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">فرص حقيقية</p>
+                  <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground">
+                    أحدث الفرص والمشاريع
+                  </h2>
+                </div>
+                <Link href="/projects" className="flex items-center gap-1 text-sm font-semibold text-primary shrink-0 self-start sm:self-auto">
+                  عرض جميع الفرص <ArrowLeft className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+                {latestProjects.map(project => (
+                  <Link
+                    key={project.id}
+                    href={`/projects/${project.id}`}
+                    className="group rounded-2xl border border-border bg-card overflow-hidden hover:border-primary/30 hover:shadow-md transition-all flex flex-col"
+                  >
+                    <div className="aspect-video bg-muted overflow-hidden">
+                      {project.coverImageUrl ? (
+                        <img
+                          src={project.coverImageUrl}
+                          alt={project.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center">
+                          <Briefcase className="h-8 w-8 text-primary/20" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-4 flex flex-col gap-2 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-medium bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
+                          {project.type}
+                        </span>
+                      </div>
+                      <h3 className="font-semibold text-sm text-foreground line-clamp-2 group-hover:text-primary transition-colors">
+                        {project.title}
+                      </h3>
+                      <p className="text-xs text-muted-foreground line-clamp-2 flex-1">{project.description}</p>
+                      <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground pt-1 border-t border-border">
+                        {project.organizationName && (
+                          <span className="flex items-center gap-1">{project.organizationName}</span>
+                        )}
+                        {project.location && (
+                          <span className="flex items-center gap-1">
+                            <MapPin className="h-3 w-3" />{project.location}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </Link>
                 ))}
               </div>
             </div>

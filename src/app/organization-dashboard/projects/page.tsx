@@ -280,8 +280,8 @@ export default function OrgProjectsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">المشاريع والفرص</h1>
-          <p className="text-slate-400 text-sm mt-1">انشر مشاريع وفرص التقديم للجمهور</p>
+          <h1 className="text-2xl font-bold tracking-tight">المشاريع والفرص</h1>
+          <p className="text-muted-foreground text-sm mt-1">انشر مشاريع وفرص التقديم للجمهور</p>
         </div>
         <Button onClick={openCreate} className="gap-2">
           <PlusCircle className="h-4 w-4" />
@@ -297,13 +297,13 @@ export default function OrgProjectsPage() {
           { label: 'مسودات', value: drafts, icon: FileEdit },
           { label: 'إجمالي التسجيلات', value: totalRegs, icon: Users },
         ].map(stat => (
-          <div key={stat.label} className="bg-slate-800/50 border border-white/10 rounded-xl p-4 flex items-center gap-3">
-            <div className="bg-white/5 rounded-lg p-2">
-              <stat.icon className="h-5 w-5 text-slate-300" />
+          <div key={stat.label} className="rounded-xl border border-border bg-card p-4 flex items-center gap-3">
+            <div className="bg-muted rounded-lg p-2 shrink-0">
+              <stat.icon className="h-5 w-5 text-muted-foreground" />
             </div>
             <div>
-              <div className="text-2xl font-bold text-white">{stat.value}</div>
-              <div className="text-xs text-slate-400">{stat.label}</div>
+              <div className="text-2xl font-bold text-foreground">{stat.value}</div>
+              <div className="text-xs text-muted-foreground">{stat.label}</div>
             </div>
           </div>
         ))}
@@ -315,7 +315,7 @@ export default function OrgProjectsPage() {
           {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-52" />)}
         </div>
       ) : projects.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+        <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
           <Briefcase className="h-12 w-12 mb-3 opacity-30" />
           <p className="text-lg font-medium">لا توجد مشاريع بعد</p>
           <p className="text-sm mt-1">أنشئ أول مشروع أو فرصة</p>
@@ -323,7 +323,7 @@ export default function OrgProjectsPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {projects.map(project => (
-            <Card key={project.id} className="bg-slate-800/50 border-white/10 overflow-hidden">
+            <Card key={project.id} className="overflow-hidden">
               {project.coverImageUrl && (
                 <div className="aspect-video overflow-hidden">
                   <img
@@ -336,9 +336,9 @@ export default function OrgProjectsPage() {
               )}
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-start justify-between gap-2">
-                  <h3 className="text-white font-semibold line-clamp-2 flex-1">{project.title}</h3>
+                  <h3 className="font-semibold line-clamp-2 flex-1">{project.title}</h3>
                   <div className="flex gap-1.5 shrink-0">
-                    <Badge className="text-xs bg-blue-500/20 text-blue-300 border-blue-500/30">
+                    <Badge variant="secondary" className="text-xs">
                       {project.type}
                     </Badge>
                     <Badge variant={project.status === 'published' ? 'default' : 'secondary'} className="text-xs">
@@ -346,8 +346,8 @@ export default function OrgProjectsPage() {
                     </Badge>
                   </div>
                 </div>
-                <p className="text-slate-400 text-sm line-clamp-2">{project.description}</p>
-                <div className="flex flex-wrap items-center gap-3 text-slate-500 text-xs">
+                <p className="text-muted-foreground text-sm line-clamp-2">{project.description}</p>
+                <div className="flex flex-wrap items-center gap-3 text-muted-foreground text-xs">
                   {project.location && (
                     <span className="flex items-center gap-1">
                       <MapPin className="h-3 w-3" />{project.location}
@@ -366,7 +366,7 @@ export default function OrgProjectsPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="border-white/10 text-slate-300 hover:text-white hover:bg-white/5"
+                    className=""
                     onClick={() => openViewRegs(project)}
                   >
                     <Eye className="h-3.5 w-3.5 ml-1.5" />
@@ -384,7 +384,7 @@ export default function OrgProjectsPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                    className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                     onClick={() => setDeleteId(project.id)}
                   >
                     <Trash2 className="h-3.5 w-3.5" />

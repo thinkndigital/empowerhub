@@ -93,6 +93,21 @@ export default function MentorArticlesPage() {
     setDialogOpen(true);
   }
 
+  async function handleCoverUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    setUploadingCover(true);
+    try {
+      const token = await user.getIdToken();
+      const url = await uploadFile(file, 'articles', token);
+      setForm(f => ({ ...f, coverImageUrl: url }));
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: 'خطأ', description: err.message || 'فشل رفع الصورة' });
+    } finally {
+      setUploadingCover(false);
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!user) return;
@@ -121,21 +136,6 @@ export default function MentorArticlesPage() {
       toast({ variant: 'destructive', title: 'خطأ', description: err.message });
     } finally {
       setSubmitting(false);
-    }
-  }
-
-  async function handleCoverUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file || !user) return;
-    setUploadingCover(true);
-    try {
-      const token = await user.getIdToken();
-      const url = await uploadFile(file, 'articles', token);
-      setForm(f => ({ ...f, coverImageUrl: url }));
-    } catch (err: any) {
-      toast({ variant: 'destructive', title: 'خطأ', description: err.message || 'فشل رفع الصورة' });
-    } finally {
-      setUploadingCover(false);
     }
   }
 
@@ -168,12 +168,12 @@ export default function MentorArticlesPage() {
   }
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">المقالات</h1>
-          <p className="text-slate-400 text-sm mt-1">اكتب وانشر مقالاتك للمستفيدين والزوار</p>
+          <h1 className="text-2xl font-bold tracking-tight">المقالات</h1>
+          <p className="text-muted-foreground text-sm mt-1">اكتب وانشر مقالاتك للمستفيدين والزوار</p>
         </div>
         <Button onClick={openCreate} className="gap-2">
           <PlusCircle className="h-4 w-4" />
@@ -188,13 +188,13 @@ export default function MentorArticlesPage() {
           { label: 'منشور', value: published, icon: Globe },
           { label: 'مسودات', value: drafts, icon: FileEdit },
         ].map(stat => (
-          <div key={stat.label} className="bg-slate-800/50 border border-white/10 rounded-xl p-4 flex items-center gap-3">
-            <div className="bg-white/5 rounded-lg p-2">
-              <stat.icon className="h-5 w-5 text-slate-300" />
+          <div key={stat.label} className="rounded-xl border border-border bg-card p-4 flex items-center gap-3">
+            <div className="bg-muted rounded-lg p-2 shrink-0">
+              <stat.icon className="h-5 w-5 text-muted-foreground" />
             </div>
             <div>
-              <div className="text-2xl font-bold text-white">{stat.value}</div>
-              <div className="text-xs text-slate-400">{stat.label}</div>
+              <div className="text-2xl font-bold text-foreground">{stat.value}</div>
+              <div className="text-xs text-muted-foreground">{stat.label}</div>
             </div>
           </div>
         ))}
@@ -206,7 +206,7 @@ export default function MentorArticlesPage() {
           {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-48" />)}
         </div>
       ) : articles.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+        <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
           <FileText className="h-12 w-12 mb-3 opacity-30" />
           <p className="text-lg font-medium">لا توجد مقالات بعد</p>
           <p className="text-sm mt-1">ابدأ بكتابة مقالك الأول</p>
@@ -214,7 +214,7 @@ export default function MentorArticlesPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {articles.map(article => (
-            <Card key={article.id} className="bg-slate-800/50 border-white/10 overflow-hidden">
+            <Card key={article.id} className="overflow-hidden">
               {article.coverImageUrl && (
                 <div className="aspect-video overflow-hidden">
                   <img
@@ -227,15 +227,15 @@ export default function MentorArticlesPage() {
               )}
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-start justify-between gap-2">
-                  <h3 className="text-white font-semibold line-clamp-2 flex-1">{article.title}</h3>
+                  <h3 className="font-semibold line-clamp-2 flex-1">{article.title}</h3>
                   <Badge variant={article.status === 'published' ? 'default' : 'secondary'} className="shrink-0">
                     {article.status === 'published' ? 'منشور' : 'مسودة'}
                   </Badge>
                 </div>
                 {article.excerpt && (
-                  <p className="text-slate-400 text-sm line-clamp-2">{article.excerpt}</p>
+                  <p className="text-muted-foreground text-sm line-clamp-2">{article.excerpt}</p>
                 )}
-                <div className="flex items-center gap-3 text-slate-500 text-xs">
+                <div className="flex items-center gap-3 text-muted-foreground text-xs">
                   <span className="flex items-center gap-1">
                     <Clock className="h-3 w-3" />
                     {article.readTime} دقيقة قراءة
@@ -247,7 +247,7 @@ export default function MentorArticlesPage() {
                 {article.tags && article.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1">
                     {article.tags.slice(0, 3).map(tag => (
-                      <span key={tag} className="flex items-center gap-0.5 bg-white/5 text-slate-300 text-xs px-2 py-0.5 rounded-full">
+                      <span key={tag} className="flex items-center gap-0.5 bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded-full">
                         <Tag className="h-2.5 w-2.5" />{tag}
                       </span>
                     ))}
@@ -257,7 +257,7 @@ export default function MentorArticlesPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="flex-1 border-white/10 text-slate-300 hover:text-white hover:bg-white/5"
+                    className="flex-1"
                     onClick={() => openEdit(article)}
                   >
                     <Edit2 className="h-3.5 w-3.5 ml-1.5" />
@@ -266,7 +266,7 @@ export default function MentorArticlesPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                    className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                     onClick={() => setDeleteId(article.id)}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -384,7 +384,7 @@ export default function MentorArticlesPage() {
           <DialogHeader>
             <DialogTitle>حذف المقال</DialogTitle>
           </DialogHeader>
-          <p className="text-slate-500 text-sm">هل أنت متأكد من حذف هذا المقال؟ لا يمكن التراجع عن هذا الإجراء.</p>
+          <p className="text-muted-foreground text-sm">هل أنت متأكد من حذف هذا المقال؟ لا يمكن التراجع عن هذا الإجراء.</p>
           <DialogFooter className="gap-2">
             <Button variant="ghost" onClick={() => setDeleteId(null)} disabled={deleting}>
               إلغاء
