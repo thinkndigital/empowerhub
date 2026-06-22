@@ -142,8 +142,8 @@ export default function MentorSettingsPage() {
       });
       setProfile(prev => prev ? { ...prev, avatarUrl: downloadUrl } : prev);
       toast({ title: 'تم تحديث الصورة الشخصية', description: 'تم رفع صورتك الشخصية بنجاح.' });
-    } catch {
-      toast({ variant: 'destructive', title: 'خطأ!', description: 'فشل رفع الصورة الشخصية.' });
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: 'خطأ!', description: err?.message || 'فشل رفع الصورة الشخصية.' });
       setAvatarPreview(null);
     } finally {
       setAvatarUploading(false);

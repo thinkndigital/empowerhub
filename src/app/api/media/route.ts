@@ -34,14 +34,19 @@ export async function POST(req: NextRequest) {
 
     const buffer = Buffer.from(await file.arrayBuffer());
 
-    // Explicitly pass bucket name — avoids issues when Admin SDK app was
-    // previously initialised without storageBucket and bucket() returns null.
+    // Use a Firebase download token — works with Uniform Bucket-Level Access
+    // (which blocks both makePublic() and getSignedUrl() on App Hosting ADC).
+    const downloadToken = crypto.randomUUID();
     const bucket = adminStorage.bucket(STORAGE_BUCKET);
     const fileRef = bucket.file(storagePath);
 
-    await fileRef.save(buffer, { contentType: file.type, resumable: false });
-    await fileRef.makePublic();
-    const url = `https://storage.googleapis.com/${STORAGE_BUCKET}/${storagePath}`;
+    await fileRef.save(buffer, {
+      contentType: file.type,
+      resumable: false,
+      metadata: { firebaseStorageDownloadTokens: downloadToken },
+    });
+
+    const url = `https://firebasestorage.googleapis.com/v0/b/${encodeURIComponent(STORAGE_BUCKET)}/o/${encodeURIComponent(storagePath)}?alt=media&token=${downloadToken}`;
 
     return NextResponse.json({ url, path: storagePath });
   } catch (e: any) {
