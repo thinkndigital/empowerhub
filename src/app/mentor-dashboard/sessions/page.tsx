@@ -7,7 +7,7 @@ import { format, isPast } from "date-fns";
 import { ar } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar as CalendarIcon, Clock, Video, User, PlusCircle, MoreHorizontal, Check, X, Star, ImageIcon, Upload, Trash2, Globe, Lock } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, Video, User, PlusCircle, MoreHorizontal, Check, X, Star, ImageIcon, Upload, Trash2, Globe, Lock, Pencil } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
@@ -74,12 +74,15 @@ export default function MentorSessionsPage() {
   const [googleLinking, setGoogleLinking] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [isPublic, setIsPublic] = useState(false);
+  const [editingSession, setEditingSession] = useState<Session | null>(null);
 
   // Image state
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [bannerPreview, setBannerPreview] = useState<string>('');
+  const [existingBannerUrl, setExistingBannerUrl] = useState<string>('');
   const [sessionImageFiles, setSessionImageFiles] = useState<File[]>([]);
   const [sessionImagePreviews, setSessionImagePreviews] = useState<string[]>([]);
+  const [existingImageUrls, setExistingImageUrls] = useState<string[]>([]);
   const bannerInputRef = useRef<HTMLInputElement>(null);
   const imagesInputRef = useRef<HTMLInputElement>(null);
 
@@ -134,7 +137,8 @@ export default function MentorSessionsPage() {
   function handleImagesChange(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
-    const combined = [...sessionImageFiles, ...files].slice(0, 6);
+    const remaining = 6 - existingImageUrls.length;
+    const combined = [...sessionImageFiles, ...files].slice(0, remaining);
     setSessionImageFiles(combined);
     setSessionImagePreviews(combined.map(f => URL.createObjectURL(f)));
   }
@@ -148,7 +152,35 @@ export default function MentorSessionsPage() {
   function removeBanner() {
     setBannerFile(null);
     setBannerPreview('');
+    setExistingBannerUrl('');
     if (bannerInputRef.current) bannerInputRef.current.value = '';
+  }
+
+  function removeExistingImage(index: number) {
+    setExistingImageUrls(prev => prev.filter((_, i) => i !== index));
+  }
+
+  function openEdit(session: Session) {
+    setEditingSession(session);
+    setIsPublic(session.isPublic ?? false);
+    const d = safeDate(session.date);
+    form.reset({
+      beneficiaryId: session.attendees?.[0] || '',
+      title: session.title,
+      description: session.description || '',
+      date: d,
+      time: format(d, 'HH:mm'),
+      duration: session.duration || 60,
+      meetLink: session.meetLink || '',
+      price: session.price || 0,
+    });
+    setExistingBannerUrl(session.bannerUrl || '');
+    setBannerPreview(session.bannerUrl || '');
+    setBannerFile(null);
+    setExistingImageUrls(session.imageUrls || []);
+    setSessionImageFiles([]);
+    setSessionImagePreviews([]);
+    setIsDialogOpen(true);
   }
 
   async function uploadFile(file: File, folder: string, token: string): Promise<string> {
@@ -219,43 +251,60 @@ export default function MentorSessionsPage() {
 
       const token = await authUser.getIdToken();
 
-      let bannerUrl = '';
+      let finalBannerUrl = existingBannerUrl;
       if (bannerFile) {
-        bannerUrl = await uploadFile(bannerFile, `sessions/${authUser.uid}`, token);
+        finalBannerUrl = await uploadFile(bannerFile, `sessions/${authUser.uid}`, token);
       }
 
-      let imageUrls: string[] = [];
+      let newImageUrls: string[] = [];
       if (sessionImageFiles.length > 0) {
-        imageUrls = await Promise.all(
+        newImageUrls = await Promise.all(
           sessionImageFiles.map((f) => uploadFile(f, `sessions/${authUser.uid}`, token))
         );
       }
-      const res = await fetch('/api/sessions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          title: values.title,
-          description: values.description || '',
-          attendees: isPublic ? [] : [values.beneficiaryId],
-          date: dt.toISOString(),
-          duration: values.duration,
-          status: 'scheduled',
-          meetLink,
-          isPublic,
-          ...(isPublic && values.price != null && { price: values.price }),
-          ...(bannerUrl && { bannerUrl }),
-          ...(imageUrls.length && { imageUrls }),
-        }),
-      });
-      if (!res.ok) throw new Error((await res.json()).error);
-      toast({ title: "تمت الجدولة!", description: `تم جدولة جلستك "${values.title}" ${isPublic ? 'ونُشرت على الموقع' : ''}.` });
+      const finalImageUrls = [...existingImageUrls, ...newImageUrls];
+
+      const sessionPayload = {
+        title: values.title,
+        description: values.description || '',
+        attendees: isPublic ? [] : [values.beneficiaryId],
+        date: dt.toISOString(),
+        duration: values.duration,
+        meetLink,
+        isPublic,
+        ...(isPublic && values.price != null && { price: values.price }),
+        bannerUrl: finalBannerUrl,
+        imageUrls: finalImageUrls,
+      };
+
+      if (editingSession) {
+        const res = await fetch('/api/sessions', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
+          body: JSON.stringify({ id: editingSession.id, ...sessionPayload }),
+        });
+        if (!res.ok) throw new Error((await res.json()).error);
+        toast({ title: "تم التعديل!", description: `تم تعديل جلسة "${values.title}" بنجاح.` });
+      } else {
+        const res = await fetch('/api/sessions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
+          body: JSON.stringify({ ...sessionPayload, status: 'scheduled' }),
+        });
+        if (!res.ok) throw new Error((await res.json()).error);
+        toast({ title: "تمت الجدولة!", description: `تم جدولة جلستك "${values.title}" ${isPublic ? 'ونُشرت على الموقع' : ''}.` });
+      }
+
       setIsDialogOpen(false);
+      setEditingSession(null);
       setIsPublic(false);
       form.reset();
       setBannerFile(null);
       setBannerPreview('');
+      setExistingBannerUrl('');
       setSessionImageFiles([]);
       setSessionImagePreviews([]);
+      setExistingImageUrls([]);
       fetchData();
     } catch (e: any) {
       toast({ variant: 'destructive', title: 'خطأ', description: e.message });
@@ -299,11 +348,14 @@ export default function MentorSessionsPage() {
           <Dialog open={isDialogOpen} onOpenChange={(open) => {
             setIsDialogOpen(open);
             if (!open) {
+              setEditingSession(null);
               form.reset();
               setBannerFile(null);
               setBannerPreview('');
+              setExistingBannerUrl('');
               setSessionImageFiles([]);
               setSessionImagePreviews([]);
+              setExistingImageUrls([]);
             }
           }}>
             <DialogTrigger asChild>
@@ -311,8 +363,8 @@ export default function MentorSessionsPage() {
             </DialogTrigger>
             <DialogContent dir="rtl" className="sm:max-w-[90vw] md:max-w-[620px] max-h-[90vh] overflow-y-auto" onPointerDownOutside={(e) => { if (e.target instanceof Element && e.target.closest('.rdp')) e.preventDefault(); }}>
               <DialogHeader>
-                <DialogTitle>جدولة جلسة جديدة</DialogTitle>
-                <DialogDescription>املأ التفاصيل أدناه لجدولة جلسة إرشادية جديدة.</DialogDescription>
+                <DialogTitle>{editingSession ? 'تعديل الجلسة' : 'جدولة جلسة جديدة'}</DialogTitle>
+                <DialogDescription>{editingSession ? 'عدّل تفاصيل الجلسة ثم احفظ التغييرات.' : 'املأ التفاصيل أدناه لجدولة جلسة إرشادية جديدة.'}</DialogDescription>
               </DialogHeader>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
@@ -419,8 +471,20 @@ export default function MentorSessionsPage() {
                     <FormLabel>صور الجلسة (اختياري، حتى 6 صور)</FormLabel>
                     <FormDescription>صور إضافية توضح محتوى الجلسة أو موادها.</FormDescription>
                     <div className="grid grid-cols-3 gap-2">
+                      {existingImageUrls.map((url, i) => (
+                        <div key={`existing-${i}`} className="relative aspect-square rounded-lg overflow-hidden border bg-muted">
+                          <img src={url} alt="" className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => removeExistingImage(i)}
+                            className="absolute top-1 left-1 bg-black/60 text-white rounded-full p-0.5 hover:bg-black/80 transition-colors"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
                       {sessionImagePreviews.map((src, i) => (
-                        <div key={i} className="relative aspect-square rounded-lg overflow-hidden border bg-muted">
+                        <div key={`new-${i}`} className="relative aspect-square rounded-lg overflow-hidden border bg-muted">
                           <img src={src} alt={`session image ${i + 1}`} className="w-full h-full object-cover" />
                           <button
                             type="button"
@@ -431,7 +495,7 @@ export default function MentorSessionsPage() {
                           </button>
                         </div>
                       ))}
-                      {sessionImagePreviews.length < 6 && (
+                      {existingImageUrls.length + sessionImagePreviews.length < 6 && (
                         <button
                           type="button"
                           onClick={() => imagesInputRef.current?.click()}
@@ -519,7 +583,7 @@ export default function MentorSessionsPage() {
                   <DialogFooter>
                     <DialogClose asChild><Button type="button" variant="ghost">إلغاء</Button></DialogClose>
                     <Button type="submit" disabled={submitting}>
-                      {submitting ? 'جارٍ الحفظ...' : 'جدولة'}
+                      {submitting ? 'جارٍ الحفظ...' : editingSession ? 'حفظ التعديلات' : 'جدولة'}
                     </Button>
                   </DialogFooter>
                 </form>
@@ -577,6 +641,7 @@ export default function MentorSessionsPage() {
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => openEdit(session)}><Pencil className="ml-2 h-4 w-4" />تعديل الجلسة</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleUpdateSessionStatus(session.id, 'completed')}><Check className="ml-2 h-4 w-4" />وضع علامة كمكتملة</DropdownMenuItem>
                         <DropdownMenuItem className="text-destructive" onClick={() => handleUpdateSessionStatus(session.id, 'cancelled')}><X className="ml-2 h-4 w-4" />إلغاء الجلسة</DropdownMenuItem>
                       </DropdownMenuContent>

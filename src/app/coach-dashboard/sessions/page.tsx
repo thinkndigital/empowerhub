@@ -7,7 +7,7 @@ import { format, isPast } from "date-fns";
 import { ar } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar as CalendarIcon, Clock, Video, User, PlusCircle, MoreHorizontal, Check, X, Star } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, Video, User, PlusCircle, MoreHorizontal, Check, X, Star, Pencil } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
@@ -57,6 +57,7 @@ export default function CoachSessionsPage() {
   const [loading, setLoading] = useState(true);
   const [googleToken, setGoogleToken] = useState<string | null>(null);
   const [googleLinking, setGoogleLinking] = useState(false);
+  const [editingSession, setEditingSession] = useState<Session | null>(null);
 
   const fetchData = useCallback(async () => {
     if (!authUser) return;
@@ -139,6 +140,20 @@ export default function CoachSessionsPage() {
     }
   }
 
+  function openEdit(session: Session) {
+    setEditingSession(session);
+    const d = safeDate(session.date);
+    form.reset({
+      beneficiaryId: session.attendees?.[0] || '',
+      title: session.title,
+      date: d,
+      time: format(d, 'HH:mm'),
+      duration: session.duration || 60,
+      meetLink: session.meetLink || '',
+    });
+    setIsDialogOpen(true);
+  }
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!authUser) return;
     const [hours, minutes] = values.time.split(':').map(Number);
@@ -146,19 +161,30 @@ export default function CoachSessionsPage() {
     dt.setHours(hours, minutes);
     try {
       let meetLink = values.meetLink || '';
-      if (googleToken && !meetLink) {
+      if (googleToken && !meetLink && !editingSession) {
         const generated = await generateMeetLink(values.title, dt.toISOString(), values.duration);
         if (generated) meetLink = generated;
       }
       const token = await authUser.getIdToken();
-      const res = await fetch('/api/sessions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
-        body: JSON.stringify({ title: values.title, attendees: [values.beneficiaryId], date: dt.toISOString(), duration: values.duration, status: 'scheduled', meetLink }),
-      });
-      if (!res.ok) throw new Error((await res.json()).error);
-      toast({ title: "تمت الجدولة!", description: `تم جدولة جلستك "${values.title}".` });
+      if (editingSession) {
+        const res = await fetch('/api/sessions', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
+          body: JSON.stringify({ id: editingSession.id, title: values.title, attendees: [values.beneficiaryId], date: dt.toISOString(), duration: values.duration, meetLink }),
+        });
+        if (!res.ok) throw new Error((await res.json()).error);
+        toast({ title: "تم التعديل!", description: `تم تعديل جلسة "${values.title}" بنجاح.` });
+      } else {
+        const res = await fetch('/api/sessions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
+          body: JSON.stringify({ title: values.title, attendees: [values.beneficiaryId], date: dt.toISOString(), duration: values.duration, status: 'scheduled', meetLink }),
+        });
+        if (!res.ok) throw new Error((await res.json()).error);
+        toast({ title: "تمت الجدولة!", description: `تم جدولة جلستك "${values.title}".` });
+      }
       setIsDialogOpen(false);
+      setEditingSession(null);
       form.reset();
       fetchData();
     } catch (e: any) { toast({ variant: 'destructive', title: 'خطأ', description: e.message }); }
@@ -182,10 +208,10 @@ export default function CoachSessionsPage() {
             <h1 className="text-2xl font-bold tracking-tight">الجلسات</h1>
             <p className="text-sm text-muted-foreground">إدارة وجدولة جلسات التدريب مع المتدربين.</p>
           </div>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) { setEditingSession(null); form.reset(); } }}>
                 <DialogTrigger asChild><Button><PlusCircle className="ml-2 h-4 w-4" />جدولة جلسة جديدة</Button></DialogTrigger>
                 <DialogContent dir="rtl" className="sm:max-w-[90vw] md:max-w-[600px]" onPointerDownOutside={(e) => { if (e.target instanceof Element && e.target.closest('.rdp')) e.preventDefault(); }}>
-                  <DialogHeader><DialogTitle>جدولة جلسة جديدة</DialogTitle><DialogDescription>املأ التفاصيل لجدولة جلسة تدريبية جديدة.</DialogDescription></DialogHeader>
+                  <DialogHeader><DialogTitle>{editingSession ? 'تعديل الجلسة' : 'جدولة جلسة جديدة'}</DialogTitle><DialogDescription>{editingSession ? 'عدّل تفاصيل الجلسة ثم احفظ التغييرات.' : 'املأ التفاصيل لجدولة جلسة تدريبية جديدة.'}</DialogDescription></DialogHeader>
                   <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
                       <FormField control={form.control} name="beneficiaryId" render={({ field }) => (
@@ -241,7 +267,7 @@ export default function CoachSessionsPage() {
                       )} />
                       <DialogFooter>
                         <DialogClose asChild><Button type="button" variant="ghost">إلغاء</Button></DialogClose>
-                        <Button type="submit">جدولة</Button>
+                        <Button type="submit">{editingSession ? 'حفظ التعديلات' : 'جدولة'}</Button>
                       </DialogFooter>
                     </form>
                   </Form>
@@ -268,6 +294,7 @@ export default function CoachSessionsPage() {
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => openEdit(session)}><Pencil className="ml-2 h-4 w-4" />تعديل الجلسة</DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleUpdateSessionStatus(session.id, 'completed')}><Check className="ml-2 h-4 w-4" />وضع علامة كمكتملة</DropdownMenuItem>
                       <DropdownMenuItem className="text-destructive" onClick={() => handleUpdateSessionStatus(session.id, 'cancelled')}><X className="ml-2 h-4 w-4" />إلغاء الجلسة</DropdownMenuItem>
                     </DropdownMenuContent>
