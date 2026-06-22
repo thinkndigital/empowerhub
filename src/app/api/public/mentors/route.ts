@@ -4,8 +4,8 @@ import { adminDb } from '@/lib/firebase-admin';
 export async function GET() {
   try {
     const [mentorsSnap, coachesSnap] = await Promise.all([
-      adminDb.collection('users').where('role', '==', 'mentor').limit(4).get(),
-      adminDb.collection('users').where('role', '==', 'coach').limit(4).get(),
+      adminDb.collection('users').where('role', '==', 'mentor').limit(50).get(),
+      adminDb.collection('users').where('role', '==', 'coach').limit(50).get(),
     ]);
     const pick = (d: FirebaseFirestore.QueryDocumentSnapshot) => {
       const data = d.data();
