@@ -32,12 +32,12 @@ interface Project {
 }
 
 const TYPE_COLORS: Record<string, string> = {
-  'تدريب': 'bg-blue-100 text-blue-700',
-  'تطوع': 'bg-green-100 text-green-700',
-  'وظيفة': 'bg-purple-100 text-purple-700',
-  'منحة': 'bg-yellow-100 text-yellow-700',
-  'مبادرة': 'bg-orange-100 text-orange-700',
-  'أخرى': 'bg-gray-100 text-gray-700',
+  'تدريب': 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+  'تطوع': 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+  'وظيفة': 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
+  'منحة': 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300',
+  'مبادرة': 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
+  'أخرى': 'bg-muted text-muted-foreground',
 };
 
 const FIELD_TYPES: Record<string, 'input' | 'textarea' | 'select'> = {
@@ -155,16 +155,16 @@ export default function ProjectDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600" />
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
       </div>
     );
   }
 
   if (notFound || !project) {
     return (
-      <div className="min-h-screen bg-white flex flex-col items-center justify-center gap-4 text-center" dir="rtl">
-        <h1 className="text-2xl font-bold text-slate-700">المشروع غير موجود</h1>
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 text-center" dir="rtl">
+        <h1 className="text-2xl font-bold text-foreground">المشروع غير موجود</h1>
         <Button onClick={() => router.push('/projects')}>
           <ArrowRight className="h-4 w-4 ml-2" />
           العودة للمشاريع
@@ -189,7 +189,7 @@ export default function ProjectDetailPage() {
         <div key={key} className="space-y-1.5">
           <Label htmlFor={key}>
             {label}
-            {required && <span className="text-red-500 mr-1">*</span>}
+            {required && <span className="text-destructive mr-1">*</span>}
           </Label>
           <Textarea
             id={key}
@@ -209,7 +209,7 @@ export default function ProjectDetailPage() {
         <div key={key} className="space-y-1.5">
           <Label htmlFor={key}>
             {label}
-            {required && <span className="text-red-500 mr-1">*</span>}
+            {required && <span className="text-destructive mr-1">*</span>}
           </Label>
           <select
             id={key}
@@ -229,7 +229,7 @@ export default function ProjectDetailPage() {
       <div key={key} className="space-y-1.5">
         <Label htmlFor={key}>
           {label}
-          {required && <span className="text-red-500 mr-1">*</span>}
+          {required && <span className="text-destructive mr-1">*</span>}
         </Label>
         <Input
           id={key}
@@ -244,10 +244,10 @@ export default function ProjectDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white" dir="rtl">
+    <div className="min-h-screen bg-background" dir="rtl">
       {/* Cover */}
       {project.coverImageUrl && (
-        <div className="w-full aspect-video max-h-[400px] overflow-hidden bg-gray-100">
+        <div className="w-full aspect-video max-h-[400px] overflow-hidden bg-muted">
           <img
             src={project.coverImageUrl}
             alt={project.title}
@@ -259,7 +259,7 @@ export default function ProjectDetailPage() {
 
       <div className="max-w-3xl mx-auto px-4 py-10">
         {/* Back button */}
-        <Button variant="ghost" onClick={() => router.push('/projects')} className="mb-6 gap-2 text-slate-500">
+        <Button variant="ghost" onClick={() => router.push('/projects')} className="mb-6 gap-2 text-muted-foreground">
           <ArrowRight className="h-4 w-4" />
           العودة للمشاريع
         </Button>
@@ -271,10 +271,10 @@ export default function ProjectDetailPage() {
               {project.type}
             </span>
           </div>
-          <h1 className="text-3xl font-bold text-slate-900 mb-4">{project.title}</h1>
+          <h1 className="text-3xl font-bold text-foreground mb-4">{project.title}</h1>
 
           {/* Meta */}
-          <div className="flex flex-wrap gap-4 text-sm text-gray-500">
+          <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
             {project.organizationName && (
               <span className="flex items-center gap-1.5">
                 <Building2 className="h-4 w-4" />
@@ -302,7 +302,7 @@ export default function ProjectDetailPage() {
         </div>
 
         {/* Description */}
-        <div className="prose prose-slate max-w-none text-slate-700 leading-loose whitespace-pre-line mb-10">
+        <div className="prose prose-slate dark:prose-invert max-w-none text-foreground leading-loose whitespace-pre-line mb-10">
           {project.description}
         </div>
 
@@ -312,25 +312,25 @@ export default function ProjectDetailPage() {
         {submitted ? (
           <div className="text-center py-12 space-y-4">
             <CheckCircle className="h-16 w-16 text-green-500 mx-auto" />
-            <h2 className="text-2xl font-bold text-slate-800">تم إرسال طلبك بنجاح!</h2>
-            <p className="text-gray-500">سيتم مراجعة طلبك والتواصل معك قريباً.</p>
+            <h2 className="text-2xl font-bold text-foreground">تم إرسال طلبك بنجاح!</h2>
+            <p className="text-muted-foreground">سيتم مراجعة طلبك والتواصل معك قريباً.</p>
             <Button variant="outline" onClick={() => router.push('/projects')}>
               استعراض فرص أخرى
             </Button>
           </div>
         ) : isExpired ? (
-          <div className="text-center py-8 bg-red-50 rounded-2xl">
-            <p className="text-red-600 font-medium">انتهت مدة التقديم على هذه الفرصة</p>
+          <div className="text-center py-8 bg-destructive/10 rounded-2xl">
+            <p className="text-destructive font-medium">انتهت مدة التقديم على هذه الفرصة</p>
           </div>
         ) : (
           <div>
-            <h2 className="text-xl font-bold text-slate-800 mb-6">نموذج التقديم</h2>
+            <h2 className="text-xl font-bold text-foreground mb-6">نموذج التقديم</h2>
             <form onSubmit={handleSubmit} className="space-y-5">
               {/* Always required: name + email */}
               <div className="space-y-1.5">
                 <Label htmlFor="reg-name">
                   الاسم الكامل
-                  <span className="text-red-500 mr-1">*</span>
+                  <span className="text-destructive mr-1">*</span>
                 </Label>
                 <Input
                   id="reg-name"
@@ -343,7 +343,7 @@ export default function ProjectDetailPage() {
               <div className="space-y-1.5">
                 <Label htmlFor="reg-email">
                   البريد الإلكتروني
-                  <span className="text-red-500 mr-1">*</span>
+                  <span className="text-destructive mr-1">*</span>
                 </Label>
                 <Input
                   id="reg-email"

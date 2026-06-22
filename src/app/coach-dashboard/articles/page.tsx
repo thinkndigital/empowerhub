@@ -16,9 +16,10 @@ import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  PlusCircle, FileText, Edit2, Trash2, Clock, Tag, Globe, FileEdit,
+  PlusCircle, FileText, Edit2, Trash2, Clock, Tag, Globe, FileEdit, Upload,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { uploadFile } from "@/lib/upload-file";
 
 interface Article {
   id: string;
@@ -54,6 +55,7 @@ export default function CoachArticlesPage() {
   const [submitting, setSubmitting] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
 
   const fetchArticles = useCallback(async () => {
     if (!user) return;
@@ -119,6 +121,21 @@ export default function CoachArticlesPage() {
       toast({ variant: 'destructive', title: 'خطأ', description: err.message });
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleCoverUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    setUploadingCover(true);
+    try {
+      const token = await user.getIdToken();
+      const url = await uploadFile(file, 'articles', token);
+      setForm(f => ({ ...f, coverImageUrl: url }));
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: 'خطأ', description: err.message || 'فشل رفع الصورة' });
+    } finally {
+      setUploadingCover(false);
     }
   }
 
@@ -300,14 +317,30 @@ export default function CoachArticlesPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="coverImageUrl-c">رابط صورة الغلاف</Label>
-              <Input
-                id="coverImageUrl-c"
-                value={form.coverImageUrl}
-                onChange={e => setForm(f => ({ ...f, coverImageUrl: e.target.value }))}
-                placeholder="https://..."
-                dir="ltr"
-              />
+              <Label htmlFor="coverImageUrl-c">صورة الغلاف</Label>
+              <div className="flex gap-2 items-center">
+                <Input
+                  id="coverImageUrl-c"
+                  value={form.coverImageUrl}
+                  onChange={e => setForm(f => ({ ...f, coverImageUrl: e.target.value }))}
+                  placeholder="https://..."
+                  dir="ltr"
+                  className="flex-1"
+                />
+                <label className="cursor-pointer shrink-0">
+                  <Button type="button" variant="outline" size="icon" disabled={uploadingCover} asChild>
+                    <span>
+                      {uploadingCover ? <span className="text-xs">⏳</span> : <Upload className="h-4 w-4" />}
+                    </span>
+                  </Button>
+                  <input type="file" accept="image/*" className="hidden" onChange={handleCoverUpload} />
+                </label>
+                {form.coverImageUrl && (
+                  <div className="h-10 w-10 rounded-lg border overflow-hidden shrink-0">
+                    <img src={form.coverImageUrl} alt="" className="h-full w-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                  </div>
+                )}
+              </div>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="tags-c">الوسوم (مفصولة بفاصلة)</Label>

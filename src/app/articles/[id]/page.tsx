@@ -61,16 +61,16 @@ export default function ArticleDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600" />
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
       </div>
     );
   }
 
   if (notFound || !article) {
     return (
-      <div className="min-h-screen bg-white flex flex-col items-center justify-center gap-4 text-center" dir="rtl">
-        <h1 className="text-2xl font-bold text-slate-700">المقال غير موجود</h1>
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 text-center" dir="rtl">
+        <h1 className="text-2xl font-bold text-foreground">المقال غير موجود</h1>
         <Button onClick={() => router.push('/articles')}>
           <ArrowRight className="h-4 w-4 ml-2" />
           العودة للمقالات
@@ -80,10 +80,10 @@ export default function ArticleDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white" dir="rtl">
+    <div className="min-h-screen bg-background" dir="rtl">
       {/* Cover image */}
       {article.coverImageUrl && (
-        <div className="w-full aspect-video max-h-[480px] overflow-hidden bg-gray-100">
+        <div className="w-full aspect-video max-h-[480px] overflow-hidden bg-muted">
           <img
             src={article.coverImageUrl}
             alt={article.title}
@@ -95,33 +95,33 @@ export default function ArticleDetailPage() {
 
       <div className="max-w-3xl mx-auto px-4 py-10">
         {/* Back button */}
-        <Button variant="ghost" onClick={() => router.push('/articles')} className="mb-6 gap-2 text-slate-500">
+        <Button variant="ghost" onClick={() => router.push('/articles')} className="mb-6 gap-2 text-muted-foreground">
           <ArrowRight className="h-4 w-4" />
           العودة للمقالات
         </Button>
 
         {/* Title */}
-        <h1 className="text-3xl font-bold text-slate-900 leading-snug mb-4">{article.title}</h1>
+        <h1 className="text-3xl font-bold text-foreground leading-snug mb-4">{article.title}</h1>
 
         {/* Excerpt */}
         {article.excerpt && (
-          <p className="text-lg text-gray-500 mb-6 border-r-4 border-indigo-300 pr-4">{article.excerpt}</p>
+          <p className="text-lg text-muted-foreground mb-6 border-r-4 border-primary/40 pr-4">{article.excerpt}</p>
         )}
 
         {/* Author card */}
-        <div className="flex items-center gap-3 p-4 rounded-xl bg-gray-50 border border-gray-100 mb-6">
+        <div className="flex items-center gap-3 p-4 rounded-xl bg-card border border-border mb-6">
           <Avatar className="h-12 w-12 shrink-0">
             <AvatarImage src={article.authorAvatarUrl} alt={article.authorName} />
             <AvatarFallback className="text-lg font-bold">{article.authorName?.charAt(0)}</AvatarFallback>
           </Avatar>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-slate-800">{article.authorName}</span>
+              <span className="font-semibold text-foreground">{article.authorName}</span>
               <Badge variant="secondary" className="text-xs">
                 {ROLE_LABELS[article.authorRole] || article.authorRole}
               </Badge>
             </div>
-            <div className="flex items-center gap-3 text-xs text-gray-400 mt-0.5">
+            <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
               {article.publishedAt && (
                 <span className="flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
@@ -139,14 +139,14 @@ export default function ArticleDetailPage() {
         <Separator className="mb-8" />
 
         {/* Content */}
-        <div className="prose prose-slate max-w-none text-slate-700 leading-loose text-base whitespace-pre-line">
+        <div className="prose prose-slate dark:prose-invert max-w-none text-foreground leading-loose text-base whitespace-pre-line">
           {article.content}
         </div>
 
         {/* Tags */}
         {article.tags && article.tags.length > 0 && (
-          <div className="mt-10 pt-6 border-t border-gray-100">
-            <p className="text-sm text-gray-400 mb-3 flex items-center gap-1.5">
+          <div className="mt-10 pt-6 border-t border-border">
+            <p className="text-sm text-muted-foreground mb-3 flex items-center gap-1.5">
               <Tag className="h-3.5 w-3.5" />
               الوسوم
             </p>

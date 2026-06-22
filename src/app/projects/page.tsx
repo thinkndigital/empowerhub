@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -25,12 +24,12 @@ interface Project {
 const PROJECT_TYPES = ['الكل', 'تدريب', 'تطوع', 'وظيفة', 'منحة', 'مبادرة', 'أخرى'];
 
 const TYPE_COLORS: Record<string, string> = {
-  'تدريب': 'bg-blue-100 text-blue-700',
-  'تطوع': 'bg-green-100 text-green-700',
-  'وظيفة': 'bg-purple-100 text-purple-700',
-  'منحة': 'bg-yellow-100 text-yellow-700',
-  'مبادرة': 'bg-orange-100 text-orange-700',
-  'أخرى': 'bg-gray-100 text-gray-700',
+  'تدريب': 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+  'تطوع': 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+  'وظيفة': 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
+  'منحة': 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300',
+  'مبادرة': 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
+  'أخرى': 'bg-muted text-muted-foreground',
 };
 
 export default function ProjectsPage() {
@@ -61,10 +60,10 @@ export default function ProjectsPage() {
   function deadlineLabel(deadline: string) {
     if (!deadline) return null;
     const diff = Math.ceil((new Date(deadline).getTime() - Date.now()) / 86400000);
-    if (diff < 0) return { text: 'انتهى التقديم', color: 'text-red-500' };
+    if (diff < 0) return { text: 'انتهى التقديم', color: 'text-destructive' };
     if (diff === 0) return { text: 'آخر يوم', color: 'text-orange-500' };
     if (diff <= 7) return { text: `${diff} أيام متبقية`, color: 'text-orange-500' };
-    return { text: `${diff} يوم متبقي`, color: 'text-green-600' };
+    return { text: `${diff} يوم متبقي`, color: 'text-green-600 dark:text-green-400' };
   }
 
   function formatDate(d: string) {
@@ -73,7 +72,7 @@ export default function ProjectsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white" dir="rtl">
+    <div className="min-h-screen bg-background" dir="rtl">
       {/* Hero */}
       <div className="bg-gradient-to-br from-indigo-900 to-purple-900 text-white py-16">
         <div className="max-w-4xl mx-auto px-4 text-center">
@@ -85,7 +84,7 @@ export default function ProjectsPage() {
       <div className="max-w-5xl mx-auto px-4 py-10">
         {/* Filter */}
         <div className="flex items-center gap-3 mb-8">
-          <span className="text-sm font-medium text-slate-600 shrink-0">تصفية حسب النوع:</span>
+          <span className="text-sm font-medium text-muted-foreground shrink-0">تصفية حسب النوع:</span>
           <Select value={typeFilter} onValueChange={setTypeFilter}>
             <SelectTrigger className="w-40">
               <SelectValue />
@@ -102,17 +101,17 @@ export default function ProjectsPage() {
         {loading ? (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="rounded-2xl border border-gray-100 overflow-hidden animate-pulse">
-                <div className="aspect-video bg-gray-200" />
+              <div key={i} className="rounded-2xl border border-border overflow-hidden animate-pulse">
+                <div className="aspect-video bg-muted" />
                 <div className="p-4 space-y-2">
-                  <div className="h-4 bg-gray-200 rounded w-3/4" />
-                  <div className="h-3 bg-gray-100 rounded" />
+                  <div className="h-4 bg-muted rounded w-3/4" />
+                  <div className="h-3 bg-muted/60 rounded" />
                 </div>
               </div>
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-20 text-gray-400">
+          <div className="text-center py-20 text-muted-foreground">
             <p className="text-lg">لا توجد فرص في هذه الفئة حالياً</p>
           </div>
         ) : (
@@ -122,10 +121,10 @@ export default function ProjectsPage() {
               return (
                 <div
                   key={project.id}
-                  className="rounded-2xl border border-gray-100 overflow-hidden hover:shadow-md transition-shadow flex flex-col"
+                  className="rounded-2xl border border-border bg-card overflow-hidden hover:border-primary/30 hover:shadow-md transition-all flex flex-col"
                 >
                   {/* Cover */}
-                  <div className="aspect-video bg-gray-100 overflow-hidden">
+                  <div className="aspect-video bg-muted overflow-hidden">
                     {project.coverImageUrl ? (
                       <img
                         src={project.coverImageUrl}
@@ -134,7 +133,7 @@ export default function ProjectsPage() {
                         onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
                       />
                     ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center">
+                      <div className="w-full h-full bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center">
                         <span className="text-4xl opacity-20">💼</span>
                       </div>
                     )}
@@ -149,13 +148,13 @@ export default function ProjectsPage() {
                     </div>
 
                     {/* Title */}
-                    <h3 className="font-bold text-slate-800 line-clamp-2">{project.title}</h3>
+                    <h3 className="font-bold text-foreground line-clamp-2">{project.title}</h3>
 
                     {/* Description */}
-                    <p className="text-gray-500 text-sm line-clamp-2 flex-1">{project.description}</p>
+                    <p className="text-muted-foreground text-sm line-clamp-2 flex-1">{project.description}</p>
 
                     {/* Meta */}
-                    <div className="space-y-1 text-xs text-gray-400">
+                    <div className="space-y-1 text-xs text-muted-foreground">
                       {project.organizationName && (
                         <div className="flex items-center gap-1">
                           <Building2 className="h-3 w-3" />
@@ -173,7 +172,7 @@ export default function ProjectsPage() {
                           <Calendar className="h-3 w-3" />
                           {dl.text}
                           {project.deadline && (
-                            <span className="text-gray-400 font-normal">— {formatDate(project.deadline)}</span>
+                            <span className="text-muted-foreground font-normal">— {formatDate(project.deadline)}</span>
                           )}
                         </div>
                       )}

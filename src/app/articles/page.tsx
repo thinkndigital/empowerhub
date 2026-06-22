@@ -65,7 +65,7 @@ export default function ArticlesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white" dir="rtl">
+    <div className="min-h-screen bg-background" dir="rtl">
       {/* Hero */}
       <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white py-16">
         <div className="max-w-4xl mx-auto px-4 text-center">
@@ -78,7 +78,7 @@ export default function ArticlesPage() {
         {/* Filter + Search */}
         <div className="flex flex-col sm:flex-row gap-4 mb-8">
           {/* Filter tabs */}
-          <div className="flex gap-2 bg-gray-100 rounded-xl p-1">
+          <div className="flex gap-2 bg-muted rounded-xl p-1">
             {[
               { key: 'all', label: 'الكل' },
               { key: 'mentor', label: 'مرشدون' },
@@ -89,8 +89,8 @@ export default function ArticlesPage() {
                 onClick={() => setFilter(tab.key as typeof filter)}
                 className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
                   filter === tab.key
-                    ? 'bg-white shadow text-slate-900'
-                    : 'text-slate-500 hover:text-slate-700'
+                    ? 'bg-background shadow text-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 {tab.label}
@@ -100,7 +100,7 @@ export default function ArticlesPage() {
 
           {/* Search */}
           <div className="relative flex-1">
-            <Search className="absolute right-3 top-2.5 h-4 w-4 text-gray-400" />
+            <Search className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               value={search}
               onChange={e => setSearch(e.target.value)}
@@ -114,18 +114,18 @@ export default function ArticlesPage() {
         {loading ? (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="rounded-2xl border border-gray-100 overflow-hidden animate-pulse">
-                <div className="aspect-video bg-gray-200" />
+              <div key={i} className="rounded-2xl border border-border overflow-hidden animate-pulse">
+                <div className="aspect-video bg-muted" />
                 <div className="p-4 space-y-2">
-                  <div className="h-4 bg-gray-200 rounded w-3/4" />
-                  <div className="h-3 bg-gray-100 rounded" />
-                  <div className="h-3 bg-gray-100 rounded w-2/3" />
+                  <div className="h-4 bg-muted rounded w-3/4" />
+                  <div className="h-3 bg-muted/60 rounded" />
+                  <div className="h-3 bg-muted/60 rounded w-2/3" />
                 </div>
               </div>
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-20 text-gray-400">
+          <div className="text-center py-20 text-muted-foreground">
             <p className="text-lg">لا توجد مقالات</p>
           </div>
         ) : (
@@ -134,10 +134,10 @@ export default function ArticlesPage() {
               <Link
                 key={article.id}
                 href={`/articles/${article.id}`}
-                className="group rounded-2xl border border-gray-100 overflow-hidden hover:shadow-md transition-shadow flex flex-col"
+                className="group rounded-2xl border border-border bg-card overflow-hidden hover:border-primary/30 hover:shadow-md transition-all flex flex-col"
               >
                 {/* Cover */}
-                <div className="aspect-video bg-gray-100 overflow-hidden">
+                <div className="aspect-video bg-muted overflow-hidden">
                   {article.coverImageUrl ? (
                     <img
                       src={article.coverImageUrl}
@@ -146,7 +146,7 @@ export default function ArticlesPage() {
                       onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
                     />
                   ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center">
+                    <div className="w-full h-full bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center">
                       <span className="text-4xl opacity-20">📝</span>
                     </div>
                   )}
@@ -154,20 +154,20 @@ export default function ArticlesPage() {
 
                 <div className="p-4 flex flex-col flex-1 gap-2">
                   {/* Title */}
-                  <h3 className="font-bold text-slate-800 line-clamp-2 group-hover:text-indigo-600 transition-colors">
+                  <h3 className="font-bold text-foreground line-clamp-2 group-hover:text-primary transition-colors">
                     {article.title}
                   </h3>
 
                   {/* Excerpt */}
                   {article.excerpt && (
-                    <p className="text-gray-500 text-sm line-clamp-2 flex-1">{article.excerpt}</p>
+                    <p className="text-muted-foreground text-sm line-clamp-2 flex-1">{article.excerpt}</p>
                   )}
 
                   {/* Tags */}
                   {article.tags && article.tags.length > 0 && (
                     <div className="flex flex-wrap gap-1">
                       {article.tags.slice(0, 3).map(tag => (
-                        <span key={tag} className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full flex items-center gap-0.5">
+                        <span key={tag} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full flex items-center gap-0.5">
                           <Tag className="h-2.5 w-2.5" />{tag}
                         </span>
                       ))}
@@ -175,19 +175,19 @@ export default function ArticlesPage() {
                   )}
 
                   {/* Author + Meta */}
-                  <div className="flex items-center gap-2 pt-1 border-t border-gray-50">
+                  <div className="flex items-center gap-2 pt-1 border-t border-border">
                     <Avatar className="h-7 w-7 shrink-0">
                       <AvatarImage src={article.authorAvatarUrl} alt={article.authorName} />
                       <AvatarFallback className="text-xs">{article.authorName?.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-medium text-slate-700 truncate">{article.authorName}</span>
+                        <span className="text-xs font-medium text-foreground truncate">{article.authorName}</span>
                         <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
                           {ROLE_LABELS[article.authorRole] || article.authorRole}
                         </Badge>
                       </div>
-                      <div className="flex items-center gap-2 text-[11px] text-gray-400">
+                      <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
                         <span>{formatDate(article.publishedAt)}</span>
                         <span className="flex items-center gap-0.5">
                           <Clock className="h-2.5 w-2.5" />{article.readTime} د

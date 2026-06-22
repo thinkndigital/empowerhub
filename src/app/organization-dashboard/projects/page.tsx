@@ -21,9 +21,10 @@ import {
 } from "@/components/ui/table";
 import {
   PlusCircle, Briefcase, Edit2, Trash2, Globe, FileEdit,
-  MapPin, Calendar, Users, Eye,
+  MapPin, Calendar, Users, Eye, Upload,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { uploadFile } from "@/lib/upload-file";
 
 interface FieldConfig {
   enabled: boolean;
@@ -110,6 +111,7 @@ export default function OrgProjectsPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [activeTab, setActiveTab] = useState<'basic' | 'form'>('basic');
+  const [uploadingCover, setUploadingCover] = useState(false);
 
   // Registrations view
   const [viewProject, setViewProject] = useState<Project | null>(null);
@@ -188,6 +190,21 @@ export default function OrgProjectsPage() {
         },
       },
     }));
+  }
+
+  async function handleCoverUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    setUploadingCover(true);
+    try {
+      const token = await user.getIdToken();
+      const url = await uploadFile(file, 'projects', token);
+      setForm(f => ({ ...f, coverImageUrl: url }));
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: 'خطأ', description: err.message || 'فشل رفع الصورة' });
+    } finally {
+      setUploadingCover(false);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -482,14 +499,30 @@ export default function OrgProjectsPage() {
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="proj-cover">رابط صورة الغلاف</Label>
-                  <Input
-                    id="proj-cover"
-                    value={form.coverImageUrl}
-                    onChange={e => setForm(f => ({ ...f, coverImageUrl: e.target.value }))}
-                    placeholder="https://..."
-                    dir="ltr"
-                  />
+                  <Label htmlFor="proj-cover">صورة الغلاف</Label>
+                  <div className="flex gap-2 items-center">
+                    <Input
+                      id="proj-cover"
+                      value={form.coverImageUrl}
+                      onChange={e => setForm(f => ({ ...f, coverImageUrl: e.target.value }))}
+                      placeholder="https://..."
+                      dir="ltr"
+                      className="flex-1"
+                    />
+                    <label className="cursor-pointer shrink-0">
+                      <Button type="button" variant="outline" size="icon" disabled={uploadingCover} asChild>
+                        <span>
+                          {uploadingCover ? <span className="text-xs">⏳</span> : <Upload className="h-4 w-4" />}
+                        </span>
+                      </Button>
+                      <input type="file" accept="image/*" className="hidden" onChange={handleCoverUpload} />
+                    </label>
+                    {form.coverImageUrl && (
+                      <div className="h-10 w-10 rounded-lg border overflow-hidden shrink-0">
+                        <img src={form.coverImageUrl} alt="" className="h-full w-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                      </div>
+                    )}
+                  </div>
                 </div>
               </>
             )}

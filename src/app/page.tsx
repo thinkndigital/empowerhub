@@ -503,6 +503,8 @@ export default function LandingPage() {
     { href: '#how-it-works', label: 'كيف تعمل' },
     { href: '#modules', label: 'الخدمات' },
     { href: '#experts', label: 'الخبراء' },
+    { href: '/articles', label: 'المقالات' },
+    { href: '/projects', label: 'الفرص' },
     { href: '/market', label: 'المتجر' },
   ];
 
