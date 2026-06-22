@@ -1025,12 +1025,12 @@ export default function LandingPage() {
         {sections.showRoles && rolesData.length > 0 && (
           <section id="roles" className="py-16 sm:py-20 md:py-28">
             <div className="container">
-              <div className="max-w-xl mb-10 sm:mb-14">
+              <div className="text-center mb-10 sm:mb-14">
                 <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">انضم إلينا</p>
                 <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground">
                   ما دورك في منظومة التمكين؟
                 </h2>
-                <p className="mt-3 text-muted-foreground text-sm sm:text-base leading-relaxed">
+                <p className="mt-3 text-muted-foreground text-sm sm:text-base leading-relaxed max-w-xl mx-auto">
                   سواء كنت تسعى للتعلم، أو تملك خبرة تشاركها، أو تقود منظمة — هناك مكان لك هنا.
                 </p>
               </div>
@@ -1065,12 +1065,10 @@ export default function LandingPage() {
           <section id="experts" className="py-16 sm:py-20 md:py-28 bg-muted/30">
             <div className="container">
               {/* Section header */}
-              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 sm:gap-6 mb-10 sm:mb-14">
-                <div>
-                  <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">فريق الخبراء</p>
-                  <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground">تعلم من الأفضل</h2>
-                </div>
-                <div className="flex flex-wrap gap-2 shrink-0">
+              <div className="text-center mb-10 sm:mb-14">
+                <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">فريق الخبراء</p>
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-4">تعلم من الأفضل</h2>
+                <div className="flex flex-wrap justify-center gap-2">
                   {sections.showMentors && (
                     <Button variant="outline" size="sm" asChild>
                       <Link href="/register?role=mentor">انضم كمرشد</Link>
@@ -1089,13 +1087,15 @@ export default function LandingPage() {
                 <div className="mb-10 sm:mb-12">
                   <p className="text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-4 sm:mb-5">المرشدون</p>
                   {loadingMentors ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                      {[...Array(4)].map((_, i) => <div key={i} className="h-48 sm:h-52 rounded-2xl bg-muted animate-pulse" />)}
+                    <div className="flex gap-4 overflow-x-auto pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                      {[...Array(4)].map((_, i) => <div key={i} className="w-[82vw] sm:w-72 shrink-0 h-52 rounded-2xl bg-muted animate-pulse" />)}
                     </div>
                   ) : mentors.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                    <div className="flex gap-4 overflow-x-auto pb-3 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                       {mentors.map(m => (
-                        <ExpertCard key={m.id} expert={m} role="mentor" currencySymbol={currencySymbol} onBook={() => { setBookingHost(m); setBookingRole('mentor'); }} />
+                        <div key={m.id} className="w-[82vw] sm:w-72 shrink-0 snap-start">
+                          <ExpertCard expert={m} role="mentor" currencySymbol={currencySymbol} onBook={() => { setBookingHost(m); setBookingRole('mentor'); }} />
+                        </div>
                       ))}
                     </div>
                   ) : (
@@ -1109,13 +1109,15 @@ export default function LandingPage() {
                 <div>
                   <p className="text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-4 sm:mb-5">المدربون</p>
                   {loadingCoaches ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                      {[...Array(4)].map((_, i) => <div key={i} className="h-48 sm:h-52 rounded-2xl bg-muted animate-pulse" />)}
+                    <div className="flex gap-4 overflow-x-auto pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                      {[...Array(4)].map((_, i) => <div key={i} className="w-[82vw] sm:w-72 shrink-0 h-52 rounded-2xl bg-muted animate-pulse" />)}
                     </div>
                   ) : coaches.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                    <div className="flex gap-4 overflow-x-auto pb-3 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                       {coaches.map(c => (
-                        <ExpertCard key={c.id} expert={c} role="coach" currencySymbol={currencySymbol} onBook={() => { setBookingHost(c); setBookingRole('coach'); }} />
+                        <div key={c.id} className="w-[82vw] sm:w-72 shrink-0 snap-start">
+                          <ExpertCard expert={c} role="coach" currencySymbol={currencySymbol} onBook={() => { setBookingHost(c); setBookingRole('coach'); }} />
+                        </div>
                       ))}
                     </div>
                   ) : (
@@ -1131,15 +1133,13 @@ export default function LandingPage() {
         {sections.showCourses && (
           <section id="courses" className="py-16 sm:py-20 md:py-28">
             <div className="container">
-              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10 sm:mb-12">
-                <div>
-                  <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">الدورات التدريبية</p>
-                  <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground">
-                    طور مهاراتك مع دوراتنا
-                  </h2>
-                </div>
+              <div className="text-center mb-10 sm:mb-12">
+                <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">الدورات التدريبية</p>
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-4">
+                  طور مهاراتك مع دوراتنا
+                </h2>
                 {!loadingCourses && courses.length > 0 && (
-                  <div className="flex items-center gap-0.5 bg-muted/70 rounded-lg p-0.5 border border-border/50 shrink-0 self-start sm:self-auto">
+                  <div className="inline-flex items-center gap-0.5 bg-muted/70 rounded-lg p-0.5 border border-border/50">
                     {(['all', 'free', 'paid'] as const).map(f => (
                       <button key={f} onClick={() => setCourseFilter(f)}
                         className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${courseFilter === f ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
@@ -1150,8 +1150,8 @@ export default function LandingPage() {
                 )}
               </div>
               {loadingCourses ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                  {[...Array(4)].map((_, i) => <div key={i} className="h-56 sm:h-60 rounded-xl bg-muted animate-pulse" />)}
+                <div className="flex gap-4 overflow-x-auto pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  {[...Array(4)].map((_, i) => <div key={i} className="w-[82vw] sm:w-72 shrink-0 h-60 rounded-xl bg-muted animate-pulse" />)}
                 </div>
               ) : courses.length === 0 ? (
                 <div className="py-12 text-center text-muted-foreground">
@@ -1170,8 +1170,12 @@ export default function LandingPage() {
                     <p className="text-sm">لا توجد دورات {courseFilter === 'free' ? 'مجانية' : 'مدفوعة'} حالياً.</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                    {filtered.map(c => <CourseCard key={c.id} course={c} currencySymbol={currencySymbol} onEnroll={setSelectedCourse} />)}
+                  <div className="flex gap-4 overflow-x-auto pb-3 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    {filtered.map(c => (
+                      <div key={c.id} className="w-[82vw] sm:w-72 shrink-0 snap-start">
+                        <CourseCard course={c} currencySymbol={currencySymbol} onEnroll={setSelectedCourse} />
+                      </div>
+                    ))}
                   </div>
                 );
               })()}
@@ -1183,20 +1187,16 @@ export default function LandingPage() {
         {publicSessions.length > 0 && (
           <section id="sessions" className="py-16 sm:py-20 md:py-28 bg-muted/30">
             <div className="container">
-              <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8 sm:mb-10">
-                <div>
-                  <p className="text-[10px] sm:text-xs font-semibold text-primary uppercase tracking-widest mb-2">جلسات إرشادية</p>
-                  <h2 className="text-2xl sm:text-3xl font-bold text-foreground">الجلسات المتاحة</h2>
-                </div>
-                <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
-                  <div className="flex items-center gap-0.5 bg-background rounded-lg p-0.5 border border-border/50">
-                    {(['all', 'free', 'paid'] as const).map(f => (
-                      <button key={f} onClick={() => setSessionFilter(f)}
-                        className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${sessionFilter === f ? 'bg-muted shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
-                        {f === 'all' ? 'الكل' : f === 'free' ? 'مجاني' : 'مدفوع'}
-                      </button>
-                    ))}
-                  </div>
+              <div className="text-center mb-8 sm:mb-10">
+                <p className="text-[10px] sm:text-xs font-semibold text-primary uppercase tracking-widest mb-2">جلسات إرشادية</p>
+                <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-4">الجلسات المتاحة</h2>
+                <div className="inline-flex items-center gap-0.5 bg-background rounded-lg p-0.5 border border-border/50">
+                  {(['all', 'free', 'paid'] as const).map(f => (
+                    <button key={f} onClick={() => setSessionFilter(f)}
+                      className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${sessionFilter === f ? 'bg-muted shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
+                      {f === 'all' ? 'الكل' : f === 'free' ? 'مجاني' : 'مدفوع'}
+                    </button>
+                  ))}
                 </div>
               </div>
               {(() => {
@@ -1211,9 +1211,11 @@ export default function LandingPage() {
                     <p className="text-sm">لا توجد جلسات {sessionFilter === 'free' ? 'مجانية' : 'مدفوعة'} حالياً.</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                  <div className="flex gap-4 overflow-x-auto pb-3 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                     {filtered.map(s => (
-                      <PublicSessionCard key={s.id} session={s} currencySymbol={currencySymbol} onBook={() => setSelectedSession(s)} />
+                      <div key={s.id} className="w-[82vw] sm:w-72 shrink-0 snap-start">
+                        <PublicSessionCard session={s} currencySymbol={currencySymbol} onBook={() => setSelectedSession(s)} />
+                      </div>
                     ))}
                   </div>
                 );
@@ -1226,12 +1228,10 @@ export default function LandingPage() {
         {sections.showProducts && (
           <section id="marketplace" className="py-16 sm:py-20 md:py-28 bg-muted/30">
             <div className="container">
-              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 sm:gap-6 mb-10 sm:mb-12">
-                <div>
-                  <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">متجر المجتمع</p>
-                  <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground">منتجات من مجتمعنا</h2>
-                </div>
-                <Button asChild variant="outline" size="sm" className="shrink-0 self-start sm:self-auto">
+              <div className="text-center mb-10 sm:mb-12">
+                <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">متجر المجتمع</p>
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-4">منتجات من مجتمعنا</h2>
+                <Button asChild variant="outline" size="sm">
                   <Link href="/market">
                     تصفح جميع المنتجات
                     <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
@@ -1240,8 +1240,8 @@ export default function LandingPage() {
               </div>
 
               {loadingProducts ? (
-                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                  {[...Array(6)].map((_, i) => <div key={i} className="h-56 sm:h-64 rounded-xl bg-muted animate-pulse" />)}
+                <div className="flex gap-4 overflow-x-auto pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  {[...Array(4)].map((_, i) => <div key={i} className="w-[46vw] sm:w-64 shrink-0 h-64 rounded-xl bg-muted animate-pulse" />)}
                 </div>
               ) : products.length === 0 ? (
                 <div className="py-12 text-center text-muted-foreground">
@@ -1250,8 +1250,12 @@ export default function LandingPage() {
                   <Button asChild size="sm"><Link href="/register">ابدأ الآن</Link></Button>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                  {products.map(p => <ProductCard key={p.id} product={p} currencySymbol={currencySymbol} onOrder={setSelectedProduct} />)}
+                <div className="flex gap-4 overflow-x-auto pb-3 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  {products.map(p => (
+                    <div key={p.id} className="w-[46vw] sm:w-64 shrink-0 snap-start">
+                      <ProductCard product={p} currencySymbol={currencySymbol} onOrder={setSelectedProduct} />
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -1262,21 +1266,21 @@ export default function LandingPage() {
         {sections.showStores && publicStores.length > 0 && (
           <section id="stores" className="py-16 sm:py-20 md:py-28">
             <div className="container">
-              <div className="max-w-xl mb-10 sm:mb-12">
+              <div className="text-center mb-10 sm:mb-12">
                 <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">رواد الأعمال</p>
                 <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground">متاجر مجتمعنا</h2>
               </div>
               {loadingStores ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                  {[...Array(3)].map((_, i) => <div key={i} className="h-20 rounded-xl bg-muted animate-pulse" />)}
+                <div className="flex gap-4 overflow-x-auto pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  {[...Array(4)].map((_, i) => <div key={i} className="w-[82vw] sm:w-72 shrink-0 h-20 rounded-xl bg-muted animate-pulse" />)}
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                <div className="flex gap-4 overflow-x-auto pb-3 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {publicStores.map(store => (
                     <Link
                       key={store.id}
                       href={`/stores/${store.id}`}
-                      className="group p-4 sm:p-5 rounded-xl border border-border bg-card hover:border-primary/30 hover:shadow-sm transition-all flex items-center justify-between gap-3"
+                      className="group w-[82vw] sm:w-72 shrink-0 snap-start p-4 sm:p-5 rounded-xl border border-border bg-card hover:border-primary/30 hover:shadow-sm transition-all flex items-center justify-between gap-3"
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
@@ -1302,13 +1306,13 @@ export default function LandingPage() {
         {sections.showTestimonials && testimonialsData.length > 0 && (
           <section className="py-16 sm:py-20 md:py-28 bg-muted/30">
             <div className="container">
-              <div className="max-w-xl mb-12 sm:mb-16">
+              <div className="text-center mb-12 sm:mb-16">
                 <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">قصص النجاح</p>
                 <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground">ماذا يقول مجتمعنا</h2>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 sm:gap-10">
+              <div className="flex gap-5 overflow-x-auto pb-3 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {testimonialsData.map((t, i) => (
-                  <div key={i} className="flex flex-col gap-4 sm:gap-5">
+                  <div key={i} className="w-[82vw] sm:w-80 lg:w-96 shrink-0 snap-start flex flex-col gap-4 sm:gap-5 p-6 rounded-2xl border border-border bg-card">
                     <div className="flex gap-0.5">
                       {Array.from({ length: Math.min(5, Math.max(1, t.stars)) }).map((_, j) => (
                         <Star key={j} className="h-3.5 w-3.5 text-amber-400 fill-amber-400" />
@@ -1337,23 +1341,21 @@ export default function LandingPage() {
         {latestArticles.length > 0 && (
           <section id="articles" className="py-16 sm:py-20 md:py-28 bg-muted/30">
             <div className="container">
-              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10 sm:mb-12">
-                <div>
-                  <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">رؤى ومعرفة</p>
-                  <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground">
-                    أحدث المقالات
-                  </h2>
-                </div>
-                <Link href="/articles" className="flex items-center gap-1 text-sm font-semibold text-primary shrink-0 self-start sm:self-auto">
+              <div className="text-center mb-10 sm:mb-12">
+                <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">رؤى ومعرفة</p>
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-4">
+                  أحدث المقالات
+                </h2>
+                <Link href="/articles" className="inline-flex items-center gap-1 text-sm font-semibold text-primary">
                   عرض جميع المقالات <ArrowLeft className="h-3.5 w-3.5" />
                 </Link>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+              <div className="flex gap-4 overflow-x-auto pb-3 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {latestArticles.map(article => (
                   <Link
                     key={article.id}
                     href={`/articles/${article.id}`}
-                    className="group rounded-2xl border border-border bg-card overflow-hidden hover:border-primary/30 hover:shadow-md transition-all flex flex-col"
+                    className="group w-[82vw] sm:w-72 shrink-0 snap-start rounded-2xl border border-border bg-card overflow-hidden hover:border-primary/30 hover:shadow-md transition-all flex flex-col"
                   >
                     <div className="aspect-video bg-muted overflow-hidden">
                       {article.coverImageUrl ? (
@@ -1403,23 +1405,21 @@ export default function LandingPage() {
         {latestProjects.length > 0 && (
           <section id="opportunities-live" className="py-16 sm:py-20 md:py-28">
             <div className="container">
-              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10 sm:mb-12">
-                <div>
-                  <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">فرص حقيقية</p>
-                  <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground">
-                    أحدث الفرص والمشاريع
-                  </h2>
-                </div>
-                <Link href="/projects" className="flex items-center gap-1 text-sm font-semibold text-primary shrink-0 self-start sm:self-auto">
+              <div className="text-center mb-10 sm:mb-12">
+                <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">فرص حقيقية</p>
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-4">
+                  أحدث الفرص والمشاريع
+                </h2>
+                <Link href="/projects" className="inline-flex items-center gap-1 text-sm font-semibold text-primary">
                   عرض جميع الفرص <ArrowLeft className="h-3.5 w-3.5" />
                 </Link>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+              <div className="flex gap-4 overflow-x-auto pb-3 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {latestProjects.map(project => (
                   <Link
                     key={project.id}
                     href={`/projects/${project.id}`}
-                    className="group rounded-2xl border border-border bg-card overflow-hidden hover:border-primary/30 hover:shadow-md transition-all flex flex-col"
+                    className="group w-[82vw] sm:w-72 shrink-0 snap-start rounded-2xl border border-border bg-card overflow-hidden hover:border-primary/30 hover:shadow-md transition-all flex flex-col"
                   >
                     <div className="aspect-video bg-muted overflow-hidden">
                       {project.coverImageUrl ? (
@@ -1476,11 +1476,11 @@ export default function LandingPage() {
                   أشخاص حقيقيون غيّروا مساراتهم بفضل التدريب والإرشاد والدعم.
                 </p>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              <div className="flex gap-4 overflow-x-auto pb-3 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {successStories.map(story => (
                   <div
                     key={story.id}
-                    className="group rounded-2xl border border-border bg-card p-6 flex flex-col gap-4 hover:border-primary/30 hover:shadow-md transition-all"
+                    className="group w-[82vw] sm:w-80 shrink-0 snap-start rounded-2xl border border-border bg-card p-6 flex flex-col gap-4 hover:border-primary/30 hover:shadow-md transition-all"
                   >
                     {/* Stars */}
                     <div className="flex gap-0.5">
