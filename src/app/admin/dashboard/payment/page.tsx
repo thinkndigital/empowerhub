@@ -35,7 +35,7 @@ const defaultConfig: PaymentConfig = {
   moyasar: { enabled: false, publishableKey: '', secretKey: '', label: 'موياسر (Mada / Visa / STC Pay)' },
   stripe: { enabled: false, publishableKey: '', secretKey: '', label: 'Stripe (بطاقة بنكية دولية)' },
   paypal: { enabled: false, clientId: '', clientSecret: '', mode: 'sandbox', label: 'PayPal' },
-  paytabs: { enabled: false, profileId: '', serverKey: '', clientKey: '', region: 'SAU', label: 'PayTabs' },
+  paytabs: { enabled: false, profileId: '', serverKey: '', clientKey: '', region: 'JOR', label: 'PayTabs' },
   hyperpay: { enabled: false, accessToken: '', entityIdVisa: '', entityIdMada: '', mode: 'test', label: 'HyperPay' },
   tamara: { enabled: false, apiKey: '', label: 'تمارا - اشتري الآن وادفع لاحقاً' },
   tabby: { enabled: false, apiKey: '', publicKey: '', label: 'تابي - قسّم المدفوعات' },
@@ -76,7 +76,7 @@ const GATEWAYS: { key: GwKey; name: string; desc: string; logo: string; fields: 
       { key: 'profileId', label: 'Profile ID' },
       { key: 'serverKey', label: 'Server Key', type: 'password' },
       { key: 'clientKey', label: 'Client Key', type: 'password' },
-      { key: 'region', label: 'المنطقة', hint: 'SAU للسعودية، ARE للإمارات، JOR للأردن' },
+      { key: 'region', label: 'المنطقة (Region)', hint: 'JOR للأردن | SAU للسعودية | ARE للإمارات | EGY لمصر | OMN لعُمان | IRQ للعراق' },
     ],
   },
   {
