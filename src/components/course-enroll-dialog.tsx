@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useUser } from "@/firebase/auth/use-user";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, BookOpen, CreditCard, Banknote, Loader2 } from "lucide-react";
+import { CheckCircle, BookOpen, CreditCard, Banknote, Loader2, ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 export type CourseEnrollDialogProps = {
@@ -63,6 +63,8 @@ export function CourseEnrollDialog({
   const [method, setMethod] = useState<'cod' | GatewayKey>('cod');
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
+  const [paymentIframeUrl, setPaymentIframeUrl] = useState<string | null>(null);
+  const [iframeLoading, setIframeLoading] = useState(false);
 
   const isFree = coursePrice === null || coursePrice === 0;
   const currency = config.currency || 'JOD';
@@ -74,8 +76,24 @@ export function CourseEnrollDialog({
   }, []);
 
   useEffect(() => {
-    if (!isOpen) { setDone(false); setName(''); setPhone(''); }
+    if (!isOpen) { setDone(false); setName(''); setPhone(''); setPaymentIframeUrl(null); }
   }, [isOpen]);
+
+  // Listen for payment result posted from the callback page inside the iframe
+  useEffect(() => {
+    const handler = (e: MessageEvent) => {
+      if (e.data?.type !== 'payment-result') return;
+      setPaymentIframeUrl(null);
+      if (e.data.status === 'paid') {
+        setDone(true);
+        onEnrolled?.();
+      } else {
+        toast({ variant: 'destructive', title: 'فشل الدفع', description: 'لم يتم إتمام الدفع. حاول مرة أخرى.' });
+      }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, [onEnrolled, toast]);
 
   // Direct enrollment for free courses (logged-in users)
   const directEnroll = async () => {
@@ -145,7 +163,8 @@ export function CourseEnrollDialog({
         });
         const payData = await payRes.json();
         if (payData.paymentUrl) {
-          window.location.href = payData.paymentUrl;
+          setIframeLoading(true);
+          setPaymentIframeUrl(payData.paymentUrl);
           return;
         }
         throw new Error(payData.error || 'فشل في تهيئة الدفع');
@@ -175,15 +194,39 @@ export function CourseEnrollDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md" dir="rtl">
+      <DialogContent className={paymentIframeUrl ? "sm:max-w-2xl w-[95vw]" : "sm:max-w-md"} dir="rtl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <BookOpen className="h-5 w-5 text-primary" />
-            {isFree ? 'التسجيل في الدورة' : 'شراء الدورة'}
+            {paymentIframeUrl ? 'إتمام الدفع' : isFree ? 'التسجيل في الدورة' : 'شراء الدورة'}
           </DialogTitle>
         </DialogHeader>
 
-        {done ? (
+        {/* Payment iframe */}
+        {paymentIframeUrl && (
+          <div className="flex flex-col gap-3">
+            <div className="relative rounded-xl overflow-hidden border border-border bg-muted/30" style={{ height: '65vh' }}>
+              {iframeLoading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-background z-10">
+                  <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                </div>
+              )}
+              <iframe
+                src={paymentIframeUrl}
+                className="w-full h-full border-0"
+                allow="payment"
+                title="صفحة الدفع"
+                onLoad={() => setIframeLoading(false)}
+              />
+            </div>
+            <Button variant="outline" size="sm" onClick={() => setPaymentIframeUrl(null)} className="gap-2">
+              <ArrowRight className="h-4 w-4" />
+              إلغاء والعودة
+            </Button>
+          </div>
+        )}
+
+        {!paymentIframeUrl && done ? (
           <div className="flex flex-col items-center gap-4 py-8 text-center">
             <div className="h-16 w-16 rounded-full bg-emerald-100 flex items-center justify-center">
               <CheckCircle className="h-8 w-8 text-emerald-600" />

@@ -14,26 +14,41 @@ export default function PaymentCallbackPage() {
   const [message, setMessage] = useState('');
   const [isCourseOrder, setIsCourseOrder] = useState(false);
   const [courseId, setCourseId] = useState('');
+  const [inIframe, setInIframe] = useState(false);
+
+  useEffect(() => {
+    setInIframe(window !== window.parent);
+  }, []);
 
   useEffect(() => {
     if (authLoading) return;
 
     const orderId = searchParams.get('orderId');
-    const moyasarStatus = searchParams.get('status');
-    const moyasarMessage = searchParams.get('message');
+    const gateway = searchParams.get('gateway') || 'moyasar';
 
     if (!orderId) { setStatus('failed'); setMessage('رقم الطلب غير موجود'); return; }
 
-    if (moyasarStatus === 'paid') {
-      // Update order payment status
+    // Determine success based on gateway-specific params
+    let isPaid = false;
+    if (gateway === 'moyasar') {
+      isPaid = searchParams.get('status') === 'paid';
+    } else if (gateway === 'paytabs') {
+      const respStatus = searchParams.get('respStatus') || searchParams.get('response_status');
+      isPaid = respStatus === 'A';
+    } else if (gateway === 'stripe') {
+      isPaid = searchParams.get('status') === 'paid';
+    } else {
+      isPaid = searchParams.get('status') === 'paid';
+    }
+
+    if (isPaid) {
       fetch('/api/public/orders/verify', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ orderId, paymentStatus: 'paid', status: 'confirmed' }),
+        body: JSON.stringify({ orderId, paymentStatus: 'paid', status: 'confirmed', gateway }),
       })
         .then(r => r.json())
         .then(async (data) => {
-          // Check if this is a course order and enroll the user
           if (data.order?.type === 'course' && data.order?.courseId && authUser) {
             const cId = data.order.courseId;
             setCourseId(cId);
@@ -53,11 +68,53 @@ export default function PaymentCallbackPage() {
       setStatus('paid');
       setMessage(`تم الدفع بنجاح! رقم طلبك: ${orderId}`);
     } else {
+      const failMsg = searchParams.get('message') || searchParams.get('respMessage') || 'فشل الدفع. يمكنك المحاولة مرة أخرى.';
       setStatus('failed');
-      setMessage(moyasarMessage || 'فشل الدفع. يمكنك المحاولة مرة أخرى.');
+      setMessage(failMsg);
     }
   }, [searchParams, authUser, authLoading]);
 
+  // Send postMessage to parent when inside iframe
+  useEffect(() => {
+    if (status === 'loading' || !inIframe) return;
+    const orderId = searchParams.get('orderId');
+    window.parent.postMessage({ type: 'payment-result', status, orderId }, '*');
+  }, [status, inIframe, searchParams]);
+
+  // Simplified iframe UI — parent dialog handles the full UX
+  if (inIframe) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background" dir="rtl">
+        <div className="text-center px-6">
+          {status === 'loading' && (
+            <>
+              <Loader2 className="h-12 w-12 text-primary mx-auto mb-3 animate-spin" />
+              <p className="text-muted-foreground text-sm">جاري التحقق من الدفع...</p>
+            </>
+          )}
+          {status === 'paid' && (
+            <>
+              <div className="h-16 w-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-3">
+                <CheckCircle className="h-8 w-8 text-emerald-600" />
+              </div>
+              <p className="font-bold text-lg">تم الدفع بنجاح!</p>
+            </>
+          )}
+          {status === 'failed' && (
+            <>
+              <div className="h-16 w-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-3">
+                <XCircle className="h-8 w-8 text-red-600" />
+              </div>
+              <p className="font-bold text-lg">لم يتم الدفع</p>
+              <p className="text-muted-foreground text-sm mt-1">{message}</p>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Full standalone page
   return (
     <div className="min-h-screen flex items-center justify-center bg-background" dir="rtl">
       <div className="text-center max-w-sm px-4">

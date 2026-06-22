@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, CreditCard, Banknote, CheckCircle } from "lucide-react";
+import { Calendar, CreditCard, Banknote, CheckCircle, Loader2, ArrowRight } from "lucide-react";
 
 interface GatewayInfo { enabled: boolean; label: string; }
 interface PaymentConfig {
@@ -53,6 +53,8 @@ export function SessionBookingDialog({ isOpen, onOpenChange, hostId, hostName, h
   const [paymentMethod, setPaymentMethod] = useState<'cod' | GatewayKey>('cod');
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
+  const [paymentIframeUrl, setPaymentIframeUrl] = useState<string | null>(null);
+  const [iframeLoading, setIframeLoading] = useState(false);
 
   useEffect(() => {
     fetch('/api/public/payment-config').then(r => r.json()).then(d => {
@@ -61,8 +63,22 @@ export function SessionBookingDialog({ isOpen, onOpenChange, hostId, hostName, h
   }, []);
 
   useEffect(() => {
-    if (!isOpen) { setDone(false); setName(''); setPhone(''); setPreferredTime(''); setNotes(''); setPaymentMethod('cod'); }
+    if (!isOpen) { setDone(false); setName(''); setPhone(''); setPreferredTime(''); setNotes(''); setPaymentMethod('cod'); setPaymentIframeUrl(null); }
   }, [isOpen]);
+
+  useEffect(() => {
+    const handler = (e: MessageEvent) => {
+      if (e.data?.type !== 'payment-result') return;
+      setPaymentIframeUrl(null);
+      if (e.data.status === 'paid') {
+        setDone(true);
+      } else {
+        toast({ variant: 'destructive', title: 'فشل الدفع', description: 'لم يتم إتمام الدفع. حاول مرة أخرى.' });
+      }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, [toast]);
 
   const currency = paymentConfig.currency || 'JOD';
 
@@ -93,7 +109,7 @@ export function SessionBookingDialog({ isOpen, onOpenChange, hostId, hostName, h
           }),
         });
         const payData = await payRes.json();
-        if (payData.paymentUrl) { window.location.href = payData.paymentUrl; return; }
+        if (payData.paymentUrl) { setIframeLoading(true); setPaymentIframeUrl(payData.paymentUrl); return; }
         throw new Error(payData.error || 'فشل في تهيئة الدفع');
       }
 
@@ -110,15 +126,38 @@ export function SessionBookingDialog({ isOpen, onOpenChange, hostId, hostName, h
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md" dir="rtl">
+      <DialogContent className={paymentIframeUrl ? "sm:max-w-2xl w-[95vw]" : "sm:max-w-md"} dir="rtl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5 text-primary" />
-            حجز {sessionLabel}
+            {paymentIframeUrl ? 'إتمام الدفع' : `حجز ${sessionLabel}`}
           </DialogTitle>
         </DialogHeader>
 
-        {done ? (
+        {paymentIframeUrl && (
+          <div className="flex flex-col gap-3">
+            <div className="relative rounded-xl overflow-hidden border border-border bg-muted/30" style={{ height: '65vh' }}>
+              {iframeLoading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-background z-10">
+                  <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                </div>
+              )}
+              <iframe
+                src={paymentIframeUrl}
+                className="w-full h-full border-0"
+                allow="payment"
+                title="صفحة الدفع"
+                onLoad={() => setIframeLoading(false)}
+              />
+            </div>
+            <Button variant="outline" size="sm" onClick={() => setPaymentIframeUrl(null)} className="gap-2">
+              <ArrowRight className="h-4 w-4" />
+              إلغاء والعودة
+            </Button>
+          </div>
+        )}
+
+        {!paymentIframeUrl && done ? (
           <div className="flex flex-col items-center gap-4 py-8 text-center">
             <div className="h-16 w-16 rounded-full bg-emerald-100 flex items-center justify-center">
               <CheckCircle className="h-8 w-8 text-emerald-600" />
