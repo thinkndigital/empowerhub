@@ -169,7 +169,7 @@ export default function CoachSettingsPage() {
   const avatarInitial = profile?.name?.charAt(0) || '؟';
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
+    <div className="w-full space-y-8" dir="rtl">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">إعدادات الملف الشخصي والمحفظة</h1>
         <p className="text-sm text-muted-foreground">إدارة معلوماتك المهنية وتفاصيل الدفع.</p>

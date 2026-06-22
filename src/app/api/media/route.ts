@@ -40,11 +40,8 @@ export async function POST(req: NextRequest) {
     const fileRef = bucket.file(storagePath);
 
     await fileRef.save(buffer, { contentType: file.type, resumable: false });
-
-    const [url] = await fileRef.getSignedUrl({
-      action: 'read',
-      expires: new Date(Date.now() + 10 * 365 * 24 * 60 * 60 * 1000),
-    });
+    await fileRef.makePublic();
+    const url = `https://storage.googleapis.com/${STORAGE_BUCKET}/${storagePath}`;
 
     return NextResponse.json({ url, path: storagePath });
   } catch (e: any) {
