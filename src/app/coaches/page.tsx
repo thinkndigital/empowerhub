@@ -3,10 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Search, MessageSquare, GraduationCap, Users } from "lucide-react";
-import { useCurrency } from "@/hooks/use-currency";
+import { Search, Users } from "lucide-react";
 
 interface Coach {
   id: string;
@@ -23,7 +21,6 @@ interface Coach {
 }
 
 export default function CoachesListPage() {
-  const { symbol } = useCurrency();
   const [coaches, setCoaches] = useState<Coach[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -49,7 +46,7 @@ export default function CoachesListPage() {
     <div className="min-h-screen bg-background" dir="rtl">
       {/* Header */}
       <div className="border-b border-border bg-muted/30">
-        <div className="max-w-5xl mx-auto px-4 py-10 sm:py-14">
+        <div className="max-w-6xl mx-auto px-4 py-10 sm:py-14">
           <nav className="flex items-center gap-1.5 text-xs text-muted-foreground mb-5" aria-label="breadcrumb">
             <Link href="/" className="hover:text-primary transition-colors">الرئيسية</Link>
             <span className="text-border/80 select-none">/</span>
@@ -72,20 +69,15 @@ export default function CoachesListPage() {
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 py-10">
+      <div className="max-w-6xl mx-auto px-4 py-10">
         {loading ? (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="rounded-2xl border border-border bg-card p-5 animate-pulse space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="h-14 w-14 rounded-full bg-muted shrink-0" />
-                  <div className="space-y-2 flex-1">
-                    <div className="h-4 bg-muted rounded w-3/4" />
-                    <div className="h-3 bg-muted rounded w-1/2" />
-                  </div>
-                </div>
-                <div className="h-3 bg-muted rounded" />
-                <div className="h-3 bg-muted rounded w-4/5" />
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="rounded-2xl border border-border bg-card p-6 animate-pulse flex flex-col items-center gap-4">
+                <div className="h-32 w-32 rounded-full bg-muted" />
+                <div className="h-4 bg-muted rounded w-2/3" />
+                <div className="h-3 bg-muted rounded w-1/2" />
+                <div className="h-9 bg-muted rounded w-full mt-auto" />
               </div>
             ))}
           </div>
@@ -100,66 +92,46 @@ export default function CoachesListPage() {
             )}
           </div>
         ) : (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {filtered.map(c => {
               const name = c.displayName || c.name || 'بدون اسم';
               const bio = c.bio || c.description || '';
               const specs = c.specializations || [];
-              const hasPrice = c.sessionPrice != null && c.sessionPrice > 0;
+              const subtitle = specs.length > 0 ? specs[0] : bio;
               return (
-                <div key={c.id} className="group rounded-2xl border border-border bg-card hover:border-primary/30 hover:shadow-md transition-all flex flex-col p-5 gap-3">
-                  {/* Avatar + name */}
-                  <div className="flex items-start gap-3">
-                    <div className="h-14 w-14 rounded-full bg-orange-500/10 flex items-center justify-center font-bold text-xl text-orange-600 flex-shrink-0 overflow-hidden border-2 border-orange-500/20">
-                      {c.avatarUrl ? (
-                        <img src={c.avatarUrl} alt={name} className="h-full w-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                      ) : name[0]}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-foreground group-hover:text-primary transition-colors truncate">{name}</h3>
-                      {c.yearsOfExperience && (
-                        <p className="text-xs text-muted-foreground">{c.yearsOfExperience} سنوات خبرة</p>
-                      )}
-                    </div>
+                <div key={c.id} className="group rounded-2xl border border-border bg-card hover:border-primary/30 hover:shadow-lg transition-all flex flex-col items-center p-6 gap-3 text-center">
+                  {/* Avatar — large centered circle */}
+                  <div className="relative h-32 w-32 rounded-full bg-orange-500/10 flex items-center justify-center font-bold text-4xl text-orange-600 overflow-hidden border-4 border-orange-500/20 shadow-md shrink-0">
+                    <span>{name[0]}</span>
+                    {c.avatarUrl && (
+                      <img
+                        src={c.avatarUrl}
+                        alt={name}
+                        className="absolute inset-0 h-full w-full object-cover"
+                        onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                      />
+                    )}
                   </div>
 
-                  {/* Bio */}
-                  {bio && (
-                    <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{bio}</p>
-                  )}
-
-                  {/* Specializations */}
-                  {specs.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {specs.slice(0, 3).map((s, i) => (
-                        <Badge key={i} variant="secondary" className="text-[10px] px-2 py-0.5">{s}</Badge>
-                      ))}
-                      {specs.length > 3 && (
-                        <span className="text-[10px] text-muted-foreground px-1">+{specs.length - 3}</span>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Price + CTA */}
-                  <div className="flex items-center justify-between pt-2 border-t border-border mt-auto">
-                    <span className="font-bold text-sm text-foreground">
-                      {hasPrice ? `${c.sessionPrice} ${symbol} / جلسة` : 'تواصل للسعر'}
-                    </span>
-                    <div className="flex gap-1.5">
-                      {c.whatsapp && (
-                        <a href={`https://wa.me/${c.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer"
-                          className="h-8 w-8 rounded-lg border border-green-500/40 text-green-600 flex items-center justify-center hover:bg-green-50 transition-colors">
-                          <MessageSquare className="h-3.5 w-3.5" />
-                        </a>
-                      )}
-                      <Button size="sm" className="h-8 text-xs px-3 gap-1" asChild>
-                        <Link href={`/coaches/${c.id}`}>
-                          <GraduationCap className="h-3.5 w-3.5" />
-                          الملف
-                        </Link>
-                      </Button>
-                    </div>
+                  {/* Name */}
+                  <div>
+                    <h3 className="font-bold text-base text-foreground group-hover:text-primary transition-colors">{name}</h3>
+                    {c.yearsOfExperience && (
+                      <p className="text-xs text-muted-foreground mt-0.5">{c.yearsOfExperience} سنوات خبرة</p>
+                    )}
                   </div>
+
+                  {/* Subtitle */}
+                  {subtitle && (
+                    <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{subtitle}</p>
+                  )}
+
+                  <div className="flex-1" />
+
+                  {/* CTA */}
+                  <Button size="sm" className="w-full mt-2" asChild>
+                    <Link href={`/coaches/${c.id}`}>الملف الشخصي</Link>
+                  </Button>
                 </div>
               );
             })}
