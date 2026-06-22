@@ -1,0 +1,389 @@
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import { useUser } from "@/firebase/auth/use-user";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import { Star, Plus, Pencil, Trash2, Quote } from "lucide-react";
+
+interface SuccessStory {
+  id: string;
+  beneficiaryName: string;
+  beneficiaryRole: string;
+  title: string;
+  content: string;
+  avatarUrl: string;
+  stars: number;
+  status: "published" | "draft";
+  orgName: string;
+  createdAt: string | null;
+}
+
+const emptyForm = {
+  beneficiaryName: '',
+  beneficiaryRole: '',
+  title: '',
+  content: '',
+  avatarUrl: '',
+  stars: 5,
+  status: 'published' as 'published' | 'draft',
+};
+
+export default function OrgSuccessStoriesPage() {
+  const { user } = useUser();
+  const { toast } = useToast();
+  const [stories, setStories] = useState<SuccessStory[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState<SuccessStory | null>(null);
+  const [form, setForm] = useState(emptyForm);
+  const [saving, setSaving] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const fetchStories = useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch('/api/org/success-stories', {
+        headers: { authorization: `Bearer ${token}` },
+      });
+      const json = await res.json();
+      setStories(json.stories || []);
+    } catch {
+      toast({ variant: 'destructive', title: 'خطأ', description: 'فشل تحميل القصص' });
+    } finally {
+      setLoading(false);
+    }
+  }, [user, toast]);
+
+  useEffect(() => { fetchStories(); }, [fetchStories]);
+
+  function openCreate() {
+    setEditing(null);
+    setForm(emptyForm);
+    setDialogOpen(true);
+  }
+
+  function openEdit(story: SuccessStory) {
+    setEditing(story);
+    setForm({
+      beneficiaryName: story.beneficiaryName,
+      beneficiaryRole: story.beneficiaryRole,
+      title: story.title,
+      content: story.content,
+      avatarUrl: story.avatarUrl,
+      stars: story.stars,
+      status: story.status,
+    });
+    setDialogOpen(true);
+  }
+
+  async function handleSave() {
+    if (!user) return;
+    if (!form.beneficiaryName.trim() || !form.content.trim()) {
+      toast({ variant: 'destructive', title: 'الاسم ونص القصة مطلوبان' });
+      return;
+    }
+    setSaving(true);
+    try {
+      const token = await user.getIdToken();
+      const url = editing
+        ? `/api/org/success-stories/${editing.id}`
+        : '/api/org/success-stories';
+      const res = await fetch(url, {
+        method: editing ? 'PATCH' : 'POST',
+        headers: { authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'فشل الحفظ');
+      }
+      toast({ title: editing ? 'تم التعديل بنجاح' : 'تمت الإضافة بنجاح' });
+      setDialogOpen(false);
+      fetchStories();
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'خطأ', description: e.message });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!user || !deleteId) return;
+    setDeleting(true);
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch(`/api/org/success-stories/${deleteId}`, {
+        method: 'DELETE',
+        headers: { authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('فشل الحذف');
+      toast({ title: 'تم الحذف' });
+      setDeleteId(null);
+      fetchStories();
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'خطأ', description: e.message });
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  async function toggleStatus(story: SuccessStory) {
+    if (!user) return;
+    try {
+      const token = await user.getIdToken();
+      const newStatus = story.status === 'published' ? 'draft' : 'published';
+      await fetch(`/api/org/success-stories/${story.id}`, {
+        method: 'PATCH',
+        headers: { authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      toast({ title: newStatus === 'published' ? 'تم النشر' : 'تم إخفاء القصة' });
+      fetchStories();
+    } catch {
+      toast({ variant: 'destructive', title: 'خطأ في تغيير الحالة' });
+    }
+  }
+
+  const published = stories.filter(s => s.status === 'published').length;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">قصص النجاح</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            أضف قصص نجاح المستفيدين لتظهر في الصفحة الرئيسية للمنصة
+          </p>
+        </div>
+        <Button onClick={openCreate}>
+          <Plus className="h-4 w-4 ml-1.5" /> إضافة قصة
+        </Button>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+        {[
+          { label: 'إجمالي القصص', value: stories.length },
+          { label: 'منشور', value: published },
+          { label: 'مسودة', value: stories.length - published },
+        ].map(s => (
+          <div key={s.label} className="rounded-xl border border-border bg-card p-4">
+            <div className="text-2xl font-bold">{s.value}</div>
+            <div className="text-xs text-muted-foreground mt-0.5">{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Stories list */}
+      {loading ? (
+        <div className="space-y-3">
+          {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-32 rounded-xl" />)}
+        </div>
+      ) : stories.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-muted-foreground text-center">
+          <Quote className="h-12 w-12 mb-3 opacity-20" />
+          <p className="font-medium">لا توجد قصص بعد</p>
+          <p className="text-sm mt-1">أضف أول قصة نجاح لمستفيديك</p>
+          <Button className="mt-5" onClick={openCreate}>
+            <Plus className="h-4 w-4 ml-1.5" /> إضافة قصة
+          </Button>
+        </div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {stories.map(story => (
+            <div key={story.id} className="rounded-2xl border border-border bg-card p-5 flex flex-col gap-3">
+              {/* Header */}
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-3 min-w-0">
+                  {story.avatarUrl ? (
+                    <img
+                      src={story.avatarUrl}
+                      alt={story.beneficiaryName}
+                      className="h-10 w-10 rounded-full object-cover shrink-0 border border-border"
+                      onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
+                  ) : (
+                    <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0">
+                      {story.beneficiaryName[0]}
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="font-semibold text-sm truncate">{story.beneficiaryName}</p>
+                    {story.beneficiaryRole && (
+                      <p className="text-xs text-muted-foreground truncate">{story.beneficiaryRole}</p>
+                    )}
+                  </div>
+                </div>
+                <Badge
+                  variant={story.status === 'published' ? 'default' : 'secondary'}
+                  className="shrink-0 cursor-pointer text-xs"
+                  onClick={() => toggleStatus(story)}
+                >
+                  {story.status === 'published' ? 'منشور' : 'مسودة'}
+                </Badge>
+              </div>
+
+              {/* Stars */}
+              <div className="flex gap-0.5">
+                {Array.from({ length: 5 }).map((_, j) => (
+                  <Star
+                    key={j}
+                    className={`h-3 w-3 ${j < story.stars ? 'text-amber-400 fill-amber-400' : 'text-muted-foreground/30'}`}
+                  />
+                ))}
+              </div>
+
+              {/* Content */}
+              <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3 flex-1">
+                &ldquo;{story.content}&rdquo;
+              </p>
+
+              {/* Actions */}
+              <div className="flex gap-2 pt-1 border-t border-border">
+                <Button variant="ghost" size="sm" className="flex-1 h-8 text-xs" onClick={() => openEdit(story)}>
+                  <Pencil className="h-3.5 w-3.5 ml-1" /> تعديل
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={() => setDeleteId(story.id)}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Create / Edit Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent dir="rtl" className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{editing ? 'تعديل القصة' : 'إضافة قصة نجاح'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>اسم المستفيد *</Label>
+                <Input
+                  placeholder="سارة أحمد"
+                  value={form.beneficiaryName}
+                  onChange={e => setForm(f => ({ ...f, beneficiaryName: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>الدور / المسمى</Label>
+                <Input
+                  placeholder="رائدة أعمال"
+                  value={form.beneficiaryRole}
+                  onChange={e => setForm(f => ({ ...f, beneficiaryRole: e.target.value }))}
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>عنوان القصة (اختياري)</Label>
+              <Input
+                placeholder="من الصفر إلى أول عملية بيع..."
+                value={form.title}
+                onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>نص القصة *</Label>
+              <Textarea
+                placeholder="اكتب قصة نجاح المستفيد بكلماته..."
+                rows={4}
+                className="resize-none"
+                value={form.content}
+                onChange={e => setForm(f => ({ ...f, content: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>رابط صورة المستفيد (اختياري)</Label>
+              <Input
+                placeholder="https://..."
+                dir="ltr"
+                value={form.avatarUrl}
+                onChange={e => setForm(f => ({ ...f, avatarUrl: e.target.value }))}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>التقييم</Label>
+                <Select
+                  value={String(form.stars)}
+                  onValueChange={v => setForm(f => ({ ...f, stars: Number(v) }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[5, 4, 3, 2, 1].map(n => (
+                      <SelectItem key={n} value={String(n)}>
+                        {'★'.repeat(n)} ({n})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>الحالة</Label>
+                <Select
+                  value={form.status}
+                  onValueChange={v => setForm(f => ({ ...f, status: v as 'published' | 'draft' }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="published">منشور</SelectItem>
+                    <SelectItem value="draft">مسودة</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>إلغاء</Button>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? 'جارٍ الحفظ...' : (editing ? 'حفظ التعديلات' : 'إضافة القصة')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <Dialog open={!!deleteId} onOpenChange={open => !open && setDeleteId(null)}>
+        <DialogContent dir="rtl" className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>حذف القصة</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">هل أنت متأكد من حذف هذه القصة؟ لا يمكن التراجع.</p>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setDeleteId(null)}>إلغاء</Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+              {deleting ? 'جارٍ الحذف...' : 'حذف'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

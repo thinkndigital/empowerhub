@@ -434,6 +434,7 @@ export default function LandingPage() {
   const [publicSessions, setPublicSessions] = useState<PublicSession[]>([]);
   const [latestArticles, setLatestArticles] = useState<{ id: string; title: string; excerpt: string; coverImageUrl: string; authorName: string; authorRole: string; readTime: number; tags: string[] }[]>([]);
   const [latestProjects, setLatestProjects] = useState<{ id: string; title: string; description: string; coverImageUrl: string; organizationName: string; type: string; location: string; deadline: string }[]>([]);
+  const [successStories, setSuccessStories] = useState<{ id: string; beneficiaryName: string; beneficiaryRole: string; content: string; avatarUrl: string; stars: number; orgName: string }[]>([]);
   const [loadingMentors, setLoadingMentors] = useState(true);
   const [loadingCoaches, setLoadingCoaches] = useState(true);
   const [loadingProducts, setLoadingProducts] = useState(true);
@@ -526,6 +527,12 @@ export default function LandingPage() {
   useEffect(() => {
     fetch('/api/public/projects').then(r => r.json()).then(d => {
       setLatestProjects((d.projects || []).slice(0, 6));
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetch('/api/public/success-stories').then(r => r.json()).then(d => {
+      setSuccessStories((d.stories || []).slice(0, 6));
     }).catch(() => {});
   }, []);
 
@@ -1402,31 +1409,61 @@ export default function LandingPage() {
           </section>
         )}
 
-        {/* ── Blog ────────────────────────────────────────────────────────────── */}
-        {sections.showBlog && blogPostsData.length > 0 && (
-          <section id="blog" className="py-16 sm:py-20 md:py-28">
+        {/* ── Success Stories ──────────────────────────────────────────────────── */}
+        {successStories.length > 0 && (
+          <section id="success-stories" className="py-16 sm:py-20 md:py-28">
             <div className="container">
-              <div className="max-w-xl mb-10 sm:mb-14">
-                <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">الموارد والمقالات</p>
-                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground">
-                  تعلم وتطور مع محتوانا
+              <div className="text-center mb-12 sm:mb-16">
+                <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">إلهام حقيقي</p>
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-3">
+                  قصص نجاح من مجتمعنا
                 </h2>
+                <p className="text-muted-foreground text-sm max-w-md mx-auto leading-relaxed">
+                  أشخاص حقيقيون غيّروا مساراتهم بفضل التدريب والإرشاد والدعم.
+                </p>
               </div>
-              <div className="divide-y divide-border">
-                {blogPostsData.map((post, i) => (
-                  <div key={i} className="py-5 sm:py-6 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6">
-                    <span className="text-xs font-semibold text-primary uppercase tracking-widest sm:w-28 shrink-0">{post.category}</span>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-sm sm:text-base text-foreground mb-0.5">{post.title}</h3>
-                      <p className="text-xs sm:text-sm text-muted-foreground line-clamp-1 leading-relaxed">{post.excerpt}</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {successStories.map(story => (
+                  <div
+                    key={story.id}
+                    className="group rounded-2xl border border-border bg-card p-6 flex flex-col gap-4 hover:border-primary/30 hover:shadow-md transition-all"
+                  >
+                    {/* Stars */}
+                    <div className="flex gap-0.5">
+                      {Array.from({ length: 5 }).map((_, j) => (
+                        <Star
+                          key={j}
+                          className={`h-3.5 w-3.5 ${j < story.stars ? 'text-amber-400 fill-amber-400' : 'text-muted-foreground/20'}`}
+                        />
+                      ))}
                     </div>
-                    {post.link ? (
-                      <Link href={post.link} className="flex items-center gap-1 text-xs font-semibold text-primary shrink-0 self-start sm:self-auto">
-                        اقرأ المزيد <ArrowLeft className="h-3 w-3" />
-                      </Link>
-                    ) : (
-                      <span className="text-xs text-muted-foreground shrink-0">قريباً</span>
-                    )}
+                    {/* Quote */}
+                    <blockquote className="text-sm text-foreground leading-relaxed flex-1 font-medium">
+                      &ldquo;{story.content}&rdquo;
+                    </blockquote>
+                    {/* Author */}
+                    <div className="flex items-center gap-3 pt-4 border-t border-border">
+                      {story.avatarUrl ? (
+                        <img
+                          src={story.avatarUrl}
+                          alt={story.beneficiaryName}
+                          className="h-10 w-10 rounded-full object-cover shrink-0 border border-border"
+                          onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                        />
+                      ) : (
+                        <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-bold shrink-0">
+                          {story.beneficiaryName[0]}
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-foreground truncate">{story.beneficiaryName}</p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {story.beneficiaryRole}
+                          {story.beneficiaryRole && story.orgName ? ' · ' : ''}
+                          {story.orgName}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
