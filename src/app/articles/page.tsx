@@ -66,11 +66,19 @@ export default function ArticlesPage() {
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
-      {/* Hero */}
-      <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white py-16">
-        <div className="max-w-4xl mx-auto px-4 text-center">
-          <h1 className="text-4xl font-bold mb-3">المقالات</h1>
-          <p className="text-slate-300 text-lg">رؤى ومعرفة من مرشدين ومدربين متميزين</p>
+      {/* Page header */}
+      <div className="border-b border-border bg-muted/30">
+        <div className="max-w-5xl mx-auto px-4 py-10 sm:py-14">
+          <nav className="flex items-center gap-1.5 text-xs text-muted-foreground mb-5" aria-label="breadcrumb">
+            <Link href="/" className="hover:text-primary transition-colors">الرئيسية</Link>
+            <span className="text-border/80 select-none">/</span>
+            <span className="text-foreground font-medium">المقالات</span>
+          </nav>
+          <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">معرفة وخبرة</p>
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground mb-3">المقالات</h1>
+          <p className="text-muted-foreground text-sm sm:text-base max-w-xl leading-relaxed">
+            رؤى ومعرفة من مرشدين ومدربين متميزين
+          </p>
         </div>
       </div>
 

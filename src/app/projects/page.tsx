@@ -73,11 +73,19 @@ export default function ProjectsPage() {
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
-      {/* Hero */}
-      <div className="bg-gradient-to-br from-indigo-900 to-purple-900 text-white py-16">
-        <div className="max-w-4xl mx-auto px-4 text-center">
-          <h1 className="text-4xl font-bold mb-3">الفرص والمشاريع</h1>
-          <p className="text-indigo-200 text-lg">اكتشف فرص التدريب والتطوع والوظائف والمنح</p>
+      {/* Page header */}
+      <div className="border-b border-border bg-muted/30">
+        <div className="max-w-5xl mx-auto px-4 py-10 sm:py-14">
+          <nav className="flex items-center gap-1.5 text-xs text-muted-foreground mb-5" aria-label="breadcrumb">
+            <Link href="/" className="hover:text-primary transition-colors">الرئيسية</Link>
+            <span className="text-border/80 select-none">/</span>
+            <span className="text-foreground font-medium">الفرص والمشاريع</span>
+          </nav>
+          <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">فرص متاحة</p>
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground mb-3">الفرص والمشاريع</h1>
+          <p className="text-muted-foreground text-sm sm:text-base max-w-xl leading-relaxed">
+            اكتشف فرص التدريب والتطوع والوظائف والمنح
+          </p>
         </div>
       </div>
 

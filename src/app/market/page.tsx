@@ -76,9 +76,14 @@ export default function MarketPage() {
       <main>
 
         {/* ── Page Header ─────────────────────────────────────────────────────── */}
-        <section className="py-12 sm:py-16 border-b border-border">
+        <section className="py-12 sm:py-16 border-b border-border bg-muted/30">
           <div className="container">
             <div className="max-w-2xl">
+              <nav className="flex items-center gap-1.5 text-xs text-muted-foreground mb-5" aria-label="breadcrumb">
+                <Link href="/" className="hover:text-primary transition-colors">الرئيسية</Link>
+                <span className="text-border/80 select-none">/</span>
+                <span className="text-foreground font-medium">المتجر</span>
+              </nav>
               <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">متجر المجتمع</p>
               <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-foreground leading-tight mb-4">
                 منتجات صنعها مجتمعنا

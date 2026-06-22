@@ -48,6 +48,11 @@ export default function PublicLiveSessionsPage() {
       <div className="container py-12 sm:py-16">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10 sm:mb-14">
           <div>
+            <nav className="flex items-center gap-1.5 text-xs text-muted-foreground mb-5" aria-label="breadcrumb">
+              <Link href="/" className="hover:text-primary transition-colors">الرئيسية</Link>
+              <span className="text-border/80 select-none">/</span>
+              <span className="text-foreground font-medium">الجلسات المباشرة</span>
+            </nav>
             <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">مباشر ومتاح</p>
             <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground mb-3">
               الجلسات المباشرة
