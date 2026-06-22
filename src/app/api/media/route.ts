@@ -34,19 +34,22 @@ export async function POST(req: NextRequest) {
 
     const buffer = Buffer.from(await file.arrayBuffer());
 
-    // Use a Firebase download token — works with Uniform Bucket-Level Access
-    // (which blocks both makePublic() and getSignedUrl() on App Hosting ADC).
     const downloadToken = crypto.randomUUID();
     const bucket = adminStorage.bucket(STORAGE_BUCKET);
     const fileRef = bucket.file(storagePath);
 
-    await fileRef.save(buffer, {
-      contentType: file.type,
-      resumable: false,
+    await fileRef.save(buffer, { contentType: file.type, resumable: false });
+    // setMetadata must be called separately — the nested `metadata.metadata`
+    // key is the GCS convention for custom (user-defined) metadata fields.
+    // Putting firebaseStorageDownloadTokens directly inside SaveOptions.metadata
+    // treats it as a top-level GCS metadata field, which Firebase ignores.
+    await fileRef.setMetadata({
       metadata: { firebaseStorageDownloadTokens: downloadToken },
     });
 
-    const url = `https://firebasestorage.googleapis.com/v0/b/${encodeURIComponent(STORAGE_BUCKET)}/o/${encodeURIComponent(storagePath)}?alt=media&token=${downloadToken}`;
+    // Bucket name has only safe chars (no encoding needed); path segments need %2F.
+    const encodedPath = storagePath.split('/').map(encodeURIComponent).join('%2F');
+    const url = `https://firebasestorage.googleapis.com/v0/b/${STORAGE_BUCKET}/o/${encodedPath}?alt=media&token=${downloadToken}`;
 
     return NextResponse.json({ url, path: storagePath });
   } catch (e: any) {
