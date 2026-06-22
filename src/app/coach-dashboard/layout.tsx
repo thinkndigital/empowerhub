@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Bell, LayoutGrid, Search, Settings, BookOpen,
-  MessageSquare, BarChartHorizontal, CalendarDays, LogOut, ShoppingBag, FileText,
+  MessageSquare, BarChartHorizontal, CalendarDays, LogOut, ShoppingBag, FileText, Video,
 } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { doc } from "firebase/firestore";
@@ -35,6 +35,7 @@ const allCoachMenuItems = [
   { href: "/coach-dashboard/courses", label: "دوراتي", icon: BookOpen, sectionKey: 'courses' },
   { href: "/coach-dashboard/orders", label: "الطلبات", icon: ShoppingBag, sectionKey: 'orders' },
   { href: "/coach-dashboard/sessions", label: "الجلسات", icon: CalendarDays, sectionKey: 'sessions' },
+  { href: "/coach-dashboard/live-sessions", label: "الجلسات المباشرة", icon: Video, sectionKey: null },
   { href: "/coach-dashboard/articles", label: "المقالات", icon: FileText, sectionKey: null },
   { href: "/coach-dashboard/analytics", label: "التحليلات", icon: BarChartHorizontal, sectionKey: 'analytics' },
   { href: "/coach-dashboard/messages", label: "الرسائل", icon: MessageSquare, sectionKey: 'messages' },
