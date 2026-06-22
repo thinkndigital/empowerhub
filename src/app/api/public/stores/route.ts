@@ -6,7 +6,7 @@ export const revalidate = 0;
 
 export async function GET() {
   try {
-    const storesSnap = await adminDb.collection('stores').limit(6).get();
+    const storesSnap = await adminDb.collection('stores').limit(100).get();
     const stores = storesSnap.docs
       .filter(d => !d.data().hidden)
       .map(d => {
