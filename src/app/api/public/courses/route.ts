@@ -24,7 +24,11 @@ export async function GET() {
           duration: cd.duration || '',
           createdBy: cd.createdBy || '',
           coachName: cd.coachName || '',
-          enrollmentCount: cd.enrollmentCount || 0,
+          enrollmentCount: cd.enrollmentCount || cd.enrolledCount || 0,
+          level: cd.level || '',
+          language: cd.language || '',
+          tags: cd.tags || [],
+          coachAvatarUrl: '',
         };
       });
 
@@ -32,12 +36,21 @@ export async function GET() {
     const coachIds = Array.from(new Set(courses.map(c => c.createdBy).filter(Boolean)));
     if (coachIds.length > 0) {
       const coachDocs = await Promise.all(coachIds.map(id => adminDb.collection('users').doc(id).get()));
-      const coachMap: Record<string, string> = {};
+      const coachMap: Record<string, { name: string; avatarUrl: string }> = {};
       coachDocs.forEach(d => {
-        if (d.exists) coachMap[d.id] = d.data()!.name || d.data()!.displayName || '';
+        if (d.exists) {
+          const data = d.data()!;
+          coachMap[d.id] = {
+            name: data.name || data.displayName || '',
+            avatarUrl: data.avatarUrl || '',
+          };
+        }
       });
       courses.forEach(c => {
-        if (c.createdBy && coachMap[c.createdBy]) c.coachName = coachMap[c.createdBy];
+        if (c.createdBy && coachMap[c.createdBy]) {
+          c.coachName = coachMap[c.createdBy].name;
+          c.coachAvatarUrl = coachMap[c.createdBy].avatarUrl;
+        }
       });
     }
 

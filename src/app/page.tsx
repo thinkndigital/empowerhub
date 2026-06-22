@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Logo } from '@/components/logo';
 import {
   ArrowLeft, BookOpen, Store, GraduationCap, CheckCircle,
-  Star, MessageSquare, Phone, Mail, Globe, Menu, X, Calendar,
+  Star, MessageSquare, Phone, Mail, Globe, Menu, X, Calendar, Clock,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useCurrency } from '@/hooks/use-currency';
@@ -58,7 +58,11 @@ interface CourseItem {
   coverImageUrl: string;
   duration: string;
   coachName: string;
+  coachAvatarUrl?: string;
   enrollmentCount: number;
+  level?: string;
+  language?: string;
+  tags?: string[];
 }
 
 interface Product {
@@ -156,27 +160,72 @@ const ExpertCard = ({
   );
 };
 
+const LEVEL_LABELS: Record<string, string> = { beginner: 'مبتدئ', intermediate: 'متوسط', advanced: 'متقدم' };
+const LEVEL_COLORS: Record<string, string> = { beginner: 'bg-green-500/10 text-green-700', intermediate: 'bg-amber-500/10 text-amber-700', advanced: 'bg-red-500/10 text-red-700' };
+
 const CourseCard = ({ course, onEnroll, currencySymbol }: { course: CourseItem; onEnroll?: (c: CourseItem) => void; currencySymbol: string }) => (
-  <div className="group rounded-xl border border-border bg-card overflow-hidden hover:border-primary/30 hover:shadow-sm transition-all flex flex-col">
-    <div className="relative h-36 bg-muted overflow-hidden">
+  <div className="group rounded-xl border border-border bg-card overflow-hidden hover:border-primary/30 hover:shadow-md transition-all duration-200 flex flex-col">
+    {/* Cover */}
+    <div className="relative h-40 bg-muted overflow-hidden shrink-0">
       {course.coverImageUrl ? (
         <img src={course.coverImageUrl} alt={course.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
       ) : (
-        <div className="h-full flex items-center justify-center">
-          <BookOpen className="h-8 w-8 text-muted-foreground/20" />
+        <div className="h-full flex items-center justify-center bg-gradient-to-br from-primary/5 to-primary/10">
+          <BookOpen className="h-9 w-9 text-primary/20" />
         </div>
       )}
+      {/* Price badge */}
       {course.price != null && (
-        <div className="absolute top-2 left-2 bg-background/90 backdrop-blur-sm text-foreground text-xs font-semibold rounded-full px-2.5 py-0.5 border border-border/50">
+        <div className="absolute top-2.5 left-2.5 bg-background/90 backdrop-blur-sm text-foreground text-[11px] font-bold rounded-full px-2.5 py-0.5 border border-border/50">
           {course.price === 0 ? 'مجاني' : `${course.price} ${currencySymbol}`}
         </div>
       )}
+      {/* Level badge */}
+      {course.level && LEVEL_LABELS[course.level] && (
+        <div className={`absolute top-2.5 right-2.5 text-[10px] font-semibold rounded-full px-2 py-0.5 ${LEVEL_COLORS[course.level] || 'bg-muted text-muted-foreground'}`}>
+          {LEVEL_LABELS[course.level]}
+        </div>
+      )}
     </div>
-    <div className="p-4 flex flex-col gap-1 flex-grow">
-      <h3 className="font-semibold text-sm line-clamp-2 text-foreground">{course.title}</h3>
-      {course.coachName && <p className="text-xs text-muted-foreground">{course.coachName}</p>}
+
+    {/* Body */}
+    <div className="p-3.5 flex flex-col gap-2 flex-grow">
+      {/* Coach */}
+      <div className="flex items-center gap-1.5">
+        {course.coachAvatarUrl ? (
+          <img src={course.coachAvatarUrl} alt={course.coachName} className="h-5 w-5 rounded-full object-cover border border-border/50" />
+        ) : (
+          <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center text-primary text-[10px] font-bold shrink-0">
+            {course.coachName?.[0] || 'م'}
+          </div>
+        )}
+        <span className="text-[11px] text-muted-foreground truncate">{course.coachName || 'مدرب'}</span>
+      </div>
+
+      {/* Title */}
+      <h3 className="font-semibold text-sm leading-snug line-clamp-2 text-foreground group-hover:text-primary transition-colors">
+        {course.title}
+      </h3>
+
+      {/* Meta */}
+      <div className="flex items-center gap-3 text-[11px] text-muted-foreground flex-wrap">
+        {course.duration && (
+          <span className="flex items-center gap-1">
+            <Clock className="h-3 w-3" />
+            {course.duration}
+          </span>
+        )}
+        {course.enrollmentCount > 0 && (
+          <span className="flex items-center gap-1">
+            <GraduationCap className="h-3 w-3" />
+            {course.enrollmentCount}+
+          </span>
+        )}
+      </div>
     </div>
-    <div className="px-4 pb-4 flex gap-2">
+
+    {/* Actions */}
+    <div className="px-3.5 pb-3.5 flex gap-2">
       <Button variant="outline" size="sm" className="flex-1 text-xs h-8" asChild>
         <Link href={`/courses/${course.id}`}>تفاصيل</Link>
       </Button>
