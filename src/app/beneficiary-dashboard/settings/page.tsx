@@ -16,8 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useUser } from "@/firebase/auth/use-user";
-import { useStorage } from "@/firebase/provider";
-import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
+import { uploadFile as uploadToStorage } from "@/lib/upload-file";
 import { User, Bell, Shield, Palette, Globe, Camera, Loader2, Save, BookOpen, Target } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -39,7 +38,6 @@ type ProfileFormValues = z.infer<typeof profileSchema>;
 export default function BeneficiarySettingsPage() {
   const { userProfile, user: authUser } = useUser();
   const { toast } = useToast();
-  const storage = useStorage();
   const [isSaving, setIsSaving] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
@@ -79,16 +77,12 @@ export default function BeneficiarySettingsPage() {
 
   async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (!file || !authUser || !storage) return;
-    const objectUrl = URL.createObjectURL(file);
-    setAvatarPreview(objectUrl);
+    if (!file || !authUser) return;
+    setAvatarPreview(URL.createObjectURL(file));
     setAvatarUploading(true);
     try {
-      const path = `avatars/${authUser.uid}/${Date.now()}-${file.name}`;
-      const ref = storageRef(storage, path);
-      await uploadBytes(ref, file);
-      const downloadUrl = await getDownloadURL(ref);
       const token = await authUser.getIdToken();
+      const downloadUrl = await uploadToStorage(file, `avatars/${authUser.uid}`, token);
       await fetch('/api/user/profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },

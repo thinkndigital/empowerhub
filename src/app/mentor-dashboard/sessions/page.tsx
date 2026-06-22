@@ -23,8 +23,7 @@ import { useUser } from "@/firebase/auth/use-user";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EvaluationDialog } from "@/components/evaluation-dialog";
 import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
-import { useStorage } from "@/firebase/provider";
-import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
+import { uploadFile as uploadToStorage } from "@/lib/upload-file";
 
 type Beneficiary = { id: string; name?: string };
 type Session = {
@@ -67,7 +66,6 @@ export default function MentorSessionsPage() {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { user: authUser } = useUser();
-  const storage = useStorage();
   const [evaluationTarget, setEvaluationTarget] = useState<EvaluationTarget | null>(null);
   const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -153,11 +151,8 @@ export default function MentorSessionsPage() {
     if (bannerInputRef.current) bannerInputRef.current.value = '';
   }
 
-  async function uploadFile(file: File, path: string): Promise<string> {
-    if (!storage) throw new Error('Storage غير متاح');
-    const ref = storageRef(storage, path);
-    await uploadBytes(ref, file);
-    return getDownloadURL(ref);
+  async function uploadFile(file: File, folder: string, token: string): Promise<string> {
+    return uploadToStorage(file, folder, token);
   }
 
   async function handleLinkGoogle() {
@@ -222,19 +217,19 @@ export default function MentorSessionsPage() {
         if (generated) meetLink = generated;
       }
 
+      const token = await authUser.getIdToken();
+
       let bannerUrl = '';
       if (bannerFile) {
-        bannerUrl = await uploadFile(bannerFile, `sessions/${authUser.uid}/${Date.now()}-banner-${bannerFile.name}`);
+        bannerUrl = await uploadFile(bannerFile, `sessions/${authUser.uid}`, token);
       }
 
       let imageUrls: string[] = [];
       if (sessionImageFiles.length > 0) {
         imageUrls = await Promise.all(
-          sessionImageFiles.map((f, i) => uploadFile(f, `sessions/${authUser.uid}/${Date.now()}-${i}-${f.name}`))
+          sessionImageFiles.map((f) => uploadFile(f, `sessions/${authUser.uid}`, token))
         );
       }
-
-      const token = await authUser.getIdToken();
       const res = await fetch('/api/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },

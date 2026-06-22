@@ -12,8 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/firebase/auth/use-user";
-import { useStorage } from "@/firebase/provider";
-import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
+import { uploadFile as uploadToStorage } from "@/lib/upload-file";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Save, Building, Facebook, Instagram, Twitter, MessageCircle } from "lucide-react";
 
@@ -37,8 +36,6 @@ type StoreSettingsFormValues = z.infer<typeof storeSettingsSchema>;
 export default function StoreSettingsPage() {
   const { toast } = useToast();
   const { user: authUser, loading: authLoading } = useUser();
-  const storage = useStorage();
-
   const [storeId, setStoreId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -126,19 +123,15 @@ export default function StoreSettingsPage() {
     let finalCoverUrl = values.coverUrl || "";
 
     try {
-      if (logoFile && storage) {
-        const imageRef = storageRef(storage, `store-logos/${authUser.uid}/${Date.now()}-${logoFile.name}`);
-        const snapshot = await uploadBytes(imageRef, logoFile);
-        finalLogoUrl = await getDownloadURL(snapshot.ref);
-      }
-
-      if (coverFile && storage) {
-        const imageRef = storageRef(storage, `store-covers/${authUser.uid}/${Date.now()}-${coverFile.name}`);
-        const snapshot = await uploadBytes(imageRef, coverFile);
-        finalCoverUrl = await getDownloadURL(snapshot.ref);
-      }
-
       const token = await authUser.getIdToken();
+
+      if (logoFile) {
+        finalLogoUrl = await uploadToStorage(logoFile, `store-logos/${authUser.uid}`, token);
+      }
+
+      if (coverFile) {
+        finalCoverUrl = await uploadToStorage(coverFile, `store-covers/${authUser.uid}`, token);
+      }
       const storeData = { ...values, logoUrl: finalLogoUrl, coverUrl: finalCoverUrl, ...(storeId ? { id: storeId } : {}) };
 
       const method = storeId ? 'PUT' : 'POST';

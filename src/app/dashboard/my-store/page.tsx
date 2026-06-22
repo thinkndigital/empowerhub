@@ -21,8 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
 import { useUser } from "@/firebase/auth/use-user";
-import { useStorage } from "@/firebase/provider";
-import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
+import { uploadFile as uploadToStorage } from "@/lib/upload-file";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -59,8 +58,6 @@ const statusMap: { [key in Order['status']]: { text: string; variant: 'default' 
 export default function MyStorePage() {
   const { toast } = useToast();
   const { user: authUser, userProfile, loading: authLoading } = useUser();
-  const storage = useStorage();
-
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -139,21 +136,12 @@ export default function MyStorePage() {
 
     let finalImageUrl = editProduct?.imageUrl || "";
 
-    if (imageFile && storage) {
-      try {
-        const uniqueFileName = `${authUser.uid}/${Date.now()}-${imageFile.name}`;
-        const imageRef = storageRef(storage, `product-images/${uniqueFileName}`);
-        const snapshot = await uploadBytes(imageRef, imageFile);
-        finalImageUrl = await getDownloadURL(snapshot.ref);
-      } catch {
-        toast({ variant: "destructive", title: "خطأ في رفع الصورة", description: "لم نتمكن من رفع صورة المنتج." });
-        setIsUploading(false);
-        return;
-      }
-    }
-
     try {
       const token = await authUser.getIdToken();
+
+      if (imageFile) {
+        finalImageUrl = await uploadToStorage(imageFile, `product-images/${authUser.uid}`, token);
+      }
       const productData = {
         ...values,
         imageUrl: finalImageUrl,

@@ -12,8 +12,7 @@ import { Palette, Save, BookOpen, Users, Copy, Key, Loader2 } from "lucide-react
 import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import { useUser } from "@/firebase/auth/use-user";
-import { useStorage } from "@/firebase/provider";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { uploadFile as uploadToStorage } from "@/lib/upload-file";
 
 const settingsSchema = z.object({
   name: z.string().min(2, { message: "يجب أن يكون الاسم حرفين على الأقل." }),
@@ -49,7 +48,6 @@ const hexToHsl = (hex: string): string => {
 export default function OrgSettingsPage() {
   const { toast } = useToast();
   const { user, userProfile } = useUser();
-  const storage = useStorage();
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [logoUploading, setLogoUploading] = useState(false);
@@ -126,12 +124,9 @@ export default function OrgSettingsPage() {
         mentorshipSessionPrice: values.mentorshipSessionPrice,
       };
 
-      // Upload logo via Firebase Storage Client SDK (browser-side)
-      if (values.logo && values.logo.length > 0 && storage) {
+      if (values.logo && values.logo.length > 0) {
         const file = values.logo[0] as File;
-        const storageRef = ref(storage, `org-logos/${Date.now()}-${file.name}`);
-        const snap = await uploadBytes(storageRef, file);
-        const logoUrl = await getDownloadURL(snap.ref);
+        const logoUrl = await uploadToStorage(file, 'org-logos', token);
         updateData.logoUrl = logoUrl;
         setLogoPreview(logoUrl);
         localStorage.removeItem('orgLogo');
