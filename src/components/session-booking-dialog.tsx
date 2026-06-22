@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, CreditCard, Banknote, CheckCircle, Loader2, ArrowRight } from "lucide-react";
+import { Calendar, CreditCard, Banknote, CheckCircle } from "lucide-react";
 
 interface GatewayInfo { enabled: boolean; label: string; }
 interface PaymentConfig {
@@ -53,8 +53,8 @@ export function SessionBookingDialog({ isOpen, onOpenChange, hostId, hostName, h
   const [paymentMethod, setPaymentMethod] = useState<'cod' | GatewayKey>('cod');
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
-  const [paymentIframeUrl, setPaymentIframeUrl] = useState<string | null>(null);
-  const [iframeLoading, setIframeLoading] = useState(false);
+  const [awaitingPayment, setAwaitingPayment] = useState(false);
+  const popupRef = useRef<Window | null>(null);
 
   useEffect(() => {
     fetch('/api/public/payment-config').then(r => r.json()).then(d => {
@@ -63,13 +63,14 @@ export function SessionBookingDialog({ isOpen, onOpenChange, hostId, hostName, h
   }, []);
 
   useEffect(() => {
-    if (!isOpen) { setDone(false); setName(''); setPhone(''); setPreferredTime(''); setNotes(''); setPaymentMethod('cod'); setPaymentIframeUrl(null); }
+    if (!isOpen) { setDone(false); setName(''); setPhone(''); setPreferredTime(''); setNotes(''); setPaymentMethod('cod'); setAwaitingPayment(false); popupRef.current?.close(); }
   }, [isOpen]);
 
   useEffect(() => {
     const handler = (e: MessageEvent) => {
       if (e.data?.type !== 'payment-result') return;
-      setPaymentIframeUrl(null);
+      popupRef.current = null;
+      setAwaitingPayment(false);
       if (e.data.status === 'paid') {
         setDone(true);
       } else {
@@ -109,7 +110,12 @@ export function SessionBookingDialog({ isOpen, onOpenChange, hostId, hostName, h
           }),
         });
         const payData = await payRes.json();
-        if (payData.paymentUrl) { setIframeLoading(true); setPaymentIframeUrl(payData.paymentUrl); return; }
+        if (payData.paymentUrl) {
+          const popup = window.open(payData.paymentUrl, 'payment-gateway', 'width=520,height=680,top=80,left=200,resizable=yes,scrollbars=yes');
+          popupRef.current = popup;
+          setAwaitingPayment(true);
+          return;
+        }
         throw new Error(payData.error || 'فشل في تهيئة الدفع');
       }
 
@@ -126,38 +132,30 @@ export function SessionBookingDialog({ isOpen, onOpenChange, hostId, hostName, h
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className={paymentIframeUrl ? "sm:max-w-2xl w-[95vw]" : "sm:max-w-md"} dir="rtl">
+      <DialogContent className="sm:max-w-md" dir="rtl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5 text-primary" />
-            {paymentIframeUrl ? 'إتمام الدفع' : `حجز ${sessionLabel}`}
+            حجز {sessionLabel}
           </DialogTitle>
         </DialogHeader>
 
-        {paymentIframeUrl && (
-          <div className="flex flex-col gap-3">
-            <div className="relative rounded-xl overflow-hidden border border-border bg-muted/30" style={{ height: '65vh' }}>
-              {iframeLoading && (
-                <div className="absolute inset-0 flex items-center justify-center bg-background z-10">
-                  <Loader2 className="h-8 w-8 text-primary animate-spin" />
-                </div>
-              )}
-              <iframe
-                src={paymentIframeUrl}
-                className="w-full h-full border-0"
-                allow="payment"
-                title="صفحة الدفع"
-                onLoad={() => setIframeLoading(false)}
-              />
+        {awaitingPayment && (
+          <div className="flex flex-col items-center gap-4 py-10 text-center">
+            <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
+              <CreditCard className="h-8 w-8 text-primary animate-pulse" />
             </div>
-            <Button variant="outline" size="sm" onClick={() => setPaymentIframeUrl(null)} className="gap-2">
-              <ArrowRight className="h-4 w-4" />
-              إلغاء والعودة
+            <div>
+              <h3 className="font-bold text-base mb-1">أكمل الدفع في النافذة المفتوحة</h3>
+              <p className="text-muted-foreground text-sm">ستُغلق النافذة تلقائياً وستُحدَّث الصفحة بعد إتمام الدفع.</p>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => { popupRef.current?.close(); setAwaitingPayment(false); }}>
+              إلغاء
             </Button>
           </div>
         )}
 
-        {!paymentIframeUrl && done ? (
+        {!awaitingPayment && done ? (
           <div className="flex flex-col items-center gap-4 py-8 text-center">
             <div className="h-16 w-16 rounded-full bg-emerald-100 flex items-center justify-center">
               <CheckCircle className="h-8 w-8 text-emerald-600" />

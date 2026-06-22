@@ -14,10 +14,10 @@ export default function PaymentCallbackPage() {
   const [message, setMessage] = useState('');
   const [isCourseOrder, setIsCourseOrder] = useState(false);
   const [courseId, setCourseId] = useState('');
-  const [inIframe, setInIframe] = useState(false);
+  const [isPopup, setIsPopup] = useState(false);
 
   useEffect(() => {
-    setInIframe(window !== window.parent);
+    setIsPopup(!!window.opener);
   }, []);
 
   useEffect(() => {
@@ -28,7 +28,6 @@ export default function PaymentCallbackPage() {
 
     if (!orderId) { setStatus('failed'); setMessage('رقم الطلب غير موجود'); return; }
 
-    // Determine success based on gateway-specific params
     let isPaid = false;
     if (gateway === 'moyasar') {
       isPaid = searchParams.get('status') === 'paid';
@@ -64,7 +63,6 @@ export default function PaymentCallbackPage() {
           }
         })
         .catch(() => {});
-
       setStatus('paid');
       setMessage(`تم الدفع بنجاح! رقم طلبك: ${orderId}`);
     } else {
@@ -74,39 +72,52 @@ export default function PaymentCallbackPage() {
     }
   }, [searchParams, authUser, authLoading]);
 
-  // Send postMessage to parent when inside iframe
+  // Notify parent window (popup scenario) then auto-close
   useEffect(() => {
-    if (status === 'loading' || !inIframe) return;
+    if (status === 'loading') return;
     const orderId = searchParams.get('orderId');
-    window.parent.postMessage({ type: 'payment-result', status, orderId }, '*');
-  }, [status, inIframe, searchParams]);
 
-  // Simplified iframe UI — parent dialog handles the full UX
-  if (inIframe) {
+    if (window.opener) {
+      window.opener.postMessage({ type: 'payment-result', status, orderId }, '*');
+      // Auto-close popup after showing result briefly
+      const t = setTimeout(() => window.close(), 2500);
+      return () => clearTimeout(t);
+    }
+
+    // iFrame fallback
+    if (window !== window.parent) {
+      window.parent.postMessage({ type: 'payment-result', status, orderId }, '*');
+    }
+  }, [status, searchParams]);
+
+  // Minimal popup UI
+  if (isPopup) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background" dir="rtl">
-        <div className="text-center px-6">
+      <div className="min-h-screen flex items-center justify-center bg-background p-6" dir="rtl">
+        <div className="text-center w-full max-w-xs">
           {status === 'loading' && (
             <>
-              <Loader2 className="h-12 w-12 text-primary mx-auto mb-3 animate-spin" />
+              <Loader2 className="h-14 w-14 text-primary mx-auto mb-3 animate-spin" />
               <p className="text-muted-foreground text-sm">جاري التحقق من الدفع...</p>
             </>
           )}
           {status === 'paid' && (
             <>
-              <div className="h-16 w-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-3">
-                <CheckCircle className="h-8 w-8 text-emerald-600" />
+              <div className="h-20 w-20 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
+                <CheckCircle className="h-10 w-10 text-emerald-600" />
               </div>
-              <p className="font-bold text-lg">تم الدفع بنجاح!</p>
+              <h2 className="font-bold text-xl mb-1">تم الدفع بنجاح!</h2>
+              <p className="text-muted-foreground text-sm">جاري إغلاق هذه النافذة...</p>
             </>
           )}
           {status === 'failed' && (
             <>
-              <div className="h-16 w-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-3">
-                <XCircle className="h-8 w-8 text-red-600" />
+              <div className="h-20 w-20 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+                <XCircle className="h-10 w-10 text-red-600" />
               </div>
-              <p className="font-bold text-lg">لم يتم الدفع</p>
-              <p className="text-muted-foreground text-sm mt-1">{message}</p>
+              <h2 className="font-bold text-xl mb-1">لم يتم الدفع</h2>
+              <p className="text-muted-foreground text-sm mb-4">{message}</p>
+              <Button variant="outline" size="sm" onClick={() => window.close()}>إغلاق</Button>
             </>
           )}
         </div>
@@ -157,7 +168,9 @@ export default function PaymentCallbackPage() {
             </div>
             <h1 className="text-2xl font-bold mb-2">لم يتم الدفع</h1>
             <p className="text-muted-foreground mb-6">{message}</p>
-            <Button variant="outline" asChild className="w-full"><Link href="/market">العودة للمتجر</Link></Button>
+            <Button variant="outline" asChild className="w-full">
+              <Link href="/market">العودة للمتجر</Link>
+            </Button>
           </>
         )}
       </div>
