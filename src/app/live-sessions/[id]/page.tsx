@@ -141,7 +141,7 @@ export default function LiveSessionDetailPage() {
               </div>
               <div className="flex items-center gap-2 font-semibold text-foreground">
                 <DollarSign className="h-4 w-4 text-primary shrink-0" />
-                <span>{session.price > 0 ? `${session.price} ريال` : 'مجاني'}</span>
+                <span>{session.price > 0 ? `${session.price} د.أ` : 'مجاني'}</span>
               </div>
             </div>
             {session.description && (
@@ -157,7 +157,7 @@ export default function LiveSessionDetailPage() {
             <div className="rounded-2xl border border-border bg-card p-6 sticky top-24 space-y-4">
               <div className="text-center">
                 <div className="text-2xl font-bold text-foreground">
-                  {session.price > 0 ? `${session.price} ريال` : 'مجاني'}
+                  {session.price > 0 ? `${session.price} د.أ` : 'مجاني'}
                 </div>
                 {spotsLeft !== null && (
                   <div className={`text-xs mt-1 ${isFull ? 'text-destructive' : 'text-muted-foreground'}`}>

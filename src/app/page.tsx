@@ -10,7 +10,7 @@ import { Logo } from '@/components/logo';
 import {
   ArrowLeft, BookOpen, Store, GraduationCap, CheckCircle,
   Star, MessageSquare, Phone, Mail, Globe, Menu, X, Calendar, Clock,
-  Tag, MapPin, FileText, Briefcase,
+  Tag, MapPin, FileText, Briefcase, Video, Building2, Users, BarChart3,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useCurrency } from '@/hooks/use-currency';
@@ -466,7 +466,7 @@ export default function LandingPage() {
   ];
 
   const testimonialsData = cfg?.testimonials?.length ? cfg.testimonials : [
-    { name: 'سارة أحمد', role: 'مستفيدة - رائدة أعمال', text: 'بفضل EmpowerHub، تمكنت من إطلاق متجري الإلكتروني وتحقيق أول ألف ريال خلال شهرين فقط. الدعم والتدريب كانا استثنائيين!', stars: 5 },
+    { name: 'سارة أحمد', role: 'مستفيدة - رائدة أعمال', text: 'بفضل EmpowerHub، تمكنت من إطلاق متجري الإلكتروني وتحقيق أول ألف دينار خلال شهرين فقط. الدعم والتدريب كانا استثنائيين!', stars: 5 },
     { name: 'محمد الخالد', role: 'مدرب - خبير تسويق رقمي', text: 'المنصة أتاحت لي الفرصة للوصول إلى مئات المستفيدين ومشاركتهم خبرتي. الأدوات سهلة الاستخدام والدعم الفني ممتاز.', stars: 5 },
     { name: 'منظمة بناء المستقبل', role: 'منظمة غير ربحية', text: 'ساعدتنا المنصة في إدارة 200 مستفيد بكل احترافية. التقارير التفصيلية مكّنتنا من قياس أثر برامجنا بشكل دقيق.', stars: 5 },
   ];
@@ -507,17 +507,80 @@ export default function LandingPage() {
     copyright: '© 2024 EmpowerHub. جميع الحقوق محفوظة.',
   };
 
-  const allModules = [
-    ...(sections.showOpportunities ? opportunitiesData : []),
-    ...(sections.showFeatures ? featuresData : []),
-  ].slice(0, 6);
+  const platformServices = [
+    {
+      icon: BookOpen,
+      color: 'bg-primary/10 text-primary',
+      title: 'الدورات التدريبية',
+      description: 'محتوى تدريبي متخصص من مدربين معتمدين في مختلف المجالات — من المهارات الرقمية إلى ريادة الأعمال.',
+      link: '#courses',
+      linkLabel: 'استعرض الدورات',
+    },
+    {
+      icon: Video,
+      color: 'bg-sky-500/10 text-sky-600',
+      title: 'الجلسات المباشرة',
+      description: 'حضور مباشر مع المدربين في جلسات تفاعلية مباشرة — سجّل مقدماً واحصل على تجربة تدريبية حقيقية.',
+      link: '/live-sessions',
+      linkLabel: 'اكتشف الجلسات',
+    },
+    {
+      icon: GraduationCap,
+      color: 'bg-violet-500/10 text-violet-600',
+      title: 'الإرشاد الشخصي',
+      description: 'تواصل مع مرشد متخصص يساعدك على رسم مسارك المهني وتجاوز التحديات بتوجيه فردي مثمر.',
+      link: '#experts',
+      linkLabel: 'تعرف على المرشدين',
+    },
+    {
+      icon: Calendar,
+      color: 'bg-amber-500/10 text-amber-600',
+      title: 'جلسات الإرشاد الجماعية',
+      description: 'جلسات مجدولة مفتوحة للمجتمع — احجز مقعدك وانضم إلى نقاشات وورش عمل تفاعلية مع الخبراء.',
+      link: '#sessions',
+      linkLabel: 'احجز جلسة',
+    },
+    {
+      icon: Briefcase,
+      color: 'bg-orange-500/10 text-orange-600',
+      title: 'الفرص والمشاريع',
+      description: 'اكتشف فرص عمل، مشاريع تطوعية، وشراكات من منظمات موثوقة تبحث عن مواهب مجتمعنا.',
+      link: '/projects',
+      linkLabel: 'استعرض الفرص',
+    },
+    {
+      icon: FileText,
+      color: 'bg-emerald-500/10 text-emerald-600',
+      title: 'المقالات والمعرفة',
+      description: 'اقرأ مقالات عملية ورؤى من خبراء المنصة في التسويق الرقمي، ريادة الأعمال، والتطوير المهني.',
+      link: '/articles',
+      linkLabel: 'اقرأ المقالات',
+    },
+    {
+      icon: Store,
+      color: 'bg-rose-500/10 text-rose-600',
+      title: 'المتجر الإلكتروني',
+      description: 'تصفح منتجات حقيقية من رواد أعمال في مجتمعنا — يدوية، رقمية، وخدمات متنوعة بأسعار مناسبة.',
+      link: '/market',
+      linkLabel: 'تسوق الآن',
+    },
+    {
+      icon: Building2,
+      color: 'bg-indigo-500/10 text-indigo-600',
+      title: 'إدارة برامج التمكين',
+      description: 'للمنظمات والجمعيات: أدر مستفيديك، وزّع الدورات والجلسات، وتابع التقدم بتقارير تفصيلية.',
+      link: '/register?role=organization',
+      linkLabel: 'للمنظمات',
+    },
+  ];
 
   const logoSrc = cfg?.logoUrl || '';
 
   const navLinks = [
     { href: '#how-it-works', label: 'كيف تعمل' },
-    { href: '#modules', label: 'الخدمات' },
+    { href: '#services', label: 'الخدمات' },
     { href: '#experts', label: 'الخبراء' },
+    { href: '/live-sessions', label: 'جلسات مباشرة' },
     { href: '/articles', label: 'المقالات' },
     { href: '/projects', label: 'الفرص' },
     { href: '/market', label: 'المتجر' },
@@ -799,32 +862,43 @@ export default function LandingPage() {
           </section>
         )}
 
-        {/* ── Modules ─────────────────────────────────────────────────────────── */}
-        {allModules.length > 0 && (
-          <section id="modules" className="py-16 sm:py-20 md:py-28 bg-muted/30">
-            <div className="container">
-              <div className="max-w-xl mb-10 sm:mb-14">
-                <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">ما تقدمه المنصة</p>
-                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground">
-                  كل ما تحتاجه لبناء مستقبلك في مكان واحد
-                </h2>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
-                {allModules.map((m, i) => (
-                  <div key={i} className="group p-5 sm:p-6 rounded-2xl bg-card border border-border hover:border-primary/30 hover:shadow-sm transition-all">
-                    <div className="text-xs font-bold text-primary/30 tabular-nums mb-3 sm:mb-4 tracking-widest">
-                      {String(i + 1).padStart(2, '0')}
-                    </div>
-                    <h3 className="text-base font-bold text-foreground mb-2 group-hover:text-primary transition-colors">
-                      {m.title}
-                    </h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{m.description}</p>
-                  </div>
-                ))}
-              </div>
+        {/* ── All Platform Services ────────────────────────────────────────────── */}
+        <section id="services" className="py-16 sm:py-20 md:py-28 bg-muted/30">
+          <div className="container">
+            <div className="text-center mb-12 sm:mb-16">
+              <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">ما تقدمه المنصة</p>
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-3">
+                كل ما تحتاجه لبناء مستقبلك في مكان واحد
+              </h2>
+              <p className="text-muted-foreground text-sm sm:text-base max-w-xl mx-auto leading-relaxed">
+                منصة متكاملة تجمع التدريب، الإرشاد، المشاريع، والتجارة — كل شيء تحتاجه في رحلة تمكينك الرقمي.
+              </p>
             </div>
-          </section>
-        )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {platformServices.map((svc, i) => (
+                <Link
+                  key={i}
+                  href={svc.link}
+                  className="group p-5 rounded-2xl bg-card border border-border hover:border-primary/30 hover:shadow-md transition-all duration-200 flex flex-col gap-4"
+                >
+                  <div className={`h-10 w-10 rounded-xl ${svc.color} flex items-center justify-center shrink-0`}>
+                    <svc.icon className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-sm font-bold text-foreground mb-1.5 group-hover:text-primary transition-colors">
+                      {svc.title}
+                    </h3>
+                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">{svc.description}</p>
+                  </div>
+                  <div className="flex items-center gap-1 text-xs font-semibold text-primary mt-auto">
+                    {svc.linkLabel}
+                    <ArrowLeft className="h-3 w-3" />
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
 
         {/* ── Roles / Join ────────────────────────────────────────────────────── */}
         {sections.showRoles && rolesData.length > 0 && (

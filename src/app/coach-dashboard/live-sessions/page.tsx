@@ -311,7 +311,7 @@ export default function CoachLiveSessionsPage() {
                   </span>
                   <span className="flex items-center gap-1 font-medium text-foreground">
                     <DollarSign className="h-3 w-3" />
-                    {session.price > 0 ? `${session.price} ريال` : 'مجاني'}
+                    {session.price > 0 ? `${session.price} د.أ` : 'مجاني'}
                   </span>
                 </div>
                 <div className="flex gap-2 pt-1">

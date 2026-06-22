@@ -179,7 +179,7 @@ export default function OrgLiveSessionsPage() {
                   <span className="flex items-center gap-1"><Users className="h-3 w-3" />{session.registrationsCount} مسجل</span>
                   <span className="flex items-center gap-1 text-foreground font-medium">
                     <DollarSign className="h-3 w-3" />
-                    {session.price > 0 ? `${session.price} ريال` : 'مجاني'}
+                    {session.price > 0 ? `${session.price} د.أ` : 'مجاني'}
                   </span>
                 </div>
                 <Button size="sm" variant="secondary" className="w-full" onClick={() => openAssign(session)}>
