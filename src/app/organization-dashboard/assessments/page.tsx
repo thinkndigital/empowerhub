@@ -143,7 +143,8 @@ export default function AssessmentsPage() {
     setSaving(true);
     try {
       const token = await authUser.getIdToken();
-      const body = { title: title.trim(), description: description.trim(), type: assessType, questions, status: asDraft ? 'draft' : 'draft' };
+      const body: Record<string, any> = { title: title.trim(), description: description.trim(), type: assessType, questions };
+    if (!editingId) body.status = 'draft';
       let res;
       if (editingId) {
         res = await fetch(`/api/org/assessments/${editingId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify(body) });
