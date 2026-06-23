@@ -22,41 +22,64 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     if (!snap.exists || snap.data()?.organizationId !== orgId)
       return NextResponse.json({ error: 'غير موجود' }, { status: 404 });
 
-    const { beneficiaryIds } = await req.json();
-    if (!Array.isArray(beneficiaryIds) || beneficiaryIds.length === 0)
-      return NextResponse.json({ error: 'لم يتم تحديد أي مستفيد' }, { status: 400 });
+    const body = await req.json();
+    const beneficiaryIds: string[] = body.beneficiaryIds || [];
+    const coachIds: string[]       = body.coachIds || [];
+    const mentorIds: string[]      = body.mentorIds || [];
+
+    const totalCount = beneficiaryIds.length + coachIds.length + mentorIds.length;
+    if (totalCount === 0)
+      return NextResponse.json({ error: 'لم يتم تحديد أي مستلم' }, { status: 400 });
 
     const assessmentData = snap.data()!;
-    const existingSentTo: string[] = assessmentData.sentTo || [];
-    const newIds = beneficiaryIds.filter((id: string) => !existingSentTo.includes(id));
 
-    if (newIds.length === 0)
-      return NextResponse.json({ message: 'تم إرسال النموذج لهؤلاء المستفيدين مسبقاً', sent: 0 });
+    const existingSentTo: string[]        = assessmentData.sentTo || [];
+    const existingSentToCoaches: string[] = assessmentData.sentToCoaches || [];
+    const existingSentToMentors: string[] = assessmentData.sentToMentors || [];
+
+    const newBenef   = beneficiaryIds.filter(id => !existingSentTo.includes(id));
+    const newCoaches = coachIds.filter(id => !existingSentToCoaches.includes(id));
+    const newMentors = mentorIds.filter(id => !existingSentToMentors.includes(id));
+
+    const totalNew = newBenef.length + newCoaches.length + newMentors.length;
 
     const batch = adminDb.batch();
 
-    // Update assessment sentTo and status
-    batch.update(docRef, {
-      sentTo: FieldValue.arrayUnion(...newIds),
-      status: 'active',
-    });
+    const updatePayload: Record<string, any> = { status: 'active' };
+    if (newBenef.length)   updatePayload.sentTo         = FieldValue.arrayUnion(...newBenef);
+    if (newCoaches.length) updatePayload.sentToCoaches  = FieldValue.arrayUnion(...newCoaches);
+    if (newMentors.length) updatePayload.sentToMentors  = FieldValue.arrayUnion(...newMentors);
+    batch.update(docRef, updatePayload);
 
-    // Create notification for each beneficiary
-    for (const uid of newIds) {
-      const notifRef = adminDb.collection('notifications').doc();
-      batch.set(notifRef, {
-        userId: uid,
-        type: 'assessment',
-        title: 'نموذج تقييم جديد',
+    const notifBase = {
+      type: 'assessment',
+      title: 'نموذج تقييم جديد',
+      assessmentId: params.id,
+      read: false,
+      createdAt: new Date(),
+    };
+
+    for (const uid of newBenef) {
+      batch.set(adminDb.collection('notifications').doc(), {
+        ...notifBase, userId: uid,
         body: `لديك نموذج تقييم "${assessmentData.title}" من ${assessmentData.orgName || 'المنظمة'}`,
-        assessmentId: params.id,
-        read: false,
-        createdAt: new Date(),
+      });
+    }
+    for (const uid of newCoaches) {
+      batch.set(adminDb.collection('notifications').doc(), {
+        ...notifBase, userId: uid,
+        body: `طُلب منك ملء نموذج تقييم "${assessmentData.title}" من ${assessmentData.orgName || 'المنظمة'}`,
+      });
+    }
+    for (const uid of newMentors) {
+      batch.set(adminDb.collection('notifications').doc(), {
+        ...notifBase, userId: uid,
+        body: `طُلب منك ملء نموذج تقييم "${assessmentData.title}" من ${assessmentData.orgName || 'المنظمة'}`,
       });
     }
 
     await batch.commit();
-    return NextResponse.json({ success: true, sent: newIds.length });
+    return NextResponse.json({ success: true, sent: totalNew });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
