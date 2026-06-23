@@ -61,6 +61,7 @@ export default function BeneficiaryAssessmentsPage() {
 
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState('');
 
   // Fill dialog
   const [fillOpen, setFillOpen] = useState(false);
@@ -73,12 +74,16 @@ export default function BeneficiaryAssessmentsPage() {
   const fetchAssessments = useCallback(async () => {
     if (!authUser) return;
     setLoading(true);
+    setFetchError('');
     try {
       const token = await authUser.getIdToken();
       const res = await fetch('/api/beneficiary/assessments', { headers: { authorization: `Bearer ${token}` } });
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'فشل تحميل النماذج');
       setAssessments(data.assessments || []);
-    } catch { /* silent */ } finally { setLoading(false); }
+    } catch (e: any) {
+      setFetchError(e.message || 'حدث خطأ');
+    } finally { setLoading(false); }
   }, [authUser]);
 
   useEffect(() => { fetchAssessments(); }, [fetchAssessments]);
@@ -135,6 +140,12 @@ export default function BeneficiaryAssessmentsPage() {
         <h1 className="text-2xl font-bold tracking-tight">نماذج التقييم</h1>
         <p className="text-sm text-muted-foreground mt-1">النماذج المرسلة إليك من المنظمة</p>
       </div>
+
+      {fetchError && (
+        <Card className="border-destructive/40 bg-destructive/5">
+          <CardContent className="py-4 text-sm text-destructive text-center">{fetchError}</CardContent>
+        </Card>
+      )}
 
       {loading ? (
         <div className="grid gap-4 md:grid-cols-2">
