@@ -36,23 +36,65 @@ jobs:
       - name: Write service account key
         run: echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > /tmp/sa.json
 
-      - name: Debug - check backends API
-        continue-on-error: true
+      - name: Deploy to Firebase App Hosting
         run: |
           gcloud auth activate-service-account --key-file=/tmp/sa.json --quiet
           PROJECT_ID=$(python3 -c "import json; print(json.load(open('/tmp/sa.json'))['project_id'])")
           ACCESS_TOKEN=$(gcloud auth print-access-token)
-          echo "=== Checking App Hosting Backends ==="
-          curl -s -w "\nHTTP_STATUS:%{http_code}" \
-            "https://firebaseapphosting.googleapis.com/v1beta/projects/${PROJECT_ID}/backends" \
-            -H "Authorization: Bearer $ACCESS_TOKEN"
-          echo ""
+          BRANCH="${{ github.ref_name }}"
 
-      - name: Deploy to Firebase App Hosting
-        env:
-          GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa.json
-        run: |
-          npx firebase-tools@latest experiments:enable webframeworks
-          npx firebase-tools@latest deploy --only hosting \
-            --project studio-4511819966-bc14f \
-            --non-interactive
+          echo "=== Listing App Hosting Backends (all locations) ==="
+          BACKENDS_JSON=$(curl -sf \
+            "https://firebaseapphosting.googleapis.com/v1beta/projects/${PROJECT_ID}/locations/-/backends" \
+            -H "Authorization: Bearer $ACCESS_TOKEN") || {
+            echo "App Hosting API call failed. Trying us-central1 explicitly..."
+            BACKENDS_JSON=$(curl -sf \
+              "https://firebaseapphosting.googleapis.com/v1beta/projects/${PROJECT_ID}/locations/us-central1/backends" \
+              -H "Authorization: Bearer $ACCESS_TOKEN") || BACKENDS_JSON="{}"
+          }
+          echo "Backends response: $BACKENDS_JSON"
+
+          BACKEND_NAME=$(echo "$BACKENDS_JSON" | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+backends = data.get('backends', [])
+if backends:
+    b = backends[0]
+    print(b['name'])
+    import sys
+    print(f'  live_branch: {b.get(\"codebase\",{}).get(\"branch\",\"unknown\")}', file=sys.stderr)
+else:
+    print('')
+" 2>&1 | head -1)
+
+          if [ -z "$BACKEND_NAME" ]; then
+            echo "ERROR: No App Hosting backend found."
+            echo "Please set up Firebase App Hosting in the Firebase console first."
+            echo "See: https://firebase.google.com/docs/app-hosting/get-started"
+            exit 1
+          fi
+
+          echo "=== Found backend: $BACKEND_NAME ==="
+          echo "=== Triggering rollout for branch: $BRANCH ==="
+
+          ROLLOUT_RESP=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
+            -X POST \
+            "https://firebaseapphosting.googleapis.com/v1beta/${BACKEND_NAME}/rollouts" \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{\"build\": {\"source\": {\"codebase\": {\"branch\": \"${BRANCH}\"}}}}")
+
+          HTTP_STATUS=$(echo "$ROLLOUT_RESP" | grep -oP '(?<=HTTP_STATUS:)\d+')
+          ROLLOUT_BODY=$(echo "$ROLLOUT_RESP" | sed '/HTTP_STATUS:/d')
+          echo "Rollout status: $HTTP_STATUS"
+          echo "Rollout body: $ROLLOUT_BODY"
+
+          if [ "$HTTP_STATUS" = "200" ] || [ "$HTTP_STATUS" = "201" ]; then
+            ROLLOUT_ID=$(echo "$ROLLOUT_BODY" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('name','').split('/')[-1])" 2>/dev/null)
+            echo "✓ Rollout created: $ROLLOUT_ID"
+            echo "Deploy triggered — Firebase App Hosting will build and publish the app."
+          else
+            echo "✗ Rollout creation failed (HTTP $HTTP_STATUS)"
+            echo "Body: $ROLLOUT_BODY"
+            exit 1
+          fi
