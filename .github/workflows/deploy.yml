@@ -52,6 +52,7 @@ jobs:
         env:
           GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa.json
         run: |
+          npx firebase-tools@latest experiments:enable webframeworks
           npx firebase-tools@latest deploy --only hosting \
             --project studio-4511819966-bc14f \
             --non-interactive
