@@ -14,6 +14,7 @@ import {
   ChevronDown,
   MessageSquare,
   HelpCircle,
+  Layers,
 } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { doc } from "firebase/firestore";
@@ -57,6 +58,7 @@ const menuItems = [
   { href: "/dashboard/reports", label: "التقارير", icon: BarChart3 },
   { href: "/dashboard/messages", label: "الرسائل", icon: MessageSquare },
   { href: "/dashboard/contact", label: "التواصل مع المنظمة", icon: HelpCircle },
+  { href: "/dashboard/content", label: "محتوى السوشال ميديا", icon: Layers },
 ];
 
 
