@@ -32,60 +32,59 @@ jobs:
           NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: "822244663005"
           NEXT_PUBLIC_FIREBASE_APP_ID: "1:822244663005:web:2bbd7b3b2a819f1e2c0534"
 
-      - name: Deploy via Firebase App Hosting
-        env:
-          DEPLOY_BRANCH: ${{ github.ref_name }}
+      - name: Authenticate with Google Cloud
         run: |
           echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > /tmp/sa.json
-          PROJECT_ID=$(python3 -c "import json; print(json.load(open('/tmp/sa.json'))['project_id'])")
-          echo "Project: $PROJECT_ID"
-
-          # Authenticate with gcloud using service account
           gcloud auth activate-service-account --key-file=/tmp/sa.json --quiet
+
+      - name: List App Hosting backends
+        id: backends
+        run: |
+          PROJECT_ID=$(python3 -c "import json; print(json.load(open('/tmp/sa.json'))['project_id'])")
+          echo "project_id=$PROJECT_ID" >> $GITHUB_OUTPUT
+
           ACCESS_TOKEN=$(gcloud auth print-access-token)
 
-          # List App Hosting backends
-          echo "--- Listing backends ---"
           curl -s \
             "https://firebaseapphosting.googleapis.com/v1beta/projects/${PROJECT_ID}/backends" \
             -H "Authorization: Bearer $ACCESS_TOKEN" \
             -o /tmp/backends.json
+
+          echo "--- Backends response ---"
           cat /tmp/backends.json
 
-          # Write helper script to extract backend ID
-          cat > /tmp/get_backend.py << 'PYEOF'
-          import json, sys
-          d = json.load(open('/tmp/backends.json'))
-          backends = d.get('backends', [])
-          if backends:
-              print(backends[0]['name'].split('/')[-1])
-          PYEOF
+          BACKEND_ID=$(python3 -c "import json; d=json.load(open('/tmp/backends.json')); b=d.get('backends',[]); print(b[0]['name'].split('/')[-1] if b else '')")
+          echo "backend_id=$BACKEND_ID" >> $GITHUB_OUTPUT
+          echo "Backend ID: $BACKEND_ID"
 
-          BACKEND_ID=$(python3 /tmp/get_backend.py 2>/dev/null || echo "")
-
-          if [ -z "$BACKEND_ID" ]; then
-            echo "::error::No App Hosting backend found. Ensure the service account has roles/firebaseapphosting.admin"
+      - name: Trigger App Hosting build
+        run: |
+          if [ -z "${{ steps.backends.outputs.backend_id }}" ]; then
+            echo "::error::No App Hosting backend found. Check that FIREBASE_SERVICE_ACCOUNT has roles/firebaseapphosting.admin"
             exit 1
           fi
 
-          echo "--- Triggering build for backend: $BACKEND_ID on branch: $DEPLOY_BRANCH ---"
+          ACCESS_TOKEN=$(gcloud auth print-access-token)
+          PROJECT_ID="${{ steps.backends.outputs.project_id }}"
+          BACKEND_ID="${{ steps.backends.outputs.backend_id }}"
+          BRANCH="${{ github.ref_name }}"
+
+          echo "Triggering build: project=$PROJECT_ID backend=$BACKEND_ID branch=$BRANCH"
+
           curl -s -X POST \
             "https://firebaseapphosting.googleapis.com/v1beta/projects/${PROJECT_ID}/backends/${BACKEND_ID}/builds" \
             -H "Authorization: Bearer $ACCESS_TOKEN" \
             -H "Content-Type: application/json" \
-            -d "{\"source\":{\"codebase\":{\"branch\":\"${DEPLOY_BRANCH}\"}}}" \
-            -o /tmp/build_response.json
-          cat /tmp/build_response.json
+            -d "{\"source\":{\"codebase\":{\"branch\":\"${BRANCH}\"}}}" \
+            -o /tmp/build.json
 
-          # Check for API error
-          cat > /tmp/check_error.py << 'PYEOF'
-          import json, sys
-          d = json.load(open('/tmp/build_response.json'))
-          err = d.get('error', {}).get('message', '')
-          if err:
-              print(f"Build API error: {err}", file=sys.stderr)
-              sys.exit(1)
-          print("Build triggered successfully!")
-          PYEOF
+          echo "--- Build response ---"
+          cat /tmp/build.json
 
-          python3 /tmp/check_error.py
+          ERROR=$(python3 -c "import json; d=json.load(open('/tmp/build.json')); print(d.get('error',{}).get('message',''))")
+          if [ -n "$ERROR" ]; then
+            echo "::error::Build trigger failed: $ERROR"
+            exit 1
+          fi
+
+          echo "Build triggered successfully!"
