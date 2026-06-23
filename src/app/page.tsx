@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -137,30 +137,57 @@ const ExpertCard = ({
   const hasPrice = expert.sessionPrice != null && expert.sessionPrice > 0;
   const initial = name[0] || '?';
   const isMentor = role === 'mentor';
-  const headerBg = isMentor ? 'from-primary/20 to-primary/5' : 'from-sky-500/20 to-sky-500/5';
-  const accentBg = isMentor ? 'bg-primary/10 text-primary' : 'bg-sky-500/10 text-sky-600';
-  const badgeClass = isMentor ? 'bg-primary/10 text-primary' : 'bg-sky-500/10 text-sky-600';
+  const gradient = isMentor
+    ? 'from-violet-600 via-primary to-indigo-600'
+    : 'from-sky-500 via-sky-400 to-cyan-500';
+  const tagBg = isMentor ? 'bg-primary/10 text-primary' : 'bg-sky-500/10 text-sky-600';
   const profileLink = `/${isMentor ? 'mentors' : 'coaches'}/${expert.id}`;
   const whatsappHref = expert.whatsapp
     ? `https://wa.me/${expert.whatsapp.replace(/\D/g, '')}`
     : null;
 
   return (
-    <div className="group rounded-2xl border border-border bg-card hover:border-primary/30 hover:shadow-lg transition-all duration-200 overflow-hidden flex flex-col">
-      {/* Coloured header strip */}
-      <div className={`h-20 bg-gradient-to-br ${headerBg} relative shrink-0`}>
-        <span className={`absolute top-3 right-3 text-[10px] font-bold px-2.5 py-0.5 rounded-full ${badgeClass}`}>
+    <div className="rounded-2xl border border-border bg-card overflow-hidden flex flex-col shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300" dir="rtl">
+      {/* Gradient banner */}
+      <div className={`relative h-28 bg-gradient-to-br ${gradient} overflow-hidden shrink-0`}>
+        <div
+          className="absolute inset-0 opacity-[0.12]"
+          style={{ backgroundImage: 'radial-gradient(circle, white 1.5px, transparent 1.5px)', backgroundSize: '16px 16px' }}
+        />
+        <span className="absolute top-3 right-3 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-white/25 text-white backdrop-blur-sm">
           {isMentor ? 'مرشد' : 'مدرب'}
         </span>
+        <div className="absolute bottom-3 left-3 flex gap-1.5">
+          {expert.linkedin && (
+            <a href={expert.linkedin} target="_blank" rel="noopener noreferrer"
+              className="h-6 w-6 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/40 transition-colors"
+              title="LinkedIn"><LinkedInIcon /></a>
+          )}
+          {expert.instagram && (
+            <a href={expert.instagram} target="_blank" rel="noopener noreferrer"
+              className="h-6 w-6 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/40 transition-colors"
+              title="Instagram"><InstagramIcon /></a>
+          )}
+          {expert.twitter && (
+            <a href={expert.twitter} target="_blank" rel="noopener noreferrer"
+              className="h-6 w-6 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/40 transition-colors"
+              title="X"><TwitterXIcon /></a>
+          )}
+          {whatsappHref && (
+            <a href={whatsappHref} target="_blank" rel="noopener noreferrer"
+              className="h-6 w-6 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/40 transition-colors"
+              title="واتساب"><WhatsAppIcon /></a>
+          )}
+        </div>
       </div>
 
-      {/* Avatar overlapping the header */}
-      <div className="-mt-9 px-4 flex items-end gap-3">
+      {/* Avatar */}
+      <div className="px-4 -mt-12 mb-3">
         {expert.avatarUrl ? (
           <img
             src={expert.avatarUrl}
             alt={name}
-            className="h-16 w-16 rounded-2xl object-cover shrink-0 border-4 border-card shadow-md"
+            className="h-24 w-24 rounded-2xl object-cover border-4 border-card shadow-lg"
             onError={e => {
               const t = e.target as HTMLImageElement;
               t.style.display = 'none';
@@ -169,103 +196,95 @@ const ExpertCard = ({
           />
         ) : null}
         <div
-          className={`h-16 w-16 rounded-2xl ${accentBg} flex items-center justify-center font-extrabold text-xl shrink-0 border-4 border-card shadow-md ${expert.avatarUrl ? 'hidden' : ''}`}
+          className={`h-24 w-24 rounded-2xl bg-gradient-to-br ${gradient} flex items-center justify-center text-white font-extrabold text-3xl border-4 border-card shadow-lg ${expert.avatarUrl ? 'hidden' : ''}`}
         >
           {initial}
         </div>
-        <div className="pb-1 min-w-0 flex-1">
-          <p className="font-bold text-sm text-foreground truncate leading-snug">{name}</p>
-          {hasPrice ? (
-            <p className="text-xs text-muted-foreground tabular-nums">
-              {expert.sessionPrice} {currencySymbol} / جلسة
-            </p>
-          ) : (
-            <p className="text-xs text-muted-foreground">متاح للتواصل</p>
-          )}
-        </div>
       </div>
 
-      {/* Body */}
-      <div className="px-4 pt-3 pb-4 flex flex-col gap-3 flex-1">
+      {/* Content */}
+      <div className="px-4 pb-4 flex flex-col gap-3 flex-1">
+        <div>
+          <h3 className="font-bold text-base text-foreground leading-snug">{name}</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {hasPrice ? `${expert.sessionPrice} ${currencySymbol} / جلسة` : 'متاح للتواصل'}
+          </p>
+        </div>
+
         {bio && (
           <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{bio}</p>
         )}
+
         {specializations.length > 0 && (
           <div className="flex flex-wrap gap-1">
             {specializations.slice(0, 3).map((s, i) => (
-              <span key={i} className="text-[10px] font-medium bg-muted text-muted-foreground rounded-full px-2 py-0.5">
-                {s}
-              </span>
+              <span key={i} className={`text-[10px] font-medium rounded-full px-2.5 py-0.5 ${tagBg}`}>{s}</span>
             ))}
           </div>
         )}
 
-        {/* Social links */}
-        {(expert.linkedin || expert.instagram || expert.twitter || expert.website || whatsappHref) && (
-          <div className="flex items-center gap-1.5 pt-0.5">
-            {expert.linkedin && (
-              <a href={expert.linkedin} target="_blank" rel="noopener noreferrer"
-                className={`h-7 w-7 rounded-lg ${accentBg} flex items-center justify-center hover:opacity-70 transition-opacity`}
-                title="LinkedIn">
-                <LinkedInIcon />
-              </a>
-            )}
-            {expert.instagram && (
-              <a href={expert.instagram} target="_blank" rel="noopener noreferrer"
-                className="h-7 w-7 rounded-lg bg-pink-500/10 text-pink-600 flex items-center justify-center hover:opacity-70 transition-opacity"
-                title="Instagram">
-                <InstagramIcon />
-              </a>
-            )}
-            {expert.twitter && (
-              <a href={expert.twitter} target="_blank" rel="noopener noreferrer"
-                className="h-7 w-7 rounded-lg bg-foreground/8 text-foreground flex items-center justify-center hover:opacity-70 transition-opacity"
-                title="X / Twitter">
-                <TwitterXIcon />
-              </a>
-            )}
-            {expert.website && (
-              <a href={expert.website} target="_blank" rel="noopener noreferrer"
-                className="h-7 w-7 rounded-lg bg-muted text-muted-foreground flex items-center justify-center hover:opacity-70 transition-opacity"
-                title="الموقع الإلكتروني">
-                <Globe className="h-3.5 w-3.5" />
-              </a>
-            )}
-            {whatsappHref && (
-              <a href={whatsappHref} target="_blank" rel="noopener noreferrer"
-                className="h-7 w-7 rounded-lg bg-green-500/10 text-green-600 flex items-center justify-center hover:opacity-70 transition-opacity"
-                title="واتساب">
-                <WhatsAppIcon />
-              </a>
-            )}
-          </div>
-        )}
-
-        {/* Action buttons */}
-        <div className="flex gap-2 mt-auto pt-2">
+        <div className="flex gap-2 mt-auto pt-3 border-t border-border/50">
           <Button variant="outline" size="sm" className="flex-1 text-xs h-8" asChild>
             <Link href={profileLink}>الملف الشخصي</Link>
           </Button>
-          {hasPrice && (
-            <Button size="sm" className="flex-1 text-xs h-8" onClick={onBook}>
-              احجز جلسة
-            </Button>
-          )}
-          {!hasPrice && whatsappHref && (
-            <a
-              href={whatsappHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 h-8 text-xs font-medium rounded-md bg-green-500 text-white flex items-center justify-center gap-1.5 hover:bg-green-600 transition-colors"
-            >
+          {hasPrice ? (
+            <Button size="sm" className="flex-1 text-xs h-8" onClick={onBook}>احجز جلسة</Button>
+          ) : whatsappHref ? (
+            <a href={whatsappHref} target="_blank" rel="noopener noreferrer"
+              className="flex-1 h-8 text-xs font-medium rounded-md bg-green-500 text-white flex items-center justify-center gap-1.5 hover:bg-green-600 transition-colors">
               <WhatsAppIcon /> تواصل
             </a>
-          )}
+          ) : null}
         </div>
       </div>
     </div>
   );
 };
+
+function AutoCarousel({ children, count }: { children: React.ReactNode; count: number }) {
+  const [active, setActive] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (count <= 1) return;
+    const t = setInterval(() => setActive(p => (p + 1) % count), 4500);
+    return () => clearInterval(t);
+  }, [count]);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || count === 0) return;
+    const child = el.children[active] as HTMLElement;
+    if (child) el.scrollTo({ left: child.offsetLeft, behavior: 'smooth' });
+  }, [active, count]);
+
+  const dotCount = Math.min(count, 8);
+  return (
+    <div>
+      <div
+        ref={containerRef}
+        dir="ltr"
+        className="flex gap-4 overflow-x-auto pb-3 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {children}
+      </div>
+      {count > 1 && (
+        <div className="flex justify-center gap-2 mt-4">
+          {Array.from({ length: dotCount }).map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setActive(i)}
+              aria-label={`الشريحة ${i + 1}`}
+              className={`h-2 rounded-full transition-all duration-300 ${
+                i === active % dotCount ? 'w-6 bg-primary' : 'w-2 bg-border hover:bg-muted-foreground/30'
+              }`}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const LEVEL_LABELS: Record<string, string> = { beginner: 'مبتدئ', intermediate: 'متوسط', advanced: 'متقدم' };
 const LEVEL_COLORS: Record<string, string> = { beginner: 'bg-green-500/10 text-green-700', intermediate: 'bg-amber-500/10 text-amber-700', advanced: 'bg-red-500/10 text-red-700' };
@@ -1004,13 +1023,13 @@ export default function LandingPage() {
                       {[...Array(4)].map((_, i) => <div key={i} className="w-[82vw] sm:w-72 shrink-0 h-52 rounded-2xl bg-muted animate-pulse" />)}
                     </div>
                   ) : mentors.length > 0 ? (
-                    <div className="flex gap-4 overflow-x-auto pb-3 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    <AutoCarousel count={mentors.length}>
                       {mentors.map(m => (
-                        <div key={m.id} className="w-[82vw] sm:w-72 shrink-0 snap-start">
+                        <div key={m.id} className="w-[82vw] sm:w-72 shrink-0 snap-start" dir="rtl">
                           <ExpertCard expert={m} role="mentor" currencySymbol={currencySymbol} onBook={() => { setBookingHost(m); setBookingRole('mentor'); }} />
                         </div>
                       ))}
-                    </div>
+                    </AutoCarousel>
                   ) : (
                     <p className="text-sm text-muted-foreground py-4">لا يوجد مرشدون بعد.</p>
                   )}
@@ -1026,13 +1045,13 @@ export default function LandingPage() {
                       {[...Array(4)].map((_, i) => <div key={i} className="w-[82vw] sm:w-72 shrink-0 h-52 rounded-2xl bg-muted animate-pulse" />)}
                     </div>
                   ) : coaches.length > 0 ? (
-                    <div className="flex gap-4 overflow-x-auto pb-3 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    <AutoCarousel count={coaches.length}>
                       {coaches.map(c => (
-                        <div key={c.id} className="w-[82vw] sm:w-72 shrink-0 snap-start">
+                        <div key={c.id} className="w-[82vw] sm:w-72 shrink-0 snap-start" dir="rtl">
                           <ExpertCard expert={c} role="coach" currencySymbol={currencySymbol} onBook={() => { setBookingHost(c); setBookingRole('coach'); }} />
                         </div>
                       ))}
-                    </div>
+                    </AutoCarousel>
                   ) : (
                     <p className="text-sm text-muted-foreground py-4">لا يوجد مدربون بعد.</p>
                   )}
@@ -1196,8 +1215,17 @@ export default function LandingPage() {
                       className="group w-[82vw] sm:w-72 shrink-0 snap-start p-4 sm:p-5 rounded-xl border border-border bg-card hover:border-primary/30 hover:shadow-sm transition-all flex items-center justify-between gap-3"
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                          <Store className="h-4 w-4 text-primary" />
+                        <div className="h-11 w-11 rounded-xl overflow-hidden shrink-0 border border-border/50 bg-primary/10 flex items-center justify-center">
+                          {store.logoUrl ? (
+                            <img
+                              src={store.logoUrl}
+                              alt={store.name}
+                              className="h-full w-full object-cover"
+                              onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                            />
+                          ) : (
+                            <Store className="h-4 w-4 text-primary" />
+                          )}
                         </div>
                         <div className="min-w-0">
                           <p className="font-semibold text-sm text-foreground truncate">{store.name}</p>
