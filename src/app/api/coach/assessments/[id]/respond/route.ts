@@ -24,13 +24,14 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     if (!existing.empty)
       return NextResponse.json({ error: 'لقد أجبت على هذا النموذج مسبقاً' }, { status: 409 });
 
-    const { answers } = await req.json();
+    const { answers, respondentInfo } = await req.json();
     await adminDb.collection('assessment-responses').add({
       assessmentId: params.id,
       respondentId: uid,
       respondentRole: 'coach',
       organizationId: data.organizationId,
       answers,
+      respondentInfo: respondentInfo || null,
       submittedAt: new Date(),
     });
 

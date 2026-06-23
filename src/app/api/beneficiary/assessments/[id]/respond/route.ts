@@ -16,7 +16,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     if (!(assessment.sentTo || []).includes(uid))
       return NextResponse.json({ error: 'غير مصرح' }, { status: 403 });
 
-    const { answers, phase } = await req.json();
+    const { answers, phase, respondentInfo } = await req.json();
     if (!answers || !phase) return NextResponse.json({ error: 'البيانات ناقصة' }, { status: 400 });
 
     const validPhases = assessment.type === 'both' ? ['pre', 'post'] : [assessment.type === 'pre' ? 'pre' : 'post'];
@@ -36,6 +36,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       organizationId: assessment.organizationId,
       phase,
       answers,
+      respondentInfo: respondentInfo || null,
       submittedAt: new Date(),
     });
 
