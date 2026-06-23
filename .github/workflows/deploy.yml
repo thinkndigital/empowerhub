@@ -42,35 +42,46 @@ jobs:
           PROJECT_ID=$(python3 -c "import json; print(json.load(open('/tmp/sa.json'))['project_id'])")
           ACCESS_TOKEN=$(gcloud auth print-access-token)
           BRANCH="${{ github.ref_name }}"
+          BACKEND_NAME="projects/${PROJECT_ID}/locations/us-central1/backends/studio"
 
-          echo "=== Listing App Hosting Backends ==="
-          BACKENDS_JSON=$(curl -sf "https://firebaseapphosting.googleapis.com/v1beta/projects/${PROJECT_ID}/locations/-/backends" -H "Authorization: Bearer $ACCESS_TOKEN" || curl -sf "https://firebaseapphosting.googleapis.com/v1beta/projects/${PROJECT_ID}/locations/us-central1/backends" -H "Authorization: Bearer $ACCESS_TOKEN" || echo "{}")
-          echo "Backends: $BACKENDS_JSON"
+          echo "=== Step 1: Create Build from branch: $BRANCH ==="
+          BUILD_RESP=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
+            -X POST \
+            "https://firebaseapphosting.googleapis.com/v1beta/${BACKEND_NAME}/builds" \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{\"source\":{\"codebase\":{\"branch\":\"${BRANCH}\"}}}")
 
-          BACKEND_NAME=$(echo "$BACKENDS_JSON" | python3 -c "import json,sys; d=json.load(sys.stdin); backends=d.get('backends',[]); print(backends[0]['name'] if backends else '')")
+          BUILD_HTTP=$(echo "$BUILD_RESP" | grep -oP '(?<=HTTP_STATUS:)\d+')
+          BUILD_BODY=$(echo "$BUILD_RESP" | sed '/HTTP_STATUS:/d')
+          echo "Build status: $BUILD_HTTP"
+          echo "Build response: $BUILD_BODY"
 
-          if [ -z "$BACKEND_NAME" ]; then
-            echo "ERROR: No App Hosting backend found. Set up Firebase App Hosting in the console first."
+          BUILD_NAME=$(echo "$BUILD_BODY" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('name','') or d.get('metadata',{}).get('build',{}).get('name',''))")
+
+          if [ -z "$BUILD_NAME" ] || [ "$BUILD_HTTP" != "200" ] && [ "$BUILD_HTTP" != "201" ]; then
+            echo "Build creation failed (HTTP $BUILD_HTTP)"
             exit 1
           fi
 
-          echo "Backend: $BACKEND_NAME"
-          echo "Triggering rollout for branch: $BRANCH"
+          echo "Build created: $BUILD_NAME"
 
-          ROLLOUT=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
+          echo "=== Step 2: Create Rollout using build ==="
+          ROLLOUT_RESP=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
             -X POST \
             "https://firebaseapphosting.googleapis.com/v1beta/${BACKEND_NAME}/rollouts" \
             -H "Authorization: Bearer $ACCESS_TOKEN" \
             -H "Content-Type: application/json" \
-            -d "{\"build\":{\"source\":{\"codebase\":{\"branch\":\"${BRANCH}\"}}}}")
+            -d "{\"build\":\"${BUILD_NAME}\"}")
 
-          HTTP_STATUS=$(echo "$ROLLOUT" | grep -oP '(?<=HTTP_STATUS:)\d+')
-          BODY=$(echo "$ROLLOUT" | sed '/HTTP_STATUS:/d')
-          echo "Status: $HTTP_STATUS  Body: $BODY"
+          ROLLOUT_HTTP=$(echo "$ROLLOUT_RESP" | grep -oP '(?<=HTTP_STATUS:)\d+')
+          ROLLOUT_BODY=$(echo "$ROLLOUT_RESP" | sed '/HTTP_STATUS:/d')
+          echo "Rollout status: $ROLLOUT_HTTP"
+          echo "Rollout response: $ROLLOUT_BODY"
 
-          if [ "$HTTP_STATUS" = "200" ] || [ "$HTTP_STATUS" = "201" ]; then
-            echo "Rollout created successfully — Firebase App Hosting will build and publish."
+          if [ "$ROLLOUT_HTTP" = "200" ] || [ "$ROLLOUT_HTTP" = "201" ]; then
+            echo "Rollout created — Firebase App Hosting will build and deploy."
           else
-            echo "Rollout creation failed (HTTP $HTTP_STATUS)"
+            echo "Rollout creation failed (HTTP $ROLLOUT_HTTP)"
             exit 1
           fi
