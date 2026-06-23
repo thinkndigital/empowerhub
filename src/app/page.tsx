@@ -142,61 +142,66 @@ const ExpertCard = ({
     ? `https://wa.me/${expert.whatsapp.replace(/\D/g, '')}`
     : null;
 
+  const hasSocial = !!(expert.linkedin || expert.instagram || expert.twitter || whatsappHref);
+
   return (
     <div dir="rtl" className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
-      {/* Photo */}
-      <Link href={profileLink} className="block relative aspect-square bg-muted overflow-hidden">
-        {expert.avatarUrl ? (
-          <img
-            src={expert.avatarUrl}
-            alt={name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-            onError={e => {
-              const t = e.target as HTMLImageElement;
-              t.style.display = 'none';
-              (t.nextElementSibling as HTMLElement)?.classList.remove('hidden');
-            }}
-          />
-        ) : null}
-        <div
-          className={`w-full h-full bg-gradient-to-br ${gradient} flex items-center justify-center text-white font-extrabold text-7xl ${expert.avatarUrl ? 'hidden' : ''}`}
-        >
-          {initial}
-        </div>
+      {/* Photo with social icons overlay */}
+      <div className="relative aspect-square bg-muted overflow-hidden">
+        <Link href={profileLink} className="block w-full h-full">
+          {expert.avatarUrl ? (
+            <img
+              src={expert.avatarUrl}
+              alt={name}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              onError={e => {
+                const t = e.target as HTMLImageElement;
+                t.style.display = 'none';
+                (t.nextElementSibling as HTMLElement)?.classList.remove('hidden');
+              }}
+            />
+          ) : null}
+          <div
+            className={`w-full h-full bg-gradient-to-br ${gradient} flex items-center justify-center text-white font-extrabold text-7xl ${expert.avatarUrl ? 'hidden' : ''}`}
+          >
+            {initial}
+          </div>
+        </Link>
         <span className="absolute top-2.5 right-2.5 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-black/40 text-white backdrop-blur-sm">
           {isMentor ? 'مرشد' : 'مدرب'}
         </span>
-      </Link>
-
-      {/* Name + social icons */}
-      <div className="px-3 py-3 flex flex-col items-center gap-2.5">
-        <Link href={profileLink} className="font-bold text-sm text-foreground text-center leading-snug hover:text-primary transition-colors">
-          {name}
-        </Link>
-        {(expert.linkedin || expert.instagram || expert.twitter || whatsappHref) && (
-          <div className="flex gap-1.5">
+        {/* Social icons overlay on bottom of photo */}
+        {hasSocial && (
+          <div className="absolute bottom-0 left-0 right-0 flex justify-center gap-2 p-2.5 bg-gradient-to-t from-black/60 to-transparent">
             {expert.linkedin && (
               <a href={expert.linkedin} target="_blank" rel="noopener noreferrer"
-                className="h-7 w-7 rounded-lg bg-muted text-muted-foreground flex items-center justify-center hover:text-primary hover:bg-primary/10 transition-colors"
+                className="h-7 w-7 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white hover:text-primary transition-colors"
                 title="LinkedIn"><LinkedInIcon /></a>
             )}
             {expert.instagram && (
               <a href={expert.instagram} target="_blank" rel="noopener noreferrer"
-                className="h-7 w-7 rounded-lg bg-muted text-muted-foreground flex items-center justify-center hover:text-pink-600 hover:bg-pink-50 transition-colors"
+                className="h-7 w-7 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white hover:text-pink-600 transition-colors"
                 title="Instagram"><InstagramIcon /></a>
             )}
             {expert.twitter && (
               <a href={expert.twitter} target="_blank" rel="noopener noreferrer"
-                className="h-7 w-7 rounded-lg bg-muted text-muted-foreground flex items-center justify-center hover:text-foreground transition-colors"
+                className="h-7 w-7 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white hover:text-foreground transition-colors"
                 title="X"><TwitterXIcon /></a>
             )}
             {whatsappHref && (
               <a href={whatsappHref} target="_blank" rel="noopener noreferrer"
-                className="h-7 w-7 rounded-lg bg-muted text-muted-foreground flex items-center justify-center hover:text-green-600 hover:bg-green-50 transition-colors"
+                className="h-7 w-7 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white hover:text-green-600 transition-colors"
                 title="واتساب"><WhatsAppIcon /></a>
             )}
           </div>
         )}
+      </div>
+
+      {/* Name */}
+      <div className="px-3 py-3 flex items-center justify-center">
+        <Link href={profileLink} className="font-bold text-sm text-foreground text-center leading-snug hover:text-primary transition-colors">
+          {name}
+        </Link>
       </div>
     </div>
   );
