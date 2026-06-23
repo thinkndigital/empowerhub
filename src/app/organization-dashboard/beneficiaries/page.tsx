@@ -10,6 +10,7 @@ import type { User } from "firebase/auth";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatusBadge } from "@/components/status-badge";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuTrigger,
@@ -341,10 +342,12 @@ export default function BeneficiariesPage() {
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
-    <div dir="rtl" className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">إدارة المستفيدين</h1>
-        <p className="text-sm text-muted-foreground">عرض وإدارة المستفيدين وإضافتهم ودعوتهم لمنظمتك.</p>
+    <div dir="rtl" className="space-y-6 animate-fade-in-up">
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">إدارة المستفيدين</h1>
+          <p className="page-subtitle">عرض وإدارة المستفيدين وإضافتهم ودعوتهم لمنظمتك.</p>
+        </div>
       </div>
 
       <Tabs defaultValue="org" dir="rtl">
@@ -395,8 +398,12 @@ export default function BeneficiariesPage() {
                   {orgLoading && <SkeletonRows cols={6} />}
                   {!orgLoading && filteredOrgUsers.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
-                        لا يوجد مستفيدون في منظمتك حتى الآن.
+                      <TableCell colSpan={6}>
+                        <div className="empty-state">
+                          <div className="empty-state-icon"><Users className="h-6 w-6" /></div>
+                          <p className="empty-state-title">لا يوجد مستفيدون بعد</p>
+                          <p className="empty-state-desc">ابدأ بدعوة مستفيدين أو إضافتهم لمنظمتك</p>
+                        </div>
                       </TableCell>
                     </TableRow>
                   )}
@@ -407,9 +414,9 @@ export default function BeneficiariesPage() {
                       <TableRow key={u.id}>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <Avatar className="h-8 w-8">
+                            <Avatar className="h-9 w-9 rounded-xl shrink-0">
                               <AvatarImage src={u.avatarUrl || ""} alt={u.name || ""} />
-                              <AvatarFallback>{(u.name || "م").charAt(0)}</AvatarFallback>
+                              <AvatarFallback className="rounded-xl bg-primary/10 text-primary text-xs font-bold">{(u.name || "م").charAt(0)}</AvatarFallback>
                             </Avatar>
                             <div>
                               <Link href={`/organization-dashboard/beneficiaries/${u.id}`} className="font-medium hover:underline text-primary">
@@ -437,15 +444,7 @@ export default function BeneficiariesPage() {
                           )}
                         </TableCell>
                         <TableCell>
-                          <Badge
-                            variant={
-                              status === "نشط" ? "default"
-                              : status === "مكتمل" ? "outline"
-                              : "secondary"
-                            }
-                          >
-                            {status}
-                          </Badge>
+                          <StatusBadge status={status} />
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
@@ -532,8 +531,12 @@ export default function BeneficiariesPage() {
                   {allLoading && <SkeletonRows cols={3} />}
                   {!allLoading && filteredExplorerUsers.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={3} className="text-center h-24 text-muted-foreground">
-                        لا توجد نتائج. جرّب كلمة بحث أخرى.
+                      <TableCell colSpan={3}>
+                        <div className="empty-state">
+                          <div className="empty-state-icon"><Search className="h-6 w-6" /></div>
+                          <p className="empty-state-title">لا توجد نتائج</p>
+                          <p className="empty-state-desc">جرّب كلمة بحث أخرى</p>
+                        </div>
                       </TableCell>
                     </TableRow>
                   )}
@@ -541,9 +544,9 @@ export default function BeneficiariesPage() {
                     <TableRow key={u.id}>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Avatar className="h-8 w-8">
+                          <Avatar className="h-9 w-9 rounded-xl shrink-0">
                             <AvatarImage src={u.avatarUrl || ""} alt={u.name || ""} />
-                            <AvatarFallback>{(u.name || "م").charAt(0)}</AvatarFallback>
+                            <AvatarFallback className="rounded-xl bg-muted text-foreground text-xs font-bold">{(u.name || "م").charAt(0)}</AvatarFallback>
                           </Avatar>
                           <span className="font-medium">{u.name || "بلا اسم"}</span>
                         </div>
@@ -708,16 +711,18 @@ export default function BeneficiariesPage() {
                 </div>
               )}
               {!groupsLoading && (groups ?? []).length === 0 && (
-                <p className="text-muted-foreground text-sm text-center py-6">
-                  لا توجد مجموعات حتى الآن. أنشئ مجموعتك الأولى.
-                </p>
+                <div className="empty-state py-10">
+                  <div className="empty-state-icon"><Users className="h-6 w-6" /></div>
+                  <p className="empty-state-title">لا توجد مجموعات بعد</p>
+                  <p className="empty-state-desc">أنشئ مجموعتك الأولى لتنظيم المستفيدين</p>
+                </div>
               )}
               {!groupsLoading && (groups ?? []).length > 0 && (
                 <div className="space-y-3">
                   {(groups ?? []).map((g) => (
                     <div
                       key={g.id}
-                      className="flex items-center justify-between rounded-lg border p-3"
+                      className="flex items-center justify-between rounded-xl border border-border/60 px-4 py-3 hover:bg-muted/30 transition-colors"
                     >
                       <span className="font-medium">{g.name}</span>
                       <Badge variant="secondary">{g.memberIds.length} عضو</Badge>

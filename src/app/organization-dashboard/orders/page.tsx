@@ -1,13 +1,16 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { ShoppingBag, Clock, CheckCircle, XCircle, Truck, RefreshCw, Search } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { ShoppingBag, Clock, CheckCircle, RefreshCw, Search, DollarSign, Package } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { StatusBadge } from "@/components/status-badge";
 import { useUser } from "@/firebase/auth/use-user";
+import { cn } from "@/lib/utils";
 
 interface Order {
   id: string;
@@ -23,13 +26,12 @@ interface Order {
   createdAt?: string;
 }
 
-const statusConfig: Record<string, { label: string; color: string }> = {
-  pending:   { label: 'قيد الانتظار', color: 'bg-amber-500/20 text-amber-400 border-0' },
-  confirmed: { label: 'مؤكد',         color: 'bg-blue-500/20 text-blue-400 border-0' },
-  shipped:   { label: 'تم الشحن',     color: 'bg-purple-500/20 text-purple-400 border-0' },
-  completed: { label: 'مكتمل',        color: 'bg-emerald-500/20 text-emerald-400 border-0' },
-  cancelled: { label: 'ملغي',         color: 'bg-red-500/20 text-red-400 border-0' },
-};
+const statColors = [
+  { bg: "bg-primary/10",    icon: "bg-primary" },
+  { bg: "bg-amber-500/10",  icon: "bg-amber-500" },
+  { bg: "bg-emerald-500/10",icon: "bg-emerald-500" },
+  { bg: "bg-sky-500/10",    icon: "bg-sky-500" },
+];
 
 export default function OrgOrdersPage() {
   const { user } = useUser();
@@ -62,50 +64,70 @@ export default function OrgOrdersPage() {
   });
 
   const stats = {
-    total: orders.length,
-    pending: orders.filter(o => o.status === 'pending').length,
+    total:     orders.length,
+    pending:   orders.filter(o => o.status === 'pending').length,
     completed: orders.filter(o => o.status === 'completed').length,
-    revenue: orders.filter(o => o.paymentStatus === 'paid').reduce((s, o) => s + (o.totalAmount || 0), 0),
+    revenue:   orders.filter(o => o.paymentStatus === 'paid').reduce((s, o) => s + (o.totalAmount || 0), 0),
   };
 
+  const statItems = [
+    { label: "إجمالي الطلبات",  value: String(stats.total),                     sub: "طلب مسجل",     icon: <ShoppingBag />, colorIdx: 0 },
+    { label: "قيد الانتظار",    value: String(stats.pending),                   sub: "بانتظار التأكيد", icon: <Clock />,       colorIdx: 1 },
+    { label: "مكتملة",          value: String(stats.completed),                 sub: "تم التسليم",    icon: <CheckCircle />, colorIdx: 2 },
+    { label: "إيرادات مدفوعة", value: `${stats.revenue.toFixed(0)} ر.س`,       sub: "دفعات مؤكدة",  icon: <DollarSign />,  colorIdx: 3 },
+  ];
+
   return (
-    <div className="space-y-6" dir="rtl">
-      <div className="flex items-center justify-between flex-wrap gap-3">
+    <div className="space-y-6 animate-fade-in-up" dir="rtl">
+      {/* ── Page header ── */}
+      <div className="page-header">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">طلبات المتاجر</h1>
-          <p className="text-muted-foreground text-sm">متابعة طلبات جميع متاجر المستفيدين في المنظمة</p>
+          <h1 className="page-title">طلبات المتاجر</h1>
+          <p className="page-subtitle">متابعة طلبات جميع متاجر المستفيدين في المنظمة</p>
         </div>
-        <Button variant="outline" onClick={load} disabled={loading} className="gap-2">
-          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+        <Button variant="outline" onClick={load} disabled={loading} className="gap-2 h-fit">
+          <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
           تحديث
         </Button>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {[
-          { label: 'إجمالي الطلبات', value: stats.total, color: 'text-primary' },
-          { label: 'قيد الانتظار', value: stats.pending, color: 'text-amber-500' },
-          { label: 'مكتملة', value: stats.completed, color: 'text-emerald-500' },
-          { label: 'إيرادات مدفوعة', value: `${stats.revenue.toFixed(0)} ر.س`, color: 'text-blue-500' },
-        ].map((s, i) => (
-          <Card key={i} className="border-0 shadow-sm">
-            <CardContent className="pt-4 pb-4">
-              <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
-              <p className="text-muted-foreground text-xs">{s.label}</p>
-            </CardContent>
-          </Card>
-        ))}
+      {/* ── KPI Cards ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {statItems.map((s, i) => {
+          const c = statColors[s.colorIdx];
+          return (
+            <Card key={i} className={cn("stat-card border-0 overflow-hidden", c.bg)}>
+              <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3 pt-5 px-5">
+                <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center shrink-0 text-white [&>svg]:h-5 [&>svg]:w-5", c.icon)}>
+                  {s.icon}
+                </div>
+              </CardHeader>
+              <CardContent className="px-5 pb-5">
+                {loading
+                  ? <Skeleton className="h-8 w-20 mb-1" />
+                  : <div className="text-3xl font-bold tracking-tight">{s.value}</div>
+                }
+                <p className="text-xs text-muted-foreground mt-1.5 font-medium">{s.label}</p>
+                <p className="text-[11px] text-muted-foreground/70 mt-0.5">{s.sub}</p>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
-      {/* Filters */}
+      {/* ── Filters ── */}
       <div className="flex gap-3 flex-wrap">
         <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="بحث عن طلب..." className="pr-9" />
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60 pointer-events-none" />
+          <Input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="بحث عن طلب..."
+            className="pr-9"
+          />
         </div>
         <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-40">
+          <SelectTrigger className="w-44">
             <SelectValue placeholder="الحالة" />
           </SelectTrigger>
           <SelectContent>
@@ -119,50 +141,67 @@ export default function OrgOrdersPage() {
         </Select>
       </div>
 
+      {/* ── Table / Empty / Loading ── */}
       {loading ? (
-        <div className="text-center py-16 text-muted-foreground">جاري التحميل...</div>
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-0">
+            <div className="divide-y divide-border/50">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="flex gap-4 items-center px-5 py-4">
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="h-4 w-28 mr-auto" />
+                  <Skeleton className="h-6 w-16 rounded-lg" />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-16 text-muted-foreground">
-          <ShoppingBag className="h-12 w-12 mx-auto mb-3 opacity-20" />
-          <p>لا توجد طلبات</p>
+        <div className="empty-state">
+          <div className="empty-state-icon"><Package className="h-6 w-6" /></div>
+          <p className="empty-state-title">لا توجد طلبات</p>
+          <p className="empty-state-desc">
+            {search || filterStatus !== 'all'
+              ? 'لا توجد نتائج تطابق معايير البحث'
+              : 'ستظهر طلبات متاجر المستفيدين هنا'}
+          </p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-border">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50 text-muted-foreground">
+        <div className="overflow-x-auto rounded-2xl border border-border shadow-sm">
+          <table className="w-full text-sm premium-table">
+            <thead>
               <tr>
-                <th className="text-right p-3 font-medium">المنتج</th>
-                <th className="text-right p-3 font-medium">العميل</th>
-                <th className="text-right p-3 font-medium">المتجر</th>
-                <th className="text-right p-3 font-medium">المبلغ</th>
-                <th className="text-right p-3 font-medium">الدفع</th>
-                <th className="text-right p-3 font-medium">الحالة</th>
-                <th className="text-right p-3 font-medium">التاريخ</th>
+                <th>المنتج</th>
+                <th>العميل</th>
+                <th>المتجر</th>
+                <th>المبلغ</th>
+                <th>الدفع</th>
+                <th>الحالة</th>
+                <th>التاريخ</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border">
-              {filtered.map(order => {
-                const sc = statusConfig[order.status] || statusConfig.pending;
-                return (
-                  <tr key={order.id} className="hover:bg-muted/30 transition-colors">
-                    <td className="p-3 font-medium max-w-[150px] truncate">{order.productName}</td>
-                    <td className="p-3">
-                      <div className="font-medium">{order.buyerName}</div>
-                      <div className="text-xs text-muted-foreground" dir="ltr">{order.buyerPhone}</div>
-                    </td>
-                    <td className="p-3 text-muted-foreground">{order.storeName || '—'}</td>
-                    <td className="p-3 font-bold text-primary">{(order.totalAmount || 0).toFixed(2)} ر.س</td>
-                    <td className="p-3">
+            <tbody>
+              {filtered.map(order => (
+                <tr key={order.id}>
+                  <td className="font-medium max-w-[150px] truncate">{order.productName}</td>
+                  <td>
+                    <div className="font-medium">{order.buyerName}</div>
+                    <div className="text-xs text-muted-foreground" dir="ltr">{order.buyerPhone}</div>
+                  </td>
+                  <td className="text-muted-foreground">{order.storeName || '—'}</td>
+                  <td className="font-bold text-primary tabular-nums">{(order.totalAmount || 0).toFixed(2)} ر.س</td>
+                  <td>
+                    <div className="flex flex-col gap-1">
                       <span className="text-xs text-muted-foreground">{order.paymentMethod === 'online' ? 'أونلاين' : 'استلام'}</span>
-                      {order.paymentStatus === 'paid' && <Badge className="mr-1 bg-emerald-500/20 text-emerald-600 border-0 text-xs">مدفوع</Badge>}
-                    </td>
-                    <td className="p-3"><Badge className={sc.color + ' text-xs'}>{sc.label}</Badge></td>
-                    <td className="p-3 text-xs text-muted-foreground">
-                      {order.createdAt ? new Date(order.createdAt).toLocaleDateString('ar-SA') : '—'}
-                    </td>
-                  </tr>
-                );
-              })}
+                      {order.paymentStatus === 'paid' && <StatusBadge status="paid" />}
+                    </div>
+                  </td>
+                  <td><StatusBadge status={order.status} /></td>
+                  <td className="text-xs text-muted-foreground tabular-nums">
+                    {order.createdAt ? new Date(order.createdAt).toLocaleDateString('ar-SA') : '—'}
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
