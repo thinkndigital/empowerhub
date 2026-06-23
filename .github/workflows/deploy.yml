@@ -6,6 +6,7 @@ on:
       - main
       - claude/laughing-hopper-vajfwr
       - claude/empowerhub0-context-lv8h4j
+      - claude/affectionate-ramanujan-rbvqv1
 
 jobs:
   build_and_deploy:
@@ -32,59 +33,25 @@ jobs:
           NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: "822244663005"
           NEXT_PUBLIC_FIREBASE_APP_ID: "1:822244663005:web:2bbd7b3b2a819f1e2c0534"
 
-      - name: Authenticate with Google Cloud
+      - name: Write service account key
+        run: echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > /tmp/sa.json
+
+      - name: Debug - check backends API
+        continue-on-error: true
         run: |
-          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > /tmp/sa.json
           gcloud auth activate-service-account --key-file=/tmp/sa.json --quiet
-
-      - name: List App Hosting backends
-        id: backends
-        run: |
           PROJECT_ID=$(python3 -c "import json; print(json.load(open('/tmp/sa.json'))['project_id'])")
-          echo "project_id=$PROJECT_ID" >> $GITHUB_OUTPUT
-
           ACCESS_TOKEN=$(gcloud auth print-access-token)
-
-          curl -s \
+          echo "=== Checking App Hosting Backends ==="
+          curl -s -w "\nHTTP_STATUS:%{http_code}" \
             "https://firebaseapphosting.googleapis.com/v1beta/projects/${PROJECT_ID}/backends" \
-            -H "Authorization: Bearer $ACCESS_TOKEN" \
-            -o /tmp/backends.json
+            -H "Authorization: Bearer $ACCESS_TOKEN"
+          echo ""
 
-          echo "--- Backends response ---"
-          cat /tmp/backends.json
-
-          BACKEND_ID=$(python3 -c "import json; d=json.load(open('/tmp/backends.json')); b=d.get('backends',[]); print(b[0]['name'].split('/')[-1] if b else '')")
-          echo "backend_id=$BACKEND_ID" >> $GITHUB_OUTPUT
-          echo "Backend ID: $BACKEND_ID"
-
-      - name: Trigger App Hosting build
+      - name: Deploy to Firebase App Hosting
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa.json
         run: |
-          if [ -z "${{ steps.backends.outputs.backend_id }}" ]; then
-            echo "::error::No App Hosting backend found. Check that FIREBASE_SERVICE_ACCOUNT has roles/firebaseapphosting.admin"
-            exit 1
-          fi
-
-          ACCESS_TOKEN=$(gcloud auth print-access-token)
-          PROJECT_ID="${{ steps.backends.outputs.project_id }}"
-          BACKEND_ID="${{ steps.backends.outputs.backend_id }}"
-          BRANCH="${{ github.ref_name }}"
-
-          echo "Triggering build: project=$PROJECT_ID backend=$BACKEND_ID branch=$BRANCH"
-
-          curl -s -X POST \
-            "https://firebaseapphosting.googleapis.com/v1beta/projects/${PROJECT_ID}/backends/${BACKEND_ID}/builds" \
-            -H "Authorization: Bearer $ACCESS_TOKEN" \
-            -H "Content-Type: application/json" \
-            -d "{\"source\":{\"codebase\":{\"branch\":\"${BRANCH}\"}}}" \
-            -o /tmp/build.json
-
-          echo "--- Build response ---"
-          cat /tmp/build.json
-
-          ERROR=$(python3 -c "import json; d=json.load(open('/tmp/build.json')); print(d.get('error',{}).get('message',''))")
-          if [ -n "$ERROR" ]; then
-            echo "::error::Build trigger failed: $ERROR"
-            exit 1
-          fi
-
-          echo "Build triggered successfully!"
+          npx firebase-tools@latest deploy --only hosting \
+            --project studio-4511819966-bc14f \
+            --non-interactive
