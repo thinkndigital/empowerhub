@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Bell, LayoutGrid, Search, Settings, BookOpen,
-  MessageSquare, BarChartHorizontal, CalendarDays, LogOut, ShoppingBag, FileText, Video,
+  MessageSquare, BarChartHorizontal, CalendarDays, LogOut, ShoppingBag, FileText, Video, ClipboardCheck,
 } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { doc } from "firebase/firestore";
@@ -40,6 +40,7 @@ const allCoachMenuItems = [
   { href: "/coach-dashboard/analytics", label: "التحليلات", icon: BarChartHorizontal, sectionKey: 'analytics' },
   { href: "/coach-dashboard/messages", label: "الرسائل", icon: MessageSquare, sectionKey: 'messages' },
   { href: "/coach-dashboard/invitations", label: "الدعوات", icon: Bell, sectionKey: 'invitations' },
+  { href: "/coach-dashboard/assessments", label: "نماذج التقييم", icon: ClipboardCheck, sectionKey: null },
 ];
 
 export default function CoachDashboardLayout({ children }: { children: React.ReactNode }) {

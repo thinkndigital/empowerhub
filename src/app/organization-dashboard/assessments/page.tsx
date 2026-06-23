@@ -44,7 +44,8 @@ interface Assessment {
   createdAt: string;
 }
 
-interface Beneficiary { id: string; name: string; email: string; }
+interface Person { id: string; name: string; email: string; }
+type SendTab = 'beneficiaries' | 'coaches' | 'mentors';
 
 const typeLabels: Record<AssessmentType, string> = { pre: 'قبلي', post: 'بعدي', both: 'قبلي وبعدي' };
 const typeBadgeColor: Record<AssessmentType, string> = {
@@ -67,7 +68,9 @@ export default function AssessmentsPage() {
 
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>([]);
+  const [beneficiaries, setBeneficiaries] = useState<Person[]>([]);
+  const [coaches, setCoaches] = useState<Person[]>([]);
+  const [mentors, setMentors] = useState<Person[]>([]);
 
   // Form dialog state
   const [formOpen, setFormOpen] = useState(false);
@@ -81,7 +84,10 @@ export default function AssessmentsPage() {
   // Send dialog state
   const [sendOpen, setSendOpen] = useState(false);
   const [sendingAssessment, setSendingAssessment] = useState<Assessment | null>(null);
+  const [sendTab, setSendTab] = useState<SendTab>('beneficiaries');
   const [selectedBeneficiaries, setSelectedBeneficiaries] = useState<string[]>([]);
+  const [selectedCoaches, setSelectedCoaches] = useState<string[]>([]);
+  const [selectedMentors, setSelectedMentors] = useState<string[]>([]);
   const [sending, setSending] = useState(false);
 
   // Preview dialog state
@@ -99,17 +105,23 @@ export default function AssessmentsPage() {
     } catch { /* silent */ } finally { setLoading(false); }
   }, [authUser]);
 
-  const fetchBeneficiaries = useCallback(async () => {
+  const fetchPeople = useCallback(async () => {
     if (!authUser) return;
     try {
       const token = await authUser.getIdToken();
-      const res = await fetch('/api/org/users?role=beneficiary&scope=all', { headers: { authorization: `Bearer ${token}` } });
-      const data = await res.json();
-      setBeneficiaries((data.users || []).map((u: any) => ({ id: u.id, name: u.name || u.email, email: u.email })));
+      const toRow = (u: any): Person => ({ id: u.id, name: u.name || u.email, email: u.email });
+      const [bRes, cRes, mRes] = await Promise.all([
+        fetch('/api/org/users?role=beneficiary&scope=all', { headers: { authorization: `Bearer ${token}` } }),
+        fetch('/api/org/users?role=coach&scope=all', { headers: { authorization: `Bearer ${token}` } }),
+        fetch('/api/org/users?role=mentor&scope=all', { headers: { authorization: `Bearer ${token}` } }),
+      ]);
+      setBeneficiaries(((await bRes.json()).users || []).map(toRow));
+      setCoaches(((await cRes.json()).users || []).map(toRow));
+      setMentors(((await mRes.json()).users || []).map(toRow));
     } catch { /* silent */ }
   }, [authUser]);
 
-  useEffect(() => { fetchAssessments(); fetchBeneficiaries(); }, [fetchAssessments, fetchBeneficiaries]);
+  useEffect(() => { fetchAssessments(); fetchPeople(); }, [fetchAssessments, fetchPeople]);
 
   const openCreate = () => {
     setEditingId(null);
@@ -160,23 +172,28 @@ export default function AssessmentsPage() {
 
   const openSend = (a: Assessment) => {
     setSendingAssessment(a);
+    setSendTab('beneficiaries');
     setSelectedBeneficiaries(beneficiaries.map(b => b.id));
+    setSelectedCoaches([]);
+    setSelectedMentors([]);
     setSendOpen(true);
   };
 
+  const totalSelected = selectedBeneficiaries.length + selectedCoaches.length + selectedMentors.length;
+
   const handleSend = async () => {
-    if (!authUser || !sendingAssessment || selectedBeneficiaries.length === 0) return;
+    if (!authUser || !sendingAssessment || totalSelected === 0) return;
     setSending(true);
     try {
       const token = await authUser.getIdToken();
       const res = await fetch(`/api/org/assessments/${sendingAssessment.id}/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
-        body: JSON.stringify({ beneficiaryIds: selectedBeneficiaries }),
+        body: JSON.stringify({ beneficiaryIds: selectedBeneficiaries, coachIds: selectedCoaches, mentorIds: selectedMentors }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      toast({ title: `تم الإرسال لـ ${data.sent} مستفيد` });
+      toast({ title: `تم الإرسال لـ ${data.sent} شخص` });
       setSendOpen(false);
       fetchAssessments();
     } catch (e: any) {
@@ -384,41 +401,85 @@ export default function AssessmentsPage() {
 
       {/* Send Dialog */}
       <Dialog open={sendOpen} onOpenChange={setSendOpen}>
-        <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto" dir="rtl">
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto" dir="rtl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><Send className="h-5 w-5" />إرسال النموذج للمستفيدين</DialogTitle>
+            <DialogTitle className="flex items-center gap-2"><Send className="h-5 w-5" />إرسال النموذج</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <p className="text-sm text-muted-foreground">اختر المستفيدين الذين سيتلقون نموذج <span className="font-medium text-foreground">"{sendingAssessment?.title}"</span></p>
-            <div className="flex items-center gap-2 pb-2 border-b">
-              <Checkbox
-                id="select-all"
-                checked={selectedBeneficiaries.length === beneficiaries.length}
-                onCheckedChange={v => setSelectedBeneficiaries(v ? beneficiaries.map(b => b.id) : [])}
-              />
-              <label htmlFor="select-all" className="text-sm font-medium cursor-pointer">تحديد الكل ({beneficiaries.length})</label>
-            </div>
-            <div className="space-y-2 max-h-64 overflow-y-auto">
-              {beneficiaries.map(b => (
-                <div key={b.id} className="flex items-center gap-2 py-1">
-                  <Checkbox
-                    id={b.id}
-                    checked={selectedBeneficiaries.includes(b.id)}
-                    onCheckedChange={v => setSelectedBeneficiaries(p => v ? [...p, b.id] : p.filter(id => id !== b.id))}
-                  />
-                  <label htmlFor={b.id} className="text-sm cursor-pointer flex-1">
-                    <span className="font-medium">{b.name}</span>
-                    <span className="text-muted-foreground text-xs mr-2">{b.email}</span>
-                  </label>
-                </div>
+            <p className="text-sm text-muted-foreground">اختر من سيتلقى نموذج <span className="font-medium text-foreground">"{sendingAssessment?.title}"</span></p>
+
+            {/* Tabs */}
+            <div className="flex rounded-lg border overflow-hidden text-sm">
+              {([
+                { key: 'beneficiaries', label: 'المستفيدون', count: beneficiaries.length, sel: selectedBeneficiaries.length },
+                { key: 'coaches',       label: 'المدربون',   count: coaches.length,       sel: selectedCoaches.length },
+                { key: 'mentors',       label: 'المرشدون',   count: mentors.length,        sel: selectedMentors.length },
+              ] as Array<{key: SendTab; label: string; count: number; sel: number}>).map(tab => (
+                <button key={tab.key} type="button"
+                  onClick={() => setSendTab(tab.key)}
+                  className={`flex-1 py-2 px-3 font-medium transition-colors ${sendTab === tab.key ? 'bg-primary text-primary-foreground' : 'hover:bg-muted/60'}`}>
+                  {tab.label}
+                  {tab.sel > 0 && <span className={`mr-1.5 text-[10px] px-1.5 py-0.5 rounded-full font-bold ${sendTab === tab.key ? 'bg-white/20' : 'bg-primary/10 text-primary'}`}>{tab.sel}</span>}
+                </button>
               ))}
             </div>
+
+            {/* People list */}
+            {([
+              { key: 'beneficiaries', list: beneficiaries, sel: selectedBeneficiaries, setSel: setSelectedBeneficiaries },
+              { key: 'coaches',       list: coaches,       sel: selectedCoaches,       setSel: setSelectedCoaches },
+              { key: 'mentors',       list: mentors,        sel: selectedMentors,        setSel: setSelectedMentors },
+            ] as Array<{key: SendTab; list: Person[]; sel: string[]; setSel: React.Dispatch<React.SetStateAction<string[]>>}>)
+              .filter(t => t.key === sendTab)
+              .map(({ key, list, sel, setSel }) => (
+                <div key={key} className="space-y-2">
+                  {list.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-6">لا يوجد {key === 'coaches' ? 'مدربون' : key === 'mentors' ? 'مرشدون' : 'مستفيدون'} مسجلون</p>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-2 pb-2 border-b">
+                        <Checkbox
+                          id={`sel-all-${key}`}
+                          checked={sel.length === list.length && list.length > 0}
+                          onCheckedChange={v => setSel(v ? list.map(p => p.id) : [])}
+                        />
+                        <label htmlFor={`sel-all-${key}`} className="text-sm font-medium cursor-pointer">تحديد الكل ({list.length})</label>
+                      </div>
+                      <div className="space-y-1 max-h-56 overflow-y-auto">
+                        {list.map(p => (
+                          <div key={p.id} className="flex items-center gap-2 py-1.5 px-1 rounded-lg hover:bg-muted/40">
+                            <Checkbox
+                              id={`${key}-${p.id}`}
+                              checked={sel.includes(p.id)}
+                              onCheckedChange={v => setSel(prev => v ? [...prev, p.id] : prev.filter(id => id !== p.id))}
+                            />
+                            <label htmlFor={`${key}-${p.id}`} className="text-sm cursor-pointer flex-1">
+                              <span className="font-medium">{p.name}</span>
+                              <span className="text-muted-foreground text-xs mr-2">{p.email}</span>
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))
+            }
+
+            {totalSelected > 0 && (
+              <p className="text-xs text-muted-foreground bg-muted/40 rounded-lg px-3 py-2">
+                سيتم الإرسال لـ <span className="font-bold text-foreground">{totalSelected}</span> شخص:
+                {selectedBeneficiaries.length > 0 && ` ${selectedBeneficiaries.length} مستفيد`}
+                {selectedCoaches.length > 0 && ` · ${selectedCoaches.length} مدرب`}
+                {selectedMentors.length > 0 && ` · ${selectedMentors.length} مرشد`}
+              </p>
+            )}
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setSendOpen(false)}>إلغاء</Button>
-            <Button onClick={handleSend} disabled={sending || selectedBeneficiaries.length === 0} className="gap-2">
+            <Button onClick={handleSend} disabled={sending || totalSelected === 0} className="gap-2">
               <Send className="h-4 w-4" />
-              {sending ? 'جاري الإرسال...' : `إرسال لـ ${selectedBeneficiaries.length} مستفيد`}
+              {sending ? 'جاري الإرسال...' : `إرسال لـ ${totalSelected} شخص`}
             </Button>
           </DialogFooter>
         </DialogContent>
