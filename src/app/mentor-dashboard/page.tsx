@@ -63,8 +63,22 @@ export default function MentorDashboardPage() {
     } catch { setAllSessions([]); } finally { setSessLoading(false); }
   }, [authUser]);
 
+  const [earnings, setEarnings] = useState<{ remaining: number; totalNet: number } | null>(null);
+  const [earningsLoading, setEarningsLoading] = useState(true);
+
+  const fetchEarnings = useCallback(async () => {
+    if (!authUser) return;
+    try {
+      const token = await authUser.getIdToken();
+      const res = await fetch('/api/mentor/financial', { headers: { authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      setEarnings(data.summary || null);
+    } catch { setEarnings(null); } finally { setEarningsLoading(false); }
+  }, [authUser]);
+
   useEffect(() => { fetchBeneficiaries(); }, [fetchBeneficiaries]);
   useEffect(() => { fetchSessions(); }, [fetchSessions]);
+  useEffect(() => { fetchEarnings(); }, [fetchEarnings]);
 
   const now = useMemo(() => new Date().toISOString(), []);
   const upcomingSessions = useMemo(
@@ -106,12 +120,12 @@ export default function MentorDashboardPage() {
       loading: benefLoading,
     },
     {
-      value: '0.00',
+      value: `${(earnings?.remaining ?? 0).toFixed(2)} د.أ`,
       label: 'الأرباح',
-      sub: 'د.أ هذا الشهر',
+      sub: 'الرصيد المتاح',
       icon: <DollarSign className="h-4 w-4" />,
       color: 'text-emerald-600 bg-emerald-50',
-      loading: false,
+      loading: earningsLoading,
     },
   ];
 

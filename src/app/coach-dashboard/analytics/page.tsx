@@ -31,6 +31,8 @@ export default function CoachAnalyticsPage() {
   const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
+  const [earnings, setEarnings] = useState<{ remaining: number; totalNet: number } | null>(null);
+  const [earningsLoading, setEarningsLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
     if (!authUser) return;
@@ -46,7 +48,18 @@ export default function CoachAnalyticsPage() {
     } catch { /* silent */ } finally { setLoading(false); }
   }, [authUser]);
 
+  const fetchEarnings = useCallback(async () => {
+    if (!authUser) return;
+    try {
+      const token = await authUser.getIdToken();
+      const res = await fetch('/api/coach/financial', { headers: { authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      setEarnings(data.summary || null);
+    } catch { setEarnings(null); } finally { setEarningsLoading(false); }
+  }, [authUser]);
+
   useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { fetchEarnings(); }, [fetchEarnings]);
 
   const stats = useMemo(() => {
     const totalBeneficiaries = beneficiaries?.length || 0;
@@ -121,7 +134,7 @@ export default function CoachAnalyticsPage() {
           { label: "إجمالي المتدربين", value: stats.totalBeneficiaries, sub: "متدرب نشط", icon: <Users className="h-5 w-5 text-white" />, color: "bg-primary" },
           { label: "متوسط تقدم المتدربين", value: `${stats.avgProgress}%`, sub: "نسبة الإنجاز الكلية", icon: <BarChart3 className="h-5 w-5 text-white" />, color: "bg-emerald-500" },
           { label: "جلسات هذا الشهر", value: stats.sessionsThisMonth, sub: `بإجمالي ${stats.totalHours} ساعة`, icon: <Clock className="h-5 w-5 text-white" />, color: "bg-amber-500" },
-          { label: "أرباح هذا الشهر", value: "—", sub: "راجع قسم المحفظة", icon: <DollarSign className="h-5 w-5 text-white" />, color: "bg-purple-500" },
+          { label: "إجمالي الأرباح", value: earningsLoading ? "—" : `${(earnings?.remaining ?? 0).toFixed(2)} د.أ`, sub: "الرصيد المتاح", icon: <DollarSign className="h-5 w-5 text-white" />, color: "bg-purple-500" },
         ].map((s, i) => (
           <Card key={i} className="border-0 shadow-sm card-hover">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
