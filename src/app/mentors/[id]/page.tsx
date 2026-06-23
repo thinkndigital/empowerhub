@@ -103,7 +103,7 @@ export default function MentorProfilePage() {
             )}
 
             {/* Specializations */}
-            {mentor.specializations?.length > 0 && (
+            {Array.isArray(mentor.specializations) && mentor.specializations.length > 0 && (
               <div className="mb-6">
                 <h3 className="text-sm font-semibold mb-2">التخصصات</h3>
                 <div className="flex flex-wrap gap-2">

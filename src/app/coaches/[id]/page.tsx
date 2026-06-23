@@ -121,7 +121,7 @@ export default function CoachProfilePage() {
             )}
 
             {/* Specializations */}
-            {coach.specializations?.length > 0 && (
+            {Array.isArray(coach.specializations) && coach.specializations.length > 0 && (
               <div className="mb-6">
                 <h3 className="text-sm font-semibold mb-2">التخصصات</h3>
                 <div className="flex flex-wrap gap-2">

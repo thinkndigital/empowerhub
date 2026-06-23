@@ -14,7 +14,8 @@ export async function GET() {
       return {
         id: d.id, name: data.name, displayName: data.displayName,
         bio: data.bio, description: data.description,
-        specializations: data.specializations, avatarUrl: data.avatarUrl || '',
+        specializations: Array.isArray(data.specializations) ? data.specializations : typeof data.specializations === 'string' && data.specializations ? [data.specializations] : [],
+        avatarUrl: data.avatarUrl || '',
         sessionPrice: data.sessionPrice ?? null,
         whatsapp: data.whatsapp || '', linkedin: data.linkedin || data.linkedIn || '',
         instagram: data.instagram || '', email: data.email || '',
