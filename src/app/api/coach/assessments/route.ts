@@ -11,7 +11,6 @@ export async function GET(req: NextRequest) {
 
     const snap = await adminDb.collection('assessments')
       .where('sentToCoaches', 'array-contains', uid)
-      .where('status', '==', 'active')
       .get();
 
     const respSnap = await adminDb.collection('assessment-responses')
@@ -21,7 +20,7 @@ export async function GET(req: NextRequest) {
 
     const submitted = new Set(respSnap.docs.map(d => d.data().assessmentId));
 
-    const assessments = snap.docs.map(d => {
+    const assessments = snap.docs.filter(d => d.data().status !== 'draft').map(d => {
       const data = d.data();
       return {
         id: d.id,

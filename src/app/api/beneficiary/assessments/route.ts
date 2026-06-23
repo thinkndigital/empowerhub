@@ -9,10 +9,9 @@ export async function GET(req: NextRequest) {
     const decoded = await adminAuth.verifyIdToken(token);
     const uid = decoded.uid;
 
-    // Assessments sent to this beneficiary
+    // Assessments sent to this beneficiary — filter status in memory to avoid composite index
     const snap = await adminDb.collection('assessments')
       .where('sentTo', 'array-contains', uid)
-      .where('status', '==', 'active')
       .get();
 
     // Get submitted responses for this user
@@ -26,7 +25,9 @@ export async function GET(req: NextRequest) {
       submittedMap[data.assessmentId].push(data.phase);
     });
 
-    const assessments = snap.docs.map(d => {
+    const assessments = snap.docs
+      .filter(d => d.data().status !== 'draft' && d.data().status !== 'closed')
+      .map(d => {
       const data = d.data();
       const submitted = submittedMap[d.id] || [];
       return {
