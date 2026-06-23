@@ -4,12 +4,13 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { MoreHorizontal, PlusCircle, Download, Edit, Trash2 } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Download, Edit, Trash2, Users } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatusBadge } from "@/components/status-badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -140,11 +141,11 @@ export default function TeamPage() {
     }
 
   return (
-    <div dir="rtl" className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div dir="rtl" className="space-y-6 animate-fade-in-up">
+      <div className="page-header">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">فريق العمل</h1>
-          <p className="text-sm text-muted-foreground">إدارة أعضاء فريق منظمتك وأدوارهم.</p>
+          <h1 className="page-title">فريق العمل</h1>
+          <p className="page-subtitle">إدارة أعضاء فريق منظمتك وأدوارهم.</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <Button variant="outline" onClick={handleExport}>
@@ -217,11 +218,11 @@ export default function TeamPage() {
           <TableBody>
             {loading && [...Array(3)].map((_, i) => (
                  <TableRow key={i}>
-                    <TableCell><div className="flex items-center gap-2"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-4 w-[150px]" /></div></TableCell>
+                    <TableCell><div className="flex items-center gap-2"><Skeleton className="h-9 w-9 rounded-xl" /><Skeleton className="h-4 w-[150px]" /></div></TableCell>
                     <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-[200px]" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
-                    <TableCell className="text-center"><Skeleton className="h-6 w-[60px] mx-auto" /></TableCell>
-                    <TableCell><Skeleton className="h-8 w-8" /></TableCell>
+                    <TableCell className="text-center"><Skeleton className="h-6 w-[60px] mx-auto rounded-lg" /></TableCell>
+                    <TableCell><Skeleton className="h-8 w-8 rounded-xl" /></TableCell>
                 </TableRow>
             ))}
             {!loading && team.map((user) => {
@@ -230,9 +231,9 @@ export default function TeamPage() {
               <TableRow key={user.id}>
                 <TableCell className="font-medium">
                   <div className="flex items-center gap-2">
-                    <Avatar className="h-8 w-8">
-                       <AvatarImage src={user.avatarUrl || `https://picsum.photos/seed/${user.id}/40/40`} alt={userName} />
-                      <AvatarFallback>{userName.charAt(0)}</AvatarFallback>
+                    <Avatar className="h-9 w-9 rounded-xl shrink-0">
+                      <AvatarImage src={user.avatarUrl} alt={userName} />
+                      <AvatarFallback className="rounded-xl bg-primary/10 text-primary text-xs font-bold">{userName.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <span>{userName}</span>
                   </div>
@@ -240,9 +241,7 @@ export default function TeamPage() {
                 <TableCell className="hidden md:table-cell">{user.email || '-'}</TableCell>
                 <TableCell>{roleMap[user.role || ''] || user.role || 'غير محدد'}</TableCell>
                 <TableCell className="text-center">
-                  <Badge variant={user.status === "نشط" ? "default" : "secondary"}>
-                    {user.status || 'غير محدد'}
-                  </Badge>
+                  <StatusBadge status={user.status || 'active'} />
                 </TableCell>
                 <TableCell>
                   <DropdownMenu>
@@ -269,7 +268,13 @@ export default function TeamPage() {
             )})}
             {!loading && team.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="text-center h-24">لا يوجد أعضاء في الفريق.</TableCell>
+                <TableCell colSpan={5}>
+                  <div className="empty-state">
+                    <div className="empty-state-icon"><Users className="h-6 w-6" /></div>
+                    <p className="empty-state-title">لا يوجد أعضاء في الفريق</p>
+                    <p className="empty-state-desc">أضف أعضاء لفريق عمل منظمتك</p>
+                  </div>
+                </TableCell>
               </TableRow>
             )}
           </TableBody>

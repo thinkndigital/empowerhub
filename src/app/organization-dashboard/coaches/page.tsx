@@ -18,6 +18,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { StatusBadge } from "@/components/status-badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -169,10 +170,12 @@ export default function OrgCoachesPage() {
   const totalHours = billingCoaches.reduce((s, c) => s + c.totalHours, 0);
 
   return (
-    <div className="space-y-6" dir="rtl">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">إدارة المدربين</h1>
-        <p className="text-sm text-muted-foreground">استعرض مدربي منظمتك أو ادعُ مدربين جدد</p>
+    <div className="space-y-6 animate-fade-in-up" dir="rtl">
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">إدارة المدربين</h1>
+          <p className="page-subtitle">استعرض مدربي منظمتك أو ادعُ مدربين جدد</p>
+        </div>
       </div>
 
       <Tabs defaultValue="org-coaches" dir="rtl">
@@ -187,13 +190,14 @@ export default function OrgCoachesPage() {
           {loadingOrgCoaches ? (
             <div className="space-y-2">
               {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="h-14 w-full rounded-md" />
+                <Skeleton key={i} className="h-14 w-full rounded-xl" />
               ))}
             </div>
           ) : !orgCoaches || orgCoaches.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-2">
-              <UserX className="h-10 w-10" />
-              <p>لا يوجد مدربون في منظمتك بعد</p>
+            <div className="empty-state">
+              <div className="empty-state-icon"><UserX className="h-6 w-6" /></div>
+              <p className="empty-state-title">لا يوجد مدربون بعد</p>
+              <p className="empty-state-desc">استكشف المدربين وادعُهم للانضمام لمنظمتك</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -211,9 +215,9 @@ export default function OrgCoachesPage() {
                   <TableRow key={coach.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <Avatar className="h-8 w-8">
+                        <Avatar className="h-9 w-9 rounded-xl shrink-0">
                           <AvatarImage src={coach.avatarUrl} />
-                          <AvatarFallback>
+                          <AvatarFallback className="rounded-xl bg-purple-500/10 text-purple-600 text-xs font-bold">
                             {coach.name?.charAt(0) ?? "م"}
                           </AvatarFallback>
                         </Avatar>
@@ -233,7 +237,7 @@ export default function OrgCoachesPage() {
                       )}
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
-                      <Badge variant="default">نشط</Badge>
+                      <StatusBadge status="active" />
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
@@ -269,37 +273,31 @@ export default function OrgCoachesPage() {
           <div className="space-y-6">
             {/* Summary cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <Card className="border-0 shadow-sm">
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-100 rounded-lg"><Clock className="h-5 w-5 text-blue-600" /></div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">إجمالي الساعات المنجزة</p>
-                      <p className="text-2xl font-bold">{totalHours.toFixed(1)}</p>
-                    </div>
+              <Card className="stat-card border-0 bg-sky-500/10">
+                <CardContent className="pt-5 pb-5 px-5">
+                  <div className="h-10 w-10 rounded-xl bg-sky-500 flex items-center justify-center mb-3">
+                    <Clock className="h-5 w-5 text-white" />
                   </div>
+                  <div className="text-3xl font-bold tracking-tight">{totalHours.toFixed(1)}</div>
+                  <p className="text-xs text-muted-foreground mt-1.5 font-medium">إجمالي الساعات المنجزة</p>
                 </CardContent>
               </Card>
-              <Card className="border-0 shadow-sm">
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-green-100 rounded-lg"><DollarSign className="h-5 w-5 text-green-600" /></div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">إجمالي التكلفة (د.أ)</p>
-                      <p className="text-2xl font-bold">{totalCost.toFixed(2)}</p>
-                    </div>
+              <Card className="stat-card border-0 bg-emerald-500/10">
+                <CardContent className="pt-5 pb-5 px-5">
+                  <div className="h-10 w-10 rounded-xl bg-emerald-500 flex items-center justify-center mb-3">
+                    <DollarSign className="h-5 w-5 text-white" />
                   </div>
+                  <div className="text-3xl font-bold tracking-tight">{totalCost.toFixed(2)}</div>
+                  <p className="text-xs text-muted-foreground mt-1.5 font-medium">إجمالي التكلفة (د.أ)</p>
                 </CardContent>
               </Card>
-              <Card className="border-0 shadow-sm">
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-purple-100 rounded-lg"><UserX className="h-5 w-5 text-purple-600" /></div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">عدد المدربين</p>
-                      <p className="text-2xl font-bold">{billingCoaches.length}</p>
-                    </div>
+              <Card className="stat-card border-0 bg-purple-500/10">
+                <CardContent className="pt-5 pb-5 px-5">
+                  <div className="h-10 w-10 rounded-xl bg-purple-500 flex items-center justify-center mb-3">
+                    <UserX className="h-5 w-5 text-white" />
                   </div>
+                  <div className="text-3xl font-bold tracking-tight">{billingCoaches.length}</div>
+                  <p className="text-xs text-muted-foreground mt-1.5 font-medium">عدد المدربين</p>
                 </CardContent>
               </Card>
             </div>
@@ -323,9 +321,9 @@ export default function OrgCoachesPage() {
                     ))}
                   </div>
                 ) : billingCoaches.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 text-muted-foreground gap-2">
-                    <UserX className="h-10 w-10" />
-                    <p>لا يوجد مدربون في منظمتك بعد</p>
+                  <div className="empty-state">
+                    <div className="empty-state-icon"><UserX className="h-6 w-6" /></div>
+                    <p className="empty-state-title">لا يوجد مدربون</p>
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
@@ -349,9 +347,9 @@ export default function OrgCoachesPage() {
                           <TableRow key={coach.id}>
                             <TableCell>
                               <div className="flex items-center gap-2">
-                                <Avatar className="h-8 w-8">
+                                <Avatar className="h-9 w-9 rounded-xl shrink-0">
                                   <AvatarImage src={coach.avatarUrl} />
-                                  <AvatarFallback>{coach.name?.charAt(0) ?? 'م'}</AvatarFallback>
+                                  <AvatarFallback className="rounded-xl bg-purple-500/10 text-purple-600 text-xs font-bold">{coach.name?.charAt(0) ?? 'م'}</AvatarFallback>
                                 </Avatar>
                                 <div>
                                   <p className="font-medium text-sm">{coach.name}</p>
@@ -421,23 +419,25 @@ export default function OrgCoachesPage() {
           {loadingAllCoaches ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {Array.from({ length: 6 }).map((_, i) => (
-                <Skeleton key={i} className="h-40 w-full rounded-xl" />
+                <Skeleton key={i} className="h-40 w-full rounded-2xl" />
               ))}
             </div>
           ) : availableCoaches.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-2">
-              <p>لا يوجد مدربون متاحون للدعوة</p>
+            <div className="empty-state">
+              <div className="empty-state-icon"><UserX className="h-6 w-6" /></div>
+              <p className="empty-state-title">لا يوجد مدربون متاحون</p>
+              <p className="empty-state-desc">جميع المدربين المتاحين أعضاء في منظمتك بالفعل</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {availableCoaches.map((coach) => {
                 const isSent = sentInvites.has(coach.id);
                 return (
-                  <Card key={coach.id} className="border-0 shadow-sm">
+                  <Card key={coach.id} className="border-0 shadow-sm card-hover">
                     <CardContent className="pt-6 flex flex-col items-center gap-3 text-center">
-                      <Avatar className="h-14 w-14">
+                      <Avatar className="h-14 w-14 rounded-2xl">
                         <AvatarImage src={coach.avatarUrl} />
-                        <AvatarFallback>
+                        <AvatarFallback className="rounded-2xl bg-purple-500/10 text-purple-600 font-bold text-lg">
                           {coach.name?.charAt(0) ?? "م"}
                         </AvatarFallback>
                       </Avatar>

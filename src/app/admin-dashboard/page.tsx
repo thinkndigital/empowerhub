@@ -1,42 +1,43 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Activity, Building, BookOpen, ShoppingCart, TrendingUp, ArrowUpRight, UserCheck, GraduationCap } from "lucide-react";
+import { Users, Activity, Building, BookOpen, TrendingUp, UserCheck, GraduationCap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 import { useCollection } from "@/firebase/firestore/use-collection";
 import { collection, query, where, orderBy, limit } from "firebase/firestore";
 import { useFirestore, useMemoFirebase } from "@/firebase/provider";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const StatCard = ({
-  title, value, sub, icon, color, loading
-}: {
-  title: string, value: string, sub: string, icon: React.ReactNode, color: string, loading?: boolean
-}) => (
-  <Card className="card-hover border-0 shadow-sm">
-    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-      <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-      <div className={`h-9 w-9 rounded-lg ${color} flex items-center justify-center shrink-0`}>
-        {icon}
-      </div>
-    </CardHeader>
-    <CardContent>
-      {loading ? <Skeleton className="h-8 w-20 mb-2" /> : <div className="text-2xl font-bold">{value}</div>}
-      <p className="text-xs text-muted-foreground">{sub}</p>
-    </CardContent>
-  </Card>
-);
+const statColors = [
+  { bg: "bg-primary/10",    icon: "bg-primary" },
+  { bg: "bg-emerald-500/10",icon: "bg-emerald-500" },
+  { bg: "bg-purple-500/10", icon: "bg-purple-500" },
+  { bg: "bg-rose-500/10",   icon: "bg-rose-500" },
+];
 
-const QuickLink = ({ href, label, desc, icon }: { href: string, label: string, desc: string, icon: React.ReactNode }) => (
-  <Button variant="outline" asChild className="h-auto p-4 flex flex-col items-start gap-1 card-hover border-border">
-    <Link href={href}>
-      <div className="flex items-center gap-2 text-primary">{icon}<span className="font-semibold">{label}</span></div>
-      <p className="text-xs text-muted-foreground text-right">{desc}</p>
-    </Link>
-  </Button>
-);
+const StatCard = ({
+  title, value, sub, icon, colorIdx = 0, loading
+}: {
+  title: string, value: string, sub: string, icon: React.ReactNode, colorIdx?: number, loading?: boolean
+}) => {
+  const c = statColors[colorIdx];
+  return (
+    <Card className={cn("stat-card border-0 overflow-hidden", c.bg)}>
+      <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3 pt-5 px-5">
+        <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center shrink-0 text-white [&>svg]:h-5 [&>svg]:w-5", c.icon)}>
+          {icon}
+        </div>
+      </CardHeader>
+      <CardContent className="px-5 pb-5">
+        {loading ? <Skeleton className="h-8 w-20 mb-1" /> : <div className="text-3xl font-bold tracking-tight">{value}</div>}
+        <p className="text-xs text-muted-foreground mt-1.5 font-medium">{title}</p>
+        <p className="text-[11px] text-muted-foreground/70 mt-0.5">{sub}</p>
+      </CardContent>
+    </Card>
+  );
+};
 
 export default function AdminDashboardPage() {
   const firestore = useFirestore();
@@ -68,48 +69,57 @@ export default function AdminDashboardPage() {
   };
 
   return (
-    <>
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
-        <div className="space-y-1">
-          <h1 className="text-3xl font-bold tracking-tight">لوحة التحكم الرئيسية</h1>
-          <p className="text-muted-foreground">نظرة عامة وشاملة على أداء المنصة بالكامل.</p>
+    <div className="space-y-6 animate-fade-in-up" dir="rtl">
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">لوحة التحكم الرئيسية</h1>
+          <p className="page-subtitle">نظرة عامة وشاملة على أداء المنصة بالكامل.</p>
         </div>
-        <Badge className="bg-primary/10 text-primary border-primary/20 w-fit">مشرف النظام</Badge>
+        <Badge className="bg-primary/10 text-primary border-primary/20 w-fit h-fit">مشرف النظام</Badge>
       </div>
 
-      <div className="grid gap-4 pt-4 grid-cols-2 lg:grid-cols-4">
-        <StatCard title="إجمالي المستخدمين" value={String(users?.length ?? 0)} sub="مستخدم مسجل" icon={<Users className="h-5 w-5 text-white" />} color="bg-primary" loading={usersLoading} />
-        <StatCard title="إجمالي الجهات" value={String(orgs?.length ?? 0)} sub="جهة مسجلة" icon={<Building className="h-5 w-5 text-white" />} color="bg-emerald-500" loading={orgsLoading} />
-        <StatCard title="إجمالي المستفيدين" value={String(beneficiaries.length)} sub="مستفيد في المنصة" icon={<Activity className="h-5 w-5 text-white" />} color="bg-purple-500" loading={usersLoading} />
-        <StatCard title="إجمالي الدورات" value={String(courses?.length ?? 0)} sub="دورة منشورة" icon={<BookOpen className="h-5 w-5 text-white" />} color="bg-rose-500" loading={coursesLoading} />
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+        <StatCard title="إجمالي المستخدمين" value={String(users?.length ?? 0)} sub="مستخدم مسجل" icon={<Users />} colorIdx={0} loading={usersLoading} />
+        <StatCard title="إجمالي الجهات" value={String(orgs?.length ?? 0)} sub="جهة مسجلة" icon={<Building />} colorIdx={1} loading={orgsLoading} />
+        <StatCard title="إجمالي المستفيدين" value={String(beneficiaries.length)} sub="مستفيد في المنصة" icon={<Activity />} colorIdx={2} loading={usersLoading} />
+        <StatCard title="إجمالي الدورات" value={String(courses?.length ?? 0)} sub="دورة منشورة" icon={<BookOpen />} colorIdx={3} loading={coursesLoading} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 pt-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <Card className="border-0 shadow-sm lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-base">إجراءات سريعة</CardTitle>
-            <CardDescription>الوصول السريع لأهم أقسام الإدارة</CardDescription>
+          <CardHeader className="pb-4">
+            <CardTitle>إجراءات سريعة</CardTitle>
+            <CardDescription className="mt-1">الوصول السريع لأهم أقسام الإدارة</CardDescription>
           </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-3">
-            <QuickLink href="/admin-dashboard/users" label="إدارة المستخدمين" desc="عرض وإدارة جميع المستخدمين" icon={<Users className="h-4 w-4" />} />
-            <QuickLink href="/admin-dashboard/organizations" label="الجهات" desc="إدارة الجهات المسجلة" icon={<Building className="h-4 w-4" />} />
-            <QuickLink href="/admin-dashboard/courses" label="الدورات" desc="إدارة المحتوى التعليمي" icon={<BookOpen className="h-4 w-4" />} />
-            <QuickLink href="/admin-dashboard/mentors" label="المرشدون" desc="إدارة فريق الإرشاد" icon={<UserCheck className="h-4 w-4" />} />
-            <QuickLink href="/admin-dashboard/analytics" label="التحليلات" desc="تقارير وإحصائيات المنصة" icon={<TrendingUp className="h-4 w-4" />} />
-            <QuickLink href="/admin-dashboard/messages" label="الرسائل" desc="الرسائل والإشعارات" icon={<GraduationCap className="h-4 w-4" />} />
+          <CardContent className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {[
+              { href: "/admin-dashboard/users",         icon: <Users className="h-4 w-4" />,      label: "المستخدمون", color: "text-primary bg-primary/10" },
+              { href: "/admin-dashboard/organizations", icon: <Building className="h-4 w-4" />,   label: "الجهات",     color: "text-emerald-600 bg-emerald-500/10" },
+              { href: "/admin-dashboard/courses",       icon: <BookOpen className="h-4 w-4" />,   label: "الدورات",    color: "text-purple-500 bg-purple-500/10" },
+              { href: "/admin-dashboard/mentors",       icon: <UserCheck className="h-4 w-4" />,  label: "المرشدون",   color: "text-sky-500 bg-sky-500/10" },
+              { href: "/admin-dashboard/analytics",     icon: <TrendingUp className="h-4 w-4" />, label: "التحليلات",  color: "text-amber-500 bg-amber-500/10" },
+              { href: "/admin-dashboard/messages",      icon: <GraduationCap className="h-4 w-4" />, label: "الرسائل", color: "text-rose-500 bg-rose-500/10" },
+            ].map(item => (
+              <Link key={item.href} href={item.href} className="quick-action-card">
+                <span className={cn("h-9 w-9 rounded-xl flex items-center justify-center", item.color)}>
+                  {item.icon}
+                </span>
+                <span className="text-xs font-medium text-muted-foreground">{item.label}</span>
+              </Link>
+            ))}
           </CardContent>
         </Card>
 
         <Card className="border-0 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-base">آخر المسجلين</CardTitle>
-            <CardDescription>أحدث المستخدمين المنضمين للمنصة</CardDescription>
+          <CardHeader className="pb-3">
+            <CardTitle>آخر المسجلين</CardTitle>
+            <CardDescription className="mt-1">أحدث المستخدمين المنضمين للمنصة</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {usersLoading && [...Array(4)].map((_, i) => (
               <div key={i} className="flex items-center gap-3">
-                <Skeleton className="h-8 w-8 rounded-full" />
-                <div className="flex-1 space-y-1">
+                <Skeleton className="h-9 w-9 rounded-xl shrink-0" />
+                <div className="flex-1 space-y-1.5">
                   <Skeleton className="h-3 w-28" />
                   <Skeleton className="h-3 w-16" />
                 </div>
@@ -117,7 +127,7 @@ export default function AdminDashboardPage() {
             ))}
             {!usersLoading && recentUsers?.map((user) => (
               <div key={user.id} className="flex items-center gap-3">
-                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium text-primary">
+                <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0">
                   {user.name?.charAt(0) || '?'}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -127,11 +137,14 @@ export default function AdminDashboardPage() {
               </div>
             ))}
             {!usersLoading && (!recentUsers || recentUsers.length === 0) && (
-              <p className="text-sm text-muted-foreground text-center py-4">لا يوجد مستخدمون بعد.</p>
+              <div className="empty-state py-8">
+                <div className="empty-state-icon h-10 w-10"><Users className="h-5 w-5" /></div>
+                <p className="empty-state-title text-sm">لا يوجد مستخدمون بعد</p>
+              </div>
             )}
           </CardContent>
         </Card>
       </div>
-    </>
+    </div>
   );
 }

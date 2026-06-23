@@ -120,11 +120,11 @@ export default function OrgReportsPage() {
   };
 
   return (
-    <>
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-6 animate-fade-in-up" dir="rtl">
+      <div className="page-header">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">تقارير الأثر والتحليلات</h1>
-          <p className="text-muted-foreground text-sm">قياس أثر برامج التمكين في منظمتك</p>
+          <h1 className="page-title">تقارير الأثر والتحليلات</h1>
+          <p className="page-subtitle">قياس أثر برامج التمكين في منظمتك</p>
         </div>
         <Dialog open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen}>
           <DialogTrigger asChild>
@@ -161,19 +161,19 @@ export default function OrgReportsPage() {
       {/* KPI Cards */}
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         {[
-          { label: "إجمالي المستفيدين", value: stats.total, sub: "مستفيد مسجل", icon: <Users className="h-5 w-5 text-white" />, color: "bg-primary" },
-          { label: "المستفيدون النشطون", value: stats.active, sub: `من أصل ${stats.total}`, icon: <Activity className="h-5 w-5 text-white" />, color: "bg-emerald-500" },
-          { label: "متوسط التقدم", value: `${stats.avgProgress}%`, sub: "نسبة الإنجاز الكلية", icon: <BarChart3 className="h-5 w-5 text-white" />, color: "bg-amber-500" },
-          { label: "نسبة الإكمال", value: `${stats.completionRate}%`, sub: `${stats.completed} أتموا البرنامج`, icon: <Award className="h-5 w-5 text-white" />, color: "bg-purple-500" },
+          { label: "إجمالي المستفيدين",  value: String(stats.total),            sub: "مستفيد مسجل",           icon: <Users />,    bg: "bg-primary/10",    ic: "bg-primary" },
+          { label: "المستفيدون النشطون", value: String(stats.active),           sub: `من أصل ${stats.total}`, icon: <Activity />, bg: "bg-emerald-500/10",ic: "bg-emerald-500" },
+          { label: "متوسط التقدم",       value: `${stats.avgProgress}%`,        sub: "نسبة الإنجاز الكلية",  icon: <BarChart3 />,bg: "bg-amber-500/10",  ic: "bg-amber-500" },
+          { label: "نسبة الإكمال",       value: `${stats.completionRate}%`,     sub: `${stats.completed} أتموا البرنامج`, icon: <Award />, bg: "bg-purple-500/10", ic: "bg-purple-500" },
         ].map((s, i) => (
-          <Card key={i} className="border-0 shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">{s.label}</CardTitle>
-              <div className={`h-9 w-9 rounded-lg ${s.color} flex items-center justify-center`}>{s.icon}</div>
+          <Card key={i} className={`stat-card border-0 overflow-hidden ${s.bg}`}>
+            <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3 pt-5 px-5">
+              <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 text-white [&>svg]:h-5 [&>svg]:w-5 ${s.ic}`}>{s.icon}</div>
             </CardHeader>
-            <CardContent>
-              {loading ? <Skeleton className="h-8 w-16" /> : <div className="text-2xl font-bold">{s.value}</div>}
-              <p className="text-xs text-muted-foreground mt-1">{s.sub}</p>
+            <CardContent className="px-5 pb-5">
+              {loading ? <Skeleton className="h-8 w-16 mb-1" /> : <div className="text-3xl font-bold tracking-tight">{s.value}</div>}
+              <p className="text-xs text-muted-foreground mt-1.5 font-medium">{s.label}</p>
+              <p className="text-[11px] text-muted-foreground/70 mt-0.5">{s.sub}</p>
             </CardContent>
           </Card>
         ))}
@@ -268,17 +268,17 @@ export default function OrgReportsPage() {
               {loading ? <Skeleton className="h-32 w-full" /> : (
                 <>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    <div className="text-center p-3 bg-muted/40 rounded-lg">
-                      <div className="text-2xl font-bold text-primary">{sessionsThisMonth.length}</div>
-                      <div className="text-xs text-muted-foreground mt-1">جلسات هذا الشهر</div>
+                    <div className="text-center p-4 bg-primary/5 rounded-xl border border-primary/10">
+                      <div className="text-3xl font-bold text-primary">{sessionsThisMonth.length}</div>
+                      <div className="text-xs text-muted-foreground mt-1.5 font-medium">جلسات هذا الشهر</div>
                     </div>
-                    <div className="text-center p-3 bg-muted/40 rounded-lg">
-                      <div className="text-2xl font-bold text-green-600">{completionRate}%</div>
-                      <div className="text-xs text-muted-foreground mt-1">معدل الإكمال</div>
+                    <div className="text-center p-4 bg-emerald-500/5 rounded-xl border border-emerald-500/10">
+                      <div className="text-3xl font-bold text-emerald-600">{completionRate}%</div>
+                      <div className="text-xs text-muted-foreground mt-1.5 font-medium">معدل الإكمال</div>
                     </div>
-                    <div className="text-center p-3 bg-muted/40 rounded-lg col-span-2 md:col-span-1">
-                      <div className="text-2xl font-bold text-amber-600">{topMentors.length}</div>
-                      <div className="text-xs text-muted-foreground mt-1">مرشدون نشطون</div>
+                    <div className="text-center p-4 bg-amber-500/5 rounded-xl border border-amber-500/10 col-span-2 md:col-span-1">
+                      <div className="text-3xl font-bold text-amber-600">{topMentors.length}</div>
+                      <div className="text-xs text-muted-foreground mt-1.5 font-medium">مرشدون نشطون</div>
                     </div>
                   </div>
 
@@ -324,9 +324,9 @@ export default function OrgReportsPage() {
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="border-0 shadow-sm">
-          <CardHeader>
+          <CardHeader className="pb-4">
             <CardTitle>مشاركة المستفيدين</CardTitle>
-            <CardDescription>المستفيدون النشطون على مدار 6 أشهر.</CardDescription>
+            <CardDescription className="mt-1">المستفيدون النشطون على مدار 6 أشهر.</CardDescription>
           </CardHeader>
           <CardContent>
             <ChartContainer config={engagementConfig} className="h-[250px] w-full relative">
@@ -343,9 +343,9 @@ export default function OrgReportsPage() {
           </CardContent>
         </Card>
         <Card className="border-0 shadow-sm">
-          <CardHeader>
+          <CardHeader className="pb-4">
             <CardTitle>توزيع التقدم</CardTitle>
-            <CardDescription>توزيع المستفيدين حسب نسبة إنجازهم.</CardDescription>
+            <CardDescription className="mt-1">توزيع المستفيدين حسب نسبة إنجازهم.</CardDescription>
           </CardHeader>
           <CardContent>
             <ChartContainer config={completionConfig} className="h-[250px] w-full relative">
@@ -357,13 +357,13 @@ export default function OrgReportsPage() {
                   <XAxis dataKey="name" tickLine={false} tickMargin={10} axisLine={false} />
                   <YAxis orientation="right" tickLine={false} axisLine={false} tickMargin={10} />
                   <Tooltip cursor={false} content={<ChartTooltipContent />} />
-                  <Bar dataKey="معدل الإكمال" fill="hsl(var(--chart-2))" radius={4} />
+                  <Bar dataKey="معدل الإكمال" fill="hsl(var(--chart-2))" radius={6} />
                 </BarChart>
               )}
             </ChartContainer>
           </CardContent>
         </Card>
       </div>
-    </>
+    </div>
   );
 }

@@ -13,6 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { StatusBadge } from "@/components/status-badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -158,10 +159,12 @@ export default function OrgMentorsPage() {
   const totalHours = billingMentors.reduce((s, m) => s + m.totalHours, 0);
 
   return (
-    <div className="space-y-6" dir="rtl">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">إدارة المرشدين</h1>
-        <p className="text-sm text-muted-foreground">استعرض مرشدي منظمتك أو ادعُ مرشدين جدد</p>
+    <div className="space-y-6 animate-fade-in-up" dir="rtl">
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">إدارة المرشدين</h1>
+          <p className="page-subtitle">استعرض مرشدي منظمتك أو ادعُ مرشدين جدد</p>
+        </div>
       </div>
 
       <Tabs defaultValue="org-mentors" dir="rtl">
@@ -176,13 +179,14 @@ export default function OrgMentorsPage() {
           {loadingOrgMentors ? (
             <div className="space-y-2">
               {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="h-14 w-full rounded-md" />
+                <Skeleton key={i} className="h-14 w-full rounded-xl" />
               ))}
             </div>
           ) : !orgMentors || orgMentors.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-2">
-              <UserX className="h-10 w-10" />
-              <p>لا يوجد مرشدون في منظمتك بعد</p>
+            <div className="empty-state">
+              <div className="empty-state-icon"><UserX className="h-6 w-6" /></div>
+              <p className="empty-state-title">لا يوجد مرشدون بعد</p>
+              <p className="empty-state-desc">استكشف المرشدين وادعُهم للانضمام لمنظمتك</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -200,9 +204,9 @@ export default function OrgMentorsPage() {
                     <TableRow key={mentor.id}>
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          <Avatar className="h-8 w-8">
+                          <Avatar className="h-9 w-9 rounded-xl shrink-0">
                             <AvatarImage src={mentor.avatarUrl} />
-                            <AvatarFallback>{mentor.name?.charAt(0) ?? "م"}</AvatarFallback>
+                            <AvatarFallback className="rounded-xl bg-primary/10 text-primary text-xs font-bold">{mentor.name?.charAt(0) ?? "م"}</AvatarFallback>
                           </Avatar>
                           <div>
                             <Link href={`/organization-dashboard/mentors/${mentor.id}`} className="font-medium hover:underline text-primary">{mentor.name}</Link>
@@ -214,7 +218,7 @@ export default function OrgMentorsPage() {
                         {mentor.expertise ? <Badge variant="outline">{mentor.expertise}</Badge> : "—"}
                       </TableCell>
                       <TableCell className="hidden md:table-cell">
-                        <Badge variant="default">نشط</Badge>
+                        <StatusBadge status="active" />
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-2">
@@ -239,37 +243,31 @@ export default function OrgMentorsPage() {
           <div className="space-y-6">
             {/* Summary cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <Card className="border-0 shadow-sm">
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-100 rounded-lg"><Clock className="h-5 w-5 text-blue-600" /></div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">إجمالي الساعات المنجزة</p>
-                      <p className="text-2xl font-bold">{totalHours.toFixed(1)}</p>
-                    </div>
+              <Card className="stat-card border-0 bg-sky-500/10">
+                <CardContent className="pt-5 pb-5 px-5">
+                  <div className="h-10 w-10 rounded-xl bg-sky-500 flex items-center justify-center mb-3">
+                    <Clock className="h-5 w-5 text-white" />
                   </div>
+                  <div className="text-3xl font-bold tracking-tight">{totalHours.toFixed(1)}</div>
+                  <p className="text-xs text-muted-foreground mt-1.5 font-medium">إجمالي الساعات المنجزة</p>
                 </CardContent>
               </Card>
-              <Card className="border-0 shadow-sm">
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-green-100 rounded-lg"><DollarSign className="h-5 w-5 text-green-600" /></div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">إجمالي التكلفة (د.أ)</p>
-                      <p className="text-2xl font-bold">{totalCost.toFixed(2)}</p>
-                    </div>
+              <Card className="stat-card border-0 bg-emerald-500/10">
+                <CardContent className="pt-5 pb-5 px-5">
+                  <div className="h-10 w-10 rounded-xl bg-emerald-500 flex items-center justify-center mb-3">
+                    <DollarSign className="h-5 w-5 text-white" />
                   </div>
+                  <div className="text-3xl font-bold tracking-tight">{totalCost.toFixed(2)}</div>
+                  <p className="text-xs text-muted-foreground mt-1.5 font-medium">إجمالي التكلفة (د.أ)</p>
                 </CardContent>
               </Card>
-              <Card className="border-0 shadow-sm">
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-purple-100 rounded-lg"><Users className="h-5 w-5 text-purple-600" /></div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">عدد المرشدين</p>
-                      <p className="text-2xl font-bold">{billingMentors.length}</p>
-                    </div>
+              <Card className="stat-card border-0 bg-purple-500/10">
+                <CardContent className="pt-5 pb-5 px-5">
+                  <div className="h-10 w-10 rounded-xl bg-purple-500 flex items-center justify-center mb-3">
+                    <Users className="h-5 w-5 text-white" />
                   </div>
+                  <div className="text-3xl font-bold tracking-tight">{billingMentors.length}</div>
+                  <p className="text-xs text-muted-foreground mt-1.5 font-medium">عدد المرشدين</p>
                 </CardContent>
               </Card>
             </div>
@@ -293,9 +291,9 @@ export default function OrgMentorsPage() {
                     ))}
                   </div>
                 ) : billingMentors.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 text-muted-foreground gap-2">
-                    <UserX className="h-10 w-10" />
-                    <p>لا يوجد مرشدون في منظمتك بعد</p>
+                  <div className="empty-state">
+                    <div className="empty-state-icon"><UserX className="h-6 w-6" /></div>
+                    <p className="empty-state-title">لا يوجد مرشدون</p>
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
@@ -319,9 +317,9 @@ export default function OrgMentorsPage() {
                             <TableRow key={mentor.id}>
                               <TableCell>
                                 <div className="flex items-center gap-2">
-                                  <Avatar className="h-8 w-8">
+                                  <Avatar className="h-9 w-9 rounded-xl shrink-0">
                                     <AvatarImage src={mentor.avatarUrl} />
-                                    <AvatarFallback>{mentor.name?.charAt(0) ?? 'م'}</AvatarFallback>
+                                    <AvatarFallback className="rounded-xl bg-primary/10 text-primary text-xs font-bold">{mentor.name?.charAt(0) ?? 'م'}</AvatarFallback>
                                   </Avatar>
                                   <div>
                                     <p className="font-medium text-sm">{mentor.name}</p>
@@ -391,23 +389,25 @@ export default function OrgMentorsPage() {
           {loadingAllMentors ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {Array.from({ length: 6 }).map((_, i) => (
-                <Skeleton key={i} className="h-40 w-full rounded-xl" />
+                <Skeleton key={i} className="h-40 w-full rounded-2xl" />
               ))}
             </div>
           ) : availableMentors.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-2">
-              <p>لا يوجد مرشدون متاحون للدعوة</p>
+            <div className="empty-state">
+              <div className="empty-state-icon"><UserX className="h-6 w-6" /></div>
+              <p className="empty-state-title">لا يوجد مرشدون متاحون</p>
+              <p className="empty-state-desc">جميع المرشدين المتاحين أعضاء في منظمتك بالفعل</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {availableMentors.map((mentor) => {
                 const isSent = sentInvites.has(mentor.id);
                 return (
-                  <Card key={mentor.id} className="border-0 shadow-sm">
+                  <Card key={mentor.id} className="border-0 shadow-sm card-hover">
                     <CardContent className="pt-6 flex flex-col items-center gap-3 text-center">
-                      <Avatar className="h-14 w-14">
+                      <Avatar className="h-14 w-14 rounded-2xl">
                         <AvatarImage src={mentor.avatarUrl} />
-                        <AvatarFallback>{mentor.name?.charAt(0) ?? "م"}</AvatarFallback>
+                        <AvatarFallback className="rounded-2xl bg-primary/10 text-primary font-bold text-lg">{mentor.name?.charAt(0) ?? "م"}</AvatarFallback>
                       </Avatar>
                       <div>
                         <p className="font-semibold">{mentor.name}</p>
