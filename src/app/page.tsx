@@ -202,11 +202,19 @@ const ExpertCard = ({
         <Link href={profileLink} className="font-bold text-sm text-foreground text-center leading-snug hover:text-primary transition-colors">
           {name}
         </Link>
-        {(expert.specializations?.length ?? 0) > 0 ? (
-          <p className="text-xs text-muted-foreground text-center line-clamp-1">
-            {expert.specializations!.slice(0, 2).join(' · ')}
-          </p>
-        ) : expert.bio ? (
+        {(() => {
+          const specs = Array.isArray(expert.specializations)
+            ? expert.specializations
+            : typeof expert.specializations === 'string' && expert.specializations
+            ? [expert.specializations]
+            : [];
+          return specs.length > 0 ? (
+            <p className="text-xs text-muted-foreground text-center line-clamp-1">
+              {specs.slice(0, 2).join(' · ')}
+            </p>
+          ) : null;
+        })()}
+        {!expert.specializations && expert.bio ? (
           <p className="text-xs text-muted-foreground text-center line-clamp-1">{expert.bio}</p>
         ) : null}
       </div>
