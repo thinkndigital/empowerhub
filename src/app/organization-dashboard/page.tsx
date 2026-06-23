@@ -1,14 +1,16 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, UserCheck, BarChart3, DollarSign, TrendingUp, BookOpen, ArrowUpRight, GraduationCap, Store } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Users, UserCheck, BarChart3, TrendingUp, BookOpen, ArrowUpRight, GraduationCap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { StatusBadge } from "@/components/status-badge";
 import Link from "next/link";
 import { useUser } from "@/firebase/auth/use-user";
+import { cn } from "@/lib/utils";
 
 type Beneficiary = { id: string; name?: string; progress?: number; status?: string };
 type StatsData = {
@@ -19,34 +21,49 @@ type StatsData = {
   beneficiaries: Beneficiary[];
 };
 
+const statColors = [
+  { bg: "bg-primary/10",    icon: "bg-primary",      text: "text-primary" },
+  { bg: "bg-emerald-500/10",icon: "bg-emerald-500",  text: "text-emerald-600" },
+  { bg: "bg-purple-500/10", icon: "bg-purple-500",   text: "text-purple-600" },
+  { bg: "bg-amber-500/10",  icon: "bg-amber-500",    text: "text-amber-600" },
+];
+
 const StatCard = ({
-  title, value, sub, icon, trend, color, loading
+  title, value, sub, icon, trend, colorIdx = 0, loading
 }: {
-  title: string, value: string, sub: string, icon: React.ReactNode, trend?: string, color: string, loading?: boolean
-}) => (
-  <Card className="card-hover border-0 shadow-sm">
-    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-      <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-      <div className={`h-9 w-9 rounded-lg ${color} flex items-center justify-center shrink-0`}>
-        {icon}
-      </div>
-    </CardHeader>
-    <CardContent>
-      {loading ? <Skeleton className="h-7 w-16" /> : <div className="text-2xl font-bold">{value}</div>}
-      <div className="flex items-center gap-1 mt-1">
-        <p className="text-xs text-muted-foreground">{sub}</p>
+  title: string; value: string; sub: string; icon: React.ReactNode;
+  trend?: string; colorIdx?: number; loading?: boolean;
+}) => {
+  const c = statColors[colorIdx];
+  return (
+    <Card className={cn("stat-card border-0 overflow-hidden relative", c.bg)}>
+      <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3 pt-5 px-5">
+        <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center shrink-0", c.icon)}>
+          <span className="text-white [&>svg]:h-5 [&>svg]:w-5">{icon}</span>
+        </div>
         {trend && !loading && (
-          <span className="text-xs flex items-center font-medium text-primary">
+          <span className={cn("text-xs flex items-center font-semibold gap-0.5 mt-0.5", c.text)}>
             <ArrowUpRight className="h-3 w-3" />{trend}
           </span>
         )}
-      </div>
-    </CardContent>
-  </Card>
-);
+      </CardHeader>
+      <CardContent className="px-5 pb-5">
+        {loading
+          ? <Skeleton className="h-8 w-20 mb-1" />
+          : <div className="text-3xl font-bold tracking-tight">{value}</div>
+        }
+        <p className="text-xs text-muted-foreground mt-1.5 font-medium">{title}</p>
+        <p className="text-[11px] text-muted-foreground/70 mt-0.5">{sub}</p>
+      </CardContent>
+    </Card>
+  );
+};
+
+const progressColor = (v: number) =>
+  v >= 70 ? "bg-emerald-500" : v >= 30 ? "bg-amber-500" : "bg-red-400";
 
 export default function OrganizationDashboardPage() {
-  const { user, userProfile } = useUser();
+  const { user } = useUser();
   const [data, setData] = useState<StatsData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -54,22 +71,14 @@ export default function OrganizationDashboardPage() {
     if (!user) return;
     try {
       const token = await user.getIdToken();
-      const res = await fetch('/api/org/stats', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error('Failed to fetch stats');
-      const json = await res.json();
-      setData(json);
-    } catch {
-      // ignore
-    } finally {
-      setLoading(false);
-    }
+      const res = await fetch('/api/org/stats', { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) throw new Error();
+      setData(await res.json());
+    } catch { /* ignore */ }
+    finally { setLoading(false); }
   }, [user]);
 
-  useEffect(() => {
-    fetchStats();
-  }, [fetchStats]);
+  useEffect(() => { fetchStats(); }, [fetchStats]);
 
   const stats = useMemo(() => {
     const beneficiaries = data?.beneficiaries ?? [];
@@ -86,31 +95,34 @@ export default function OrganizationDashboardPage() {
   );
 
   return (
-    <>
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
-        <div className="space-y-1">
-          <h1 className="text-3xl font-bold tracking-tight">لوحة تحكم المنظمة</h1>
-          <p className="text-muted-foreground">نظرة عامة على أداء المستفيدين في منظمتك.</p>
+    <div className="space-y-6 animate-fade-in-up">
+      {/* ── Page header ── */}
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">لوحة تحكم المنظمة</h1>
+          <p className="page-subtitle">نظرة عامة على أداء المستفيدين في منظمتك</p>
         </div>
-        <Badge className="bg-primary/10 text-primary border-primary/20 w-fit">مدير المنظمة</Badge>
+        <Badge className="bg-primary/10 text-primary border-primary/20 w-fit h-fit">مدير المنظمة</Badge>
       </div>
 
-      {/* Stats */}
-      <div className="grid gap-4 pt-4 grid-cols-2 lg:grid-cols-4">
-        <StatCard loading={loading} title="إجمالي المستفيدين" value={String(stats.total)} sub="مستفيد مسجل" icon={<Users className="h-5 w-5 text-white" />} color="bg-primary" />
-        <StatCard loading={loading} title="المستفيدون النشطون" value={String(stats.active)} sub={`${stats.total > 0 ? Math.round((stats.active / stats.total) * 100) : 0}% من الإجمالي`} icon={<UserCheck className="h-5 w-5 text-white" />} color="bg-emerald-500" />
-        <StatCard loading={loading} title="متوسط التقدم" value={`${stats.avgProgress}%`} sub="في جميع الدورات" icon={<BarChart3 className="h-5 w-5 text-white" />} color="bg-purple-500" />
-        <StatCard loading={loading} title="المستفيدون المكتملون" value={String(stats.completed)} sub="أكملوا برنامجهم" icon={<TrendingUp className="h-5 w-5 text-white" />} color="bg-amber-500" />
+      {/* ── KPI Cards ── */}
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+        <StatCard loading={loading} colorIdx={0} title="إجمالي المستفيدين" value={String(stats.total)} sub="مستفيد مسجل" icon={<Users />} />
+        <StatCard loading={loading} colorIdx={1} title="المستفيدون النشطون" value={String(stats.active)}
+          sub={`${stats.total > 0 ? Math.round((stats.active / stats.total) * 100) : 0}% من الإجمالي`} icon={<UserCheck />} />
+        <StatCard loading={loading} colorIdx={2} title="متوسط التقدم" value={`${stats.avgProgress}%`} sub="في جميع الدورات" icon={<BarChart3 />} />
+        <StatCard loading={loading} colorIdx={3} title="المستفيدون المكتملون" value={String(stats.completed)} sub="أكملوا برنامجهم" icon={<TrendingUp />} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 pt-4">
-        {/* Beneficiaries Progress */}
+      {/* ── Main content ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        {/* Beneficiaries progress */}
         <Card className="border-0 shadow-sm lg:col-span-2">
-          <CardHeader>
+          <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-base">تقدم المستفيدين</CardTitle>
-                <CardDescription>أعلى المستفيدين تقدماً</CardDescription>
+                <CardTitle>تقدم المستفيدين</CardTitle>
+                <CardDescription className="mt-1">أعلى المستفيدين تقدماً</CardDescription>
               </div>
               <Button variant="outline" size="sm" asChild>
                 <Link href="/organization-dashboard/beneficiaries">عرض الكل</Link>
@@ -119,90 +131,108 @@ export default function OrganizationDashboardPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             {loading && [...Array(4)].map((_, i) => (
-              <div key={i} className="space-y-1.5">
+              <div key={i} className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Skeleton className="h-5 w-32" />
+                  <Skeleton className="h-5 w-36" />
                   <Skeleton className="h-5 w-16" />
                 </div>
-                <Skeleton className="h-1.5 w-full" />
+                <Skeleton className="h-2 w-full rounded-full" />
               </div>
             ))}
             {!loading && topBeneficiaries.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground text-sm">
-                لا يوجد مستفيدون بعد.{' '}
-                <Link href="/organization-dashboard/beneficiaries" className="text-primary underline">أضف مستفيداً</Link>
+              <div className="empty-state">
+                <div className="empty-state-icon"><Users className="h-6 w-6" /></div>
+                <p className="empty-state-title">لا يوجد مستفيدون بعد</p>
+                <p className="empty-state-desc">ابدأ بإضافة مستفيدين لمتابعة تقدمهم</p>
+                <Button size="sm" asChild className="mt-2">
+                  <Link href="/organization-dashboard/beneficiaries">إضافة مستفيد</Link>
+                </Button>
               </div>
             )}
             {!loading && topBeneficiaries.map((b) => {
-              const statusLabel = b.progress === 100 ? 'مكتمل' : (b.progress ?? 0) > 0 ? 'نشط' : 'جديد';
+              const progress = b.progress ?? 0;
+              const statusKey = progress === 100 ? 'completed' : progress > 0 ? 'active' : 'new';
               return (
-                <div key={b.id} className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="h-7 w-7 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">
+                <div key={b.id} className="space-y-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary text-xs font-bold shrink-0">
                         {(b.name || 'م')[0]}
                       </div>
-                      <span className="text-sm font-medium">{b.name || 'مستفيد'}</span>
+                      <span className="text-sm font-medium truncate">{b.name || 'مستفيد'}</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant={statusLabel === 'مكتمل' ? "default" : statusLabel === 'جديد' ? "secondary" : "outline"} className="text-xs">
-                        {statusLabel}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground w-8 text-left">{b.progress ?? 0}%</span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <StatusBadge status={statusKey} />
+                      <span className="text-xs font-semibold text-muted-foreground w-8 text-center">{progress}%</span>
                     </div>
                   </div>
-                  <Progress value={b.progress ?? 0} className="h-1.5" />
+                  <div className="h-2 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className={cn("h-full rounded-full transition-all duration-500", progressColor(progress))}
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
                 </div>
               );
             })}
           </CardContent>
         </Card>
 
-        {/* Quick actions + Summary */}
+        {/* Right sidebar */}
         <div className="space-y-4">
+          {/* Summary */}
           <Card className="border-0 shadow-sm">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">ملخص المنظمة</CardTitle>
+              <CardTitle>ملخص المنظمة</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-0.5">
               {[
-                { label: "المستفيدون", value: loading ? '...' : String(data?.beneficiariesCount ?? 0), icon: <Users className="h-4 w-4 text-primary" /> },
-                { label: "المرشدون", value: loading ? '...' : String(data?.mentorsCount ?? 0), icon: <GraduationCap className="h-4 w-4 text-accent" /> },
-                { label: "المدربون", value: loading ? '...' : String(data?.coachesCount ?? 0), icon: <BookOpen className="h-4 w-4 text-purple-500" /> },
-                { label: "معدل الإكمال", value: loading ? '...' : `${stats.avgProgress}%`, icon: <TrendingUp className="h-4 w-4 text-amber-500" /> },
+                { label: "المستفيدون",   value: data?.beneficiariesCount ?? 0, icon: <Users className="h-4 w-4 text-primary" /> },
+                { label: "المرشدون",     value: data?.mentorsCount ?? 0,       icon: <GraduationCap className="h-4 w-4 text-sky-500" /> },
+                { label: "المدربون",     value: data?.coachesCount ?? 0,       icon: <BookOpen className="h-4 w-4 text-purple-500" /> },
+                { label: "معدل الإكمال", value: `${stats.avgProgress}%`,       icon: <TrendingUp className="h-4 w-4 text-amber-500" /> },
               ].map((item, i) => (
-                <div key={i} className="flex items-center justify-between py-1.5 border-b last:border-0">
-                  <div className="flex items-center gap-2 text-sm">
+                <div key={i} className="flex items-center justify-between py-2.5 border-b border-border/50 last:border-0">
+                  <div className="flex items-center gap-2.5 text-sm">
                     {item.icon}
                     <span className="text-muted-foreground">{item.label}</span>
                   </div>
-                  <span className="font-bold text-sm">{item.value}</span>
+                  {loading
+                    ? <Skeleton className="h-4 w-8" />
+                    : <span className="font-bold text-sm">{item.value}</span>
+                  }
                 </div>
               ))}
             </CardContent>
           </Card>
 
+          {/* Quick actions */}
           <Card className="border-0 shadow-sm">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">إجراءات سريعة</CardTitle>
+              <CardTitle>إجراءات سريعة</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-2 gap-2">
-              <Button variant="outline" size="sm" asChild className="text-xs justify-start gap-1">
-                <Link href="/organization-dashboard/beneficiaries"><Users className="h-3 w-3" />المستفيدون</Link>
-              </Button>
-              <Button variant="outline" size="sm" asChild className="text-xs justify-start gap-1">
-                <Link href="/organization-dashboard/coaches"><BookOpen className="h-3 w-3" />المدربون</Link>
-              </Button>
-              <Button variant="outline" size="sm" asChild className="text-xs justify-start gap-1">
-                <Link href="/organization-dashboard/mentors"><GraduationCap className="h-3 w-3" />المرشدون</Link>
-              </Button>
-              <Button variant="outline" size="sm" asChild className="text-xs justify-start gap-1">
-                <Link href="/organization-dashboard/reports"><BarChart3 className="h-3 w-3" />التقارير</Link>
-              </Button>
+              {[
+                { href: "/organization-dashboard/beneficiaries", icon: <Users className="h-4 w-4" />,         label: "المستفيدون" },
+                { href: "/organization-dashboard/coaches",       icon: <BookOpen className="h-4 w-4" />,      label: "المدربون" },
+                { href: "/organization-dashboard/mentors",       icon: <GraduationCap className="h-4 w-4" />, label: "المرشدون" },
+                { href: "/organization-dashboard/reports",       icon: <BarChart3 className="h-4 w-4" />,     label: "التقارير" },
+              ].map(item => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="quick-action-card"
+                >
+                  <span className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                    {item.icon}
+                  </span>
+                  <span className="text-xs font-medium text-muted-foreground">{item.label}</span>
+                </Link>
+              ))}
             </CardContent>
           </Card>
         </div>
       </div>
-    </>
+    </div>
   );
 }
