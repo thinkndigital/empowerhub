@@ -39,7 +39,7 @@ import {
   Settings,
   RefreshCw,
 } from "lucide-react";
-import { exportToCSV, exportToPDF } from "@/lib/export-utils";
+import { exportToExcel, exportToPDF } from "@/lib/export-utils";
 
 type Order = {
   id: string;
@@ -236,44 +236,29 @@ export default function AdminFinancialOrdersPage() {
   const totalPaid = payouts.filter(p => p.status === "paid").reduce((s, p) => s + p.amount, 0);
   const remaining = Math.max(0, totalNet - totalPaid);
 
-  const handleExportCSV = () => {
-    const headers = ["#", "اسم المستخدم", "الدور", "المنتج/الدورة", "التاريخ", "المبلغ الإجمالي", `العمولة (${data?.commissionRate}%)`, "صافي المستحق", "حالة الطلب", "حالة الدفع"];
-    const rows = orders.map((o, i) => [
-      i + 1,
-      o.userName,
-      roleLabel[o.userRole] || o.userRole,
-      o.productName,
-      o.createdAt ? new Date(o.createdAt).toLocaleDateString("ar-EG") : "",
-      o.totalAmount,
-      o.commissionAmount,
-      o.netAmount,
-      statusLabel[o.status] || o.status,
-      statusLabel[o.paymentStatus] || o.paymentStatus,
-    ]);
-    exportToCSV("كشف_الطلبات_المالي", headers, rows);
+  const exportHeaders = ["#", "اسم المستخدم", "الدور", "المنتج/الدورة", "التاريخ", "المبلغ الإجمالي", `العمولة (${data?.commissionRate}%)`, "صافي المستحق", "حالة الطلب", "حالة الدفع"];
+  const exportRows = orders.map((o, i) => [
+    i + 1,
+    o.userName,
+    roleLabel[o.userRole] || o.userRole,
+    o.productName,
+    o.createdAt ? new Date(o.createdAt).toLocaleDateString("ar-EG") : "",
+    o.totalAmount,
+    o.commissionAmount,
+    o.netAmount,
+    statusLabel[o.status] || o.status,
+    statusLabel[o.paymentStatus] || o.paymentStatus,
+  ]);
+  const exportSummary = {
+    "إجمالي المبيعات": `${totalGross.toFixed(2)} ${symbol}`,
+    "إجمالي العمولات": `${totalCommission.toFixed(2)} ${symbol}`,
+    "إجمالي الصافي": `${totalNet.toFixed(2)} ${symbol}`,
+    "تم صرفه": `${totalPaid.toFixed(2)} ${symbol}`,
+    "الرصيد المتبقي": `${remaining.toFixed(2)} ${symbol}`,
   };
 
-  const handleExportPDF = () => {
-    const headers = ["#", "اسم المستخدم", "الدور", "المنتج", "التاريخ", "الإجمالي", "العمولة", "الصافي", "الحالة"];
-    const rows = orders.map((o, i) => [
-      i + 1,
-      o.userName,
-      roleLabel[o.userRole] || o.userRole,
-      o.productName,
-      o.createdAt ? new Date(o.createdAt).toLocaleDateString("ar-EG") : "",
-      `${o.totalAmount} ${symbol}`,
-      `${o.commissionAmount} ${symbol}`,
-      `${o.netAmount} ${symbol}`,
-      statusLabel[o.status] || o.status,
-    ]);
-    exportToPDF("كشف الطلبات المالي - EmpowerHub", headers, rows, {
-      "إجمالي المبيعات": `${totalGross.toFixed(2)} ${symbol}`,
-      "إجمالي العمولات": `${totalCommission.toFixed(2)} ${symbol}`,
-      "إجمالي الصافي": `${totalNet.toFixed(2)} ${symbol}`,
-      "تم صرفه": `${totalPaid.toFixed(2)} ${symbol}`,
-      "الرصيد المتبقي": `${remaining.toFixed(2)} ${symbol}`,
-    });
-  };
+  const handleExportCSV = () => exportToExcel("كشف_الطلبات_المالي", exportHeaders, exportRows);
+  const handleExportPDF = () => exportToPDF("كشف الطلبات المالي - EmpowerHub", exportHeaders, exportRows, { summary: exportSummary });
 
   return (
     <div className="space-y-6" dir="rtl">
@@ -290,11 +275,11 @@ export default function AdminFinancialOrdersPage() {
           </Button>
           <Button variant="outline" size="sm" onClick={handleExportCSV} className="gap-2">
             <Download className="h-4 w-4" />
-            Excel
+            تصدير Excel
           </Button>
           <Button variant="outline" size="sm" onClick={handleExportPDF} className="gap-2">
             <Printer className="h-4 w-4" />
-            PDF
+            تصدير PDF
           </Button>
           <Button size="sm" onClick={() => setShowPayoutDialog(true)} className="gap-2">
             <Plus className="h-4 w-4" />

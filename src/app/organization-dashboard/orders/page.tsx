@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useUser } from "@/firebase/auth/use-user";
+import { ExportButton } from "@/components/export-button";
 
 interface Order {
   id: string;
@@ -75,10 +76,28 @@ export default function OrgOrdersPage() {
           <h1 className="text-2xl font-bold tracking-tight">طلبات المتاجر</h1>
           <p className="text-muted-foreground text-sm">متابعة طلبات جميع متاجر المستفيدين</p>
         </div>
-        <Button variant="outline" onClick={load} disabled={loading} className="gap-2">
-          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          تحديث
-        </Button>
+        <div className="flex gap-2">
+          <ExportButton
+            title="طلبات المتاجر"
+            filename={`orders-${new Date().toISOString().slice(0,10)}`}
+            headers={['المنتج', 'المشتري', 'الهاتف', 'المتجر', 'المبلغ (د.أ)', 'الحالة', 'طريقة الدفع', 'التاريخ']}
+            rows={orders.map(o => [
+              o.productName || '',
+              o.buyerName || '',
+              o.buyerPhone || '',
+              o.storeName || '',
+              (o.totalAmount || 0).toFixed(2),
+              statusConfig[o.status]?.label || o.status,
+              o.paymentMethod || '',
+              o.createdAt ? new Date(o.createdAt).toLocaleDateString('ar-EG') : '',
+            ])}
+            options={{ summary: { 'إجمالي الطلبات': String(stats.total), 'قيد الانتظار': String(stats.pending), 'مكتملة': String(stats.completed), 'إجمالي الإيرادات': `${stats.revenue.toFixed(0)} د.أ` } }}
+          />
+          <Button variant="outline" onClick={load} disabled={loading} className="gap-2">
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            تحديث
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}

@@ -22,7 +22,7 @@ import {
   MessageCircle, Copy, Download, Printer, TrendingUp, DollarSign,
   Wallet, Banknote, RefreshCw,
 } from "lucide-react";
-import { exportToCSV, exportToPDF } from "@/lib/export-utils";
+import { exportToExcel, exportToPDF } from "@/lib/export-utils";
 
 type Order = {
   id: string;
@@ -194,7 +194,7 @@ export default function CoachOrdersPage() {
       o.netAmount,
       o.status === 'confirmed' ? 'مؤكد' : o.status === 'pending' ? 'قيد الانتظار' : o.status === 'rejected' ? 'مرفوض' : o.status,
     ]);
-    exportToCSV('كشف_مالي_دوراتي', headers, rows);
+    exportToExcel('كشف_مالي_دوراتي', headers, rows);
   };
 
   const handleExportPDF = () => {
@@ -207,13 +207,13 @@ export default function CoachOrdersPage() {
       `${o.netAmount} ${currencySymbol}`,
       o.status === 'confirmed' ? 'مؤكد' : o.status === 'pending' ? 'قيد الانتظار' : o.status === 'rejected' ? 'مرفوض' : o.status,
     ]);
-    exportToPDF('الكشف المالي - دوراتي', headers, rows, summary ? {
+    exportToPDF('الكشف المالي - دوراتي', headers, rows, summary ? { summary: {
       'إجمالي المبيعات': `${summary.totalGross.toFixed(2)} ${currencySymbol}`,
       'عمولة EmpowerHub': `${summary.totalCommission.toFixed(2)} ${currencySymbol}`,
       'صافي المستحق': `${summary.totalNet.toFixed(2)} ${currencySymbol}`,
       'تم استلامه': `${summary.totalPaid.toFixed(2)} ${currencySymbol}`,
       'الرصيد المتبقي': `${summary.remaining.toFixed(2)} ${currencySymbol}`,
-    } : undefined);
+    } } : undefined);
   };
 
   const pending = orders.filter(o => o.status === 'pending');

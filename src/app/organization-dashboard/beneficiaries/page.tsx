@@ -5,6 +5,7 @@ import { useState, useMemo, useRef } from "react";
 import {
   MoreHorizontal, PlusCircle, Users, Search, UserPlus, Mail, Upload, Loader2,
 } from "lucide-react";
+import { ExportButton } from "@/components/export-button";
 import type { User } from "firebase/auth";
 
 import { Badge } from "@/components/ui/badge";
@@ -365,7 +366,21 @@ export default function BeneficiariesPage() {
                   </CardTitle>
                   <CardDescription>قائمة بجميع المستفيدين المسجلين.</CardDescription>
                 </div>
-                <Select value={groupFilter} onValueChange={setGroupFilter}>
+                <div className="flex gap-2 flex-wrap">
+                  <ExportButton
+                    title="قائمة المستفيدين"
+                    filename={`beneficiaries-${new Date().toISOString().slice(0,10)}`}
+                    headers={['الاسم', 'البريد الإلكتروني', 'الحالة', 'التقدم %', 'المجموعة']}
+                    rows={(orgUsers ?? []).map(u => [
+                      u.name || '',
+                      u.email || '',
+                      u.status || derivedStatus(u.progress),
+                      u.progress ?? 0,
+                      (groups ?? []).find(g => g.id === u.groupId)?.name || '',
+                    ])}
+                    options={{ summary: { 'إجمالي المستفيدين': String((orgUsers ?? []).length), 'نشطون': String((orgUsers ?? []).filter(u => (u.progress ?? 0) > 0 && (u.progress ?? 0) < 100).length), 'أكملوا البرنامج': String((orgUsers ?? []).filter(u => (u.progress ?? 0) >= 100).length) } }}
+                  />
+                  <Select value={groupFilter} onValueChange={setGroupFilter}>
                   <SelectTrigger className="w-44">
                     <SelectValue placeholder="تصفية بالمجموعة" />
                   </SelectTrigger>
@@ -376,6 +391,7 @@ export default function BeneficiariesPage() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
               </div>
             </CardHeader>
             <CardContent>

@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/table";
 import { useUser } from "@/firebase/auth/use-user";
 import { useCurrency } from "@/hooks/use-currency";
-import { exportToCSV, exportToPDF } from "@/lib/export-utils";
+import { exportToExcel, exportToPDF } from "@/lib/export-utils";
 
 interface Order {
   id: string;
@@ -166,7 +166,7 @@ export default function BeneficiaryOrdersPage() {
       o.netAmount,
       o.status === 'completed' ? 'مكتمل' : o.status === 'confirmed' ? 'مؤكد' : o.status === 'pending' ? 'قيد الانتظار' : o.status,
     ]);
-    exportToCSV('كشف_مالي_متجري', headers, rows);
+    exportToExcel('كشف_مالي_متجري', headers, rows);
   };
 
   const handleExportPDF = () => {
@@ -179,13 +179,13 @@ export default function BeneficiaryOrdersPage() {
       `${o.netAmount} ${currencySymbol}`,
       o.status === 'completed' ? 'مكتمل' : o.status === 'confirmed' ? 'مؤكد' : o.status === 'pending' ? 'قيد الانتظار' : o.status,
     ]);
-    exportToPDF('الكشف المالي - متجري', headers, rows, summary ? {
+    exportToPDF('الكشف المالي - متجري', headers, rows, summary ? { summary: {
       'إجمالي المبيعات': `${summary.totalGross.toFixed(2)} ${currencySymbol}`,
       'عمولة EmpowerHub': `${summary.totalCommission.toFixed(2)} ${currencySymbol}`,
       'صافي المستحق': `${summary.totalNet.toFixed(2)} ${currencySymbol}`,
       'تم استلامه': `${summary.totalPaid.toFixed(2)} ${currencySymbol}`,
       'الرصيد المتبقي': `${summary.remaining.toFixed(2)} ${currencySymbol}`,
-    } : undefined);
+    } } : undefined);
   };
 
   return (
