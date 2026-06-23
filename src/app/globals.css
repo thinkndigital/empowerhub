@@ -45,8 +45,14 @@ body {
     --input:               214 32% 91%;
     --ring:                221 83% 53%;
 
-    /* ─── Radius ───────────────────────────────────── */
-    --radius:              0.5rem;
+    /* ─── Radius ─── upgraded to 12px premium scale ── */
+    --radius:              0.75rem;       /* 12px base */
+
+    /* ─── Shadow tokens ────────────────────────────── */
+    --shadow-sm:   0 1px 3px hsl(222 47% 11% / 0.06), 0 1px 2px hsl(222 47% 11% / 0.04);
+    --shadow-md:   0 4px 12px hsl(222 47% 11% / 0.08), 0 2px 4px hsl(222 47% 11% / 0.05);
+    --shadow-lg:   0 8px 28px hsl(222 47% 11% / 0.10), 0 4px 8px hsl(222 47% 11% / 0.06);
+    --shadow-card: 0 1px 4px hsl(222 47% 11% / 0.05), 0 0 0 1px hsl(var(--border));
 
     /* ─── Charts ───────────────────────────────────── */
     --chart-1:   221 83% 53%;   /* blue    */
@@ -87,6 +93,12 @@ body {
     --input:                222 47% 18%;
     --ring:                 213 94% 68%;
 
+    /* ─── Dark shadow tokens ────────────────────────── */
+    --shadow-sm:   0 1px 3px hsl(0 0% 0% / 0.20), 0 1px 2px hsl(0 0% 0% / 0.12);
+    --shadow-md:   0 4px 12px hsl(0 0% 0% / 0.24), 0 2px 4px hsl(0 0% 0% / 0.16);
+    --shadow-lg:   0 8px 28px hsl(0 0% 0% / 0.30), 0 4px 8px hsl(0 0% 0% / 0.20);
+    --shadow-card: 0 1px 4px hsl(0 0% 0% / 0.18), 0 0 0 1px hsl(var(--border));
+
     --chart-1:   213 94% 68%;
     --chart-2:   262 83% 70%;
     --chart-3:    32 95% 63%;
@@ -105,7 +117,16 @@ body {
 }
 
 @layer base {
-  * { @apply border-border; }
+  * {
+    @apply border-border;
+    transition-property: color, background-color, border-color, box-shadow, opacity, transform;
+    transition-duration: 200ms;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  /* Reset transition for elements that shouldn't animate */
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
   body { @apply bg-background text-foreground; }
 }
 
@@ -123,7 +144,7 @@ html { scroll-behavior: smooth; }
    ANIMATIONS
 ═══════════════════════════════════════════════════ */
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(10px); }
+  from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
@@ -137,9 +158,22 @@ html { scroll-behavior: smooth; }
   100% { background-position:  400% 0; }
 }
 
-.animate-fade-in-up { animation: fadeInUp 0.35s ease-out forwards; }
-.animate-fade-in    { animation: fadeIn   0.25s ease-out forwards; }
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
 
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.animate-fade-in-up    { animation: fadeInUp    0.35s cubic-bezier(0.16,1,0.3,1) forwards; }
+.animate-fade-in       { animation: fadeIn      0.25s ease-out forwards; }
+.animate-slide-in-right{ animation: slideInRight 0.25s cubic-bezier(0.16,1,0.3,1) forwards; }
+.animate-scale-in      { animation: scaleIn     0.2s  cubic-bezier(0.16,1,0.3,1) forwards; }
+
+.delay-50  { animation-delay:  50ms; }
 .delay-100 { animation-delay:  80ms; }
 .delay-200 { animation-delay: 160ms; }
 .delay-300 { animation-delay: 240ms; }
@@ -147,23 +181,23 @@ html { scroll-behavior: smooth; }
 .delay-500 { animation-delay: 400ms; }
 
 /* ═══════════════════════════════════════════════════
-   CARD EFFECTS
+   CARD EFFECTS — dark mode aware
 ═══════════════════════════════════════════════════ */
 .card-hover {
-  transition: box-shadow 0.15s ease, transform 0.15s ease;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
 .card-hover:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.09);
+  box-shadow: var(--shadow-lg);
 }
 
 .stat-card {
-  transition: box-shadow 0.15s ease, transform 0.15s ease;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  box-shadow: var(--shadow-sm);
 }
 .stat-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.1);
+  box-shadow: var(--shadow-md);
 }
 
 /* ═══════════════════════════════════════════════════
@@ -191,17 +225,106 @@ html { scroll-behavior: smooth; }
 }
 
 /* ═══════════════════════════════════════════════════
-   GLASS MORPHISM
+   GLASS MORPHISM — dark mode aware via CSS vars
 ═══════════════════════════════════════════════════ */
 .glass {
-  background: rgba(255, 255, 255, 0.82);
+  background: hsl(var(--card) / 0.82);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+  border: 1px solid hsl(var(--border) / 0.6);
 }
 
 /* ═══════════════════════════════════════════════════
-   PAGE HEADER DIVIDER UTILITY
+   PAGE SECTION
 ═══════════════════════════════════════════════════ */
 .page-section {
-  @apply rounded-xl border bg-card p-5 shadow-sm;
+  @apply rounded-2xl border bg-card p-6 shadow-sm;
+}
+
+/* ═══════════════════════════════════════════════════
+   PAGE HEADER
+═══════════════════════════════════════════════════ */
+.page-header {
+  @apply flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-border/60 mb-6;
+}
+
+.page-title {
+  @apply text-2xl font-bold tracking-tight text-foreground;
+}
+
+.page-subtitle {
+  @apply text-sm text-muted-foreground mt-1;
+}
+
+/* ═══════════════════════════════════════════════════
+   PREMIUM TABLE
+═══════════════════════════════════════════════════ */
+.premium-table thead tr {
+  @apply bg-muted/40;
+}
+.premium-table thead th {
+  @apply h-11 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wide;
+}
+.premium-table tbody tr {
+  @apply border-b border-border/50 transition-colors hover:bg-muted/30;
+}
+.premium-table tbody td {
+  @apply h-14 px-4 align-middle text-sm;
+}
+
+/* ═══════════════════════════════════════════════════
+   STATUS BADGE TOKENS
+═══════════════════════════════════════════════════ */
+.badge-active   { @apply bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200/60 dark:border-emerald-800/40; }
+.badge-pending  { @apply bg-amber-500/10   text-amber-700   dark:text-amber-400   border-amber-200/60   dark:border-amber-800/40; }
+.badge-completed{ @apply bg-blue-500/10    text-blue-700    dark:text-blue-400    border-blue-200/60    dark:border-blue-800/40; }
+.badge-new      { @apply bg-purple-500/10  text-purple-700  dark:text-purple-400  border-purple-200/60  dark:border-purple-800/40; }
+.badge-inactive { @apply bg-slate-500/10   text-slate-600   dark:text-slate-400   border-slate-200/50   dark:border-slate-700/40; }
+.badge-cancelled{ @apply bg-red-500/10     text-red-700     dark:text-red-400     border-red-200/50     dark:border-red-800/40; }
+
+/* ═══════════════════════════════════════════════════
+   SIDEBAR ACTIVE INDICATOR — RTL accent
+═══════════════════════════════════════════════════ */
+[dir="rtl"] .sidebar-menu-active {
+  border-right: 3px solid hsl(var(--sidebar-primary));
+  background-color: hsl(var(--sidebar-accent));
+  color: hsl(var(--sidebar-accent-foreground));
+}
+
+/* ═══════════════════════════════════════════════════
+   FOCUS RING — accessible
+═══════════════════════════════════════════════════ */
+:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/* ═══════════════════════════════════════════════════
+   EMPTY STATE
+═══════════════════════════════════════════════════ */
+.empty-state {
+  @apply flex flex-col items-center justify-center gap-3 py-16 text-center;
+}
+.empty-state-icon {
+  @apply h-14 w-14 rounded-2xl bg-muted/60 flex items-center justify-center text-muted-foreground;
+}
+.empty-state-title {
+  @apply text-base font-semibold text-foreground;
+}
+.empty-state-desc {
+  @apply text-sm text-muted-foreground max-w-xs;
+}
+
+/* ═══════════════════════════════════════════════════
+   QUICK ACTION CARD
+═══════════════════════════════════════════════════ */
+.quick-action-card {
+  @apply flex flex-col items-center justify-center gap-2 p-4 rounded-xl border bg-background
+         cursor-pointer select-none transition-all duration-200;
+}
+.quick-action-card:hover {
+  @apply shadow-md -translate-y-0.5 border-primary/30 bg-primary/5;
+}
+.quick-action-card:active {
+  @apply translate-y-0 shadow-sm;
 }
