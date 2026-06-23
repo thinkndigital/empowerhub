@@ -4,12 +4,14 @@ import { useState, useEffect, useCallback } from "react";
 import { useUser } from "@/firebase/auth/use-user";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ClipboardCheck, CheckCircle2, Star, Clock } from "lucide-react";
+import { ClipboardCheck, CheckCircle2, Star, Clock, User } from "lucide-react";
 
 type QuestionType = 'text' | 'rating' | 'choice';
 type AssessmentType = 'pre' | 'post' | 'both';
@@ -54,7 +56,7 @@ function getPendingPhases(assessment: Assessment): Array<'pre' | 'post'> {
 }
 
 export default function BeneficiaryAssessmentsPage() {
-  const { user: authUser } = useUser();
+  const { user: authUser, userProfile } = useUser();
   const { toast } = useToast();
 
   const [assessments, setAssessments] = useState<Assessment[]>([]);
@@ -66,6 +68,7 @@ export default function BeneficiaryAssessmentsPage() {
   const [fillPhase, setFillPhase] = useState<'pre' | 'post'>('pre');
   const [answers, setAnswers] = useState<Record<string, string | number>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [info, setInfo] = useState({ name: '', specialization: '', phone: '', address: '' });
 
   const fetchAssessments = useCallback(async () => {
     if (!authUser) return;
@@ -84,6 +87,14 @@ export default function BeneficiaryAssessmentsPage() {
     setFillAssessment(a);
     setFillPhase(phase);
     setAnswers({});
+    const p = userProfile as any;
+    const specs = Array.isArray(p?.specializations) ? p.specializations.join('، ') : (p?.specializations || '');
+    setInfo({
+      name: p?.name || authUser?.displayName || '',
+      specialization: specs,
+      phone: p?.phone || '',
+      address: p?.address || '',
+    });
     setFillOpen(true);
   };
 
@@ -103,7 +114,7 @@ export default function BeneficiaryAssessmentsPage() {
       const res = await fetch(`/api/beneficiary/assessments/${fillAssessment.id}/respond`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
-        body: JSON.stringify({ answers: answerList, phase: fillPhase }),
+        body: JSON.stringify({ answers: answerList, phase: fillPhase, respondentInfo: info }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -257,6 +268,31 @@ export default function BeneficiaryAssessmentsPage() {
               {fillAssessment.description && (
                 <p className="text-sm text-muted-foreground leading-relaxed">{fillAssessment.description}</p>
               )}
+
+              {/* Personal info — pre-filled, editable */}
+              <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-3">
+                <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+                  <User className="h-3.5 w-3.5" />معلوماتك الشخصية
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">الاسم الكامل</Label>
+                    <Input value={info.name} onChange={e => setInfo(p => ({ ...p, name: e.target.value }))} placeholder="الاسم" className="h-8 text-sm bg-background" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">التخصص / المجال</Label>
+                    <Input value={info.specialization} onChange={e => setInfo(p => ({ ...p, specialization: e.target.value }))} placeholder="التخصص" className="h-8 text-sm bg-background" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">رقم الجوال</Label>
+                    <Input value={info.phone} onChange={e => setInfo(p => ({ ...p, phone: e.target.value }))} placeholder="05xxxxxxxx" dir="ltr" className="h-8 text-sm bg-background" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">العنوان</Label>
+                    <Input value={info.address} onChange={e => setInfo(p => ({ ...p, address: e.target.value }))} placeholder="المدينة / المنطقة" className="h-8 text-sm bg-background" />
+                  </div>
+                </div>
+              </div>
 
               {fillAssessment.questions.map((q, idx) => (
                 <div key={q.id} className="space-y-2.5">
