@@ -35,29 +35,53 @@ jobs:
       - name: Deploy via Firebase App Hosting
         run: |
           echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > /tmp/sa.json
+          PROJECT_ID=$(python3 -c "import json; print(json.load(open('/tmp/sa.json'))['project_id'])")
 
-          # Get the App Hosting backend ID for this project
-          BACKENDS_JSON=$(npx firebase-tools@latest apphosting:backends:list \
-            --project studio-4511819966-bc14f --json 2>/dev/null || echo "[]")
+          # Authenticate with gcloud using the service account
+          gcloud auth activate-service-account --key-file=/tmp/sa.json --quiet
+          ACCESS_TOKEN=$(gcloud auth print-access-token)
 
-          BACKEND_ID=$(node -e "
-            try {
-              const d = require('fs').readFileSync('/dev/stdin','utf8');
-              const j = JSON.parse(d);
-              const arr = Array.isArray(j) ? j : (j.result || []);
-              const name = arr[0]?.name || '';
-              console.log(name.split('/').pop() || '');
-            } catch(e) { console.log(''); }
-          " <<< "$BACKENDS_JSON")
+          # List App Hosting backends (with full error output)
+          echo "--- Listing App Hosting backends for project: $PROJECT_ID ---"
+          BACKENDS_JSON=$(curl -s \
+            "https://firebaseapphosting.googleapis.com/v1beta/projects/${PROJECT_ID}/backends" \
+            -H "Authorization: Bearer $ACCESS_TOKEN")
+          echo "Response: $BACKENDS_JSON"
 
-          if [ -n "$BACKEND_ID" ]; then
-            echo "Triggering App Hosting build for backend: $BACKEND_ID"
-            npx firebase-tools@latest apphosting:builds:create "$BACKEND_ID" \
-              --project studio-4511819966-bc14f \
-              --git-branch "${{ github.ref_name }}" || \
-              echo "::warning::App Hosting build trigger failed – check FIREBASE_SERVICE_ACCOUNT permissions"
-          else
-            echo "::warning::No App Hosting backend found for project studio-4511819966-bc14f"
+          # Extract first backend ID
+          BACKEND_ID=$(python3 -c "
+import sys, json
+d = json.loads('''$BACKENDS_JSON''')
+backends = d.get('backends', [])
+if backends:
+    print(backends[0]['name'].split('/')[-1])
+else:
+    print('')
+" 2>/dev/null || echo "")
+
+          if [ -z "$BACKEND_ID" ]; then
+            echo "::error::Could not find an App Hosting backend. Check service account permissions (needs roles/firebaseapphosting.admin)."
+            exit 1
           fi
-        env:
-          GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa.json
+
+          echo "--- Triggering build for backend: $BACKEND_ID on branch: ${{ github.ref_name }} ---"
+          BUILD_RESP=$(curl -s -X POST \
+            "https://firebaseapphosting.googleapis.com/v1beta/projects/${PROJECT_ID}/backends/${BACKEND_ID}/builds" \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{\"source\":{\"codebase\":{\"branch\":\"${{ github.ref_name }}\"}}}")
+          echo "Build response: $BUILD_RESP"
+
+          # Check for error in response
+          ERROR=$(python3 -c "
+import sys, json
+d = json.loads('''$BUILD_RESP''')
+print(d.get('error', {}).get('message', ''))
+" 2>/dev/null || echo "")
+
+          if [ -n "$ERROR" ]; then
+            echo "::error::Build trigger failed: $ERROR"
+            exit 1
+          fi
+
+          echo "Build triggered successfully!"
