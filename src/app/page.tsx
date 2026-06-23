@@ -129,65 +129,28 @@ const WhatsAppIcon = () => (
 );
 
 const ExpertCard = ({
-  expert, role, onBook, currencySymbol,
+  expert, role,
 }: { expert: MentorUser; role: 'mentor' | 'coach'; onBook?: () => void; currencySymbol: string }) => {
   const name = expert.displayName || expert.name || 'بدون اسم';
-  const bio = expert.bio || expert.description || '';
-  const specializations = Array.isArray(expert.specializations) ? expert.specializations : [];
-  const hasPrice = expert.sessionPrice != null && expert.sessionPrice > 0;
   const initial = name[0] || '?';
   const isMentor = role === 'mentor';
   const gradient = isMentor
     ? 'from-violet-600 via-primary to-indigo-600'
     : 'from-sky-500 via-sky-400 to-cyan-500';
-  const tagBg = isMentor ? 'bg-primary/10 text-primary' : 'bg-sky-500/10 text-sky-600';
   const profileLink = `/${isMentor ? 'mentors' : 'coaches'}/${expert.id}`;
   const whatsappHref = expert.whatsapp
     ? `https://wa.me/${expert.whatsapp.replace(/\D/g, '')}`
     : null;
 
   return (
-    <div className="rounded-2xl border border-border bg-card overflow-hidden flex flex-col shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300" dir="rtl">
-      {/* Gradient banner */}
-      <div className={`relative h-28 bg-gradient-to-br ${gradient} overflow-hidden shrink-0`}>
-        <div
-          className="absolute inset-0 opacity-[0.12]"
-          style={{ backgroundImage: 'radial-gradient(circle, white 1.5px, transparent 1.5px)', backgroundSize: '16px 16px' }}
-        />
-        <span className="absolute top-3 right-3 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-white/25 text-white backdrop-blur-sm">
-          {isMentor ? 'مرشد' : 'مدرب'}
-        </span>
-        <div className="absolute bottom-3 left-3 flex gap-1.5">
-          {expert.linkedin && (
-            <a href={expert.linkedin} target="_blank" rel="noopener noreferrer"
-              className="h-6 w-6 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/40 transition-colors"
-              title="LinkedIn"><LinkedInIcon /></a>
-          )}
-          {expert.instagram && (
-            <a href={expert.instagram} target="_blank" rel="noopener noreferrer"
-              className="h-6 w-6 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/40 transition-colors"
-              title="Instagram"><InstagramIcon /></a>
-          )}
-          {expert.twitter && (
-            <a href={expert.twitter} target="_blank" rel="noopener noreferrer"
-              className="h-6 w-6 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/40 transition-colors"
-              title="X"><TwitterXIcon /></a>
-          )}
-          {whatsappHref && (
-            <a href={whatsappHref} target="_blank" rel="noopener noreferrer"
-              className="h-6 w-6 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/40 transition-colors"
-              title="واتساب"><WhatsAppIcon /></a>
-          )}
-        </div>
-      </div>
-
-      {/* Avatar */}
-      <div className="px-4 -mt-12 mb-3">
+    <div dir="rtl" className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
+      {/* Photo */}
+      <Link href={profileLink} className="block relative aspect-square bg-muted overflow-hidden">
         {expert.avatarUrl ? (
           <img
             src={expert.avatarUrl}
             alt={name}
-            className="h-24 w-24 rounded-2xl object-cover border-4 border-card shadow-lg"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             onError={e => {
               const t = e.target as HTMLImageElement;
               t.style.display = 'none';
@@ -196,46 +159,44 @@ const ExpertCard = ({
           />
         ) : null}
         <div
-          className={`h-24 w-24 rounded-2xl bg-gradient-to-br ${gradient} flex items-center justify-center text-white font-extrabold text-3xl border-4 border-card shadow-lg ${expert.avatarUrl ? 'hidden' : ''}`}
+          className={`w-full h-full bg-gradient-to-br ${gradient} flex items-center justify-center text-white font-extrabold text-7xl ${expert.avatarUrl ? 'hidden' : ''}`}
         >
           {initial}
         </div>
-      </div>
+        <span className="absolute top-2.5 right-2.5 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-black/40 text-white backdrop-blur-sm">
+          {isMentor ? 'مرشد' : 'مدرب'}
+        </span>
+      </Link>
 
-      {/* Content */}
-      <div className="px-4 pb-4 flex flex-col gap-3 flex-1">
-        <div>
-          <h3 className="font-bold text-base text-foreground leading-snug">{name}</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {hasPrice ? `${expert.sessionPrice} ${currencySymbol} / جلسة` : 'متاح للتواصل'}
-          </p>
-        </div>
-
-        {bio && (
-          <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{bio}</p>
-        )}
-
-        {specializations.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {specializations.slice(0, 3).map((s, i) => (
-              <span key={i} className={`text-[10px] font-medium rounded-full px-2.5 py-0.5 ${tagBg}`}>{s}</span>
-            ))}
+      {/* Name + social icons */}
+      <div className="px-3 py-3 flex flex-col items-center gap-2.5">
+        <Link href={profileLink} className="font-bold text-sm text-foreground text-center leading-snug hover:text-primary transition-colors">
+          {name}
+        </Link>
+        {(expert.linkedin || expert.instagram || expert.twitter || whatsappHref) && (
+          <div className="flex gap-1.5">
+            {expert.linkedin && (
+              <a href={expert.linkedin} target="_blank" rel="noopener noreferrer"
+                className="h-7 w-7 rounded-lg bg-muted text-muted-foreground flex items-center justify-center hover:text-primary hover:bg-primary/10 transition-colors"
+                title="LinkedIn"><LinkedInIcon /></a>
+            )}
+            {expert.instagram && (
+              <a href={expert.instagram} target="_blank" rel="noopener noreferrer"
+                className="h-7 w-7 rounded-lg bg-muted text-muted-foreground flex items-center justify-center hover:text-pink-600 hover:bg-pink-50 transition-colors"
+                title="Instagram"><InstagramIcon /></a>
+            )}
+            {expert.twitter && (
+              <a href={expert.twitter} target="_blank" rel="noopener noreferrer"
+                className="h-7 w-7 rounded-lg bg-muted text-muted-foreground flex items-center justify-center hover:text-foreground transition-colors"
+                title="X"><TwitterXIcon /></a>
+            )}
+            {whatsappHref && (
+              <a href={whatsappHref} target="_blank" rel="noopener noreferrer"
+                className="h-7 w-7 rounded-lg bg-muted text-muted-foreground flex items-center justify-center hover:text-green-600 hover:bg-green-50 transition-colors"
+                title="واتساب"><WhatsAppIcon /></a>
+            )}
           </div>
         )}
-
-        <div className="flex gap-2 mt-auto pt-3 border-t border-border/50">
-          <Button variant="outline" size="sm" className="flex-1 text-xs h-8" asChild>
-            <Link href={profileLink}>الملف الشخصي</Link>
-          </Button>
-          {hasPrice ? (
-            <Button size="sm" className="flex-1 text-xs h-8" onClick={onBook}>احجز جلسة</Button>
-          ) : whatsappHref ? (
-            <a href={whatsappHref} target="_blank" rel="noopener noreferrer"
-              className="flex-1 h-8 text-xs font-medium rounded-md bg-green-500 text-white flex items-center justify-center gap-1.5 hover:bg-green-600 transition-colors">
-              <WhatsAppIcon /> تواصل
-            </a>
-          ) : null}
-        </div>
       </div>
     </div>
   );
