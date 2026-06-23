@@ -33,55 +33,59 @@ jobs:
           NEXT_PUBLIC_FIREBASE_APP_ID: "1:822244663005:web:2bbd7b3b2a819f1e2c0534"
 
       - name: Deploy via Firebase App Hosting
+        env:
+          DEPLOY_BRANCH: ${{ github.ref_name }}
         run: |
           echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > /tmp/sa.json
           PROJECT_ID=$(python3 -c "import json; print(json.load(open('/tmp/sa.json'))['project_id'])")
+          echo "Project: $PROJECT_ID"
 
-          # Authenticate with gcloud using the service account
+          # Authenticate with gcloud using service account
           gcloud auth activate-service-account --key-file=/tmp/sa.json --quiet
           ACCESS_TOKEN=$(gcloud auth print-access-token)
 
-          # List App Hosting backends (with full error output)
-          echo "--- Listing App Hosting backends for project: $PROJECT_ID ---"
-          BACKENDS_JSON=$(curl -s \
+          # List App Hosting backends
+          echo "--- Listing backends ---"
+          curl -s \
             "https://firebaseapphosting.googleapis.com/v1beta/projects/${PROJECT_ID}/backends" \
-            -H "Authorization: Bearer $ACCESS_TOKEN")
-          echo "Response: $BACKENDS_JSON"
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            -o /tmp/backends.json
+          cat /tmp/backends.json
 
-          # Extract first backend ID
-          BACKEND_ID=$(python3 -c "
-import sys, json
-d = json.loads('''$BACKENDS_JSON''')
-backends = d.get('backends', [])
-if backends:
-    print(backends[0]['name'].split('/')[-1])
-else:
-    print('')
-" 2>/dev/null || echo "")
+          # Write helper script to extract backend ID
+          cat > /tmp/get_backend.py << 'PYEOF'
+          import json, sys
+          d = json.load(open('/tmp/backends.json'))
+          backends = d.get('backends', [])
+          if backends:
+              print(backends[0]['name'].split('/')[-1])
+          PYEOF
+
+          BACKEND_ID=$(python3 /tmp/get_backend.py 2>/dev/null || echo "")
 
           if [ -z "$BACKEND_ID" ]; then
-            echo "::error::Could not find an App Hosting backend. Check service account permissions (needs roles/firebaseapphosting.admin)."
+            echo "::error::No App Hosting backend found. Ensure the service account has roles/firebaseapphosting.admin"
             exit 1
           fi
 
-          echo "--- Triggering build for backend: $BACKEND_ID on branch: ${{ github.ref_name }} ---"
-          BUILD_RESP=$(curl -s -X POST \
+          echo "--- Triggering build for backend: $BACKEND_ID on branch: $DEPLOY_BRANCH ---"
+          curl -s -X POST \
             "https://firebaseapphosting.googleapis.com/v1beta/projects/${PROJECT_ID}/backends/${BACKEND_ID}/builds" \
             -H "Authorization: Bearer $ACCESS_TOKEN" \
             -H "Content-Type: application/json" \
-            -d "{\"source\":{\"codebase\":{\"branch\":\"${{ github.ref_name }}\"}}}")
-          echo "Build response: $BUILD_RESP"
+            -d "{\"source\":{\"codebase\":{\"branch\":\"${DEPLOY_BRANCH}\"}}}" \
+            -o /tmp/build_response.json
+          cat /tmp/build_response.json
 
-          # Check for error in response
-          ERROR=$(python3 -c "
-import sys, json
-d = json.loads('''$BUILD_RESP''')
-print(d.get('error', {}).get('message', ''))
-" 2>/dev/null || echo "")
+          # Check for API error
+          cat > /tmp/check_error.py << 'PYEOF'
+          import json, sys
+          d = json.load(open('/tmp/build_response.json'))
+          err = d.get('error', {}).get('message', '')
+          if err:
+              print(f"Build API error: {err}", file=sys.stderr)
+              sys.exit(1)
+          print("Build triggered successfully!")
+          PYEOF
 
-          if [ -n "$ERROR" ]; then
-            echo "::error::Build trigger failed: $ERROR"
-            exit 1
-          fi
-
-          echo "Build triggered successfully!"
+          python3 /tmp/check_error.py
