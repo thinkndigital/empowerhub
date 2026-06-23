@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   BookOpen, LayoutGrid, Search, Settings, Store,
-  Users, BarChart3, MessageSquare, HelpCircle, LogOut,
+  Users, BarChart3, MessageSquare, HelpCircle, LogOut, Layers,
 } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { doc } from "firebase/firestore";
@@ -38,6 +38,7 @@ const menuItems = [
   { href: "/dashboard/reports", label: "التقارير", icon: BarChart3 },
   { href: "/dashboard/messages", label: "الرسائل", icon: MessageSquare },
   { href: "/dashboard/contact", label: "التواصل مع المنظمة", icon: HelpCircle },
+  { href: "/dashboard/content", label: "محتوى السوشال ميديا", icon: Layers },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
