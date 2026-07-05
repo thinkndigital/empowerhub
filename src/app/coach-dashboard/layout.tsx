@@ -213,7 +213,7 @@ export default function CoachDashboardLayout({ children }: { children: React.Rea
       </Sidebar>
 
       <SidebarInset>
-        <header className="flex h-14 items-center gap-3 border-b border-border/60 bg-background/95 backdrop-blur-sm px-4 lg:px-6 sticky top-0 z-30">
+        <header className="flex h-16 items-center gap-3 border-b border-border/70 bg-card px-4 lg:px-6 sticky top-0 z-30">
           <SidebarTrigger className="h-8 w-8 rounded-xl shrink-0" />
           <div className="flex-1 max-w-xs">
             <div className="relative">
@@ -256,7 +256,7 @@ export default function CoachDashboardLayout({ children }: { children: React.Rea
             </DropdownMenu>
           </div>
         </header>
-        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-background" dir="rtl">
+        <main className="flex flex-1 flex-col gap-6 p-4 lg:p-6 bg-background" dir="rtl">
           {children}
         </main>
       </SidebarInset>

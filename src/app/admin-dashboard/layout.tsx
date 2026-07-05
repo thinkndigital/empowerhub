@@ -167,7 +167,7 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
             </DropdownMenu>
           </div>
         </header>
-        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-background" dir="rtl">
+        <main className="flex flex-1 flex-col gap-6 p-4 lg:p-6 bg-background" dir="rtl">
           {children}
         </main>
       </SidebarInset>
