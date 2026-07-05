@@ -37,12 +37,32 @@ jobs:
         run: echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > /tmp/sa.json
 
       - name: Deploy to Firebase App Hosting
-        env:
-          GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa.json
         run: |
+          gcloud auth activate-service-account --key-file=/tmp/sa.json
+          ACCESS_TOKEN=$(gcloud auth print-access-token)
+          BUILD_ID="ci-${{ github.run_id }}"
           BRANCH="${{ github.ref_name }}"
-          echo "Creating rollout for backend 'studio' from branch: $BRANCH"
-          npx firebase-tools@latest apphosting:rollouts:create studio \
-            --git-branch "$BRANCH" \
-            --project studio-4511819966-bc14f \
-            --non-interactive
+          PROJECT="studio-4511819966-bc14f"
+          LOCATION="us-central1"
+          BACKEND="studio"
+          BASE="https://firebaseapphosting.googleapis.com/v1beta/projects/${PROJECT}/locations/${LOCATION}/backends/${BACKEND}"
+
+          echo "Creating build ${BUILD_ID} from branch ${BRANCH}"
+          HTTP_CODE=$(curl -s -o /tmp/build_resp.json -w "%{http_code}" -X POST \
+            "${BASE}/builds?buildId=${BUILD_ID}" \
+            -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "{\"source\":{\"codebase\":{\"branch\":\"${BRANCH}\"}}}")
+          echo "Build response (HTTP ${HTTP_CODE}): $(cat /tmp/build_resp.json)"
+          [ "${HTTP_CODE}" -lt 400 ] || { echo "Build creation failed"; exit 1; }
+
+          echo "Creating rollout from build ${BUILD_ID}"
+          HTTP_CODE=$(curl -s -o /tmp/rollout_resp.json -w "%{http_code}" -X POST \
+            "${BASE}/rollouts" \
+            -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "{\"build\":\"projects/${PROJECT}/locations/${LOCATION}/backends/${BACKEND}/builds/${BUILD_ID}\"}")
+          echo "Rollout response (HTTP ${HTTP_CODE}): $(cat /tmp/rollout_resp.json)"
+          [ "${HTTP_CODE}" -lt 400 ] || { echo "Rollout creation failed"; exit 1; }
+
+          echo "Deploy initiated successfully for branch ${BRANCH}"
