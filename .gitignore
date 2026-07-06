@@ -43,6 +43,5 @@ database-debug.log*
 
 # Other
 .env
-apphosting.yaml
 docs
 components.json
