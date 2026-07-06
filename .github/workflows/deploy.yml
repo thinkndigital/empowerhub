@@ -37,6 +37,7 @@ jobs:
         run: echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > /tmp/sa.json
 
       - name: Deploy to Firebase App Hosting
+        timeout-minutes: 25
         run: |
           gcloud auth activate-service-account --key-file=/tmp/sa.json
           ACCESS_TOKEN=$(gcloud auth print-access-token)
@@ -55,6 +56,28 @@ jobs:
             -d "{\"source\":{\"codebase\":{\"branch\":\"${BRANCH}\"}}}")
           echo "Build response (HTTP ${HTTP_CODE}): $(cat /tmp/build_resp.json)"
           [ "${HTTP_CODE}" -lt 400 ] || { echo "Build creation failed"; exit 1; }
+
+          echo "Waiting for build to reach READY state (poll every 20s, max 20min)..."
+          STATE="PENDING"
+          for i in $(seq 1 60); do
+            HTTP=$(curl -s -o /tmp/build_state.json -w "%{http_code}" \
+              -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+              "${BASE}/builds/${BUILD_ID}")
+            if [ "${HTTP}" = "200" ]; then
+              STATE=$(python3 -c "import json; d=json.load(open('/tmp/build_state.json')); print(d.get('state','UNKNOWN'))")
+            else
+              STATE="NOT_FOUND"
+            fi
+            echo "  Poll ${i}/60: state=${STATE}"
+            [ "${STATE}" = "READY" ] && break
+            if [ "${STATE}" = "BUILD_FAILED" ]; then
+              echo "Build failed!"; cat /tmp/build_state.json; exit 1
+            fi
+            sleep 20
+          done
+          if [ "${STATE}" != "READY" ]; then
+            echo "Build did not reach READY state. Last state: ${STATE}"; exit 1
+          fi
 
           echo "Creating rollout from build ${BUILD_ID}"
           HTTP_CODE=$(curl -s -o /tmp/rollout_resp.json -w "%{http_code}" -X POST \
