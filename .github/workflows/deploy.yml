@@ -1,4 +1,4 @@
-name: CI / Deploy to Firebase App Hosting
+name: CI / Deploy to Cloud Run
 
 on:
   push:
@@ -36,79 +36,27 @@ jobs:
       - name: Write service account key
         run: echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > /tmp/sa.json
 
-      - name: Deploy to Firebase App Hosting
-        timeout-minutes: 25
+      - name: Authenticate to Google Cloud
+        run: gcloud auth activate-service-account --key-file=/tmp/sa.json
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+
+      - name: Build Docker image
         run: |
-          gcloud auth activate-service-account --key-file=/tmp/sa.json
-          ACCESS_TOKEN=$(gcloud auth print-access-token)
-          BUILD_ID="ci-${{ github.run_id }}"
-          BRANCH="${{ github.ref_name }}"
-          PROJECT="studio-4511819966-bc14f"
-          LOCATION="us-central1"
-          BACKEND="studio"
-          BASE="https://firebaseapphosting.googleapis.com/v1beta/projects/${PROJECT}/locations/${LOCATION}/backends/${BACKEND}"
+          IMAGE="us-central1-docker.pkg.dev/studio-4511819966-bc14f/empowerhub/app:${{ github.sha }}"
+          docker build -t "${IMAGE}" .
+          echo "IMAGE=${IMAGE}" >> $GITHUB_ENV
 
-          echo "=== Creating build ${BUILD_ID} from branch ${BRANCH} ==="
-          HTTP_CODE=$(curl -s -o /tmp/build_resp.json -w "%{http_code}" -X POST \
-            "${BASE}/builds?buildId=${BUILD_ID}" \
-            -H "Authorization: Bearer ${ACCESS_TOKEN}" \
-            -H "Content-Type: application/json" \
-            -d "{\"source\":{\"codebase\":{\"branch\":\"${BRANCH}\"}}}")
-          echo "Build response (HTTP ${HTTP_CODE}):"
-          cat /tmp/build_resp.json
-          echo ""
-          [ "${HTTP_CODE}" -lt 400 ] || { echo "Build creation failed"; exit 1; }
+      - name: Push Docker image
+        run: docker push "$IMAGE"
 
-          OPERATION=$(python3 -c "import json; print(json.load(open('/tmp/build_resp.json'))['name'])")
-          echo "=== Polling LRO until done ==="
-          for j in $(seq 1 30); do
-            curl -s -o /tmp/lro.json \
-              -H "Authorization: Bearer ${ACCESS_TOKEN}" \
-              "https://firebaseapphosting.googleapis.com/v1beta/${OPERATION}"
-            DONE=$(python3 -c "import json; d=json.load(open('/tmp/lro.json')); print('true' if d.get('done') else 'false')" 2>/dev/null || echo "false")
-            echo "  LRO ${j}/30: done=${DONE}"
-            if [ "${DONE}" = "true" ]; then
-              echo "LRO final response:"; cat /tmp/lro.json; echo ""
-              python3 -c "import json,sys; d=json.load(open('/tmp/lro.json')); print('LRO error:',json.dumps(d['error'])) or sys.exit(1) if d.get('error') else None" || exit 1
-              break
-            fi
-            sleep 5
-          done
-
-          echo "=== Polling build state (every 20s, max 20min) ==="
-          STATE="PENDING"
-          for i in $(seq 1 60); do
-            HTTP=$(curl -s -o /tmp/build_state.json -w "%{http_code}" \
-              -H "Authorization: Bearer ${ACCESS_TOKEN}" \
-              "${BASE}/builds/${BUILD_ID}")
-            if [ "${HTTP}" = "200" ]; then
-              STATE=$(python3 -c "import json; d=json.load(open('/tmp/build_state.json')); print(d.get('state','UNSPECIFIED'))")
-            else
-              STATE="HTTP_${HTTP}"
-            fi
-            echo "  Poll ${i}/60: HTTP=${HTTP} state=${STATE}"
-            if [ "${i}" -le "5" ] || [ "${HTTP}" != "200" ]; then
-              cat /tmp/build_state.json; echo ""
-            fi
-            [ "${STATE}" = "READY" ] && break
-            if [ "${STATE}" = "BUILD_FAILED" ]; then
-              echo "Build failed!"; exit 1
-            fi
-            if echo "${STATE}" | grep -q "HTTP_4"; then
-              echo "Build resource gone — likely a permissions or branch config issue"; exit 1
-            fi
-            sleep 20
-          done
-          [ "${STATE}" = "READY" ] || { echo "Timed out. Last state: ${STATE}"; exit 1; }
-
-          echo "=== Creating rollout from build ${BUILD_ID} ==="
-          HTTP_CODE=$(curl -s -o /tmp/rollout_resp.json -w "%{http_code}" -X POST \
-            "${BASE}/rollouts?rolloutId=${BUILD_ID}" \
-            -H "Authorization: Bearer ${ACCESS_TOKEN}" \
-            -H "Content-Type: application/json" \
-            -d "{\"build\":\"projects/${PROJECT}/locations/${LOCATION}/backends/${BACKEND}/builds/${BUILD_ID}\"}")
-          echo "Rollout response (HTTP ${HTTP_CODE}):"
-          cat /tmp/rollout_resp.json
-          [ "${HTTP_CODE}" -lt 400 ] || { echo "Rollout creation failed"; exit 1; }
-
-          echo "=== Deploy initiated successfully for branch ${BRANCH} ==="
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run services update studio \
+            --image="${IMAGE}" \
+            --project=studio-4511819966-bc14f \
+            --region=us-central1 \
+            --quiet
+          echo "=== Deployed successfully ==="
+          echo "URL: https://studio-bkmodeaqwa-uc.a.run.app"
