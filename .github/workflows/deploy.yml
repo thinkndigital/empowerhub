@@ -58,7 +58,7 @@ jobs:
 
           echo "Creating rollout from build ${BUILD_ID}"
           HTTP_CODE=$(curl -s -o /tmp/rollout_resp.json -w "%{http_code}" -X POST \
-            "${BASE}/rollouts" \
+            "${BASE}/rollouts?rolloutId=${BUILD_ID}" \
             -H "Authorization: Bearer ${ACCESS_TOKEN}" \
             -H "Content-Type: application/json" \
             -d "{\"build\":\"projects/${PROJECT}/locations/${LOCATION}/backends/${BACKEND}/builds/${BUILD_ID}\"}")
