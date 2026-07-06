@@ -48,44 +48,73 @@ jobs:
           BACKEND="studio"
           BASE="https://firebaseapphosting.googleapis.com/v1beta/projects/${PROJECT}/locations/${LOCATION}/backends/${BACKEND}"
 
-          echo "Creating build ${BUILD_ID} from branch ${BRANCH}"
+          echo "=== Creating build ${BUILD_ID} from branch ${BRANCH} ==="
           HTTP_CODE=$(curl -s -o /tmp/build_resp.json -w "%{http_code}" -X POST \
             "${BASE}/builds?buildId=${BUILD_ID}" \
             -H "Authorization: Bearer ${ACCESS_TOKEN}" \
             -H "Content-Type: application/json" \
             -d "{\"source\":{\"codebase\":{\"branch\":\"${BRANCH}\"}}}")
-          echo "Build response (HTTP ${HTTP_CODE}): $(cat /tmp/build_resp.json)"
+          echo "Build response (HTTP ${HTTP_CODE}):"
+          cat /tmp/build_resp.json
+          echo ""
           [ "${HTTP_CODE}" -lt 400 ] || { echo "Build creation failed"; exit 1; }
 
-          echo "Waiting for build to reach READY state (poll every 20s, max 20min)..."
+          OPERATION=$(python3 -c "import json; print(json.load(open('/tmp/build_resp.json'))['name'])")
+          echo "=== Polling LRO until done ==="
+          for j in $(seq 1 30); do
+            curl -s -o /tmp/lro.json \
+              -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+              "https://firebaseapphosting.googleapis.com/v1beta/${OPERATION}"
+            DONE=$(python3 -c "import json; d=json.load(open('/tmp/lro.json')); print('true' if d.get('done') else 'false')" 2>/dev/null || echo "false")
+            echo "  LRO ${j}/30: done=${DONE}"
+            if [ "${DONE}" = "true" ]; then
+              echo "LRO final response:"; cat /tmp/lro.json; echo ""
+              python3 -c "
+import json, sys
+d = json.load(open('/tmp/lro.json'))
+if d.get('error'):
+    print('LRO error:', json.dumps(d['error']))
+    sys.exit(1)
+" || exit 1
+              break
+            fi
+            sleep 5
+          done
+
+          echo "=== Polling build state (every 20s, max 20min) ==="
           STATE="PENDING"
           for i in $(seq 1 60); do
             HTTP=$(curl -s -o /tmp/build_state.json -w "%{http_code}" \
               -H "Authorization: Bearer ${ACCESS_TOKEN}" \
               "${BASE}/builds/${BUILD_ID}")
             if [ "${HTTP}" = "200" ]; then
-              STATE=$(python3 -c "import json; d=json.load(open('/tmp/build_state.json')); print(d.get('state','UNKNOWN'))")
+              STATE=$(python3 -c "import json; d=json.load(open('/tmp/build_state.json')); print(d.get('state','UNSPECIFIED'))")
             else
-              STATE="NOT_FOUND"
+              STATE="HTTP_${HTTP}"
             fi
-            echo "  Poll ${i}/60: state=${STATE}"
+            echo "  Poll ${i}/60: HTTP=${HTTP} state=${STATE}"
+            if [ "${i}" -le "5" ] || [ "${HTTP}" != "200" ]; then
+              cat /tmp/build_state.json; echo ""
+            fi
             [ "${STATE}" = "READY" ] && break
             if [ "${STATE}" = "BUILD_FAILED" ]; then
-              echo "Build failed!"; cat /tmp/build_state.json; exit 1
+              echo "Build failed!"; exit 1
+            fi
+            if echo "${STATE}" | grep -q "HTTP_4"; then
+              echo "Build resource gone — likely a permissions or branch config issue"; exit 1
             fi
             sleep 20
           done
-          if [ "${STATE}" != "READY" ]; then
-            echo "Build did not reach READY state. Last state: ${STATE}"; exit 1
-          fi
+          [ "${STATE}" = "READY" ] || { echo "Timed out. Last state: ${STATE}"; exit 1; }
 
-          echo "Creating rollout from build ${BUILD_ID}"
+          echo "=== Creating rollout from build ${BUILD_ID} ==="
           HTTP_CODE=$(curl -s -o /tmp/rollout_resp.json -w "%{http_code}" -X POST \
             "${BASE}/rollouts?rolloutId=${BUILD_ID}" \
             -H "Authorization: Bearer ${ACCESS_TOKEN}" \
             -H "Content-Type: application/json" \
             -d "{\"build\":\"projects/${PROJECT}/locations/${LOCATION}/backends/${BACKEND}/builds/${BUILD_ID}\"}")
-          echo "Rollout response (HTTP ${HTTP_CODE}): $(cat /tmp/rollout_resp.json)"
+          echo "Rollout response (HTTP ${HTTP_CODE}):"
+          cat /tmp/rollout_resp.json
           [ "${HTTP_CODE}" -lt 400 ] || { echo "Rollout creation failed"; exit 1; }
 
-          echo "Deploy initiated successfully for branch ${BRANCH}"
+          echo "=== Deploy initiated successfully for branch ${BRANCH} ==="
