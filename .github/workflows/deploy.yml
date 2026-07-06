@@ -69,13 +69,7 @@ jobs:
             echo "  LRO ${j}/30: done=${DONE}"
             if [ "${DONE}" = "true" ]; then
               echo "LRO final response:"; cat /tmp/lro.json; echo ""
-              python3 -c "
-import json, sys
-d = json.load(open('/tmp/lro.json'))
-if d.get('error'):
-    print('LRO error:', json.dumps(d['error']))
-    sys.exit(1)
-" || exit 1
+              python3 -c "import json,sys; d=json.load(open('/tmp/lro.json')); print('LRO error:',json.dumps(d['error'])) or sys.exit(1) if d.get('error') else None" || exit 1
               break
             fi
             sleep 5
