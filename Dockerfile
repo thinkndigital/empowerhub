@@ -8,7 +8,6 @@ ENV HOSTNAME=0.0.0.0
 
 COPY .next/standalone ./
 COPY .next/static ./.next/static
-COPY public ./public
 
 EXPOSE 8080
 CMD ["node", "server.js"]
