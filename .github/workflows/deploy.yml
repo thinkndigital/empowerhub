@@ -1,4 +1,4 @@
-name: CI / Deploy to Cloud Run
+name: CI / Deploy to Firebase App Hosting
 
 on:
   push:
@@ -36,27 +36,13 @@ jobs:
       - name: Write service account key
         run: echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > /tmp/sa.json
 
-      - name: Authenticate to Google Cloud
-        run: gcloud auth activate-service-account --key-file=/tmp/sa.json
-
-      - name: Configure Docker for Artifact Registry
-        run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
-
-      - name: Build Docker image
+      - name: Deploy to Firebase App Hosting
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa.json
         run: |
-          IMAGE="us-central1-docker.pkg.dev/studio-4511819966-bc14f/empowerhub/app:${{ github.sha }}"
-          docker build -t "${IMAGE}" .
-          echo "IMAGE=${IMAGE}" >> $GITHUB_ENV
-
-      - name: Push Docker image
-        run: docker push "$IMAGE"
-
-      - name: Deploy to Cloud Run
-        run: |
-          gcloud run services update studio \
-            --image="${IMAGE}" \
-            --project=studio-4511819966-bc14f \
-            --region=us-central1 \
-            --quiet
-          echo "=== Deployed successfully ==="
-          echo "URL: https://studio-bkmodeaqwa-uc.a.run.app"
+          BRANCH="${{ github.ref_name }}"
+          echo "Creating rollout for backend 'studio' from branch: $BRANCH"
+          npx firebase-tools@latest apphosting:rollouts:create studio \
+            --git-branch "$BRANCH" \
+            --project studio-4511819966-bc14f \
+            --non-interactive
