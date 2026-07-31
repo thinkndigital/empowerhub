@@ -2,6 +2,7 @@
 "use client";
 
 import { MoreHorizontal, Download, UserX, Edit, User, Eye } from "lucide-react";
+import { ExportButton } from "@/components/export-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -99,12 +100,7 @@ export default function UsersPage() {
   const loading = usersLoading || orgsLoading;
 
 
-  const handleExport = () => {
-    toast({
-      title: "جاري تصدير قائمة المستخدمين...",
-      description: "سيتم تنزيل ملف CSV قريبًا.",
-    });
-  };
+  const roleAr: Record<string, string> = { admin: 'مدير', organization: 'منظمة', mentor: 'مرشد', coach: 'مدرب', beneficiary: 'مستفيد' };
 
   const handleToggleStatus = async (user: UserProfile) => {
     if (!firestore) return;
@@ -153,10 +149,19 @@ export default function UsersPage() {
         <h1 className="text-2xl font-bold tracking-tight">المستخدمون</h1>
         <p className="text-sm text-muted-foreground">عرض وإدارة جميع المستخدمين المسجلين على المنصة.</p>
       </div>
-      <Button variant="outline" size="sm" onClick={handleExport}>
-        <Download className="ml-2 h-4 w-4" />
-        تصدير
-      </Button>
+      <ExportButton
+        title="قائمة المستخدمين"
+        filename={`users-${new Date().toISOString().slice(0,10)}`}
+        headers={['الاسم', 'البريد الإلكتروني', 'الدور', 'المنظمة', 'الحالة']}
+        rows={(users ?? []).map(u => [
+          u.name || '',
+          u.email || '',
+          roleAr[u.role || ''] || u.role || '',
+          orgMap.get(u.organizationId || '') || '',
+          u.status || 'نشط',
+        ])}
+        options={{ summary: { 'إجمالي المستخدمين': String((users ?? []).length) } }}
+      />
     </div>
     <Card className="border-0 shadow-sm">
       <CardHeader>

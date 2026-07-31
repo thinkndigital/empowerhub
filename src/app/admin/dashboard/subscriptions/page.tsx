@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { CreditCard, Calendar, CheckCircle, XCircle, Clock, Pencil, Trash2 } from "lucide-react";
+import { ExportButton } from "@/components/export-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -46,7 +47,7 @@ const statusConfig: Record<string, { label: string; color: string; icon: any }> 
 
 function formatDate(d?: string) {
   if (!d) return '—';
-  return new Date(d).toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' });
+  return new Date(d).toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 function daysLeft(endDate?: string) {
@@ -64,7 +65,7 @@ export default function SubscriptionsPage() {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     planId: '', status: 'active', billingCycle: 'monthly',
-    startDate: '', endDate: '', price: 0, currency: 'SAR', notes: '',
+    startDate: '', endDate: '', price: 0, currency: 'JOD', notes: '',
   });
 
   const load = () => {
@@ -93,7 +94,7 @@ export default function SubscriptionsPage() {
       startDate: sub?.startDate?.split('T')[0] || today,
       endDate: sub?.endDate?.split('T')[0] || nextYear,
       price: sub?.price || 0,
-      currency: sub?.currency || 'SAR',
+      currency: sub?.currency || 'JOD',
       notes: sub?.notes || '',
     });
   };
@@ -104,7 +105,7 @@ export default function SubscriptionsPage() {
       setForm(f => ({
         ...f, planId,
         price: f.billingCycle === 'annual' ? plan.priceAnnual : plan.priceMonthly,
-        currency: plan.currency || 'SAR',
+        currency: plan.currency || 'JOD',
       }));
     }
   };
@@ -143,9 +144,28 @@ export default function SubscriptionsPage() {
 
   return (
     <div className="space-y-6" dir="rtl">
-      <div>
-        <h1 className="text-2xl font-bold text-white">الاشتراكات</h1>
-        <p className="text-slate-400 text-sm">إدارة اشتراكات المنظمات وتتبع حالتها</p>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-white">الاشتراكات</h1>
+          <p className="text-slate-400 text-sm">إدارة اشتراكات المنظمات وتتبع حالتها</p>
+        </div>
+        <ExportButton
+          title="اشتراكات المنظمات"
+          filename={`subscriptions-${new Date().toISOString().slice(0,10)}`}
+          headers={['المنظمة', 'الخطة', 'الحالة', 'دورة الفوترة', 'السعر', 'العملة', 'تاريخ البداية', 'تاريخ الانتهاء']}
+          rows={data.map(d => [
+            d.org.name || '',
+            d.subscription?.planName || '—',
+            statusConfig[d.subscription?.status || '']?.label || d.subscription?.status || 'بدون اشتراك',
+            d.subscription?.billingCycle === 'annual' ? 'سنوي' : d.subscription?.billingCycle === 'monthly' ? 'شهري' : '—',
+            d.subscription?.price ?? '—',
+            d.subscription?.currency || '—',
+            d.subscription?.startDate ? formatDate(d.subscription.startDate) : '—',
+            d.subscription?.endDate ? formatDate(d.subscription.endDate) : '—',
+          ])}
+          options={{ summary: { 'إجمالي المنظمات': String(stats.total), 'نشطة': String(stats.active), 'منتهية': String(stats.expired), 'بدون اشتراك': String(stats.noSub) } }}
+          variant="outline"
+        />
       </div>
 
       {/* Stats */}

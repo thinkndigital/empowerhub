@@ -54,7 +54,7 @@ const RoleCard = ({ icon, title, description, link, color, badge }: {
 }) => (
   <Card className="card-hover text-center flex flex-col group border-0 shadow-md bg-card relative overflow-hidden">
     {badge && (
-      <Badge className="absolute top-3 left-3 bg-primary text-primary-foreground text-xs">{badge}</Badge>
+      <Badge className="absolute top-3 right-3 bg-primary text-primary-foreground text-xs">{badge}</Badge>
     )}
     <div className="absolute inset-0 bg-gradient-to-br from-primary/3 to-accent/3 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
     <CardHeader className="relative">

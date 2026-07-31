@@ -31,11 +31,11 @@ interface PaymentConfig {
 const defaultConfig: PaymentConfig = {
   allowCOD: true,
   codLabel: 'الدفع عند الاستلام',
-  currency: 'SAR',
+  currency: 'JOD',
   moyasar: { enabled: false, publishableKey: '', secretKey: '', label: 'موياسر (Mada / Visa / STC Pay)' },
   stripe: { enabled: false, publishableKey: '', secretKey: '', label: 'Stripe (بطاقة بنكية دولية)' },
   paypal: { enabled: false, clientId: '', clientSecret: '', mode: 'sandbox', label: 'PayPal' },
-  paytabs: { enabled: false, profileId: '', serverKey: '', region: 'SAU', label: 'PayTabs' },
+  paytabs: { enabled: false, profileId: '', serverKey: '', clientKey: '', region: 'JOR', label: 'PayTabs' },
   hyperpay: { enabled: false, accessToken: '', entityIdVisa: '', entityIdMada: '', mode: 'test', label: 'HyperPay' },
   tamara: { enabled: false, apiKey: '', label: 'تمارا - اشتري الآن وادفع لاحقاً' },
   tabby: { enabled: false, apiKey: '', publicKey: '', label: 'تابي - قسّم المدفوعات' },
@@ -75,7 +75,8 @@ const GATEWAYS: { key: GwKey; name: string; desc: string; logo: string; fields: 
     fields: [
       { key: 'profileId', label: 'Profile ID' },
       { key: 'serverKey', label: 'Server Key', type: 'password' },
-      { key: 'region', label: 'المنطقة', hint: 'SAU للسعودية' },
+      { key: 'clientKey', label: 'Client Key', type: 'password' },
+      { key: 'region', label: 'المنطقة (Region)', hint: 'JOR للأردن | SAU للسعودية | ARE للإمارات | EGY لمصر | OMN لعُمان | IRQ للعراق' },
     ],
   },
   {
@@ -115,9 +116,9 @@ function SecretInput({ value, onChange, placeholder }: { value: string; onChange
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder || '••••••••'}
         dir="ltr"
-        className="font-mono text-sm pl-10"
+        className="font-mono text-sm pr-10"
       />
-      <button type="button" onClick={() => setShow(s => !s)} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white">
+      <button type="button" onClick={() => setShow(s => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white">
         {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
       </button>
     </div>
@@ -291,7 +292,7 @@ export default function PaymentConfigPage() {
             <Input
               value={config.currency}
               onChange={e => setConfig(c => ({ ...c, currency: e.target.value.toUpperCase() }))}
-              placeholder="SAR"
+              placeholder="JOD"
               dir="ltr"
               className="max-w-[80px] font-mono text-center"
               maxLength={3}

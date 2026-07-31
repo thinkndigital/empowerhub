@@ -1,0 +1,11 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // All reads are public (download URLs with token bypass these rules anyway)
+    match /{allPaths=**} {
+      allow read: if true;
+      // Writes only via Admin SDK (server-side) — block direct client writes
+      allow write: if false;
+    }
+  }
+}

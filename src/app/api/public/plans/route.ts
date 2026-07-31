@@ -17,7 +17,7 @@ export async function GET() {
         description: data.description || '',
         priceMonthly: data.priceMonthly ?? 0,
         priceAnnual: data.priceAnnual ?? 0,
-        currency: data.currency || 'SAR',
+        currency: data.currency || 'JOD',
         color: data.color || '#6366f1',
         icon: data.icon || 'Star',
         highlighted: data.highlighted ?? false,

@@ -23,8 +23,16 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { UserX, Send, Eye, Save, Clock, DollarSign, RefreshCw } from "lucide-react";
+import { UserX, Send, Eye, Save, Clock, DollarSign, RefreshCw, BookOpen, Video, Gift } from "lucide-react";
 import { useRouter } from "next/navigation";
+import {
+  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 
 async function apiAction(user: User, body: object) {
   const token = await user.getIdToken();
@@ -57,6 +65,13 @@ export default function OrgCoachesPage() {
   const router = useRouter();
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [sentInvites, setSentInvites] = useState<Set<string>>(new Set());
+
+  // Content offer state
+  const [offerCoach, setOfferCoach] = useState<OrgUser | null>(null);
+  const [offerLoading, setOfferLoading] = useState(false);
+  const [coachContent, setCoachContent] = useState<{ courses: {id:string;title:string}[]; liveSessions: {id:string;title:string}[] }>({ courses: [], liveSessions: [] });
+  const [offerForm, setOfferForm] = useState({ offerType: 'course' as 'course'|'live_session', contentId: '', note: '' });
+  const [sendingOffer, setSendingOffer] = useState(false);
 
   // Billing state
   const [billingCoaches, setBillingCoaches] = useState<BillingCoach[]>([]);
@@ -137,7 +152,7 @@ export default function OrgCoachesPage() {
     try {
       const result = await apiAction(user, { action: "removeFromOrg", userId: coachId });
       if (result.error) throw new Error(result.error);
-      toast({ title: "تمت الإزالة", description: "تم إزالة المدرب من المنظمة." });
+      toast({ title: "تمت الإزالة", description: "تم إزالة المدرب." });
       refetchOrg();
     } catch {
       toast({ title: "خطأ", description: "فشل في إزالة المدرب.", variant: "destructive" });
@@ -163,6 +178,56 @@ export default function OrgCoachesPage() {
       toast({ title: "خطأ", description: "فشل في إرسال الدعوة.", variant: "destructive" });
     } finally {
       setLoadingAction(null);
+    }
+  };
+
+  const openOfferModal = async (coach: OrgUser) => {
+    setOfferCoach(coach);
+    setOfferForm({ offerType: 'course', contentId: '', note: '' });
+    setOfferLoading(true);
+    try {
+      const res = await fetch(`/api/public/coach-content/${coach.id}`);
+      const json = await res.json();
+      setCoachContent({ courses: json.courses || [], liveSessions: json.liveSessions || [] });
+    } catch {
+      setCoachContent({ courses: [], liveSessions: [] });
+    } finally {
+      setOfferLoading(false);
+    }
+  };
+
+  const handleSendOffer = async () => {
+    if (!user || !offerCoach) return;
+    const items = offerForm.offerType === 'course' ? coachContent.courses : coachContent.liveSessions;
+    const selected = items.find(i => i.id === offerForm.contentId);
+    if (!selected) {
+      toast({ variant: 'destructive', title: 'خطأ', description: 'اختر المحتوى أولاً' });
+      return;
+    }
+    setSendingOffer(true);
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch('/api/org/content-offers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          targetUid: offerCoach.id,
+          targetName: offerCoach.name || '',
+          targetRole: 'coach',
+          offerType: offerForm.offerType,
+          contentId: selected.id,
+          contentTitle: selected.title,
+          note: offerForm.note,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      toast({ title: 'تم الإرسال', description: 'تم إرسال العرض للمدرب.' });
+      setOfferCoach(null);
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'خطأ', description: e.message });
+    } finally {
+      setSendingOffer(false);
     }
   };
 
@@ -447,20 +512,20 @@ export default function OrgCoachesPage() {
                           {coach.expertise ?? "لا يوجد تخصص محدد"}
                         </p>
                       </div>
-                      {isSent ? (
-                        <Button variant="outline" size="sm" disabled>
-                          تم الإرسال
+                      <div className="flex gap-2 justify-center flex-wrap">
+                        {isSent ? (
+                          <Button variant="outline" size="sm" disabled>تم الإرسال</Button>
+                        ) : (
+                          <Button size="sm" variant="outline" disabled={loadingAction === coach.id} onClick={() => handleInvite(coach)}>
+                            <Send className="h-4 w-4 ml-1" />
+                            دعوة
+                          </Button>
+                        )}
+                        <Button size="sm" onClick={() => openOfferModal(coach)}>
+                          <Gift className="h-4 w-4 ml-1" />
+                          إرسال عرض
                         </Button>
-                      ) : (
-                        <Button
-                          size="sm"
-                          disabled={loadingAction === coach.id}
-                          onClick={() => handleInvite(coach)}
-                        >
-                          <Send className="h-4 w-4 ml-1" />
-                          دعوة
-                        </Button>
-                      )}
+                      </div>
                     </CardContent>
                   </Card>
                 );
@@ -469,6 +534,78 @@ export default function OrgCoachesPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Content Offer Modal */}
+      <Dialog open={!!offerCoach} onOpenChange={(open) => !open && setOfferCoach(null)}>
+        <DialogContent dir="rtl" className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>إرسال عرض للمدرب {offerCoach?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label>نوع المحتوى</Label>
+              <Select
+                value={offerForm.offerType}
+                onValueChange={(v) => setOfferForm(f => ({ ...f, offerType: v as 'course'|'live_session', contentId: '' }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="course">
+                    <span className="flex items-center gap-2"><BookOpen className="h-4 w-4" /> دورة مسجلة</span>
+                  </SelectItem>
+                  <SelectItem value="live_session">
+                    <span className="flex items-center gap-2"><Video className="h-4 w-4" /> جلسة مباشرة</span>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>المحتوى</Label>
+              {offerLoading ? (
+                <div className="h-10 rounded-md bg-muted animate-pulse" />
+              ) : (
+                <Select
+                  value={offerForm.contentId}
+                  onValueChange={(v) => setOfferForm(f => ({ ...f, contentId: v }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="اختر..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(offerForm.offerType === 'course' ? coachContent.courses : coachContent.liveSessions).length === 0 ? (
+                      <SelectItem value="__none" disabled>
+                        {offerForm.offerType === 'course' ? 'لا توجد دورات منشورة' : 'لا توجد جلسات مباشرة منشورة'}
+                      </SelectItem>
+                    ) : (
+                      (offerForm.offerType === 'course' ? coachContent.courses : coachContent.liveSessions).map(item => (
+                        <SelectItem key={item.id} value={item.id}>{item.title}</SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="offer-note">ملاحظة (اختياري)</Label>
+              <Textarea
+                id="offer-note"
+                value={offerForm.note}
+                onChange={e => setOfferForm(f => ({ ...f, note: e.target.value }))}
+                placeholder="رسالة للمدرب حول العرض..."
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" onClick={() => setOfferCoach(null)} disabled={sendingOffer}>إلغاء</Button>
+            <Button onClick={handleSendOffer} disabled={sendingOffer || !offerForm.contentId}>
+              {sendingOffer ? 'جاري الإرسال...' : 'إرسال العرض'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

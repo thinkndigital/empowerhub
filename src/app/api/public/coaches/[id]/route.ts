@@ -36,7 +36,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
         id: coachSnap.id,
         name: data.name || data.displayName || '',
         bio: data.bio || data.description || '',
-        specializations: data.specializations || [],
+        specializations: Array.isArray(data.specializations) ? data.specializations : typeof data.specializations === 'string' && data.specializations ? [data.specializations] : [],
         avatarUrl: data.avatarUrl || '',
         sessionPrice: data.sessionPrice ?? null,
         whatsapp: data.whatsapp || '',

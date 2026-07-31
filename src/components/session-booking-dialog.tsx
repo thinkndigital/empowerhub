@@ -114,7 +114,7 @@ export function SessionBookingDialog({ isOpen, onOpenChange, hostId, hostName, h
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5 text-primary" />
-            حجز {sessionLabel}
+            {`حجز ${sessionLabel}`}
           </DialogTitle>
         </DialogHeader>
 

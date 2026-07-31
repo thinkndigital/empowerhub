@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Activity, BookOpenCheck, DollarSign, TrendingUp, Clock, Target, ChevronRight, User, Calendar, Video, Star } from "lucide-react";
+import { Activity, BookOpenCheck, DollarSign, TrendingUp, Clock, Target, ChevronLeft, User, Calendar, Video, Star } from "lucide-react";
 import { AiRecommender } from "./ai-recommender";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -204,7 +204,7 @@ export default function DashboardPage() {
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-semibold text-foreground">الدورات التدريبية</CardTitle>
                   <Button variant="ghost" size="sm" asChild className="h-7 text-xs text-primary hover:text-primary px-2">
-                    <Link href="/dashboard/training">عرض الكل <ChevronRight className="h-3 w-3 mr-1" /></Link>
+                    <Link href="/dashboard/training">عرض الكل <ChevronLeft className="h-3 w-3 mr-1" /></Link>
                   </Button>
                 </div>
               </CardHeader>

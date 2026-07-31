@@ -2,22 +2,20 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Logo } from '@/components/logo';
+import { SiteHeader } from '@/components/site-header';
 import {
-  ArrowLeft, BookOpen, Users, Store, Building, GraduationCap,
-  UserCheck, CheckCircle, TrendingUp, Award, Globe, ChevronDown,
-  Star, BarChart3, Shield, Zap, MessageSquare, Phone, Mail, Sparkles,
+  ArrowLeft, BookOpen, Store, GraduationCap, CheckCircle,
+  Star, MessageSquare, Phone, Mail, Globe, Calendar, Clock,
+  Tag, MapPin, FileText, Briefcase, Video, Building2, Users, BarChart3,
 } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { useFirestore } from '@/firebase/provider';
-import { collection, query, where, getCountFromServer } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { useCurrency } from '@/hooks/use-currency';
+import { applyOrgColor } from '@/lib/apply-org-color';
 import { OrderDialog } from '@/components/order-dialog';
 import { SessionBookingDialog } from '@/components/session-booking-dialog';
 import { CourseEnrollDialog } from '@/components/course-enroll-dialog';
@@ -31,10 +29,28 @@ interface MentorUser {
   bio?: string;
   description?: string;
   specializations?: string[];
+  avatarUrl?: string;
   sessionPrice?: number | null;
   whatsapp?: string;
   linkedin?: string;
+  instagram?: string;
+  website?: string;
+  twitter?: string;
   email?: string;
+}
+
+interface PublicSession {
+  id: string;
+  title: string;
+  description: string;
+  date: string;
+  duration: number;
+  meetLink: string;
+  bannerUrl: string;
+  hostId: string;
+  hostName: string;
+  hostAvatarUrl: string;
+  price: number | null;
 }
 
 interface CourseItem {
@@ -45,7 +61,11 @@ interface CourseItem {
   coverImageUrl: string;
   duration: string;
   coachName: string;
+  coachAvatarUrl?: string;
   enrollmentCount: number;
+  level?: string;
+  language?: string;
+  tags?: string[];
 }
 
 interface Product {
@@ -85,335 +105,343 @@ interface SiteConfig {
   footer: { description: string; email: string; phone: string; twitter: string; linkedin: string; instagram: string; copyright: string };
 }
 
-const iconMap: Record<string, React.ReactNode> = {
-  Users: <Users className="h-6 w-6" />,
-  BookOpen: <BookOpen className="h-6 w-6" />,
-  GraduationCap: <GraduationCap className="h-6 w-6" />,
-  Award: <Award className="h-6 w-6" />,
-  Store: <Store className="h-6 w-6" />,
-  BarChart3: <BarChart3 className="h-6 w-6" />,
-  Zap: <Zap className="h-6 w-6" />,
-  Shield: <Shield className="h-6 w-6" />,
-  Star: <Star className="h-6 w-6" />,
-  TrendingUp: <TrendingUp className="h-6 w-6" />,
-  UserCheck: <UserCheck className="h-6 w-6" />,
-  Building: <Building className="h-6 w-6" />,
-  Globe: <Globe className="h-6 w-6" />,
-  Sparkles: <Sparkles className="h-6 w-6" />,
-  MessageSquare: <MessageSquare className="h-6 w-6" />,
-};
-
-const featureColors = ['bg-primary', 'bg-sky-500', 'bg-amber-500', 'bg-purple-500', 'bg-rose-500', 'bg-teal-600'];
-
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-const FeatureCard = ({ icon, title, description, color }: {
-  icon: React.ReactNode, title: string, description: string, color: string
-}) => (
-  <Card className="card-hover border-0 shadow-md bg-card">
-    <CardContent className="pt-6 pb-6">
-      <div className={`flex items-center justify-center h-14 w-14 rounded-2xl ${color} mx-auto mb-4`}>
-        {icon}
-      </div>
-      <h3 className="text-lg font-bold text-center mb-2">{title}</h3>
-      <p className="text-sm text-muted-foreground text-center leading-relaxed">{description}</p>
-    </CardContent>
-  </Card>
+const LinkedInIcon = () => (
+  <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+  </svg>
+);
+const InstagramIcon = () => (
+  <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z" />
+  </svg>
+);
+const TwitterXIcon = () => (
+  <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+  </svg>
+);
+const WhatsAppIcon = () => (
+  <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+  </svg>
 );
 
-const RoleCard = ({ icon, title, description, link, badge }: {
-  icon: React.ReactNode, title: string, description: string, link: string, badge?: string
-}) => (
-  <Card className="card-hover text-center flex flex-col group border-0 shadow-md bg-card relative overflow-hidden">
-    {badge && (
-      <Badge className="absolute top-3 left-3 bg-primary text-primary-foreground text-xs">{badge}</Badge>
-    )}
-    <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-    <CardHeader className="relative">
-      <div className="flex items-center justify-center h-16 w-16 rounded-2xl bg-primary/10 text-primary mx-auto mb-3 transition-all group-hover:bg-primary group-hover:text-primary-foreground group-hover:scale-110">
-        {icon}
-      </div>
-      <CardTitle className="text-lg">{title}</CardTitle>
-    </CardHeader>
-    <CardContent className="flex-grow relative">
-      <CardDescription className="text-sm leading-relaxed">{description}</CardDescription>
-    </CardContent>
-    <CardFooter className="relative">
-      <Button asChild className="w-full group/btn">
-        <Link href={link}>
-          ابدأ الآن
-          <ArrowLeft className="mr-2 h-4 w-4 transition-transform group-hover/btn:-translate-x-1" />
+const ExpertCard = ({
+  expert, role,
+}: { expert: MentorUser; role: 'mentor' | 'coach'; onBook?: () => void; currencySymbol: string }) => {
+  const name = expert.displayName || expert.name || 'بدون اسم';
+  const initial = name[0] || '?';
+  const isMentor = role === 'mentor';
+  const gradient = isMentor
+    ? 'from-violet-600 via-primary to-indigo-600'
+    : 'from-sky-500 via-sky-400 to-cyan-500';
+  const profileLink = `/${isMentor ? 'mentors' : 'coaches'}/${expert.id}`;
+  const whatsappHref = expert.whatsapp
+    ? `https://wa.me/${expert.whatsapp.replace(/\D/g, '')}`
+    : null;
+
+  const hasSocial = !!(expert.linkedin || expert.instagram || expert.twitter || whatsappHref);
+
+  return (
+    <div dir="rtl" className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
+      {/* Photo with social icons overlay */}
+      <div className="relative aspect-square bg-muted overflow-hidden">
+        <Link href={profileLink} className="block w-full h-full">
+          {expert.avatarUrl ? (
+            <img
+              src={expert.avatarUrl}
+              alt={name}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              onError={e => {
+                const t = e.target as HTMLImageElement;
+                t.style.display = 'none';
+                (t.nextElementSibling as HTMLElement)?.classList.remove('hidden');
+              }}
+            />
+          ) : null}
+          <div
+            className={`w-full h-full bg-gradient-to-br ${gradient} flex items-center justify-center text-white font-extrabold text-7xl ${expert.avatarUrl ? 'hidden' : ''}`}
+          >
+            {initial}
+          </div>
         </Link>
-      </Button>
-    </CardFooter>
-  </Card>
-);
+        <span className="absolute top-2.5 right-2.5 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-black/40 text-white backdrop-blur-sm">
+          {isMentor ? 'مرشد' : 'مدرب'}
+        </span>
+        {/* Social icons overlay on bottom of photo */}
+        {hasSocial && (
+          <div className="absolute bottom-0 left-0 right-0 flex justify-center gap-2 p-2.5 bg-gradient-to-t from-black/60 to-transparent">
+            {expert.linkedin && (
+              <a href={expert.linkedin} target="_blank" rel="noopener noreferrer"
+                className="h-7 w-7 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white hover:text-primary transition-colors"
+                title="LinkedIn"><LinkedInIcon /></a>
+            )}
+            {expert.instagram && (
+              <a href={expert.instagram} target="_blank" rel="noopener noreferrer"
+                className="h-7 w-7 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white hover:text-pink-600 transition-colors"
+                title="Instagram"><InstagramIcon /></a>
+            )}
+            {expert.twitter && (
+              <a href={expert.twitter} target="_blank" rel="noopener noreferrer"
+                className="h-7 w-7 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white hover:text-foreground transition-colors"
+                title="X"><TwitterXIcon /></a>
+            )}
+            {whatsappHref && (
+              <a href={whatsappHref} target="_blank" rel="noopener noreferrer"
+                className="h-7 w-7 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white hover:text-green-600 transition-colors"
+                title="واتساب"><WhatsAppIcon /></a>
+            )}
+          </div>
+        )}
+      </div>
 
-const StatCard = ({ number, label, icon }: { number: string, label: string, icon: React.ReactNode }) => (
-  <div className="text-center group">
-    <div className="flex justify-center mb-2">
-      <div className="h-12 w-12 rounded-full bg-primary/20 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-all">
-        {icon}
+      {/* Name + specialty */}
+      <div className="px-3 py-3 flex flex-col items-center gap-1">
+        <Link href={profileLink} className="font-bold text-sm text-foreground text-center leading-snug hover:text-primary transition-colors">
+          {name}
+        </Link>
+        {(() => {
+          const specs = Array.isArray(expert.specializations)
+            ? expert.specializations
+            : typeof expert.specializations === 'string' && expert.specializations
+            ? [expert.specializations]
+            : [];
+          return specs.length > 0 ? (
+            <p className="text-xs text-muted-foreground text-center line-clamp-1">
+              {specs.slice(0, 2).join(' · ')}
+            </p>
+          ) : null;
+        })()}
+        {!expert.specializations && expert.bio ? (
+          <p className="text-xs text-muted-foreground text-center line-clamp-1">{expert.bio}</p>
+        ) : null}
       </div>
     </div>
-    <div className="text-3xl font-extrabold text-primary mb-1">{number}</div>
-    <div className="text-sm text-muted-foreground">{label}</div>
+  );
+};
+
+function AutoCarousel({ children, count }: { children: React.ReactNode; count: number }) {
+  const [active, setActive] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (count <= 1) return;
+    const t = setInterval(() => setActive(p => (p + 1) % count), 4500);
+    return () => clearInterval(t);
+  }, [count]);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || count === 0) return;
+    const child = el.children[active] as HTMLElement;
+    if (child) el.scrollTo({ left: child.offsetLeft, behavior: 'smooth' });
+  }, [active, count]);
+
+  const dotCount = Math.min(count, 8);
+  return (
+    <div>
+      <div
+        ref={containerRef}
+        dir="ltr"
+        className="flex gap-4 overflow-x-auto pb-3 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {children}
+      </div>
+      {count > 1 && (
+        <div className="flex justify-center gap-2 mt-4">
+          {Array.from({ length: dotCount }).map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setActive(i)}
+              aria-label={`الشريحة ${i + 1}`}
+              className={`h-2 rounded-full transition-all duration-300 ${
+                i === active % dotCount ? 'w-6 bg-primary' : 'w-2 bg-border hover:bg-muted-foreground/30'
+              }`}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const LEVEL_LABELS: Record<string, string> = { beginner: 'مبتدئ', intermediate: 'متوسط', advanced: 'متقدم' };
+const LEVEL_COLORS: Record<string, string> = { beginner: 'bg-green-500/10 text-green-700', intermediate: 'bg-amber-500/10 text-amber-700', advanced: 'bg-red-500/10 text-red-700' };
+
+const CourseCard = ({ course, onEnroll, currencySymbol }: { course: CourseItem; onEnroll?: (c: CourseItem) => void; currencySymbol: string }) => (
+  <div className="group rounded-xl border border-border bg-card overflow-hidden hover:border-primary/30 hover:shadow-md transition-all duration-200 flex flex-col">
+    {/* Cover */}
+    <div className="relative h-40 bg-muted overflow-hidden shrink-0">
+      {course.coverImageUrl ? (
+        <img src={course.coverImageUrl} alt={course.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+      ) : (
+        <div className="h-full flex items-center justify-center bg-gradient-to-br from-primary/5 to-primary/10">
+          <BookOpen className="h-9 w-9 text-primary/20" />
+        </div>
+      )}
+      {/* Price badge */}
+      {course.price != null && (
+        <div className="absolute top-2.5 left-2.5 bg-background/90 backdrop-blur-sm text-foreground text-[11px] font-bold rounded-full px-2.5 py-0.5 border border-border/50">
+          {course.price === 0 ? 'مجاني' : `${course.price} ${currencySymbol}`}
+        </div>
+      )}
+      {/* Level badge */}
+      {course.level && LEVEL_LABELS[course.level] && (
+        <div className={`absolute top-2.5 right-2.5 text-[10px] font-semibold rounded-full px-2 py-0.5 ${LEVEL_COLORS[course.level] || 'bg-muted text-muted-foreground'}`}>
+          {LEVEL_LABELS[course.level]}
+        </div>
+      )}
+    </div>
+
+    {/* Body */}
+    <div className="p-3.5 flex flex-col gap-2 flex-grow">
+      {/* Coach */}
+      <div className="flex items-center gap-1.5">
+        {course.coachAvatarUrl ? (
+          <img src={course.coachAvatarUrl} alt={course.coachName} className="h-5 w-5 rounded-full object-cover border border-border/50" />
+        ) : (
+          <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center text-primary text-[10px] font-bold shrink-0">
+            {course.coachName?.[0] || 'م'}
+          </div>
+        )}
+        <span className="text-[11px] text-muted-foreground truncate">{course.coachName || 'مدرب'}</span>
+      </div>
+
+      {/* Title */}
+      <h3 className="font-semibold text-sm leading-snug line-clamp-2 text-foreground group-hover:text-primary transition-colors">
+        {course.title}
+      </h3>
+
+      {/* Meta */}
+      <div className="flex items-center gap-3 text-[11px] text-muted-foreground flex-wrap">
+        {course.duration && (
+          <span className="flex items-center gap-1">
+            <Clock className="h-3 w-3" />
+            {course.duration}
+          </span>
+        )}
+        {course.enrollmentCount > 0 && (
+          <span className="flex items-center gap-1">
+            <GraduationCap className="h-3 w-3" />
+            {course.enrollmentCount}+
+          </span>
+        )}
+      </div>
+    </div>
+
+    {/* Actions */}
+    <div className="px-3.5 pb-3.5 flex gap-2">
+      <Button variant="outline" size="sm" className="flex-1 text-xs h-8" asChild>
+        <Link href={`/courses/${course.id}`}>تفاصيل</Link>
+      </Button>
+      <Button size="sm" className="flex-1 text-xs h-8" onClick={() => onEnroll?.(course)}>
+        {course.price === 0 || course.price === null ? 'اشترك مجاناً' : 'اشترك الآن'}
+      </Button>
+    </div>
   </div>
 );
 
-const TestimonialCard = ({ name, role, text, stars }: {
-  name: string, role: string, text: string, stars: number
-}) => (
-  <Card className="card-hover border-0 shadow-md bg-card">
-    <CardContent className="pt-6">
-      <div className="flex mb-3">
-        {Array.from({ length: Math.max(1, Math.min(5, stars)) }).map((_, i) => (
-          <Star key={i} className="h-4 w-4 text-amber-400 fill-amber-400" />
-        ))}
-      </div>
-      <p className="text-sm text-muted-foreground leading-relaxed mb-4">"{text}"</p>
-      <div className="flex items-center gap-3">
-        <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">
-          {name[0]}
-        </div>
-        <div className="text-right">
-          <div className="font-semibold text-sm">{name}</div>
-          <div className="text-xs text-muted-foreground">{role}</div>
-        </div>
-      </div>
-    </CardContent>
-  </Card>
-);
-
-const ShimmerCard = () => (
-  <Card className="border-0 shadow-md bg-card animate-pulse">
-    <CardContent className="pt-6 pb-6 flex flex-col items-center gap-3">
-      <div className="h-16 w-16 rounded-full bg-muted" />
-      <div className="h-4 w-32 rounded bg-muted" />
-      <div className="h-3 w-48 rounded bg-muted" />
-      <div className="h-3 w-40 rounded bg-muted" />
-      <div className="flex gap-2 mt-2">
-        <div className="h-5 w-16 rounded-full bg-muted" />
-        <div className="h-5 w-16 rounded-full bg-muted" />
-      </div>
-    </CardContent>
-  </Card>
-);
-
-const MentorCard = ({ mentor, onBook }: { mentor: MentorUser; onBook?: (m: MentorUser) => void }) => {
-  const name = mentor.displayName || mentor.name || 'بدون اسم';
-  const bio = mentor.bio || mentor.description || '';
-  const specializations = Array.isArray(mentor.specializations) ? mentor.specializations : [];
-  const hasPrice = mentor.sessionPrice != null && mentor.sessionPrice > 0;
-  return (
-    <Card className="card-hover border-0 shadow-md bg-card flex flex-col">
-      <CardContent className="pt-6 flex flex-col items-center text-center gap-3 flex-grow">
-        <div className="h-16 w-16 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-2xl">
-          {name[0]}
-        </div>
-        <div>
-          <h3 className="font-bold text-base">{name}</h3>
-          {bio && (
-            <p className="text-sm text-muted-foreground mt-1 leading-relaxed line-clamp-2">{bio}</p>
-          )}
-        </div>
-        {specializations.length > 0 && (
-          <div className="flex flex-wrap gap-1 justify-center">
-            {specializations.slice(0, 3).map((s, i) => (
-              <Badge key={i} variant="secondary" className="text-xs">{s}</Badge>
-            ))}
-          </div>
-        )}
-        {hasPrice && (
-          <p className="text-primary font-bold text-sm">{mentor.sessionPrice} د.أ / جلسة</p>
-        )}
-      </CardContent>
-      <CardFooter className="flex gap-2">
-        <Button variant="outline" className="flex-1 text-xs" asChild>
-          <Link href={`/mentors/${mentor.id}`}>الملف الشخصي</Link>
-        </Button>
-        {hasPrice && (
-          <Button className="flex-1 text-xs" onClick={() => onBook?.(mentor)}>احجز جلسة</Button>
-        )}
-      </CardFooter>
-    </Card>
-  );
-};
-
-const CoachCard = ({ coach, onBook }: { coach: MentorUser; onBook?: (c: MentorUser) => void }) => {
-  const name = coach.displayName || coach.name || 'بدون اسم';
-  const bio = coach.bio || coach.description || '';
-  const specializations = Array.isArray(coach.specializations) ? coach.specializations : [];
-  const hasPrice = coach.sessionPrice != null && coach.sessionPrice > 0;
-  return (
-    <Card className="card-hover border-0 shadow-md bg-card flex flex-col">
-      <CardContent className="pt-6 flex flex-col items-center text-center gap-3 flex-grow">
-        <div className="h-16 w-16 rounded-full bg-sky-500/20 flex items-center justify-center text-sky-600 font-bold text-2xl">
-          {name[0]}
-        </div>
-        <div>
-          <h3 className="font-bold text-base">{name}</h3>
-          {bio && (
-            <p className="text-sm text-muted-foreground mt-1 leading-relaxed line-clamp-2">{bio}</p>
-          )}
-        </div>
-        {specializations.length > 0 && (
-          <div className="flex flex-wrap gap-1 justify-center">
-            {specializations.slice(0, 3).map((s, i) => (
-              <Badge key={i} variant="secondary" className="text-xs">{s}</Badge>
-            ))}
-          </div>
-        )}
-        {hasPrice && (
-          <p className="text-sky-600 font-bold text-sm">{coach.sessionPrice} د.أ / جلسة</p>
-        )}
-      </CardContent>
-      <CardFooter className="flex gap-2">
-        <Button variant="outline" className="flex-1 text-xs" asChild>
-          <Link href={`/coaches/${coach.id}`}>الملف الشخصي</Link>
-        </Button>
-        {hasPrice && (
-          <Button className="flex-1 text-xs" onClick={() => onBook?.(coach)}>احجز جلسة</Button>
-        )}
-      </CardFooter>
-    </Card>
-  );
-};
-
-const CourseCard = ({ course, onEnroll }: { course: CourseItem; onEnroll?: (c: CourseItem) => void }) => (
-  <Card className="card-hover border-0 shadow-md bg-card flex flex-col overflow-hidden">
-    <div className="relative h-36 bg-muted">
-      {course.coverImageUrl ? (
-        <img src={course.coverImageUrl} alt={course.title} className="w-full h-full object-cover" />
-      ) : (
-        <div className="h-full flex items-center justify-center">
-          <BookOpen className="h-10 w-10 text-muted-foreground/30" />
-        </div>
-      )}
-      {course.price != null && (
-        <Badge className="absolute top-2 left-2 bg-primary text-primary-foreground text-xs">
-          {course.price === 0 ? 'مجاني' : `${course.price} د.أ`}
-        </Badge>
-      )}
-    </div>
-    <CardContent className="pt-4 flex-grow">
-      <h3 className="font-bold text-sm line-clamp-2 mb-1">{course.title}</h3>
-      {course.coachName && (
-        <p className="text-xs text-muted-foreground mb-2">بقلم {course.coachName}</p>
-      )}
-      {course.description && (
-        <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{course.description}</p>
-      )}
-    </CardContent>
-    <CardFooter className="pt-0 flex gap-2">
-      <Button variant="outline" size="sm" className="flex-1 text-xs" asChild>
-        <Link href={`/courses/${course.id}`}>تفاصيل</Link>
-      </Button>
-      <Button size="sm" className="flex-1 text-xs" onClick={() => onEnroll?.(course)}>
-        <GraduationCap className="h-3 w-3 ml-1" />
-        {course.price === 0 || course.price === null ? 'اشترك مجاناً' : 'اشترك الآن'}
-      </Button>
-    </CardFooter>
-  </Card>
-);
-
-const ProductCard = ({ product, onOrder }: { product: Product; onOrder: (p: Product) => void }) => {
+const ProductCard = ({ product, onOrder, currencySymbol }: { product: Product; onOrder: (p: Product) => void; currencySymbol: string }) => {
   const name = product.name || 'منتج';
   const imageUrl = product.imageUrl || product.image || '';
   return (
-    <Card className="card-hover border-0 shadow-md bg-card flex flex-col overflow-hidden">
-      <div className="relative h-40 w-full bg-muted">
+    <div className="group rounded-xl border border-border bg-card overflow-hidden hover:border-primary/30 hover:shadow-sm transition-all flex flex-col">
+      <div className="relative h-40 bg-muted overflow-hidden">
         {imageUrl ? (
-          <Image src={imageUrl} alt={name} fill className="object-cover" />
+          <Image src={imageUrl} alt={name} fill className="object-cover group-hover:scale-105 transition-transform duration-300" />
         ) : (
-          <div className="h-full w-full flex items-center justify-center text-muted-foreground">
-            <Store className="h-10 w-10 opacity-30" />
+          <div className="h-full flex items-center justify-center">
+            <Store className="h-8 w-8 text-muted-foreground/20" />
           </div>
         )}
         {product.category && (
-          <Badge className="absolute top-2 right-2 bg-primary/90 text-primary-foreground text-xs">
+          <div className="absolute top-2 right-2 bg-background/90 backdrop-blur-sm text-foreground text-xs font-medium rounded-full px-2.5 py-0.5 border border-border/50">
             {product.category}
-          </Badge>
+          </div>
         )}
       </div>
-      <CardContent className="pt-4 flex flex-col gap-1 flex-grow">
-        <h3 className="font-bold text-sm line-clamp-2">{name}</h3>
+      <div className="p-4 flex flex-col gap-1 flex-grow">
+        <h3 className="font-semibold text-sm line-clamp-2 text-foreground">{name}</h3>
         {product.price != null && (
-          <p className="text-primary font-semibold text-sm">{product.price} د.أ</p>
+          <p className="text-primary font-bold text-sm">{product.price} {currencySymbol}</p>
         )}
-      </CardContent>
-      <CardFooter className="pt-0">
-        <Button className="w-full" onClick={() => onOrder(product)}>
-          <Store className="h-4 w-4 ml-2" />
-          اطلب الآن
-        </Button>
-      </CardFooter>
-    </Card>
+      </div>
+      <div className="px-4 pb-4">
+        <Button className="w-full h-9 text-sm" onClick={() => onOrder(product)}>اطلب الآن</Button>
+      </div>
+    </div>
   );
 };
 
-const OpportunityCard = ({ icon, title, description, badge, color, link }: {
-  icon: React.ReactNode, title: string, description: string, badge?: string, color: string, link?: string
-}) => (
-  <Card className="card-hover border-0 shadow-md bg-card group overflow-hidden flex flex-col">
-    <div className={`h-1 w-full ${color}`} />
-    <CardContent className="pt-5 pb-6 flex flex-col flex-grow">
-      <div className={`h-12 w-12 rounded-xl ${color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
-        <span className="text-white">{icon}</span>
+const PublicSessionCard = ({ session, currencySymbol, onBook }: { session: PublicSession; currencySymbol: string; onBook?: () => void }) => {
+  const date = new Date(session.date);
+  const dateStr = date.toLocaleDateString('ar-EG', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+  const timeStr = date.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+  const isFree = session.price === 0 || session.price == null;
+  return (
+    <div className="group rounded-2xl border border-border bg-card hover:border-primary/30 hover:shadow-md transition-all flex flex-col overflow-hidden">
+      {/* Banner */}
+      <div className="relative h-36 overflow-hidden bg-muted shrink-0">
+        {session.bannerUrl ? (
+          <img src={session.bannerUrl} alt={session.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+        ) : (
+          <div className="h-full bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center">
+            <GraduationCap className="h-10 w-10 text-primary/30" />
+          </div>
+        )}
+        {/* Price badge */}
+        <div className={`absolute top-2.5 left-2.5 text-[11px] font-bold px-2.5 py-0.5 rounded-full shadow-sm ${
+          isFree
+            ? 'bg-emerald-500 text-white'
+            : 'bg-background/90 backdrop-blur-sm text-foreground border border-border/50'
+        }`}>
+          {isFree ? 'مجاني' : `${session.price} ${currencySymbol}`}
+        </div>
       </div>
-      {badge && (
-        <Badge className="self-start mb-3 text-xs bg-primary/10 text-primary border-primary/20">{badge}</Badge>
-      )}
-      <h3 className="font-bold text-base mb-2">{title}</h3>
-      <p className="text-sm text-muted-foreground leading-relaxed flex-grow">{description}</p>
-      {link && (
-        <Link href={link} className="inline-flex items-center gap-1 text-primary text-sm font-medium mt-4 hover:underline">
-          اكتشف المزيد <ArrowLeft className="h-3 w-3" />
-        </Link>
-      )}
-    </CardContent>
-  </Card>
-);
 
-const BlogCard = ({ title, excerpt, category, imageUrl, link }: {
-  title: string, excerpt: string, category: string, imageUrl?: string, link?: string
-}) => (
-  <Card className="card-hover border-0 shadow-md bg-card overflow-hidden flex flex-col group">
-    <div className="h-36 overflow-hidden bg-gradient-to-br from-primary/10 via-primary/5 to-accent/10 flex items-center justify-center relative">
-      {imageUrl ? (
-        <img src={imageUrl} alt={title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 absolute inset-0" />
-      ) : (
-        <BookOpen className="h-10 w-10 text-primary/25" />
-      )}
+      <div className="p-4 flex flex-col gap-2 flex-grow">
+        <h3 className="font-semibold text-sm line-clamp-2 text-foreground group-hover:text-primary transition-colors">{session.title}</h3>
+        {session.description && <p className="text-xs text-muted-foreground line-clamp-2">{session.description}</p>}
+        <div className="flex items-center gap-2 mt-auto pt-2">
+          {session.hostAvatarUrl ? (
+            <img src={session.hostAvatarUrl} alt={session.hostName} className="h-6 w-6 rounded-full object-cover border border-border" />
+          ) : (
+            <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold">{session.hostName[0]}</div>
+          )}
+          <span className="text-xs text-muted-foreground">{session.hostName}</span>
+        </div>
+        <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t border-border/50">
+          <span>{dateStr} — {timeStr}</span>
+          <span>{session.duration} د</span>
+        </div>
+      </div>
+
+      <div className="px-4 pb-4">
+        <Button className="w-full h-9 text-sm" onClick={onBook}>
+          {isFree ? 'احجز مجاناً' : `احجز — ${session.price} ${currencySymbol}`}
+        </Button>
+      </div>
     </div>
-    <CardContent className="pt-4 pb-5 flex flex-col flex-grow">
-      <Badge variant="secondary" className="self-start mb-3 text-xs">{category}</Badge>
-      <h3 className="font-bold text-sm mb-2 line-clamp-2 leading-snug">{title}</h3>
-      <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed flex-grow">{excerpt}</p>
-      {link ? (
-        <Link href={link} className="inline-flex items-center gap-1 text-primary text-xs font-medium mt-4 hover:underline">
-          اقرأ المزيد <ArrowLeft className="h-3 w-3" />
-        </Link>
-      ) : (
-        <span className="inline-flex items-center gap-1 text-muted-foreground text-xs mt-4">قريباً</span>
-      )}
-    </CardContent>
-  </Card>
-);
+  );
+};
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
-  const heroImage = PlaceHolderImages.find((image) => image.id === 'register-background');
-  const db = useFirestore();
   const { toast } = useToast();
-
+  const { symbol: currencySymbol } = useCurrency();
   const [siteConfig, setSiteConfig] = useState<SiteConfig | null>(null);
   const [mentors, setMentors] = useState<MentorUser[]>([]);
   const [coaches, setCoaches] = useState<MentorUser[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [publicStores, setPublicStores] = useState<{ id: string; name: string; logoUrl?: string; location?: string; beneficiaryName?: string }[]>([]);
   const [courses, setCourses] = useState<CourseItem[]>([]);
+  const [publicSessions, setPublicSessions] = useState<PublicSession[]>([]);
+  const [latestArticles, setLatestArticles] = useState<{ id: string; title: string; excerpt: string; coverImageUrl: string; authorName: string; authorRole: string; readTime: number; tags: string[] }[]>([]);
+  const [latestProjects, setLatestProjects] = useState<{ id: string; title: string; description: string; coverImageUrl: string; organizationName: string; type: string; location: string; deadline: string }[]>([]);
+  const [successStories, setSuccessStories] = useState<{ id: string; beneficiaryName: string; beneficiaryRole: string; content: string; avatarUrl: string; stars: number; orgName: string }[]>([]);
   const [loadingMentors, setLoadingMentors] = useState(true);
   const [loadingCoaches, setLoadingCoaches] = useState(true);
   const [loadingProducts, setLoadingProducts] = useState(true);
@@ -421,36 +449,24 @@ export default function LandingPage() {
   const [loadingCourses, setLoadingCourses] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedCourse, setSelectedCourse] = useState<CourseItem | null>(null);
+  const [selectedSession, setSelectedSession] = useState<PublicSession | null>(null);
   const [bookingHost, setBookingHost] = useState<MentorUser | null>(null);
   const [bookingRole, setBookingRole] = useState<'mentor' | 'coach'>('mentor');
+  const [courseFilter, setCourseFilter] = useState<'all' | 'free' | 'paid'>('all');
+  const [sessionFilter, setSessionFilter] = useState<'all' | 'free' | 'paid'>('all');
 
   const [contactName, setContactName] = useState('');
   const [contactEmail, setContactEmail] = useState('');
   const [contactMessage, setContactMessage] = useState('');
 
-  // Load site config from API
   useEffect(() => {
     fetch('/api/public/site-config', { cache: 'no-store' }).then(r => r.json()).then(d => {
       if (d.config) setSiteConfig(d.config);
     }).catch(() => {});
   }, []);
 
-  // Apply platform primary color from admin config
   useEffect(() => {
-    const hex = siteConfig?.primaryColor?.replace(/^#/, '');
-    if (!hex || hex.length !== 6) return;
-    let r = parseInt(hex.slice(0, 2), 16) / 255;
-    let g = parseInt(hex.slice(2, 4), 16) / 255;
-    let b = parseInt(hex.slice(4, 6), 16) / 255;
-    const cmin = Math.min(r, g, b), cmax = Math.max(r, g, b), delta = cmax - cmin;
-    let h = 0, s = 0, l = (cmax + cmin) / 2;
-    if (delta !== 0) {
-      s = l > 0.5 ? delta / (2 - cmax - cmin) : delta / (cmax + cmin);
-      if (cmax === r) h = ((g - b) / delta + (g < b ? 6 : 0)) * 60;
-      else if (cmax === g) h = ((b - r) / delta + 2) * 60;
-      else h = ((r - g) / delta + 4) * 60;
-    }
-    document.documentElement.style.setProperty('--primary', `${Math.round(h)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`);
+    if (siteConfig?.primaryColor) applyOrgColor(siteConfig.primaryColor);
   }, [siteConfig?.primaryColor]);
 
   useEffect(() => {
@@ -493,6 +509,30 @@ export default function LandingPage() {
     }).catch(() => {}).finally(() => setLoadingCourses(false));
   }, []);
 
+  useEffect(() => {
+    fetch('/api/public/sessions').then(r => r.json()).then(d => {
+      setPublicSessions(d.sessions || []);
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetch('/api/public/articles').then(r => r.json()).then(d => {
+      setLatestArticles((d.articles || []).slice(0, 6));
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetch('/api/public/projects').then(r => r.json()).then(d => {
+      setLatestProjects((d.projects || []).slice(0, 6));
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetch('/api/public/success-stories').then(r => r.json()).then(d => {
+      setSuccessStories((d.stories || []).slice(0, 6));
+    }).catch(() => {});
+  }, []);
+
   const handleContactSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     toast({ title: 'شكراً لتواصلك! سنرد عليك قريباً.' });
@@ -501,7 +541,6 @@ export default function LandingPage() {
     setContactMessage('');
   };
 
-  // Derived values from config (with fallbacks)
   const cfg = siteConfig;
   const sections = {
     showStats: true, showFeatures: true, showOpportunities: true, showHowItWorks: true,
@@ -511,10 +550,9 @@ export default function LandingPage() {
   };
 
   const heroTitle = cfg?.hero?.title || 'بوابتك للتمكين والنجاح';
-  const heroSubtitle = cfg?.hero?.subtitle || 'منصة متكاملة تجمع بين التدريب المتخصص، الإرشاد الشخصي، والتجارة الإلكترونية\nلمساعدتك على بناء مستقبلك وتحقيق أهدافك.';
+  const heroSubtitle = cfg?.hero?.subtitle || 'منصة متكاملة تجمع بين التدريب المتخصص، الإرشاد الشخصي، والتجارة الإلكترونية لمساعدتك على بناء مستقبلك.';
   const heroCta = cfg?.hero?.ctaText || 'ابدأ رحلتك مجاناً';
-  const heroCtaSecondary = cfg?.hero?.ctaSecondaryText || 'تصفح المتجر';
-  const heroBg = cfg?.hero?.backgroundImage || '';
+  const heroCtaSecondary = cfg?.hero?.ctaSecondaryText || 'كيف تعمل المنصة';
 
   const statsData = cfg?.stats?.length ? cfg.stats : [
     { label: 'مستفيد نشط', value: '2,500+', icon: 'Users' },
@@ -524,9 +562,9 @@ export default function LandingPage() {
   ];
 
   const featuresData = cfg?.features?.length ? cfg.features : [
-    { title: 'تقارير وتحليلات', description: 'تابع تقدمك ونموك بتقارير مرئية شاملة تساعدك على اتخاذ قرارات أفضل.', icon: 'BarChart3' },
-    { title: 'توصيات بالذكاء الاصطناعي', description: 'احصل على توصيات مخصصة لمحتوى التدريب والموارد المناسبة لأهدافك.', icon: 'Zap' },
-    { title: 'أمان وموثوقية', description: 'بياناتك محمية بأحدث تقنيات الأمان. نضمن لك تجربة موثوقة وآمنة في كل وقت.', icon: 'Shield' },
+    { title: 'تتبع التقدم والنمو', description: 'تابع إنجازاتك خطوة بخطوة بتقارير مرئية واضحة تساعدك على معرفة ما حققته وما التالي.', icon: 'BarChart3' },
+    { title: 'توصيات ذكية بالذكاء الاصطناعي', description: 'احصل على توصيات مخصصة تناسب أهدافك وظروفك لتحقيق أقصى استفادة من المنصة.', icon: 'Zap' },
+    { title: 'أمان وخصوصية تامة', description: 'بياناتك ومعلوماتك الشخصية محمية بأحدث تقنيات التشفير. تجربة آمنة وموثوقة دائماً.', icon: 'Shield' },
   ];
 
   const howItWorksData = cfg?.howItWorks?.length ? cfg.howItWorks : [
@@ -536,7 +574,7 @@ export default function LandingPage() {
   ];
 
   const testimonialsData = cfg?.testimonials?.length ? cfg.testimonials : [
-    { name: 'سارة أحمد', role: 'مستفيدة - رائدة أعمال', text: 'بفضل EmpowerHub، تمكنت من إطلاق متجري الإلكتروني وتحقيق أول ألف ريال خلال شهرين فقط. الدعم والتدريب كانا استثنائيين!', stars: 5 },
+    { name: 'سارة أحمد', role: 'مستفيدة - رائدة أعمال', text: 'بفضل EmpowerHub، تمكنت من إطلاق متجري الإلكتروني وتحقيق أول ألف دينار خلال شهرين فقط. الدعم والتدريب كانا استثنائيين!', stars: 5 },
     { name: 'محمد الخالد', role: 'مدرب - خبير تسويق رقمي', text: 'المنصة أتاحت لي الفرصة للوصول إلى مئات المستفيدين ومشاركتهم خبرتي. الأدوات سهلة الاستخدام والدعم الفني ممتاز.', stars: 5 },
     { name: 'منظمة بناء المستقبل', role: 'منظمة غير ربحية', text: 'ساعدتنا المنصة في إدارة 200 مستفيد بكل احترافية. التقارير التفصيلية مكّنتنا من قياس أثر برامجنا بشكل دقيق.', stars: 5 },
   ];
@@ -548,12 +586,17 @@ export default function LandingPage() {
     { title: 'كمنظمة', description: 'أدر برامج التمكين الخاصة بك، وتابع تقدم المستفيدين بفعالية.', icon: 'Building', badge: '', link: '/register?role=organization' },
   ];
 
-  const ctaBanner = cfg?.ctaBanner ?? { title: 'جاهز للبدء؟ انضم إلى آلاف المستفيدين', subtitle: 'سجّل مجاناً اليوم وابدأ رحلتك نحو التمكين والنجاح مع EmpowerHub', primaryText: 'ابدأ مجاناً الآن', secondaryText: 'تجربة المنصة أولاً' };
+  const ctaBanner = cfg?.ctaBanner ?? {
+    title: 'جاهز للبدء؟ انضم إلى آلاف المستفيدين',
+    subtitle: 'سجّل مجاناً اليوم وابدأ رحلتك نحو التمكين والنجاح مع EmpowerHub',
+    primaryText: 'ابدأ مجاناً الآن',
+    secondaryText: 'تجربة المنصة أولاً',
+  };
 
   const opportunitiesData = cfg?.opportunities?.length ? cfg.opportunities : [
-    { title: 'برامج التدريب المهني', description: 'دورات متخصصة في التقنية، الأعمال والتصميم لتزويدك بمهارات سوق العمل الحديث.', icon: 'GraduationCap', badge: 'متاح الآن', color: 'bg-primary', link: '/register' },
-    { title: 'الإرشاد الفردي', description: 'جلسات مخصصة مع مرشدين خبراء لمساعدتك في رسم مسارك المهني وتحقيق أهدافك.', icon: 'Users', badge: 'مجاني', color: 'bg-sky-500', link: '/register' },
-    { title: 'ريادة الأعمال', description: 'ابدأ مشروعك، أطلق متجرك الإلكتروني، وابنِ مصدر دخل مستدام مع دعم متكامل.', icon: 'Store', badge: 'جديد', color: 'bg-amber-500', link: '/register' },
+    { title: 'مشاريع منزلية ناجحة', description: 'أطلق مشروعك من المنزل وابنِ متجرك الإلكتروني مع دعم متكامل من الفكرة حتى أول عملية بيع ناجحة.', icon: 'Store', badge: 'جديد', color: 'bg-amber-500', link: '/register' },
+    { title: 'التمكين الاقتصادي', description: 'مهارات مالية وأدوات عملية تساعدك على تحقيق الاستقلالية الاقتصادية وبناء مصدر دخل حقيقي ومستدام.', icon: 'TrendingUp', badge: 'متاح', color: 'bg-green-500', link: '/register' },
+    { title: 'مجتمع الدعم والتشبيك', description: 'انضم لمجتمع من المستفيدين والخبراء الذين يتشاركون التجارب ويدعمون بعضهم نحو النجاح.', icon: 'Users', badge: '', color: 'bg-primary', link: '/register' },
   ];
 
   const blogPostsData = cfg?.blogPosts?.length ? cfg.blogPosts : [
@@ -562,166 +605,290 @@ export default function LandingPage() {
     { title: 'قصص نجاح: التدريب الذي غيّر مساراتنا', excerpt: 'قصص ملهمة لأشخاص حققوا أهدافهم بفضل التدريب الصحيح والإرشاد المتخصص.', category: 'قصص نجاح', imageUrl: '' },
   ];
 
-  const contactInfo = cfg?.contact ?? { phone: '+966 XX XXX XXXX', whatsapp: '+966 XX XXX XXXX', whatsappLink: 'https://wa.me/966XXXXXXXXX', email: 'info@empowerhub.com' };
-  const footerData = cfg?.footer ?? { description: 'منصة متكاملة للتمكين الرقمي تجمع التدريب، الإرشاد، والتجارة الإلكترونية في مكان واحد.', email: 'info@empowerhub.com', phone: '', twitter: '', linkedin: '', instagram: '', copyright: '© 2024 EmpowerHub. جميع الحقوق محفوظة.' };
+  const contactInfo = cfg?.contact ?? {
+    phone: '+966 XX XXX XXXX', whatsapp: '+966 XX XXX XXXX',
+    whatsappLink: 'https://wa.me/966XXXXXXXXX', email: 'info@empowerhub.com',
+  };
+  const footerData = cfg?.footer ?? {
+    description: 'منصة متكاملة للتمكين الرقمي تجمع التدريب، الإرشاد، والتجارة الإلكترونية في مكان واحد.',
+    email: 'info@empowerhub.com', phone: '', twitter: '', linkedin: '', instagram: '',
+    copyright: '© 2024 EmpowerHub. جميع الحقوق محفوظة.',
+  };
+
+  const platformServices = [
+    {
+      icon: BookOpen,
+      color: 'bg-primary/10 text-primary',
+      title: 'الدورات التدريبية',
+      description: 'محتوى تدريبي متخصص من مدربين معتمدين في مختلف المجالات — من المهارات الرقمية إلى ريادة الأعمال.',
+      link: '#courses',
+      linkLabel: 'استعرض الدورات',
+    },
+    {
+      icon: Video,
+      color: 'bg-sky-500/10 text-sky-600',
+      title: 'الجلسات المباشرة',
+      description: 'حضور مباشر مع المدربين في جلسات تفاعلية مباشرة — سجّل مقدماً واحصل على تجربة تدريبية حقيقية.',
+      link: '/live-sessions',
+      linkLabel: 'اكتشف الجلسات',
+    },
+    {
+      icon: GraduationCap,
+      color: 'bg-violet-500/10 text-violet-600',
+      title: 'الإرشاد الشخصي',
+      description: 'تواصل مع مرشد متخصص يساعدك على رسم مسارك المهني وتجاوز التحديات بتوجيه فردي مثمر.',
+      link: '#experts',
+      linkLabel: 'تعرف على المرشدين',
+    },
+    {
+      icon: Calendar,
+      color: 'bg-amber-500/10 text-amber-600',
+      title: 'جلسات الإرشاد الجماعية',
+      description: 'جلسات مجدولة مفتوحة للمجتمع — احجز مقعدك وانضم إلى نقاشات وورش عمل تفاعلية مع الخبراء.',
+      link: '#sessions',
+      linkLabel: 'احجز جلسة',
+    },
+    {
+      icon: Briefcase,
+      color: 'bg-orange-500/10 text-orange-600',
+      title: 'الفرص والمشاريع',
+      description: 'اكتشف فرص عمل، مشاريع تطوعية، وشراكات من منظمات موثوقة تبحث عن مواهب مجتمعنا.',
+      link: '/projects',
+      linkLabel: 'استعرض الفرص',
+    },
+    {
+      icon: FileText,
+      color: 'bg-emerald-500/10 text-emerald-600',
+      title: 'المقالات والمعرفة',
+      description: 'اقرأ مقالات عملية ورؤى من خبراء المنصة في التسويق الرقمي، ريادة الأعمال، والتطوير المهني.',
+      link: '/articles',
+      linkLabel: 'اقرأ المقالات',
+    },
+    {
+      icon: Store,
+      color: 'bg-rose-500/10 text-rose-600',
+      title: 'المتجر الإلكتروني',
+      description: 'تصفح منتجات حقيقية من رواد أعمال في مجتمعنا — يدوية، رقمية، وخدمات متنوعة بأسعار مناسبة.',
+      link: '/market',
+      linkLabel: 'تسوق الآن',
+    },
+    {
+      icon: Building2,
+      color: 'bg-indigo-500/10 text-indigo-600',
+      title: 'إدارة برامج التمكين',
+      description: 'للمنظمات والجمعيات: أدر مستفيديك، وزّع الدورات والجلسات، وتابع التقدم بتقارير تفصيلية.',
+      link: '/register?role=organization',
+      linkLabel: 'للمنظمات',
+    },
+  ];
+
+  const logoSrc = cfg?.logoUrl || '';
 
   return (
     <div className="bg-background text-foreground" dir="rtl">
-      {/* Header */}
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
-        <div className="container flex h-16 items-center">
-          <Link href="/" className="flex items-center gap-2 font-bold text-lg">
-            <Logo />
-            <span className="gradient-text">{cfg?.siteName || 'EmpowerHub'}</span>
-          </Link>
-          <nav className="flex-1 mr-8 hidden md:flex gap-6 text-sm font-medium">
-            <Link href="#features" className="text-muted-foreground transition-colors hover:text-primary">الميزات</Link>
-            <Link href="#stats" className="text-muted-foreground transition-colors hover:text-primary">إحصائياتنا</Link>
-            <Link href="#roles" className="text-muted-foreground transition-colors hover:text-primary">انضم إلينا</Link>
-            <Link href="/market" className="text-muted-foreground transition-colors hover:text-primary">المتجر</Link>
-            <Link href="/try-roles" className="text-muted-foreground transition-colors hover:text-primary">تجربة المنصة</Link>
-          </nav>
-          <div className="flex items-center gap-2 mr-auto">
-            <Button variant="ghost" asChild className="hidden sm:flex">
-              <Link href="/login">تسجيل الدخول</Link>
-            </Button>
-            <Button asChild className="shadow-md">
-              <Link href="/register">سجّل الآن</Link>
-            </Button>
-          </div>
-        </div>
-      </header>
+
+      <SiteHeader />
 
       <main>
-        {/* Hero Section */}
-        <section className="relative flex min-h-[85vh] items-center justify-center text-center text-white overflow-hidden">
-          {heroBg ? (
-            <img src={heroBg} alt="" className="absolute inset-0 w-full h-full object-cover scale-105" />
-          ) : heroImage ? (
-            <Image src={heroImage.imageUrl} alt={heroImage.description} fill className="object-cover scale-105" data-ai-hint={heroImage.imageHint} priority />
-          ) : null}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/60 to-black/80" />
 
-          <div className="relative z-10 container px-4 md:px-6 animate-fade-in-up">
-            <Badge className="mb-6 bg-primary/20 text-primary-foreground border border-primary/30 backdrop-blur px-4 py-1.5 text-sm">
-              🚀 {cfg?.tagline || 'منصة التمكين الرقمي الشاملة'}
-            </Badge>
-            <h1 className="text-4xl font-extrabold tracking-tight md:text-5xl lg:text-7xl leading-tight">
-              <span className="block">EmpowerHub</span>
-              <span className="block mt-3 text-3xl md:text-4xl lg:text-5xl font-bold text-white/90">
-                {heroTitle}
-              </span>
-            </h1>
-            <p className="mt-6 max-w-2xl mx-auto text-lg md:text-xl text-white/80 leading-relaxed whitespace-pre-line">
-              {heroSubtitle}
-            </p>
-            <div className="mt-10 flex flex-wrap justify-center gap-4">
-              <Button size="lg" asChild className="shadow-xl text-base px-8 py-6">
-                <Link href="/register">
-                  {heroCta}
-                  <ArrowLeft className="mr-2 h-5 w-5" />
-                </Link>
-              </Button>
-              <Button size="lg" variant="outline" asChild className="bg-white/10 border-white/30 text-white hover:bg-white/20 backdrop-blur text-base px-8 py-6">
-                <Link href="#features">{heroCtaSecondary}</Link>
-              </Button>
-            </div>
-            <div className="mt-12 flex flex-wrap justify-center gap-8 text-sm text-white/70">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-primary" />
-                <span>مجاني تماماً للبدء</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-primary" />
-                <span>لا يتطلب بطاقة ائتمان</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-primary" />
-                <span>دعم باللغة العربية</span>
-              </div>
-            </div>
-          </div>
+        {/* ── Hero ────────────────────────────────────────────────────────────── */}
+        <section className="relative min-h-[85vh] lg:min-h-screen flex items-center overflow-hidden bg-background">
+          {/* Subtle grid pattern */}
+          <div
+            className="absolute inset-0 opacity-[0.025] pointer-events-none"
+            style={{
+              backgroundImage: 'linear-gradient(hsl(var(--border)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--border)) 1px, transparent 1px)',
+              backgroundSize: '64px 64px',
+            }}
+          />
+          {/* Gradient blob */}
+          <div className="absolute top-1/3 left-1/4 w-[700px] h-[500px] bg-primary/5 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-sky-500/4 rounded-full blur-3xl pointer-events-none" />
 
-          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
-            <ChevronDown className="h-6 w-6 text-white/50" />
+          <div className="relative z-10 container py-16 sm:py-20 lg:py-28">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+
+              {/* ── Text Column ── */}
+              <div className="text-center lg:text-right">
+                {/* Tagline pill */}
+                <div className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground border border-border/80 rounded-full px-3.5 py-1.5 mb-6 sm:mb-8 bg-card/60 backdrop-blur-sm">
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse shrink-0" />
+                  <span className="truncate">{cfg?.tagline || 'منصة التمكين الرقمي الشاملة'}</span>
+                </div>
+
+                {/* Headline */}
+                <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-foreground leading-[1.1] mb-5 sm:mb-6">
+                  {heroTitle}
+                </h1>
+
+                {/* Subtitle */}
+                <p className="text-base sm:text-lg text-muted-foreground max-w-xl mx-auto lg:mx-0 leading-relaxed mb-8 sm:mb-10">
+                  {heroSubtitle}
+                </p>
+
+                {/* CTAs */}
+                <div className="flex flex-col sm:flex-row justify-center lg:justify-start gap-3 mb-8 sm:mb-10">
+                  <Button size="lg" asChild className="h-12 px-7 text-base font-semibold shadow-sm w-full sm:w-auto">
+                    <Link href="/register">
+                      {heroCta}
+                      <ArrowLeft className="mr-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                  <Button size="lg" variant="outline" asChild className="h-12 px-7 text-base w-full sm:w-auto">
+                    <Link href="#how-it-works">{heroCtaSecondary}</Link>
+                  </Button>
+                </div>
+
+                {/* Trust strip */}
+                <div className="flex flex-wrap justify-center lg:justify-start gap-x-5 gap-y-2 text-xs sm:text-sm text-muted-foreground">
+                  {['مجاني تماماً للبدء', 'لا يتطلب بطاقة ائتمان', 'دعم باللغة العربية'].map((t, i) => (
+                    <div key={i} className="flex items-center gap-1.5">
+                      <CheckCircle className="h-3.5 w-3.5 text-primary shrink-0" />
+                      <span>{t}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* ── Visual Column — Dashboard mockup ── */}
+              <div className="hidden lg:flex items-center justify-center">
+                <div className="relative w-full max-w-sm xl:max-w-md">
+                  {/* Glow behind card */}
+                  <div className="absolute inset-6 bg-primary/10 rounded-3xl blur-2xl pointer-events-none" />
+
+                  {/* Main dashboard card */}
+                  <div className="relative rounded-2xl border border-border bg-card shadow-2xl p-5 flex flex-col gap-4">
+
+                    {/* Top bar */}
+                    <div className="flex items-center justify-between pb-3 border-b border-border">
+                      <span className="text-sm font-bold text-foreground">لوحة التحكم</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-full bg-green-500" />
+                        <span className="text-xs text-muted-foreground">نشط</span>
+                      </div>
+                    </div>
+
+                    {/* Profile row */}
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full bg-primary/15 flex items-center justify-center shrink-0 text-sm font-extrabold text-primary">ن</div>
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">مرحباً، نور! 👋</p>
+                        <p className="text-xs text-muted-foreground">مشروعك المنزلي ينمو</p>
+                      </div>
+                    </div>
+
+                    {/* Stats row */}
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { label: 'المبيعات', value: '١٢٤٠', color: 'text-primary' },
+                        { label: 'الدورات', value: '٥', color: 'text-sky-500' },
+                        { label: 'الجلسات', value: '١٢', color: 'text-amber-500' },
+                      ].map((s, idx) => (
+                        <div key={idx} className="bg-muted/50 rounded-xl p-2.5 text-center">
+                          <div className={`text-lg font-extrabold ${s.color} tabular-nums leading-none mb-0.5`}>{s.value}</div>
+                          <div className="text-[10px] text-muted-foreground">{s.label}</div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Progress bar */}
+                    <div>
+                      <div className="flex justify-between text-[10px] text-muted-foreground mb-1.5">
+                        <span>تقدم دورة التسويق الرقمي</span>
+                        <span className="font-semibold text-primary">٧٥٪</span>
+                      </div>
+                      <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div className="h-full w-3/4 bg-primary rounded-full" />
+                      </div>
+                    </div>
+
+                    {/* Upcoming session */}
+                    <div className="flex items-center gap-3 p-3 rounded-xl bg-primary/5 border border-primary/15">
+                      <div className="h-8 w-8 rounded-full bg-primary/15 flex items-center justify-center shrink-0 text-xs font-bold text-primary">س</div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-foreground truncate">جلسة مع المرشدة سارة</p>
+                        <p className="text-[10px] text-muted-foreground">اليوم — ٣:٠٠ مساءً</p>
+                      </div>
+                      <span className="text-[10px] font-semibold text-primary bg-primary/10 rounded-full px-2 py-0.5 shrink-0">قريباً</span>
+                    </div>
+
+                    {/* New store order */}
+                    <div className="flex items-center gap-3 p-3 rounded-xl bg-amber-500/5 border border-amber-500/15">
+                      <div className="h-8 w-8 rounded-full bg-amber-500/15 flex items-center justify-center shrink-0">
+                        <Store className="h-3.5 w-3.5 text-amber-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-foreground">طلب جديد في متجرك!</p>
+                        <p className="text-[10px] text-muted-foreground">منتج يدوي — ٢٥ د.أ</p>
+                      </div>
+                      <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
+                    </div>
+                  </div>
+
+                  {/* Floating badge top */}
+                  <div className="absolute -top-3 -right-4 bg-card border border-border rounded-xl shadow-lg px-3 py-2 flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                    <span className="text-xs font-semibold text-foreground whitespace-nowrap">٢٫٥٠٠+ مستفيدة</span>
+                  </div>
+
+                  {/* Floating badge bottom */}
+                  <div className="absolute -bottom-3 -left-4 bg-card border border-border rounded-xl shadow-lg px-3 py-2 flex items-center gap-1.5">
+                    <Star className="h-3 w-3 text-amber-400 fill-amber-400" />
+                    <span className="text-xs font-semibold text-foreground whitespace-nowrap">٤.٩ تقييم المستفيدين</span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
           </div>
         </section>
 
-        {/* Stats Section */}
+        {/* ── Impact Strip ────────────────────────────────────────────────────── */}
         {sections.showStats && (
-          <section id="stats" className="py-16 bg-card border-y">
-            <div className="container px-4 md:px-6">
-              <div className={`grid grid-cols-2 md:grid-cols-${Math.min(4, statsData.length)} gap-8`}>
-                {statsData.map((s, i) => (
-                  <StatCard key={i} number={s.value} label={s.label} icon={iconMap[s.icon] ?? <Star className="h-6 w-6" />} />
-                ))}
-              </div>
+          <section className="border-y border-border">
+            {/* gap-px + bg-border creates 1px dividers in all directions regardless of RTL */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-border">
+              {statsData.map((s, i) => (
+                <div key={i} className="bg-card text-center py-8 sm:py-10 px-4 sm:px-6">
+                  <div className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-foreground tabular-nums tracking-tight mb-1.5">
+                    {s.value}
+                  </div>
+                  <div className="text-xs sm:text-sm text-muted-foreground">{s.label}</div>
+                </div>
+              ))}
             </div>
           </section>
         )}
 
-        {/* Combined Opportunities + Features Section */}
-        {(sections.showOpportunities || sections.showFeatures) && (() => {
-          // When opportunities are shown, exclude features with same or conceptually overlapping icons
-          const oppIcons = new Set(opportunitiesData.map(o => o.icon));
-          // BookOpen ~ GraduationCap (both = training), Store ~ Store (marketplace)
-          const conceptualOverlap: Record<string, string> = { GraduationCap: 'BookOpen', BookOpen: 'GraduationCap' };
-          Object.keys(conceptualOverlap).forEach(k => { if (oppIcons.has(k)) oppIcons.add(conceptualOverlap[k]); });
-
-          const filteredFeatures = sections.showOpportunities
-            ? featuresData.filter(f => !oppIcons.has(f.icon))
-            : featuresData;
-
-          const allCards = [
-            ...(sections.showOpportunities ? opportunitiesData.map((o, i) => ({ title: o.title, description: o.description, icon: o.icon, color: o.color || featureColors[i % featureColors.length] })) : []),
-            ...filteredFeatures.map((f, i) => ({ title: f.title, description: f.description, icon: f.icon, color: featureColors[(i + (sections.showOpportunities ? opportunitiesData.length : 0)) % featureColors.length] })),
-          ];
-
-          return (
-            <section id="features" className="py-16 md:py-24">
-              <div className="container px-4 md:px-6">
-                <div className="text-center mb-14">
-                  <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">ما نقدمه</Badge>
-                  <h2 className="text-3xl font-bold tracking-tight md:text-4xl">كل ما تحتاجه للنجاح في مكان واحد</h2>
-                  <p className="mt-3 text-lg text-muted-foreground max-w-2xl mx-auto">
-                    فرص متنوعة وأدوات متكاملة مصممة لتناسب طموحاتك وتحقق أهدافك المهنية والشخصية.
-                  </p>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {allCards.map((card, i) => (
-                    <FeatureCard
-                      key={i}
-                      title={card.title}
-                      description={card.description}
-                      color={card.color}
-                      icon={<span className="text-white">{iconMap[card.icon] ?? <Sparkles className="h-6 w-6" />}</span>}
-                    />
-                  ))}
-                </div>
-              </div>
-            </section>
-          );
-        })()}
-
-        {/* How it works */}
+        {/* ── How It Works ────────────────────────────────────────────────────── */}
         {sections.showHowItWorks && howItWorksData.length > 0 && (
-          <section className="py-16 md:py-24 bg-muted/40">
-            <div className="container px-4 md:px-6">
-              <div className="text-center mb-14">
-                <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">كيف تعمل المنصة</Badge>
-                <h2 className="text-3xl font-bold tracking-tight">ابدأ رحلتك في {howItWorksData.length} خطوات بسيطة</h2>
+          <section id="how-it-works" className="py-16 sm:py-20 md:py-28">
+            <div className="container">
+              {/* Centered header */}
+              <div className="text-center mb-14 sm:mb-20">
+                <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">كيف تعمل المنصة</p>
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground">
+                  من الفكرة إلى النجاح في خطوات واضحة
+                </h2>
               </div>
-              <div className={`grid grid-cols-1 md:grid-cols-${Math.min(3, howItWorksData.length)} gap-8`}>
+
+              {/* 3-column horizontal grid */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-10 md:gap-8 lg:gap-14">
                 {howItWorksData.map((item, i) => (
-                  <div key={i} className="text-center relative z-10">
-                    <div className="flex items-center justify-center h-20 w-20 rounded-full bg-primary text-primary-foreground text-2xl font-extrabold mx-auto mb-4 shadow-lg shadow-primary/30">
-                      {item.step}
+                  <div key={i} className="flex flex-col">
+                    {/* Giant ghost number */}
+                    <span className="text-8xl sm:text-9xl md:text-[8rem] lg:text-[9rem] font-extrabold text-foreground/[0.06] leading-none select-none tabular-nums mb-4">
+                      {String(i + 1).padStart(2, '0')}
+                    </span>
+                    {/* Step content — overlaps the number slightly */}
+                    <div className="-mt-4 sm:-mt-6">
+                      <h3 className="text-xl sm:text-2xl font-bold text-foreground mb-2 sm:mb-3">
+                        {item.title}
+                      </h3>
+                      <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
+                        {item.desc}
+                      </p>
                     </div>
-                    <div className="flex justify-center mb-3 text-primary">
-                      {iconMap[item.icon] ?? <CheckCircle className="h-8 w-8" />}
-                    </div>
-                    <h3 className="text-xl font-bold mb-2">{item.title}</h3>
-                    <p className="text-muted-foreground text-sm leading-relaxed">{item.desc}</p>
                   </div>
                 ))}
               </div>
@@ -729,374 +896,659 @@ export default function LandingPage() {
           </section>
         )}
 
-        {/* Roles CTA Section */}
+        {/* ── All Platform Services ────────────────────────────────────────────── */}
+        <section id="services" className="py-16 sm:py-20 md:py-28 bg-muted/30">
+          <div className="container">
+            <div className="text-center mb-12 sm:mb-16">
+              <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">ما تقدمه المنصة</p>
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-3">
+                كل ما تحتاجه لبناء مستقبلك في مكان واحد
+              </h2>
+              <p className="text-muted-foreground text-sm sm:text-base max-w-xl mx-auto leading-relaxed">
+                منصة متكاملة تجمع التدريب، الإرشاد، المشاريع، والتجارة — كل شيء تحتاجه في رحلة تمكينك الرقمي.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {platformServices.map((svc, i) => (
+                <Link
+                  key={i}
+                  href={svc.link}
+                  className="group p-5 rounded-2xl bg-card border border-border hover:border-primary/30 hover:shadow-md transition-all duration-200 flex flex-col gap-4"
+                >
+                  <div className={`h-10 w-10 rounded-xl ${svc.color} flex items-center justify-center shrink-0`}>
+                    <svc.icon className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-sm font-bold text-foreground mb-1.5 group-hover:text-primary transition-colors">
+                      {svc.title}
+                    </h3>
+                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">{svc.description}</p>
+                  </div>
+                  <div className="flex items-center gap-1 text-xs font-semibold text-primary mt-auto">
+                    {svc.linkLabel}
+                    <ArrowLeft className="h-3 w-3" />
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── Roles / Join ────────────────────────────────────────────────────── */}
         {sections.showRoles && rolesData.length > 0 && (
-          <section id="roles" className="py-16 md:py-24">
-            <div className="container px-4 md:px-6">
-              <div className="text-center mb-14">
-                <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">انضم إلينا</Badge>
-                <h2 className="text-3xl font-bold tracking-tight">انضم إلى مجتمعنا اليوم</h2>
-                <p className="mt-3 text-lg text-muted-foreground">
-                  سواء كنت مستفيدًا، مرشدًا، أو منظمة، هناك مكان لك في EmpowerHub.
+          <section id="roles" className="py-16 sm:py-20 md:py-28">
+            <div className="container">
+              <div className="text-center mb-10 sm:mb-14">
+                <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">انضم إلينا</p>
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground">
+                  ما دورك في منظومة التمكين؟
+                </h2>
+                <p className="mt-3 text-muted-foreground text-sm sm:text-base leading-relaxed max-w-xl mx-auto">
+                  سواء كنت تسعى للتعلم، أو تملك خبرة تشاركها، أو تقود منظمة — هناك مكان لك هنا.
                 </p>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {rolesData.map((role, i) => (
-                  <RoleCard
+                  <Link
                     key={i}
-                    icon={iconMap[role.icon] ?? <UserCheck size={32} />}
-                    title={role.title}
-                    description={role.description}
-                    link={role.link || '/register'}
-                    badge={role.badge || undefined}
-                  />
+                    href={role.link || '/register'}
+                    className="group p-5 rounded-2xl border border-border hover:border-primary/40 bg-card transition-all flex flex-col gap-3"
+                  >
+                    <div className="text-xs font-bold text-primary/30 tabular-nums tracking-widest">
+                      {String(i + 1).padStart(2, '0')}
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-foreground group-hover:text-primary transition-colors mb-1.5">
+                        {role.title}
+                      </h3>
+                      <p className="text-sm text-muted-foreground leading-relaxed">{role.description}</p>
+                    </div>
+                    <div className="flex items-center gap-1 text-xs font-semibold text-primary mt-auto">
+                      ابدأ الآن <ArrowLeft className="h-3 w-3" />
+                    </div>
+                  </Link>
                 ))}
               </div>
             </div>
           </section>
         )}
 
-        {/* Featured Mentors Section */}
-        {sections.showMentors && (
-          <section id="mentors" className="py-16 md:py-24 bg-muted/40">
-            <div className="container px-4 md:px-6">
-              <div className="text-center mb-14">
-                <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">مرشدون</Badge>
-                <h2 className="text-3xl font-bold tracking-tight">مرشدون متميزون</h2>
-                <p className="mt-3 text-lg text-muted-foreground">
-                  تواصل مع نخبة من المرشدين المتخصصين الذين يساعدونك في رحلتك نحو النجاح.
-                </p>
-              </div>
-              {loadingMentors || mentors.length === 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {[...Array(4)].map((_, i) => <ShimmerCard key={i} />)}
+        {/* ── Expert Preview ──────────────────────────────────────────────────── */}
+        {(sections.showMentors || sections.showCoaches) && (
+          <section id="experts" className="py-16 sm:py-20 md:py-28 bg-muted/30">
+            <div className="container">
+              {/* Section header */}
+              <div className="text-center mb-10 sm:mb-14">
+                <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">فريق الخبراء</p>
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-4">تعلم من الأفضل</h2>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {sections.showMentors && (
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href="/register?role=mentor">انضم كمرشد</Link>
+                    </Button>
+                  )}
+                  {sections.showCoaches && (
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href="/register?role=coach">انضم كمدرب</Link>
+                    </Button>
+                  )}
                 </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {mentors.map(m => <MentorCard key={m.id} mentor={m} onBook={h => { setBookingHost(h); setBookingRole('mentor'); }} />)}
+              </div>
+
+              {/* Mentors */}
+              {sections.showMentors && (
+                <div className="mb-10 sm:mb-12">
+                  <p className="text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-4 sm:mb-5">المرشدون</p>
+                  {loadingMentors ? (
+                    <div className="flex gap-4 overflow-x-auto pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                      {[...Array(4)].map((_, i) => <div key={i} className="w-[82vw] sm:w-72 shrink-0 h-52 rounded-2xl bg-muted animate-pulse" />)}
+                    </div>
+                  ) : mentors.length > 0 ? (
+                    <AutoCarousel count={mentors.length}>
+                      {mentors.map(m => (
+                        <div key={m.id} className="w-[82vw] sm:w-72 shrink-0 snap-start" dir="rtl">
+                          <ExpertCard expert={m} role="mentor" currencySymbol={currencySymbol} onBook={() => { setBookingHost(m); setBookingRole('mentor'); }} />
+                        </div>
+                      ))}
+                    </AutoCarousel>
+                  ) : (
+                    <p className="text-sm text-muted-foreground py-4">لا يوجد مرشدون بعد.</p>
+                  )}
                 </div>
               )}
-              <div className="text-center mt-10">
-                <Button variant="outline" asChild>
-                  <Link href="/register?role=mentor">انضم كمرشد</Link>
-                </Button>
-              </div>
+
+              {/* Coaches */}
+              {sections.showCoaches && (
+                <div>
+                  <p className="text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-4 sm:mb-5">المدربون</p>
+                  {loadingCoaches ? (
+                    <div className="flex gap-4 overflow-x-auto pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                      {[...Array(4)].map((_, i) => <div key={i} className="w-[82vw] sm:w-72 shrink-0 h-52 rounded-2xl bg-muted animate-pulse" />)}
+                    </div>
+                  ) : coaches.length > 0 ? (
+                    <AutoCarousel count={coaches.length}>
+                      {coaches.map(c => (
+                        <div key={c.id} className="w-[82vw] sm:w-72 shrink-0 snap-start" dir="rtl">
+                          <ExpertCard expert={c} role="coach" currencySymbol={currencySymbol} onBook={() => { setBookingHost(c); setBookingRole('coach'); }} />
+                        </div>
+                      ))}
+                    </AutoCarousel>
+                  ) : (
+                    <p className="text-sm text-muted-foreground py-4">لا يوجد مدربون بعد.</p>
+                  )}
+                </div>
+              )}
             </div>
           </section>
         )}
 
-        {/* Featured Coaches Section */}
-        {sections.showCoaches && (
-          <section id="coaches" className="py-16 md:py-24">
-            <div className="container px-4 md:px-6">
-              <div className="text-center mb-14">
-                <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">مدربون</Badge>
-                <h2 className="text-3xl font-bold tracking-tight">مدربون متميزون</h2>
-                <p className="mt-3 text-lg text-muted-foreground">
-                  تعلم من أفضل المدربين في مختلف المجالات وطور مهاراتك معهم.
-                </p>
-              </div>
-              {loadingCoaches || coaches.length === 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {[...Array(4)].map((_, i) => <ShimmerCard key={i} />)}
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {coaches.map(c => <CoachCard key={c.id} coach={c} onBook={h => { setBookingHost(h); setBookingRole('coach'); }} />)}
-                </div>
-              )}
-              <div className="text-center mt-10">
-                <Button variant="outline" asChild>
-                  <Link href="/register?role=coach">انضم كمدرب</Link>
-                </Button>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* Courses Section */}
+        {/* ── Courses ─────────────────────────────────────────────────────────── */}
         {sections.showCourses && (
-          <section id="courses" className="py-16 md:py-24 bg-muted/40">
-            <div className="container px-4 md:px-6">
-              <div className="text-center mb-14">
-                <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">الدورات التدريبية</Badge>
-                <h2 className="text-3xl font-bold tracking-tight">دورات تدريبية من مدربينا</h2>
-                <p className="mt-3 text-lg text-muted-foreground">
-                  طور مهاراتك مع دورات متخصصة يقدمها أفضل المدربين على المنصة.
-                </p>
+          <section id="courses" className="py-16 sm:py-20 md:py-28">
+            <div className="container">
+              <div className="text-center mb-10 sm:mb-12">
+                <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">الدورات التدريبية</p>
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-4">
+                  طور مهاراتك مع دوراتنا
+                </h2>
+                {!loadingCourses && courses.length > 0 && (
+                  <div className="inline-flex items-center gap-0.5 bg-muted/70 rounded-lg p-0.5 border border-border/50">
+                    {(['all', 'free', 'paid'] as const).map(f => (
+                      <button key={f} onClick={() => setCourseFilter(f)}
+                        className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${courseFilter === f ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
+                        {f === 'all' ? 'الكل' : f === 'free' ? 'مجاني' : 'مدفوع'}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
               {loadingCourses ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {[...Array(4)].map((_, i) => <ShimmerCard key={i} />)}
+                <div className="flex gap-4 overflow-x-auto pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  {[...Array(4)].map((_, i) => <div key={i} className="w-[82vw] sm:w-72 shrink-0 h-60 rounded-xl bg-muted animate-pulse" />)}
                 </div>
               ) : courses.length === 0 ? (
-                <div className="text-center py-10 text-muted-foreground">
-                  <BookOpen className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                  <p>لا توجد دورات بعد.</p>
+                <div className="py-12 text-center text-muted-foreground">
+                  <BookOpen className="h-10 w-10 mx-auto mb-3 opacity-20" />
+                  <p className="text-sm">لا توجد دورات بعد.</p>
                 </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {courses.map(c => <CourseCard key={c.id} course={c} onEnroll={setSelectedCourse} />)}
+              ) : (() => {
+                const filtered = courses.filter(c => {
+                  if (courseFilter === 'free') return c.price === 0 || c.price == null;
+                  if (courseFilter === 'paid') return c.price != null && c.price > 0;
+                  return true;
+                });
+                return filtered.length === 0 ? (
+                  <div className="py-12 text-center text-muted-foreground">
+                    <BookOpen className="h-10 w-10 mx-auto mb-3 opacity-20" />
+                    <p className="text-sm">لا توجد دورات {courseFilter === 'free' ? 'مجانية' : 'مدفوعة'} حالياً.</p>
+                  </div>
+                ) : (
+                  <div className="flex gap-4 overflow-x-auto pb-3 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    {filtered.map(c => (
+                      <div key={c.id} className="w-[82vw] sm:w-72 shrink-0 snap-start">
+                        <CourseCard course={c} currencySymbol={currencySymbol} onEnroll={setSelectedCourse} />
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+          </section>
+        )}
+
+        {/* ── Public Sessions ─────────────────────────────────────────────────── */}
+        {publicSessions.length > 0 && (
+          <section id="sessions" className="py-16 sm:py-20 md:py-28 bg-muted/30">
+            <div className="container">
+              <div className="text-center mb-8 sm:mb-10">
+                <p className="text-[10px] sm:text-xs font-semibold text-primary uppercase tracking-widest mb-2">جلسات إرشادية</p>
+                <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-4">الجلسات المتاحة</h2>
+                <div className="inline-flex items-center gap-0.5 bg-background rounded-lg p-0.5 border border-border/50">
+                  {(['all', 'free', 'paid'] as const).map(f => (
+                    <button key={f} onClick={() => setSessionFilter(f)}
+                      className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${sessionFilter === f ? 'bg-muted shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
+                      {f === 'all' ? 'الكل' : f === 'free' ? 'مجاني' : 'مدفوع'}
+                    </button>
+                  ))}
                 </div>
-              )}
+              </div>
+              {(() => {
+                const filtered = publicSessions.filter(s => {
+                  if (sessionFilter === 'free') return s.price === 0 || s.price == null;
+                  if (sessionFilter === 'paid') return s.price != null && s.price > 0;
+                  return true;
+                });
+                return filtered.length === 0 ? (
+                  <div className="py-10 text-center text-muted-foreground">
+                    <Calendar className="h-10 w-10 mx-auto mb-3 opacity-20" />
+                    <p className="text-sm">لا توجد جلسات {sessionFilter === 'free' ? 'مجانية' : 'مدفوعة'} حالياً.</p>
+                  </div>
+                ) : (
+                  <div className="flex gap-4 overflow-x-auto pb-3 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    {filtered.map(s => (
+                      <div key={s.id} className="w-[82vw] sm:w-72 shrink-0 snap-start">
+                        <PublicSessionCard session={s} currencySymbol={currencySymbol} onBook={() => setSelectedSession(s)} />
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
           </section>
         )}
 
-        {/* Blog / Resources Section */}
-        {sections.showBlog && blogPostsData.length > 0 && (
-          <section id="blog" className="py-16 md:py-24">
-            <div className="container px-4 md:px-6">
-              <div className="text-center mb-14">
-                <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">الموارد والمقالات</Badge>
-                <h2 className="text-3xl font-bold tracking-tight">تعلم وتطور مع محتوانا</h2>
-                <p className="mt-3 text-lg text-muted-foreground max-w-2xl mx-auto">
-                  مقالات ونصائح من خبراء المنصة لمساعدتك في رحلة التمكين والنجاح.
-                </p>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {blogPostsData.map((post, i) => (
-                  <BlogCard
-                    key={i}
-                    title={post.title}
-                    excerpt={post.excerpt}
-                    category={post.category}
-                    imageUrl={post.imageUrl}
-                    link={post.link}
-                  />
-                ))}
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* Testimonials */}
-        {sections.showTestimonials && testimonialsData.length > 0 && (
-          <section className="py-16 md:py-24 bg-muted/40">
-            <div className="container px-4 md:px-6">
-              <div className="text-center mb-14">
-                <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">آراء مستخدمينا</Badge>
-                <h2 className="text-3xl font-bold tracking-tight">ماذا يقول من جربوا المنصة</h2>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {testimonialsData.map((t, i) => (
-                  <TestimonialCard key={i} name={t.name} role={t.role} text={t.text} stars={t.stars} />
-                ))}
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* Marketplace Preview Section */}
+        {/* ── Marketplace Preview ─────────────────────────────────────────────── */}
         {sections.showProducts && (
-          <section id="marketplace" className="py-16 md:py-24">
-            <div className="container px-4 md:px-6">
-              <div className="text-center mb-14">
-                <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">المتجر</Badge>
-                <h2 className="text-3xl font-bold tracking-tight">منتجات من مجتمعنا</h2>
-                <p className="mt-3 text-lg text-muted-foreground">
-                  اكتشف منتجات متنوعة من رواد الأعمال في منصتنا وادعم مشاريعهم.
-                </p>
-              </div>
-              {loadingProducts ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {[...Array(6)].map((_, i) => (
-                    <Card key={i} className="border-0 shadow-md bg-card animate-pulse overflow-hidden">
-                      <div className="h-40 bg-muted w-full" />
-                      <CardContent className="pt-4 flex flex-col gap-2">
-                        <div className="h-4 w-3/4 rounded bg-muted" />
-                        <div className="h-3 w-1/3 rounded bg-muted" />
-                      </CardContent>
-                      <CardFooter><div className="h-9 w-full rounded bg-muted" /></CardFooter>
-                    </Card>
-                  ))}
-                </div>
-              ) : products.length === 0 ? (
-                <div className="text-center py-16 text-muted-foreground">
-                  <Store className="h-16 w-16 mx-auto mb-4 opacity-20" />
-                  <p className="text-lg">لا توجد منتجات بعد. كن أول من يضيف منتجه!</p>
-                  <Button asChild className="mt-6"><Link href="/register">ابدأ الآن</Link></Button>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {products.map(p => <ProductCard key={p.id} product={p} onOrder={setSelectedProduct} />)}
-                </div>
-              )}
-              <div className="text-center mt-10">
-                <Button asChild size="lg">
-                  <Link href="/market">تصفح جميع المنتجات <ArrowLeft className="mr-2 h-4 w-4" /></Link>
-                </Button>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* Stores Section */}
-        {sections.showStores && (
-          <section id="stores" className="py-16 md:py-24 bg-muted/20">
-            <div className="container px-4 md:px-6">
-              <div className="text-center mb-14">
-                <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">المتاجر</Badge>
-                <h2 className="text-3xl font-bold tracking-tight">متاجر رواد الأعمال</h2>
-                <p className="mt-3 text-lg text-muted-foreground">
-                  اكتشف متاجر المستفيدين في مجتمعنا وادعم مشاريعهم.
-                </p>
-              </div>
-              {loadingStores ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {[...Array(3)].map((_, i) => (
-                    <Card key={i} className="border-0 shadow-md animate-pulse">
-                      <CardContent className="pt-6 flex flex-col gap-2">
-                        <div className="h-5 w-3/4 rounded bg-muted" />
-                        <div className="h-4 w-1/2 rounded bg-muted" />
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              ) : publicStores.length === 0 ? (
-                <div className="text-center py-10 text-muted-foreground">
-                  <Store className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                  <p>لا توجد متاجر بعد.</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {publicStores.map(store => (
-                    <Card key={store.id} className="border-0 shadow-md hover:shadow-lg transition-shadow flex flex-col">
-                      <CardContent className="pt-6 flex flex-col gap-2 flex-grow">
-                        <div className="flex items-center gap-3 mb-2">
-                          <div className="p-2 bg-primary/10 rounded-full">
-                            <Store className="h-5 w-5 text-primary" />
-                          </div>
-                          <h3 className="font-bold text-base">{store.name}</h3>
-                        </div>
-                        {store.beneficiaryName && <p className="text-sm text-muted-foreground">البائع: {store.beneficiaryName}</p>}
-                        {store.location && <p className="text-sm text-muted-foreground">الموقع: {store.location}</p>}
-                      </CardContent>
-                      <CardFooter className="pt-0">
-                        <Button variant="outline" className="w-full text-xs" asChild>
-                          <Link href={`/stores/${store.id}`}>
-                            تصفح المتجر <ArrowLeft className="mr-2 h-3 w-3" />
-                          </Link>
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </div>
-          </section>
-        )}
-
-        {/* Contact Section */}
-        {sections.showContact && (
-          <section id="contact" className="py-16 md:py-24 bg-muted/40">
-            <div className="container px-4 md:px-6">
-              <div className="text-center mb-14">
-                <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">تواصل</Badge>
-                <h2 className="text-3xl font-bold tracking-tight">تواصل معنا</h2>
-                <p className="mt-3 text-lg text-muted-foreground">نحن هنا للإجابة على استفساراتك ومساعدتك في كل خطوة.</p>
-              </div>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
-                <div className="flex flex-col gap-4">
-                  {contactInfo.phone && (
-                    <Card className="border-0 shadow-md bg-card">
-                      <CardContent className="pt-6 flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
-                          <Phone className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-sm">الهاتف</p>
-                          <p className="text-muted-foreground text-sm" dir="ltr">{contactInfo.phone}</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-                  {contactInfo.email && (
-                    <Card className="border-0 shadow-md bg-card">
-                      <CardContent className="pt-6 flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
-                          <Mail className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-sm">البريد الإلكتروني</p>
-                          <p className="text-muted-foreground text-sm" dir="ltr">{contactInfo.email}</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-                  {contactInfo.whatsapp && (
-                    <Card className="border-0 shadow-md bg-card">
-                      <CardContent className="pt-6 flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#25D366' }}>
-                          <MessageSquare className="h-5 w-5 text-white" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-semibold text-sm">واتساب</p>
-                          <p className="text-muted-foreground text-sm mb-3" dir="ltr">{contactInfo.whatsapp}</p>
-                          <Button
-                            asChild
-                            className="text-white text-sm px-4 py-2 h-auto"
-                            style={{ backgroundColor: '#25D366' }}
-                          >
-                            <a href={contactInfo.whatsappLink || `https://wa.me/${contactInfo.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
-                              <MessageSquare className="h-4 w-4 ml-1" />
-                              تواصل عبر واتساب
-                            </a>
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-                </div>
-                <Card className="border-0 shadow-md bg-card">
-                  <CardHeader>
-                    <CardTitle className="text-xl">أرسل لنا رسالة</CardTitle>
-                    <CardDescription>سنرد عليك في أقرب وقت ممكن</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <form onSubmit={handleContactSubmit} className="flex flex-col gap-4">
-                      <div>
-                        <label className="text-sm font-medium mb-1 block">الاسم</label>
-                        <Input placeholder="اسمك الكريم" value={contactName} onChange={e => setContactName(e.target.value)} required />
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium mb-1 block">البريد الإلكتروني</label>
-                        <Input type="email" placeholder="example@email.com" value={contactEmail} onChange={e => setContactEmail(e.target.value)} required dir="ltr" />
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium mb-1 block">رسالتك</label>
-                        <Textarea placeholder="اكتب رسالتك هنا..." rows={5} value={contactMessage} onChange={e => setContactMessage(e.target.value)} required className="resize-none" />
-                      </div>
-                      <Button type="submit" className="w-full mt-2" size="lg">
-                        <Mail className="h-4 w-4 ml-2" />
-                        إرسال الرسالة
-                      </Button>
-                    </form>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* CTA Banner */}
-        {sections.showCTA && (
-          <section className="py-16 md:py-24 bg-primary text-primary-foreground">
-            <div className="container px-4 md:px-6 text-center">
-              <h2 className="text-3xl md:text-4xl font-extrabold mb-4">
-                {ctaBanner.title}
-              </h2>
-              <p className="text-lg text-primary-foreground/80 mb-8 max-w-xl mx-auto">
-                {ctaBanner.subtitle}
-              </p>
-              <div className="flex flex-wrap justify-center gap-4">
-                <Button size="lg" variant="secondary" asChild className="text-primary font-bold px-8 py-6 text-base shadow-xl">
-                  <Link href="/register">
-                    {ctaBanner.primaryText}
-                    <ArrowLeft className="mr-2 h-5 w-5" />
+          <section id="marketplace" className="py-16 sm:py-20 md:py-28 bg-muted/30">
+            <div className="container">
+              <div className="text-center mb-10 sm:mb-12">
+                <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">متجر المجتمع</p>
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-4">منتجات من مجتمعنا</h2>
+                <Button asChild variant="outline" size="sm">
+                  <Link href="/market">
+                    تصفح جميع المنتجات
+                    <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
                   </Link>
                 </Button>
-                <Button size="lg" variant="outline" asChild className="border-white/40 text-white hover:bg-white/10 px-8 py-6 text-base">
+              </div>
+
+              {loadingProducts ? (
+                <div className="flex gap-4 overflow-x-auto pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  {[...Array(4)].map((_, i) => <div key={i} className="w-[46vw] sm:w-64 shrink-0 h-64 rounded-xl bg-muted animate-pulse" />)}
+                </div>
+              ) : products.length === 0 ? (
+                <div className="py-12 text-center text-muted-foreground">
+                  <Store className="h-10 w-10 mx-auto mb-3 opacity-20" />
+                  <p className="text-sm mb-4">لا توجد منتجات بعد. كن أول من يضيف منتجه!</p>
+                  <Button asChild size="sm"><Link href="/register">ابدأ الآن</Link></Button>
+                </div>
+              ) : (
+                <div className="flex gap-4 overflow-x-auto pb-3 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  {products.map(p => (
+                    <div key={p.id} className="w-[46vw] sm:w-64 shrink-0 snap-start">
+                      <ProductCard product={p} currencySymbol={currencySymbol} onOrder={setSelectedProduct} />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* ── Stores ──────────────────────────────────────────────────────────── */}
+        {sections.showStores && publicStores.length > 0 && (
+          <section id="stores" className="py-16 sm:py-20 md:py-28">
+            <div className="container">
+              <div className="text-center mb-10 sm:mb-12">
+                <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">رواد الأعمال</p>
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground">متاجر مجتمعنا</h2>
+              </div>
+              {loadingStores ? (
+                <div className="flex gap-4 overflow-x-auto pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  {[...Array(4)].map((_, i) => <div key={i} className="w-[82vw] sm:w-72 shrink-0 h-20 rounded-xl bg-muted animate-pulse" />)}
+                </div>
+              ) : (
+                <div className="flex gap-4 overflow-x-auto pb-3 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  {publicStores.map(store => (
+                    <Link
+                      key={store.id}
+                      href={`/stores/${store.id}`}
+                      className="group w-[82vw] sm:w-72 shrink-0 snap-start p-4 sm:p-5 rounded-xl border border-border bg-card hover:border-primary/30 hover:shadow-sm transition-all flex items-center justify-between gap-3"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="h-11 w-11 rounded-xl overflow-hidden shrink-0 border border-border/50 bg-primary/10 flex items-center justify-center">
+                          {store.logoUrl ? (
+                            <img
+                              src={store.logoUrl}
+                              alt={store.name}
+                              className="h-full w-full object-cover"
+                              onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                            />
+                          ) : (
+                            <Store className="h-4 w-4 text-primary" />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-semibold text-sm text-foreground truncate">{store.name}</p>
+                          {store.beneficiaryName && (
+                            <p className="text-xs text-muted-foreground truncate">{store.beneficiaryName}</p>
+                          )}
+                        </div>
+                      </div>
+                      <ArrowLeft className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary shrink-0 transition-colors" />
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* ── Testimonials ────────────────────────────────────────────────────── */}
+        {sections.showTestimonials && testimonialsData.length > 0 && (
+          <section className="py-16 sm:py-20 md:py-28 bg-muted/30">
+            <div className="container">
+              <div className="text-center mb-12 sm:mb-16">
+                <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">قصص النجاح</p>
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground">ماذا يقول مجتمعنا</h2>
+              </div>
+              <div className="flex gap-5 overflow-x-auto pb-3 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {testimonialsData.map((t, i) => (
+                  <div key={i} className="w-[82vw] sm:w-80 lg:w-96 shrink-0 snap-start flex flex-col gap-4 sm:gap-5 p-6 rounded-2xl border border-border bg-card">
+                    <div className="flex gap-0.5">
+                      {Array.from({ length: Math.min(5, Math.max(1, t.stars)) }).map((_, j) => (
+                        <Star key={j} className="h-3.5 w-3.5 text-amber-400 fill-amber-400" />
+                      ))}
+                    </div>
+                    <blockquote className="text-base text-foreground leading-relaxed font-medium flex-grow">
+                      &ldquo;{t.text}&rdquo;
+                    </blockquote>
+                    <div className="flex items-center gap-3 pt-4 border-t border-border">
+                      <div className="h-9 w-9 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0">
+                        {t.name[0]}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">{t.name}</p>
+                        <p className="text-xs text-muted-foreground">{t.role}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* ── Latest Articles ─────────────────────────────────────────────────── */}
+        {latestArticles.length > 0 && (
+          <section id="articles" className="py-16 sm:py-20 md:py-28 bg-muted/30">
+            <div className="container">
+              <div className="text-center mb-10 sm:mb-12">
+                <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">رؤى ومعرفة</p>
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-4">
+                  أحدث المقالات
+                </h2>
+                <Link href="/articles" className="inline-flex items-center gap-1 text-sm font-semibold text-primary">
+                  عرض جميع المقالات <ArrowLeft className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+              <div className="flex gap-4 overflow-x-auto pb-3 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {latestArticles.map(article => (
+                  <Link
+                    key={article.id}
+                    href={`/articles/${article.id}`}
+                    className="group w-[82vw] sm:w-72 shrink-0 snap-start rounded-2xl border border-border bg-card overflow-hidden hover:border-primary/30 hover:shadow-md transition-all flex flex-col"
+                  >
+                    <div className="aspect-video bg-muted overflow-hidden">
+                      {article.coverImageUrl ? (
+                        <img
+                          src={article.coverImageUrl}
+                          alt={article.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center">
+                          <FileText className="h-8 w-8 text-primary/20" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-4 flex flex-col gap-2 flex-1">
+                      <h3 className="font-semibold text-sm text-foreground line-clamp-2 group-hover:text-primary transition-colors">
+                        {article.title}
+                      </h3>
+                      {article.excerpt && (
+                        <p className="text-xs text-muted-foreground line-clamp-2 flex-1">{article.excerpt}</p>
+                      )}
+                      {article.tags && article.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {article.tags.slice(0, 2).map(tag => (
+                            <span key={tag} className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full flex items-center gap-0.5">
+                              <Tag className="h-2 w-2" />{tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1 border-t border-border">
+                        <span>{article.authorName}</span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />{article.readTime} د
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* ── Latest Projects / Opportunities ─────────────────────────────────── */}
+        {latestProjects.length > 0 && (
+          <section id="opportunities-live" className="py-16 sm:py-20 md:py-28">
+            <div className="container">
+              <div className="text-center mb-10 sm:mb-12">
+                <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">فرص حقيقية</p>
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-4">
+                  أحدث الفرص والمشاريع
+                </h2>
+                <Link href="/projects" className="inline-flex items-center gap-1 text-sm font-semibold text-primary">
+                  عرض جميع الفرص <ArrowLeft className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+              <div className="flex gap-4 overflow-x-auto pb-3 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {latestProjects.map(project => (
+                  <Link
+                    key={project.id}
+                    href={`/projects/${project.id}`}
+                    className="group w-[82vw] sm:w-72 shrink-0 snap-start rounded-2xl border border-border bg-card overflow-hidden hover:border-primary/30 hover:shadow-md transition-all flex flex-col"
+                  >
+                    <div className="aspect-video bg-muted overflow-hidden">
+                      {project.coverImageUrl ? (
+                        <img
+                          src={project.coverImageUrl}
+                          alt={project.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center">
+                          <Briefcase className="h-8 w-8 text-primary/20" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-4 flex flex-col gap-2 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-medium bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
+                          {project.type}
+                        </span>
+                      </div>
+                      <h3 className="font-semibold text-sm text-foreground line-clamp-2 group-hover:text-primary transition-colors">
+                        {project.title}
+                      </h3>
+                      <p className="text-xs text-muted-foreground line-clamp-2 flex-1">{project.description}</p>
+                      <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground pt-1 border-t border-border">
+                        {project.organizationName && (
+                          <span className="flex items-center gap-1">{project.organizationName}</span>
+                        )}
+                        {project.location && (
+                          <span className="flex items-center gap-1">
+                            <MapPin className="h-3 w-3" />{project.location}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* ── Success Stories ──────────────────────────────────────────────────── */}
+        {successStories.length > 0 && (
+          <section id="success-stories" className="py-16 sm:py-20 md:py-28">
+            <div className="container">
+              <div className="text-center mb-12 sm:mb-16">
+                <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">إلهام حقيقي</p>
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-3">
+                  قصص نجاح من مجتمعنا
+                </h2>
+                <p className="text-muted-foreground text-sm max-w-md mx-auto leading-relaxed">
+                  أشخاص حقيقيون غيّروا مساراتهم بفضل التدريب والإرشاد والدعم.
+                </p>
+              </div>
+              <div className="flex gap-4 overflow-x-auto pb-3 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {successStories.map(story => (
+                  <div
+                    key={story.id}
+                    className="group w-[82vw] sm:w-80 shrink-0 snap-start rounded-2xl border border-border bg-card p-6 flex flex-col gap-4 hover:border-primary/30 hover:shadow-md transition-all"
+                  >
+                    {/* Stars */}
+                    <div className="flex gap-0.5">
+                      {Array.from({ length: 5 }).map((_, j) => (
+                        <Star
+                          key={j}
+                          className={`h-3.5 w-3.5 ${j < story.stars ? 'text-amber-400 fill-amber-400' : 'text-muted-foreground/20'}`}
+                        />
+                      ))}
+                    </div>
+                    {/* Quote */}
+                    <blockquote className="text-sm text-foreground leading-relaxed flex-1 font-medium">
+                      &ldquo;{story.content}&rdquo;
+                    </blockquote>
+                    {/* Author */}
+                    <div className="flex items-center gap-3 pt-4 border-t border-border">
+                      {story.avatarUrl ? (
+                        <img
+                          src={story.avatarUrl}
+                          alt={story.beneficiaryName}
+                          className="h-10 w-10 rounded-full object-cover shrink-0 border border-border"
+                          onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                        />
+                      ) : (
+                        <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-bold shrink-0">
+                          {story.beneficiaryName[0]}
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-foreground truncate">{story.beneficiaryName}</p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {story.beneficiaryRole}
+                          {story.beneficiaryRole && story.orgName ? ' · ' : ''}
+                          {story.orgName}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* ── Contact ─────────────────────────────────────────────────────────── */}
+        {sections.showContact && (
+          <section id="contact" className="py-16 sm:py-20 md:py-28 bg-muted/30">
+            <div className="container">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 sm:gap-12 lg:gap-16 items-start">
+                <div>
+                  <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">تواصل معنا</p>
+                  <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-3 sm:mb-4">
+                    كيف يمكننا مساعدتك؟
+                  </h2>
+                  <p className="text-muted-foreground mb-8 sm:mb-10 leading-relaxed text-sm sm:text-base">
+                    نحن هنا للإجابة على استفساراتك ومساعدتك في كل خطوة.
+                  </p>
+                  <div className="space-y-4 sm:space-y-5">
+                    {contactInfo.phone && (
+                      <div className="flex items-center gap-4">
+                        <div className="h-10 w-10 rounded-xl bg-card border border-border flex items-center justify-center shrink-0">
+                          <Phone className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-0.5">الهاتف</p>
+                          <p className="text-sm font-semibold text-foreground" dir="ltr">{contactInfo.phone}</p>
+                        </div>
+                      </div>
+                    )}
+                    {contactInfo.email && (
+                      <div className="flex items-center gap-4">
+                        <div className="h-10 w-10 rounded-xl bg-card border border-border flex items-center justify-center shrink-0">
+                          <Mail className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-0.5">البريد الإلكتروني</p>
+                          <p className="text-sm font-semibold text-foreground" dir="ltr">{contactInfo.email}</p>
+                        </div>
+                      </div>
+                    )}
+                    {contactInfo.whatsapp && (
+                      <div className="flex items-center gap-4">
+                        <div className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: '#25D366' }}>
+                          <MessageSquare className="h-4 w-4 text-white" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-0.5">واتساب</p>
+                          <a
+                            href={contactInfo.whatsappLink || `https://wa.me/${contactInfo.whatsapp.replace(/\D/g, '')}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm font-semibold text-foreground hover:text-primary transition-colors"
+                            dir="ltr"
+                          >
+                            {contactInfo.whatsapp}
+                          </a>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="p-5 sm:p-6 rounded-2xl border border-border bg-card">
+                  <h3 className="text-base sm:text-lg font-bold text-foreground mb-4 sm:mb-5">أرسل لنا رسالة</h3>
+                  <form onSubmit={handleContactSubmit} className="flex flex-col gap-3 sm:gap-4">
+                    <div>
+                      <label className="text-sm font-medium mb-1.5 block">الاسم</label>
+                      <Input placeholder="اسمك الكريم" value={contactName} onChange={e => setContactName(e.target.value)} required />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-1.5 block">البريد الإلكتروني</label>
+                      <Input type="email" placeholder="example@email.com" value={contactEmail} onChange={e => setContactEmail(e.target.value)} required dir="ltr" />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-1.5 block">رسالتك</label>
+                      <Textarea placeholder="اكتب رسالتك هنا..." rows={4} value={contactMessage} onChange={e => setContactMessage(e.target.value)} required className="resize-none" />
+                    </div>
+                    <Button type="submit" className="w-full mt-1">
+                      <Mail className="h-4 w-4 ml-2" />
+                      إرسال الرسالة
+                    </Button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* ── CTA Block ───────────────────────────────────────────────────────── */}
+        {sections.showCTA && (
+          <section className="py-16 sm:py-20 md:py-28 bg-foreground text-background">
+            <div className="container text-center">
+              <h2 className="text-2xl sm:text-3xl md:text-5xl font-extrabold tracking-tight mb-4 sm:mb-5 leading-tight">
+                {ctaBanner.title}
+              </h2>
+              <p className="text-sm sm:text-base md:text-lg text-background/60 mb-7 sm:mb-9 max-w-xl mx-auto leading-relaxed">
+                {ctaBanner.subtitle}
+              </p>
+              <div className="flex flex-col sm:flex-row justify-center gap-3">
+                <Button size="lg" variant="secondary" asChild className="h-12 px-7 text-base font-semibold text-foreground w-full sm:w-auto">
+                  <Link href="/register">
+                    {ctaBanner.primaryText}
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                  </Link>
+                </Button>
+                <Button size="lg" variant="outline" asChild className="h-12 px-7 text-base border-background/30 text-background hover:bg-background/10 w-full sm:w-auto">
                   <Link href="/try-roles">{ctaBanner.secondaryText}</Link>
                 </Button>
               </div>
@@ -1105,7 +1557,7 @@ export default function LandingPage() {
         )}
       </main>
 
-      {/* Order dialog for products */}
+      {/* ── Dialogs ─────────────────────────────────────────────────────────── */}
       <OrderDialog
         product={selectedProduct ? {
           id: selectedProduct.id,
@@ -1120,7 +1572,6 @@ export default function LandingPage() {
         onOpenChange={open => { if (!open) setSelectedProduct(null); }}
       />
 
-      {/* Enrollment dialog for courses */}
       {selectedCourse && (
         <CourseEnrollDialog
           courseId={selectedCourse.id}
@@ -1131,7 +1582,6 @@ export default function LandingPage() {
         />
       )}
 
-      {/* Booking dialog for mentors/coaches */}
       {bookingHost && (
         <SessionBookingDialog
           isOpen={!!bookingHost}
@@ -1143,44 +1593,66 @@ export default function LandingPage() {
         />
       )}
 
-      {/* Footer */}
-      <footer className="py-10 border-t bg-card">
-        <div className="container px-4 md:px-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-            <div className="md:col-span-2">
+      {selectedSession && (
+        <SessionBookingDialog
+          isOpen={!!selectedSession}
+          onOpenChange={open => { if (!open) setSelectedSession(null); }}
+          hostId={selectedSession.hostId}
+          hostName={selectedSession.hostName}
+          hostRole="mentor"
+          sessionPrice={selectedSession.price ?? 0}
+        />
+      )}
+
+      {/* ── Footer ──────────────────────────────────────────────────────────── */}
+      <footer className="py-12 sm:py-14 border-t bg-card">
+        <div className="container">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 sm:gap-10 mb-8 sm:mb-10">
+            <div className="sm:col-span-2 md:col-span-1">
               <div className="flex items-center gap-2 mb-3">
-                <Logo className="h-8 w-8" />
-                <span className="font-bold text-lg gradient-text">{cfg?.siteName || 'EmpowerHub'}</span>
+                {logoSrc
+                  ? <img src={logoSrc} alt="logo" className="h-6 w-6 object-contain" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                  : <Logo className="h-6 w-6" />}
+                <span className="font-bold text-base text-foreground">{cfg?.siteName || 'EmpowerHub'}</span>
               </div>
-              <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">
+              <p className="text-sm text-muted-foreground leading-relaxed max-w-xs">
                 {footerData.description}
               </p>
             </div>
             <div>
-              <h4 className="font-semibold mb-3">روابط سريعة</h4>
-              <div className="flex flex-col gap-2 text-sm text-muted-foreground">
-                <Link href="#features" className="hover:text-primary transition-colors">الميزات</Link>
-                <Link href="/market" className="hover:text-primary transition-colors">المتجر</Link>
-                <Link href="/try-roles" className="hover:text-primary transition-colors">تجربة المنصة</Link>
-                <Link href="/login" className="hover:text-primary transition-colors">تسجيل الدخول</Link>
+              <h4 className="text-sm font-semibold text-foreground mb-4">روابط سريعة</h4>
+              <div className="flex flex-col gap-2.5 text-sm text-muted-foreground">
+                <Link href="#how-it-works" className="hover:text-foreground transition-colors">كيف تعمل</Link>
+                <Link href="#modules" className="hover:text-foreground transition-colors">الخدمات</Link>
+                <Link href="/market" className="hover:text-foreground transition-colors">المتجر</Link>
+                <Link href="/try-roles" className="hover:text-foreground transition-colors">تجربة المنصة</Link>
+                <Link href="/login" className="hover:text-foreground transition-colors">تسجيل الدخول</Link>
               </div>
             </div>
             <div>
-              <h4 className="font-semibold mb-3">قانوني</h4>
-              <div className="flex flex-col gap-2 text-sm text-muted-foreground">
-                <Link href="#" className="hover:text-primary transition-colors">سياسة الخصوصية</Link>
-                <Link href="#" className="hover:text-primary transition-colors">شروط الاستخدام</Link>
-                <Link href="#contact" className="hover:text-primary transition-colors">تواصل معنا</Link>
+              <h4 className="text-sm font-semibold text-foreground mb-4">قانوني</h4>
+              <div className="flex flex-col gap-2.5 text-sm text-muted-foreground">
+                <Link href="#" className="hover:text-foreground transition-colors">سياسة الخصوصية</Link>
+                <Link href="#" className="hover:text-foreground transition-colors">شروط الاستخدام</Link>
+                <Link href="#contact" className="hover:text-foreground transition-colors">تواصل معنا</Link>
               </div>
             </div>
           </div>
-          <div className="border-t pt-6 flex flex-col md:flex-row items-center justify-between gap-3">
-            <p className="text-sm text-muted-foreground">{footerData.copyright || '© 2024 EmpowerHub. جميع الحقوق محفوظة.'}</p>
-            <div className="flex items-center gap-3">
-              {footerData.twitter && <a href={footerData.twitter} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary text-xs transition-colors">تويتر</a>}
-              {footerData.linkedin && <a href={footerData.linkedin} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary text-xs transition-colors">LinkedIn</a>}
-              {footerData.instagram && <a href={footerData.instagram} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary text-xs transition-colors">Instagram</a>}
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <div className="border-t pt-5 sm:pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <p className="text-xs text-muted-foreground text-center sm:text-right">
+              {footerData.copyright || '© 2024 EmpowerHub. جميع الحقوق محفوظة.'}
+            </p>
+            <div className="flex items-center gap-4">
+              {footerData.twitter && (
+                <a href={footerData.twitter} target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:text-foreground transition-colors">تويتر</a>
+              )}
+              {footerData.linkedin && (
+                <a href={footerData.linkedin} target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:text-foreground transition-colors">LinkedIn</a>
+              )}
+              {footerData.instagram && (
+                <a href={footerData.instagram} target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Instagram</a>
+              )}
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Globe className="h-3 w-3" />
                 <span>مدعوم بالذكاء الاصطناعي</span>
               </div>

@@ -43,7 +43,7 @@ type PlanForm = Omit<Plan, 'id'> & { featuresText: string };
 
 const emptyForm: PlanForm = {
   name: '', nameEn: '', key: '', description: '',
-  priceMonthly: 0, priceAnnual: 0, currency: 'SAR',
+  priceMonthly: 0, priceAnnual: 0, currency: 'JOD',
   color: '#6366f1', icon: 'Star', highlighted: false,
   features: [], featuresText: '',
   limits: { maxUsers: 50, maxMentors: 5, maxCourses: 10, maxProducts: 20, maxStorage: 5 },
@@ -269,7 +269,7 @@ export default function PlansPage() {
             </div>
             <div className="space-y-2">
               <Label>العملة</Label>
-              <Input value={form.currency} onChange={e => setForm(f => ({ ...f, currency: e.target.value }))} placeholder="SAR" dir="ltr" />
+              <Input value={form.currency} onChange={e => setForm(f => ({ ...f, currency: e.target.value }))} placeholder="JOD" dir="ltr" />
             </div>
             <div className="space-y-2">
               <Label>السعر الشهري</Label>

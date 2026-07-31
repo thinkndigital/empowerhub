@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/status-badge";
 import { useUser } from "@/firebase/auth/use-user";
 import { cn } from "@/lib/utils";
+import { ExportButton } from "@/components/export-button";
 
 interface Order {
   id: string;
@@ -32,6 +33,14 @@ const statColors = [
   { bg: "bg-emerald-500/10",icon: "bg-emerald-500" },
   { bg: "bg-sky-500/10",    icon: "bg-sky-500" },
 ];
+
+const orderStatusLabels: Record<string, string> = {
+  pending: "قيد الانتظار",
+  confirmed: "مؤكد",
+  shipped: "تم الشحن",
+  completed: "مكتمل",
+  cancelled: "ملغي",
+};
 
 export default function OrgOrdersPage() {
   const { user } = useUser();
@@ -71,10 +80,10 @@ export default function OrgOrdersPage() {
   };
 
   const statItems = [
-    { label: "إجمالي الطلبات",  value: String(stats.total),                     sub: "طلب مسجل",     icon: <ShoppingBag />, colorIdx: 0 },
-    { label: "قيد الانتظار",    value: String(stats.pending),                   sub: "بانتظار التأكيد", icon: <Clock />,       colorIdx: 1 },
-    { label: "مكتملة",          value: String(stats.completed),                 sub: "تم التسليم",    icon: <CheckCircle />, colorIdx: 2 },
-    { label: "إيرادات مدفوعة", value: `${stats.revenue.toFixed(0)} ر.س`,       sub: "دفعات مؤكدة",  icon: <DollarSign />,  colorIdx: 3 },
+    { label: "إجمالي الطلبات",   value: String(stats.total),      sub: "طلب مسجل",        icon: <ShoppingBag />, colorIdx: 0 },
+    { label: "قيد الانتظار",     value: String(stats.pending),    sub: "بانتظار التأكيد", icon: <Clock />,       colorIdx: 1 },
+    { label: "مكتملة",           value: String(stats.completed),  sub: "تم التسليم",      icon: <CheckCircle />, colorIdx: 2 },
+    { label: "إيرادات مدفوعة",   value: `${stats.revenue.toFixed(0)} د.أ`, sub: "دفعات مؤكدة",  icon: <DollarSign />,  colorIdx: 3 },
   ];
 
   return (
@@ -85,10 +94,28 @@ export default function OrgOrdersPage() {
           <h1 className="page-title">طلبات المتاجر</h1>
           <p className="page-subtitle">متابعة طلبات جميع متاجر المستفيدين في المنظمة</p>
         </div>
-        <Button variant="outline" onClick={load} disabled={loading} className="gap-2 h-fit">
-          <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
-          تحديث
-        </Button>
+        <div className="flex gap-2">
+          <ExportButton
+            title="طلبات المتاجر"
+            filename={`orders-${new Date().toISOString().slice(0,10)}`}
+            headers={['المنتج', 'المشتري', 'الهاتف', 'المتجر', 'المبلغ (د.أ)', 'الحالة', 'طريقة الدفع', 'التاريخ']}
+            rows={orders.map(o => [
+              o.productName || '',
+              o.buyerName || '',
+              o.buyerPhone || '',
+              o.storeName || '',
+              (o.totalAmount || 0).toFixed(2),
+              orderStatusLabels[o.status] || o.status,
+              o.paymentMethod || '',
+              o.createdAt ? new Date(o.createdAt).toLocaleDateString('ar-EG') : '',
+            ])}
+            options={{ summary: { 'إجمالي الطلبات': String(stats.total), 'قيد الانتظار': String(stats.pending), 'مكتملة': String(stats.completed), 'إيرادات مدفوعة': `${stats.revenue.toFixed(0)} د.أ` } }}
+          />
+          <Button variant="outline" onClick={load} disabled={loading} className="gap-2 h-fit">
+            <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+            تحديث
+          </Button>
+        </div>
       </div>
 
       {/* ── KPI Cards ── */}
@@ -189,7 +216,7 @@ export default function OrgOrdersPage() {
                     <div className="text-xs text-muted-foreground" dir="ltr">{order.buyerPhone}</div>
                   </td>
                   <td className="text-muted-foreground">{order.storeName || '—'}</td>
-                  <td className="font-bold text-primary tabular-nums">{(order.totalAmount || 0).toFixed(2)} ر.س</td>
+                  <td className="font-bold text-primary tabular-nums">{(order.totalAmount || 0).toFixed(2)} د.أ</td>
                   <td>
                     <div className="flex flex-col gap-1">
                       <span className="text-xs text-muted-foreground">{order.paymentMethod === 'online' ? 'أونلاين' : 'استلام'}</span>
@@ -198,7 +225,7 @@ export default function OrgOrdersPage() {
                   </td>
                   <td><StatusBadge status={order.status} /></td>
                   <td className="text-xs text-muted-foreground tabular-nums">
-                    {order.createdAt ? new Date(order.createdAt).toLocaleDateString('ar-SA') : '—'}
+                    {order.createdAt ? new Date(order.createdAt).toLocaleDateString('ar-EG') : '—'}
                   </td>
                 </tr>
               ))}

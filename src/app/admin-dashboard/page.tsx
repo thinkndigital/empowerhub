@@ -1,13 +1,16 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Activity, Building, BookOpen, TrendingUp, UserCheck, GraduationCap } from "lucide-react";
+import { Users, Activity, Building, BookOpen, TrendingUp, UserCheck, GraduationCap, DatabaseZap, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useCollection } from "@/firebase/firestore/use-collection";
-import { collection, query, where, orderBy, limit } from "firebase/firestore";
+import { collection, query, orderBy, limit } from "firebase/firestore";
 import { useFirestore, useMemoFirebase } from "@/firebase/provider";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const statColors = [
@@ -40,7 +43,39 @@ const StatCard = ({
 };
 
 export default function AdminDashboardPage() {
+  const { toast } = useToast();
+  const [seeding, setSeeding] = useState(false);
   const firestore = useFirestore();
+
+  async function seedDemo() {
+    setSeeding(true);
+    try {
+      const res = await fetch('/api/admin-panel/seed-demo', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'فشل');
+      const counts = Object.entries(data.seeded).map(([k, v]) => `${k}: ${v}`).join('، ');
+      toast({ title: 'تم إضافة البيانات التجريبية', description: counts });
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'خطأ', description: e.message });
+    } finally {
+      setSeeding(false);
+    }
+  }
+
+  async function clearDemo() {
+    if (!confirm('هل أنت متأكد من حذف جميع البيانات؟ لا يمكن التراجع عن هذا الإجراء.')) return;
+    setSeeding(true);
+    try {
+      const res = await fetch('/api/admin-panel/seed-demo', { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'فشل');
+      toast({ title: 'تم مسح البيانات', description: 'تم حذف جميع البيانات التجريبية.' });
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'خطأ', description: e.message });
+    } finally {
+      setSeeding(false);
+    }
+  }
 
   const usersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, "users")) : null, [firestore]);
   const { data: users, isLoading: usersLoading } = useCollection(usersQuery);
@@ -75,7 +110,17 @@ export default function AdminDashboardPage() {
           <h1 className="page-title">لوحة التحكم الرئيسية</h1>
           <p className="page-subtitle">نظرة عامة وشاملة على أداء المنصة بالكامل.</p>
         </div>
-        <Badge className="bg-primary/10 text-primary border-primary/20 w-fit h-fit">مشرف النظام</Badge>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Badge className="bg-primary/10 text-primary border-primary/20 w-fit h-fit">مشرف النظام</Badge>
+          <Button size="sm" variant="outline" onClick={seedDemo} disabled={seeding} className="h-8 text-xs gap-1.5">
+            <DatabaseZap className="h-3.5 w-3.5" />
+            {seeding ? 'جاري التنفيذ...' : 'إضافة بيانات تجريبية'}
+          </Button>
+          <Button size="sm" variant="ghost" onClick={clearDemo} disabled={seeding} className="h-8 text-xs gap-1.5 text-destructive hover:text-destructive">
+            <Trash2 className="h-3.5 w-3.5" />
+            مسح البيانات
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">

@@ -102,7 +102,7 @@ export default function CourseDetailPage() {
                     min={0} max={100} step={5}
                     className="flex-1"
                   />
-                  <span className="text-sm font-bold w-10 text-left">{sliderVal}%</span>
+                  <span className="text-sm font-bold w-10 text-right">{sliderVal}%</span>
                 </div>
                 <Button onClick={saveProgress} disabled={saving || sliderVal === progress} className="w-full">
                   {saving ? "جاري الحفظ..." : "حفظ التقدم"}

@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
-import { Users, Calendar, Star, DollarSign, MessageSquare, CheckCircle2, CalendarDays } from "lucide-react";
+import { Users, Calendar, Star, DollarSign, MessageSquare, CheckCircle2, Clock, PlusCircle, Video } from "lucide-react";
 import { useUser } from '@/firebase/auth/use-user';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +12,7 @@ import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
-type Session = { id: string; title: string; date: string; status: string; attendees: string[] };
+type Session = { id: string; title: string; date: string; status: string; attendees: string[]; meetLink?: string };
 type Beneficiary = { id: string; name?: string; progress?: number };
 
 const statColors = [
@@ -25,10 +25,33 @@ const statColors = [
 const progressColor = (v: number) =>
   v >= 70 ? "[&>div]:bg-emerald-500" : v >= 30 ? "[&>div]:bg-amber-500" : "[&>div]:bg-primary";
 
+function safeDate(d: any): Date {
+  if (!d) return new Date(0);
+  if (typeof d === 'object' && d._seconds) return new Date(d._seconds * 1000);
+  if (typeof d === 'object' && d.seconds) return new Date(d.seconds * 1000);
+  return new Date(d);
+}
+
+function formatSessionDate(dateStr: string): string {
+  const d = safeDate(dateStr);
+  const now = new Date();
+  const diffMs = d.getTime() - now.getTime();
+  const diffH = Math.round(diffMs / (1000 * 60 * 60));
+  const diffD = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffH <= 0 && diffMs > 0) return 'خلال دقائق';
+  if (diffH === 1) return 'خلال ساعة';
+  if (diffH < 24 && diffH > 0) return `خلال ${diffH} ساعة`;
+  if (diffD === 1) return 'غداً';
+  return d.toLocaleDateString('ar-EG', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
 export default function MentorDashboardPage() {
   const { user: authUser } = useUser();
   const [beneficiaries, setBeneficiaries] = useState<Beneficiary[] | null>(null);
   const [benefLoading, setBenefLoading] = useState(true);
+  const [allSessions, setAllSessions] = useState<Session[]>([]);
+  const [sessLoading, setSessLoading] = useState(true);
 
   const fetchBeneficiaries = useCallback(async () => {
     if (!authUser) return;
@@ -38,19 +61,9 @@ export default function MentorDashboardPage() {
       const res = await fetch(`/api/org/users?role=beneficiary&scope=all&mentorId=${authUser.uid}`, {
         headers: { authorization: `Bearer ${token}` },
       });
-      const json = await res.json();
-      setBeneficiaries(json.users || []);
-    } catch {
-      setBeneficiaries([]);
-    } finally {
-      setBenefLoading(false);
-    }
+      setBeneficiaries((await res.json()).users || []);
+    } catch { setBeneficiaries([]); } finally { setBenefLoading(false); }
   }, [authUser]);
-
-  useEffect(() => { fetchBeneficiaries(); }, [fetchBeneficiaries]);
-
-  const [allSessions, setAllSessions] = useState<Session[]>([]);
-  const [sessLoading, setSessLoading] = useState(true);
 
   const fetchSessions = useCallback(async () => {
     if (!authUser) return;
@@ -58,30 +71,46 @@ export default function MentorDashboardPage() {
     try {
       const token = await authUser.getIdToken();
       const res = await fetch('/api/sessions', { headers: { authorization: `Bearer ${token}` } });
-      const json = await res.json();
-      setAllSessions(json.sessions || []);
-    } catch {
-      setAllSessions([]);
-    } finally {
-      setSessLoading(false);
-    }
+      setAllSessions((await res.json()).sessions || []);
+    } catch { setAllSessions([]); } finally { setSessLoading(false); }
   }, [authUser]);
 
-  useEffect(() => { fetchSessions(); }, [fetchSessions]);
+  const [earnings, setEarnings] = useState<{ remaining: number; totalNet: number } | null>(null);
+  const [earningsLoading, setEarningsLoading] = useState(true);
 
-  const now = new Date().toISOString();
-  const upcomingSessions = allSessions.filter(s => s.status === 'scheduled' && (s.date || '') >= now);
+  const fetchEarnings = useCallback(async () => {
+    if (!authUser) return;
+    try {
+      const token = await authUser.getIdToken();
+      const res = await fetch('/api/mentor/financial', { headers: { authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      setEarnings(data.summary || null);
+    } catch { setEarnings(null); } finally { setEarningsLoading(false); }
+  }, [authUser]);
+
+  useEffect(() => { fetchBeneficiaries(); }, [fetchBeneficiaries]);
+  useEffect(() => { fetchSessions(); }, [fetchSessions]);
+  useEffect(() => { fetchEarnings(); }, [fetchEarnings]);
+
+  const now = useMemo(() => new Date().toISOString(), []);
+  const upcomingSessions = useMemo(
+    () => allSessions.filter(s => s.status === 'scheduled' && (s.date || '') >= now)
+      .sort((a, b) => a.date.localeCompare(b.date)),
+    [allSessions, now]
+  );
 
   const avgProgress = useMemo(() => {
     if (!beneficiaries || beneficiaries.length === 0) return 0;
     return Math.round(beneficiaries.reduce((s, b) => s + ((b as any).progress || 0), 0) / beneficiaries.length);
   }, [beneficiaries]);
 
+  const nextSession = upcomingSessions[0];
+
   const statItems = [
     { title: "إجمالي المستفيدين", value: String(beneficiaries?.length || 0), sub: "مستفيد نشط",             icon: <Users />,       loading: benefLoading },
     { title: "الجلسات القادمة",   value: String(upcomingSessions.length),     sub: "جلسة مجدولة",            icon: <Calendar />,    loading: sessLoading },
     { title: "متوسط التقدم",      value: `${avgProgress}%`,                   sub: "نسبة إنجاز المستفيدين", icon: <Star />,        loading: benefLoading },
-    { title: "إجمالي الأرباح",   value: "0.00 د.أ",                           sub: "رصيد المحفظة",           icon: <DollarSign />,  loading: false },
+    { title: "إجمالي الأرباح",   value: `${(earnings?.remaining ?? 0).toFixed(2)} د.أ`, sub: "الرصيد المتاح", icon: <DollarSign />,  loading: earningsLoading },
   ];
 
   return (
@@ -92,8 +121,45 @@ export default function MentorDashboardPage() {
           <h1 className="page-title">لوحة تحكم المرشد</h1>
           <p className="page-subtitle">أدواتك لمتابعة المستفيدين، جدولة الجلسات، وقياس تأثيرك</p>
         </div>
-        <Badge className="bg-primary/10 text-primary border-primary/20 w-fit h-fit">مرشد معتمد</Badge>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Badge className="bg-primary/10 text-primary border-primary/20 w-fit h-fit">مرشد معتمد</Badge>
+          <Button size="sm" asChild className="gap-1.5 h-fit">
+            <Link href="/mentor-dashboard/sessions">
+              <PlusCircle className="h-3.5 w-3.5" />
+              جدولة جلسة
+            </Link>
+          </Button>
+        </div>
       </div>
+
+      {/* ── Next Session Hero ── */}
+      {!sessLoading && nextSession && (
+        <div className="next-session-card flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div className="h-10 w-10 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
+              <Clock className="h-5 w-5 text-primary" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-primary uppercase tracking-wide mb-0.5">الجلسة القادمة</p>
+              <p className="font-semibold text-foreground truncate">{nextSession.title}</p>
+              <p className="text-sm text-muted-foreground">{formatSessionDate(nextSession.date)}</p>
+            </div>
+          </div>
+          <div className="flex gap-2 shrink-0">
+            {nextSession.meetLink && (
+              <Button size="sm" asChild>
+                <a href={nextSession.meetLink} target="_blank" rel="noopener noreferrer">
+                  <Video className="h-3.5 w-3.5 ml-1.5" />
+                  انضم
+                </a>
+              </Button>
+            )}
+            <Button size="sm" variant="outline" asChild>
+              <Link href="/mentor-dashboard/sessions">إدارة الجلسات</Link>
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* ── KPI Cards ── */}
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
@@ -159,12 +225,20 @@ export default function MentorDashboardPage() {
                 <div className="h-10 w-10 rounded-xl bg-sky-500/10 flex items-center justify-center shrink-0">
                   <Calendar className="h-4 w-4 text-sky-500" />
                 </div>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold truncate">{s.title}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {s.date ? new Date(s.date).toLocaleDateString('ar-SA', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
-                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{formatSessionDate(s.date)}</p>
                 </div>
+                {s.meetLink && (
+                  <a
+                    href={s.meetLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="shrink-0 text-xs font-medium text-primary border border-primary/20 bg-primary/5 hover:bg-primary/10 rounded-md px-2.5 py-1 transition-colors"
+                  >
+                    انضم
+                  </a>
+                )}
               </div>
             ))}
           </CardContent>

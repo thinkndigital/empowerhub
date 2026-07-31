@@ -71,7 +71,21 @@ export default function CoachDashboardPage() {
     setSessLoading(false);
   }, [authUser]);
 
+  const [earnings, setEarnings] = useState<{ remaining: number; totalNet: number } | null>(null);
+  const [earningsLoading, setEarningsLoading] = useState(true);
+
+  const fetchEarnings = useCallback(async () => {
+    if (!authUser) return;
+    try {
+      const token = await authUser.getIdToken();
+      const res = await fetch('/api/coach/financial', { headers: { authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      setEarnings(data.summary || null);
+    } catch { setEarnings(null); } finally { setEarningsLoading(false); }
+  }, [authUser]);
+
   useEffect(() => { fetchCoachData(); }, [fetchCoachData]);
+  useEffect(() => { fetchEarnings(); }, [fetchEarnings]);
 
   const stats = useMemo(() => {
     const totalEnrolled = courses.reduce((s, c) => s + (c.enrolledCount || 0), 0);
@@ -88,7 +102,7 @@ export default function CoachDashboardPage() {
     { title: "إجمالي المسجلين",     value: String(stats.totalEnrolled),    sub: "في جميع دوراتك",    icon: <Users />,       loading: coursesLoading },
     { title: "الجلسات القادمة",     value: String(stats.upcomingSessions), sub: "جلسة مجدولة",        icon: <CalendarDays />, loading: sessLoading },
     { title: "متوسط معدل الإكمال", value: `${stats.avgCompletion}%`,       sub: "لكل الدورات",        icon: <CheckCircle />, loading: coursesLoading },
-    { title: "إجمالي الأرباح",     value: "0.00 د.أ",                      sub: "رصيد المحفظة",       icon: <DollarSign />,  loading: false },
+    { title: "إجمالي الأرباح",     value: `${(earnings?.remaining ?? 0).toFixed(2)} د.أ`, sub: "الرصيد المتاح",  icon: <DollarSign />,  loading: earningsLoading },
   ];
 
   return (

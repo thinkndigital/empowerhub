@@ -21,11 +21,11 @@ type Profile = {
 function safeFormat(dateVal?: any): string | null {
   if (!dateVal) return null;
   try {
-    if (typeof dateVal === 'object' && dateVal._seconds) return new Date(dateVal._seconds * 1000).toLocaleDateString('ar-SA');
-    if (typeof dateVal === 'object' && dateVal.seconds) return new Date(dateVal.seconds * 1000).toLocaleDateString('ar-SA');
+    if (typeof dateVal === 'object' && dateVal._seconds) return new Date(dateVal._seconds * 1000).toLocaleDateString('ar-EG');
+    if (typeof dateVal === 'object' && dateVal.seconds) return new Date(dateVal.seconds * 1000).toLocaleDateString('ar-EG');
     const d = new Date(dateVal);
     if (isNaN(d.getTime())) return null;
-    return d.toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' });
+    return d.toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric' });
   } catch { return null; }
 }
 

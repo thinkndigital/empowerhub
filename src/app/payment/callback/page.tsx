@@ -14,26 +14,40 @@ export default function PaymentCallbackPage() {
   const [message, setMessage] = useState('');
   const [isCourseOrder, setIsCourseOrder] = useState(false);
   const [courseId, setCourseId] = useState('');
+  const [isPopup, setIsPopup] = useState(false);
+
+  useEffect(() => {
+    setIsPopup(!!window.opener);
+  }, []);
 
   useEffect(() => {
     if (authLoading) return;
 
     const orderId = searchParams.get('orderId');
-    const moyasarStatus = searchParams.get('status');
-    const moyasarMessage = searchParams.get('message');
+    const gateway = searchParams.get('gateway') || 'moyasar';
 
     if (!orderId) { setStatus('failed'); setMessage('رقم الطلب غير موجود'); return; }
 
-    if (moyasarStatus === 'paid') {
-      // Update order payment status
+    let isPaid = false;
+    if (gateway === 'moyasar') {
+      isPaid = searchParams.get('status') === 'paid';
+    } else if (gateway === 'paytabs') {
+      const respStatus = searchParams.get('respStatus') || searchParams.get('response_status');
+      isPaid = respStatus === 'A';
+    } else if (gateway === 'stripe') {
+      isPaid = searchParams.get('status') === 'paid';
+    } else {
+      isPaid = searchParams.get('status') === 'paid';
+    }
+
+    if (isPaid) {
       fetch('/api/public/orders/verify', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ orderId, paymentStatus: 'paid', status: 'confirmed' }),
+        body: JSON.stringify({ orderId, paymentStatus: 'paid', status: 'confirmed', gateway }),
       })
         .then(r => r.json())
         .then(async (data) => {
-          // Check if this is a course order and enroll the user
           if (data.order?.type === 'course' && data.order?.courseId && authUser) {
             const cId = data.order.courseId;
             setCourseId(cId);
@@ -49,15 +63,69 @@ export default function PaymentCallbackPage() {
           }
         })
         .catch(() => {});
-
       setStatus('paid');
       setMessage(`تم الدفع بنجاح! رقم طلبك: ${orderId}`);
     } else {
+      const failMsg = searchParams.get('message') || searchParams.get('respMessage') || 'فشل الدفع. يمكنك المحاولة مرة أخرى.';
       setStatus('failed');
-      setMessage(moyasarMessage || 'فشل الدفع. يمكنك المحاولة مرة أخرى.');
+      setMessage(failMsg);
     }
   }, [searchParams, authUser, authLoading]);
 
+  // Notify parent window (popup scenario) then auto-close
+  useEffect(() => {
+    if (status === 'loading') return;
+    const orderId = searchParams.get('orderId');
+
+    if (window.opener) {
+      window.opener.postMessage({ type: 'payment-result', status, orderId }, '*');
+      // Auto-close popup after showing result briefly
+      const t = setTimeout(() => window.close(), 2500);
+      return () => clearTimeout(t);
+    }
+
+    // iFrame fallback
+    if (window !== window.parent) {
+      window.parent.postMessage({ type: 'payment-result', status, orderId }, '*');
+    }
+  }, [status, searchParams]);
+
+  // Minimal popup UI
+  if (isPopup) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-6" dir="rtl">
+        <div className="text-center w-full max-w-xs">
+          {status === 'loading' && (
+            <>
+              <Loader2 className="h-14 w-14 text-primary mx-auto mb-3 animate-spin" />
+              <p className="text-muted-foreground text-sm">جاري التحقق من الدفع...</p>
+            </>
+          )}
+          {status === 'paid' && (
+            <>
+              <div className="h-20 w-20 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
+                <CheckCircle className="h-10 w-10 text-emerald-600" />
+              </div>
+              <h2 className="font-bold text-xl mb-1">تم الدفع بنجاح!</h2>
+              <p className="text-muted-foreground text-sm">جاري إغلاق هذه النافذة...</p>
+            </>
+          )}
+          {status === 'failed' && (
+            <>
+              <div className="h-20 w-20 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+                <XCircle className="h-10 w-10 text-red-600" />
+              </div>
+              <h2 className="font-bold text-xl mb-1">لم يتم الدفع</h2>
+              <p className="text-muted-foreground text-sm mb-4">{message}</p>
+              <Button variant="outline" size="sm" onClick={() => window.close()}>إغلاق</Button>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Full standalone page
   return (
     <div className="min-h-screen flex items-center justify-center bg-background" dir="rtl">
       <div className="text-center max-w-sm px-4">
@@ -100,7 +168,9 @@ export default function PaymentCallbackPage() {
             </div>
             <h1 className="text-2xl font-bold mb-2">لم يتم الدفع</h1>
             <p className="text-muted-foreground mb-6">{message}</p>
-            <Button variant="outline" asChild className="w-full"><Link href="/market">العودة للمتجر</Link></Button>
+            <Button variant="outline" asChild className="w-full">
+              <Link href="/market">العودة للمتجر</Link>
+            </Button>
           </>
         )}
       </div>

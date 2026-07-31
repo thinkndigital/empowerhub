@@ -12,8 +12,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useStorage } from "@/firebase/provider";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { useUser } from "@/firebase/auth/use-user";
+import { uploadFile as uploadToStorage } from "@/lib/upload-file";
+import { applyOrgColor } from "@/lib/apply-org-color";
 
 interface SiteConfig {
   siteName: string;
@@ -59,11 +60,11 @@ const defaultConfig: SiteConfig = {
 function SaveBar({ onSave, saving, saved }: { onSave: () => void; saving: boolean; saved: boolean }) {
   return (
     <div className="sticky top-14 z-20 bg-slate-900/95 backdrop-blur border-b border-white/10 px-4 py-3 flex items-center justify-between">
-      <p className="text-slate-400 text-sm">تعديل محتوى الموقع</p>
       <Button onClick={onSave} disabled={saving} className={`gap-2 ${saved ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-primary hover:bg-primary/90'}`}>
         <Save className="h-4 w-4" />
         {saving ? 'جاري الحفظ...' : saved ? 'تم الحفظ ✓' : 'حفظ جميع التغييرات'}
       </Button>
+      <p className="text-slate-400 text-sm">تعديل محتوى الموقع</p>
     </div>
   );
 }
@@ -71,18 +72,16 @@ function SaveBar({ onSave, saving, saved }: { onSave: () => void; saving: boolea
 function ImageUploadField({ label, value, onChange, storagePath }: {
   label: string; value: string; onChange: (url: string) => void; storagePath: string;
 }) {
-  const storage = useStorage();
+  const { user } = useUser();
   const [uploading, setUploading] = useState(false);
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !storage) return;
+    if (!file || !user) return;
     setUploading(true);
     try {
-      const r = ref(storage, `${storagePath}/${Date.now()}-${file.name}`);
-      const snap = await uploadBytes(r, file);
-      const url = await getDownloadURL(snap.ref);
-      onChange(url);
+      const token = await user.getIdToken();
+      onChange(await uploadToStorage(file, storagePath, token));
     } catch {}
     setUploading(false);
   };
@@ -113,6 +112,11 @@ export default function SiteEditorPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  // Live-preview brand color in the admin panel itself
+  useEffect(() => {
+    if (config.primaryColor) applyOrgColor(config.primaryColor);
+  }, [config.primaryColor]);
 
   useEffect(() => {
     fetch('/api/admin-panel/site-config').then(r => r.json()).then(d => {

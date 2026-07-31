@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Bell, LayoutGrid, Search, Settings, BookOpen,
-  MessageSquare, BarChartHorizontal, CalendarDays, LogOut, ShoppingBag, ClipboardCheck,
+  MessageSquare, BarChartHorizontal, CalendarDays, LogOut, ShoppingBag, FileText, Video, ClipboardCheck,
 } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { doc } from "firebase/firestore";
@@ -29,16 +29,19 @@ import { useUser } from "@/firebase/auth/use-user";
 import { NotificationBell } from "@/components/notification-bell";
 import { MessageBell } from "@/components/message-bell";
 import { cn } from "@/lib/utils";
+import { applyPlatformColor } from "@/lib/platform-color";
 
 const allCoachMenuItems = [
-  { href: "/coach-dashboard",              label: "لوحة التحكم",    icon: LayoutGrid,        sectionKey: null },
-  { href: "/coach-dashboard/courses",      label: "دوراتي",         icon: BookOpen,          sectionKey: 'courses' },
-  { href: "/coach-dashboard/orders",       label: "الطلبات",        icon: ShoppingBag,       sectionKey: 'orders' },
-  { href: "/coach-dashboard/sessions",     label: "الجلسات",        icon: CalendarDays,      sectionKey: 'sessions' },
-  { href: "/coach-dashboard/analytics",    label: "التحليلات",      icon: BarChartHorizontal,sectionKey: 'analytics' },
-  { href: "/coach-dashboard/messages",     label: "الرسائل",        icon: MessageSquare,     sectionKey: 'messages' },
-  { href: "/coach-dashboard/invitations",  label: "الدعوات",        icon: Bell,              sectionKey: 'invitations' },
-  { href: "/coach-dashboard/assessments",  label: "نماذج التقييم", icon: ClipboardCheck,    sectionKey: null },
+  { href: "/coach-dashboard",              label: "لوحة التحكم",        icon: LayoutGrid,        sectionKey: null },
+  { href: "/coach-dashboard/courses",      label: "دوراتي",             icon: BookOpen,          sectionKey: 'courses' },
+  { href: "/coach-dashboard/orders",       label: "الطلبات",            icon: ShoppingBag,       sectionKey: 'orders' },
+  { href: "/coach-dashboard/sessions",     label: "الجلسات",            icon: CalendarDays,      sectionKey: 'sessions' },
+  { href: "/coach-dashboard/live-sessions",label: "الجلسات المباشرة",   icon: Video,             sectionKey: null },
+  { href: "/coach-dashboard/articles",     label: "المقالات",           icon: FileText,          sectionKey: null },
+  { href: "/coach-dashboard/analytics",    label: "التحليلات",          icon: BarChartHorizontal,sectionKey: 'analytics' },
+  { href: "/coach-dashboard/messages",     label: "الرسائل",            icon: MessageSquare,     sectionKey: 'messages' },
+  { href: "/coach-dashboard/invitations",  label: "الدعوات",            icon: Bell,              sectionKey: 'invitations' },
+  { href: "/coach-dashboard/assessments",  label: "نماذج التقييم",     icon: ClipboardCheck,    sectionKey: null },
 ];
 
 export default function CoachDashboardLayout({ children }: { children: React.ReactNode }) {
@@ -89,27 +92,7 @@ export default function CoachDashboardLayout({ children }: { children: React.Rea
   }, [firestore, userProfile?.organizationId]);
   const { data: organization } = useDoc<any>(orgRef);
 
-  useEffect(() => {
-    if (!organization?.primaryColor) return;
-    const hex = organization.primaryColor.replace(/^#/, '');
-    let r = parseInt(hex.substring(0, 2), 16);
-    let g = parseInt(hex.substring(2, 4), 16);
-    let b = parseInt(hex.substring(4, 6), 16);
-    r /= 255; g /= 255; b /= 255;
-    let cmin = Math.min(r, g, b), cmax = Math.max(r, g, b), delta = cmax - cmin, h = 0, s = 0, l = 0;
-    l = (cmax + cmin) / 2;
-    if (delta !== 0) {
-      s = l > 0.5 ? delta / (2 - cmax - cmin) : delta / (cmax + cmin);
-      if (cmax === r) h = (g - b) / delta + (g < b ? 6 : 0);
-      else if (cmax === g) h = (b - r) / delta + 2;
-      else h = (r - g) / delta + 4;
-      h = Math.round(h * 60);
-    }
-    if (h < 0) h += 360;
-    s = Math.round(s * 100);
-    l = Math.round(l * 100);
-    document.documentElement.style.setProperty('--primary', `${h} ${s}% ${l}%`);
-  }, [organization?.primaryColor]);
+  useEffect(() => { applyPlatformColor(); }, []);
 
   if (loading || (authUser && !userProfile && !profileTimedOut)) {
     return (

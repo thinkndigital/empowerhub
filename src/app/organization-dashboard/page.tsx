@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Users, UserCheck, BarChart3, TrendingUp, BookOpen, ArrowUpRight, GraduationCap } from "lucide-react";
+import { Users, UserCheck, BarChart3, TrendingUp, BookOpen, ArrowUpRight, GraduationCap, ChevronLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
@@ -90,7 +90,7 @@ export default function OrganizationDashboardPage() {
   }, [data]);
 
   const topBeneficiaries = useMemo(() =>
-    [...(data?.beneficiaries ?? [])].sort((a, b) => (b.progress ?? 0) - (a.progress ?? 0)).slice(0, 5),
+    [...(data?.beneficiaries ?? [])].sort((a, b) => (b.progress ?? 0) - (a.progress ?? 0)).slice(0, 6),
     [data]
   );
 
@@ -195,7 +195,7 @@ export default function OrganizationDashboardPage() {
                 <div key={i} className="flex items-center justify-between py-2.5 border-b border-border/50 last:border-0">
                   <div className="flex items-center gap-2.5 text-sm">
                     {item.icon}
-                    <span className="text-muted-foreground">{item.label}</span>
+                    <span>{item.label}</span>
                   </div>
                   {loading
                     ? <Skeleton className="h-4 w-8" />
@@ -231,6 +231,26 @@ export default function OrganizationDashboardPage() {
               ))}
             </CardContent>
           </Card>
+
+          {/* Insight teaser */}
+          {!loading && stats.total > 0 && (
+            <div className="rounded-xl bg-primary/5 border border-primary/10 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <ArrowUpRight className="h-4 w-4 text-primary" />
+                <span className="text-xs font-semibold text-primary">نظرة سريعة</span>
+              </div>
+              <p className="text-sm text-foreground font-medium leading-relaxed">
+                {stats.active} من {stats.total} مستفيد نشط حالياً
+                {stats.avgProgress > 0 && ` بمتوسط تقدم ${stats.avgProgress}%`}.
+              </p>
+              <Link
+                href="/organization-dashboard/reports"
+                className="text-xs text-primary font-medium mt-2 inline-flex items-center gap-1 hover:gap-2 transition-all"
+              >
+                عرض التقارير الكاملة <ChevronLeft className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     </div>

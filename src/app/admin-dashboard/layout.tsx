@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutGrid, Search, Settings, Users, Building,
   Shield, BarChartHorizontal, BookOpen, MessageSquare, LogOut,
+  Video, GraduationCap, FileText, Briefcase, Store, Quote, Layout,
 } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { useMemo } from "react";
@@ -32,9 +33,16 @@ const menuItems = [
   { href: "/admin-dashboard/organizations", label: "الجهات المسجلة", icon: Building },
   { href: "/admin-dashboard/users", label: "المستخدمون", icon: Users },
   { href: "/admin-dashboard/mentors", label: "المرشدون", icon: Users },
+  { href: "/admin-dashboard/coaches", label: "المدربون", icon: GraduationCap },
   { href: "/admin-dashboard/courses", label: "الدورات", icon: BookOpen },
+  { href: "/admin-dashboard/live-sessions", label: "الجلسات المباشرة", icon: Video },
+  { href: "/admin-dashboard/articles", label: "المقالات", icon: FileText },
+  { href: "/admin-dashboard/projects", label: "المشاريع والفرص", icon: Briefcase },
+  { href: "/admin-dashboard/stores", label: "المتاجر والمنتجات", icon: Store },
+  { href: "/admin-dashboard/success-stories", label: "قصص النجاح", icon: Quote },
   { href: "/admin-dashboard/analytics", label: "تحليلات المنصة", icon: BarChartHorizontal },
   { href: "/admin-dashboard/messages", label: "الرسائل", icon: MessageSquare },
+  { href: "/admin-dashboard/homepage", label: "محرر الموقع", icon: Layout },
 ];
 
 export default function AdminDashboardLayout({ children }: { children: React.ReactNode }) {

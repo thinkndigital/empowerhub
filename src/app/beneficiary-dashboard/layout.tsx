@@ -25,6 +25,7 @@ import { useAuth } from "@/firebase/provider";
 import { NotificationBell } from "@/components/notification-bell";
 import { MessageBell } from "@/components/message-bell";
 import { cn } from "@/lib/utils";
+import { applyPlatformColor } from "@/lib/platform-color";
 
 const allMenuItems = [
   { href: "/beneficiary-dashboard",              label: "لوحة التحكم",    icon: LayoutGrid,    sectionKey: null },
@@ -67,6 +68,7 @@ export default function BeneficiaryDashboardLayout({ children }: { children: Rea
         const sections = platformData.config.dashboardSections.beneficiary;
         setMenuItems(allMenuItems.filter(item => item.sectionKey === null || sections[item.sectionKey] !== false));
       }
+      applyPlatformColor();
     } catch { /* silent */ }
   }, [authUser]);
 

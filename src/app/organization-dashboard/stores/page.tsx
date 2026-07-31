@@ -171,7 +171,7 @@ export default function OrgStoresPage() {
     <div className="space-y-6" dir="rtl">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">المتاجر والمنتجات</h1>
-        <p className="text-muted-foreground text-sm">إدارة متاجر المستفيدين ومنتجاتهم وطلباتهم في منظمتك.</p>
+        <p className="text-muted-foreground text-sm">إدارة متاجر المستفيدين ومنتجاتهم وطلباتهم.</p>
       </div>
 
       {/* Summary Stats */}

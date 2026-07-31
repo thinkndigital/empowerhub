@@ -49,6 +49,7 @@ import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
 
 import { ORG_TYPES } from "@/lib/org-types";
+import { ExportButton } from "@/components/export-button";
 
 type DashboardSections = {
   organization?: Record<string, boolean>;
@@ -292,10 +293,19 @@ export default function OrganizationsPage() {
               <CardDescription>إدارة المنظمات والشركات والمؤسسات الشريكة وصلاحياتهم.</CardDescription>
             </div>
             <div className="flex gap-2 flex-wrap">
-              <Button variant="outline" size="sm">
-                <Download className="ml-2 h-4 w-4" />
-                تصدير
-              </Button>
+              <ExportButton
+                title="الجهات المسجلة"
+                filename={`organizations-${new Date().toISOString().slice(0,10)}`}
+                headers={['الاسم', 'النوع', 'الخطة', 'الحالة', 'تاريخ الانضمام']}
+                rows={(organizations ?? []).map(org => [
+                  org.name || '',
+                  ORG_TYPES[org.orgType || 'organization'] || org.orgType || 'منظمة',
+                  PLAN_LABELS[org.plan || 'basic'] || 'أساسي',
+                  org.status || 'غير محدد',
+                  org.joined ? new Date(org.joined).toLocaleDateString('ar-EG') : '',
+                ])}
+                options={{ summary: { 'إجمالي الجهات': String((organizations ?? []).length), 'نشطة': String((organizations ?? []).filter(o => o.status === 'نشط').length) } }}
+              />
               <Button size="sm" onClick={() => setIsCreateOpen(true)}>
                 <Plus className="ml-2 h-4 w-4" />
                 إنشاء منظمة جديدة

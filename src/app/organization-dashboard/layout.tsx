@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutGrid, Search, Settings, Users, BarChart3,
-  BookOpen, Store, MessageSquare, GraduationCap, ClipboardList, LogOut, Quote, ClipboardCheck,
+  BookOpen, Store, MessageSquare, GraduationCap, ClipboardList, LogOut, Briefcase, Video, Quote, ClipboardCheck,
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { signOut } from "firebase/auth";
@@ -16,8 +16,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
-  DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
+  DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Logo } from "@/components/logo";
@@ -26,20 +26,24 @@ import { useAuth } from "@/firebase/provider";
 import { NotificationBell } from "@/components/notification-bell";
 import { MessageBell } from "@/components/message-bell";
 import { cn } from "@/lib/utils";
+import { applyOrgColor } from "@/lib/apply-org-color";
+import { applyPlatformColor } from "@/lib/platform-color";
 
 const allMenuItems = [
-  { href: "/organization-dashboard",                 label: "لوحة التحكم",    icon: LayoutGrid,    sectionKey: null },
-  { href: "/organization-dashboard/beneficiaries",   label: "المستفيدون",     icon: Users,         sectionKey: 'beneficiaries' },
-  { href: "/organization-dashboard/team",            label: "فريق العمل",     icon: Users,         sectionKey: 'team' },
-  { href: "/organization-dashboard/mentors",         label: "المرشدون",       icon: Users,         sectionKey: 'mentors' },
-  { href: "/organization-dashboard/coaches",         label: "المدربون",       icon: GraduationCap, sectionKey: 'coaches' },
-  { href: "/organization-dashboard/courses",         label: "الدورات",        icon: BookOpen,      sectionKey: 'courses' },
-  { href: "/organization-dashboard/stores",          label: "المتاجر",        icon: Store,         sectionKey: 'stores' },
-  { href: "/organization-dashboard/orders",          label: "الطلبات",        icon: ClipboardList, sectionKey: 'orders' },
-  { href: "/organization-dashboard/reports",         label: "التقارير",       icon: BarChart3,     sectionKey: 'reports' },
-  { href: "/organization-dashboard/assessments",     label: "نماذج التقييم", icon: ClipboardCheck, sectionKey: null },
-  { href: "/organization-dashboard/success-stories", label: "قصص النجاح",    icon: Quote,         sectionKey: null },
-  { href: "/organization-dashboard/messages",        label: "الرسائل",        icon: MessageSquare, sectionKey: 'messages' },
+  { href: "/organization-dashboard",                 label: "لوحة التحكم",        icon: LayoutGrid,    sectionKey: null },
+  { href: "/organization-dashboard/beneficiaries",   label: "المستفيدون",         icon: Users,         sectionKey: 'beneficiaries' },
+  { href: "/organization-dashboard/team",            label: "فريق العمل",         icon: Users,         sectionKey: 'team' },
+  { href: "/organization-dashboard/mentors",         label: "المرشدون",           icon: Users,         sectionKey: 'mentors' },
+  { href: "/organization-dashboard/coaches",         label: "المدربون",           icon: GraduationCap, sectionKey: 'coaches' },
+  { href: "/organization-dashboard/courses",         label: "الدورات",            icon: BookOpen,      sectionKey: 'courses' },
+  { href: "/organization-dashboard/live-sessions",   label: "الجلسات المباشرة",   icon: Video,         sectionKey: null },
+  { href: "/organization-dashboard/projects",        label: "المشاريع",           icon: Briefcase,     sectionKey: 'projects' },
+  { href: "/organization-dashboard/stores",          label: "المتاجر",            icon: Store,         sectionKey: 'stores' },
+  { href: "/organization-dashboard/orders",          label: "الطلبات",            icon: ClipboardList, sectionKey: 'orders' },
+  { href: "/organization-dashboard/reports",         label: "التقارير",           icon: BarChart3,     sectionKey: 'reports' },
+  { href: "/organization-dashboard/assessments",     label: "نماذج التقييم",     icon: ClipboardCheck, sectionKey: null },
+  { href: "/organization-dashboard/success-stories", label: "قصص النجاح",        icon: Quote,         sectionKey: null },
+  { href: "/organization-dashboard/messages",        label: "الرسائل",            icon: MessageSquare, sectionKey: 'messages' },
 ];
 
 export default function OrganizationDashboardLayout({ children }: { children: React.ReactNode }) {
@@ -65,6 +69,8 @@ export default function OrganizationDashboardLayout({ children }: { children: Re
       const orgData = await orgRes.json();
       if (orgData.org?.name) setOrgName(orgData.org.name);
       if (orgData.org?.logoUrl) setOrgLogo(orgData.org.logoUrl);
+      if (orgData.org?.primaryColor) applyOrgColor(orgData.org.primaryColor);
+      else applyPlatformColor();
       const profileData = await profileRes.json();
       if (profileData.profile?.avatarUrl) setAvatarUrl(profileData.profile.avatarUrl);
       const platformData = await platformRes.json();
@@ -96,6 +102,7 @@ export default function OrganizationDashboardLayout({ children }: { children: Re
     href === '/organization-dashboard'
       ? pathname === href
       : pathname === href || pathname.startsWith(href + '/');
+
 
   return (
     <SidebarProvider dir="rtl">

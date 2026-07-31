@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   LayoutGrid, Building2, Users, GraduationCap, Settings,
-  LogOut, Menu, X, Shield, CreditCard, Star, PenSquare, Store, Wallet, Sliders,
+  LogOut, Menu, X, Shield, CreditCard, Star, PenSquare, Store, Wallet, Sliders, FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -29,6 +29,7 @@ const navGroups = [
   {
     label: 'المحتوى',
     items: [
+      { href: "/admin/dashboard/content", label: "إدارة المحتوى", icon: FileText },
       { href: "/admin/dashboard/stores", label: "المتاجر والمنتجات", icon: Store },
       { href: "/admin/dashboard/payment", label: "بوابة الدفع", icon: Wallet },
     ],
@@ -132,7 +133,7 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 flex" dir="rtl">
+    <div className="dark min-h-screen bg-slate-950 flex" dir="rtl">
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex w-60 flex-shrink-0 bg-slate-900 border-l border-white/10 flex-col">
         <SidebarContent />
@@ -143,7 +144,7 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
         <div className="lg:hidden fixed inset-0 z-50 flex">
           <div className="fixed inset-0 bg-black/60" onClick={() => setSidebarOpen(false)} />
           <aside className="relative w-60 bg-slate-900 flex flex-col z-10">
-            <button onClick={() => setSidebarOpen(false)} className="absolute top-4 left-4 text-slate-400 hover:text-white">
+            <button onClick={() => setSidebarOpen(false)} className="absolute top-4 right-4 text-slate-400 hover:text-white">
               <X className="h-5 w-5" />
             </button>
             <SidebarContent />
@@ -155,16 +156,16 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top bar */}
         <header className="h-14 bg-slate-900/80 backdrop-blur border-b border-white/10 flex items-center gap-4 px-4 lg:px-6 sticky top-0 z-30">
-          <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-slate-400 hover:text-white">
-            <Menu className="h-5 w-5" />
-          </button>
-          <div className="flex-1" />
           <div className="flex items-center gap-2">
             <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
               <Shield className="h-4 w-4 text-primary" />
             </div>
             <span className="text-slate-300 text-sm hidden sm:block">المشرف العام</span>
           </div>
+          <div className="flex-1" />
+          <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-slate-400 hover:text-white">
+            <Menu className="h-5 w-5" />
+          </button>
         </header>
 
         {/* Content */}

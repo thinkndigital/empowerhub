@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Bell, LayoutGrid, Search, Settings, Users,
-  MessageSquare, Calendar, BarChart3, LogOut, ShoppingBag, ClipboardCheck,
+  MessageSquare, Calendar, BarChart3, LogOut, ShoppingBag, FileText, ClipboardCheck,
 } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { doc } from "firebase/firestore";
@@ -20,8 +20,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
-  DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
+  DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Logo } from "@/components/logo";
@@ -29,12 +29,14 @@ import { useUser } from "@/firebase/auth/use-user";
 import { NotificationBell } from "@/components/notification-bell";
 import { MessageBell } from "@/components/message-bell";
 import { cn } from "@/lib/utils";
+import { applyPlatformColor } from "@/lib/platform-color";
 
 const allMentorMenuItems = [
   { href: "/mentor-dashboard",                  label: "لوحة التحكم",    icon: LayoutGrid,    sectionKey: null },
   { href: "/mentor-dashboard/my-beneficiaries", label: "المستفيدون",     icon: Users,         sectionKey: 'my_beneficiaries' },
   { href: "/mentor-dashboard/orders",           label: "الطلبات",        icon: ShoppingBag,   sectionKey: 'orders' },
   { href: "/mentor-dashboard/sessions",         label: "الجلسات",        icon: Calendar,      sectionKey: 'sessions' },
+  { href: "/mentor-dashboard/articles",         label: "المقالات",       icon: FileText,      sectionKey: null },
   { href: "/mentor-dashboard/analytics",        label: "التحليلات",      icon: BarChart3,     sectionKey: 'analytics' },
   { href: "/mentor-dashboard/messages",         label: "الرسائل",        icon: MessageSquare, sectionKey: 'messages' },
   { href: "/mentor-dashboard/invitations",      label: "الدعوات",        icon: Bell,          sectionKey: 'invitations' },
@@ -89,27 +91,7 @@ export default function MentorDashboardLayout({ children }: { children: React.Re
   }, [firestore, userProfile?.organizationId]);
   const { data: organization } = useDoc<any>(orgRef);
 
-  useEffect(() => {
-    if (!organization?.primaryColor) return;
-    const hex = organization.primaryColor.replace(/^#/, '');
-    let r = parseInt(hex.substring(0, 2), 16);
-    let g = parseInt(hex.substring(2, 4), 16);
-    let b = parseInt(hex.substring(4, 6), 16);
-    r /= 255; g /= 255; b /= 255;
-    let cmin = Math.min(r, g, b), cmax = Math.max(r, g, b), delta = cmax - cmin, h = 0, s = 0, l = 0;
-    l = (cmax + cmin) / 2;
-    if (delta !== 0) {
-      s = l > 0.5 ? delta / (2 - cmax - cmin) : delta / (cmax + cmin);
-      if (cmax === r) h = (g - b) / delta + (g < b ? 6 : 0);
-      else if (cmax === g) h = (b - r) / delta + 2;
-      else h = (r - g) / delta + 4;
-      h = Math.round(h * 60);
-    }
-    if (h < 0) h += 360;
-    s = Math.round(s * 100);
-    l = Math.round(l * 100);
-    document.documentElement.style.setProperty('--primary', `${h} ${s}% ${l}%`);
-  }, [organization?.primaryColor]);
+  useEffect(() => { applyPlatformColor(); }, []);
 
   if (loading || (authUser && !userProfile && !profileTimedOut)) {
     return (
@@ -249,9 +231,13 @@ export default function MentorDashboardLayout({ children }: { children: React.Re
                   <Settings className="h-4 w-4" />الإعدادات
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onSelect={handleLogout} className="text-right cursor-pointer rounded-lg gap-2 text-destructive focus:text-destructive focus:bg-destructive/10">
-                  <LogOut className="h-4 w-4" />تسجيل الخروج
-                </DropdownMenuItem>
+                {authUser ? (
+                  <DropdownMenuItem onSelect={handleLogout} className="text-right cursor-pointer rounded-lg gap-2 text-destructive focus:text-destructive focus:bg-destructive/10">
+                    <LogOut className="h-4 w-4" />تسجيل الخروج
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem onSelect={() => router.push('/login')} className="text-right cursor-pointer rounded-lg gap-2">تسجيل الدخول</DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

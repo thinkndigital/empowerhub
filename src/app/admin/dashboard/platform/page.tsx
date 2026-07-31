@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { useStorage } from "@/firebase/provider";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { useUser } from "@/firebase/auth/use-user";
+import { uploadFile as uploadToStorage } from "@/lib/upload-file";
 
 interface DashSections {
   organization: Record<string, boolean>;
@@ -68,17 +68,16 @@ const defaultConfig: PlatformConfig = {
 };
 
 function ImageUploadField({ label, value, onChange, hint }: { label: string; value: string; onChange: (v: string) => void; hint?: string }) {
-  const storage = useStorage();
+  const { user } = useUser();
   const [uploading, setUploading] = useState(false);
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !storage) return;
+    if (!file || !user) return;
     setUploading(true);
     try {
-      const r = ref(storage, `platform/${Date.now()}-${file.name}`);
-      const snap = await uploadBytes(r, file);
-      onChange(await getDownloadURL(snap.ref));
+      const token = await user.getIdToken();
+      onChange(await uploadToStorage(file, 'platform', token));
     } catch {}
     setUploading(false);
   };

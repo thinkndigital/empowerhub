@@ -13,7 +13,7 @@ export async function GET() {
       config: {
         allowCOD: d.allowCOD ?? true,
         codLabel: d.codLabel || 'الدفع عند الاستلام',
-        currency: d.currency || 'SAR',
+        currency: d.currency || 'JOD',
         // expose only enabled flag + label per gateway (no keys)
         moyasar: { enabled: d.moyasar?.enabled ?? false, label: d.moyasar?.label || 'موياسر' },
         stripe: { enabled: d.stripe?.enabled ?? false, label: d.stripe?.label || 'Stripe' },
@@ -25,6 +25,6 @@ export async function GET() {
       },
     });
   } catch {
-    return NextResponse.json({ config: { allowCOD: true, codLabel: 'الدفع عند الاستلام', currency: 'SAR', moyasar: { enabled: false }, stripe: { enabled: false }, paypal: { enabled: false }, paytabs: { enabled: false }, hyperpay: { enabled: false }, tamara: { enabled: false }, tabby: { enabled: false } } });
+    return NextResponse.json({ config: { allowCOD: true, codLabel: 'الدفع عند الاستلام', currency: 'JOD', moyasar: { enabled: false }, stripe: { enabled: false }, paypal: { enabled: false }, paytabs: { enabled: false }, hyperpay: { enabled: false }, tamara: { enabled: false }, tabby: { enabled: false } } });
   }
 }

@@ -5,8 +5,8 @@ import {
   Plus, Pencil, Trash2, Search, Eye, Users, GraduationCap,
   Store, UserCheck, RefreshCw, Upload, MoreVertical, Sliders, Building2,
 } from "lucide-react";
-import { useStorage } from "@/firebase/provider";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { useUser } from "@/firebase/auth/use-user";
+import { uploadFile as uploadToStorage } from "@/lib/upload-file";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -99,17 +99,16 @@ const emptyForm: OrgForm = { name: "", plan: "free", primaryColor: "#6366f1", lo
 // ─── Logo Upload ──────────────────────────────────────────────────────────────
 
 function LogoUploadField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const storage = useStorage();
+  const { user } = useUser();
   const [uploading, setUploading] = useState(false);
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !storage) return;
+    if (!file || !user) return;
     setUploading(true);
     try {
-      const r = ref(storage, `organizations/${Date.now()}-${file.name}`);
-      const snap = await uploadBytes(r, file);
-      onChange(await getDownloadURL(snap.ref));
+      const token = await user.getIdToken();
+      onChange(await uploadToStorage(file, 'organizations', token));
     } catch {}
     setUploading(false);
     e.target.value = '';

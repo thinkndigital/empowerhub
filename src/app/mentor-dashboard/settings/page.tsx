@@ -15,8 +15,7 @@ import { useUser } from '@/firebase/auth/use-user';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useStorage } from '@/firebase/provider';
-import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { uploadFile as uploadToStorage } from '@/lib/upload-file';
 
 const mentorProfileSchema = z.object({
   name: z.string().min(2, { message: 'يجب أن يكون الاسم حرفين على الأقل.' }),
@@ -25,6 +24,9 @@ const mentorProfileSchema = z.object({
   certifications: z.string().optional(),
   phone: z.string().optional(),
   linkedIn: z.string().optional(),
+  website: z.string().optional(),
+  twitter: z.string().optional(),
+  instagram: z.string().optional(),
   yearsOfExperience: z.coerce.number().min(0).optional(),
 });
 
@@ -45,6 +47,9 @@ type MentorProfile = {
   certifications?: string;
   phone?: string;
   linkedIn?: string;
+  website?: string;
+  twitter?: string;
+  instagram?: string;
   yearsOfExperience?: number;
   wallet?: {
     balance?: number;
@@ -55,7 +60,6 @@ type MentorProfile = {
 export default function MentorSettingsPage() {
   const { toast } = useToast();
   const { user: authUser } = useUser();
-  const storage = useStorage();
   const [profile, setProfile] = useState<MentorProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -84,6 +88,9 @@ export default function MentorSettingsPage() {
       certifications: '',
       phone: '',
       linkedIn: '',
+      website: '',
+      twitter: '',
+      instagram: '',
       yearsOfExperience: 0,
     },
   });
@@ -107,6 +114,9 @@ export default function MentorSettingsPage() {
         certifications: profile.certifications || '',
         phone: profile.phone || '',
         linkedIn: profile.linkedIn || '',
+        website: profile.website || '',
+        twitter: profile.twitter || '',
+        instagram: profile.instagram || '',
         yearsOfExperience: profile.yearsOfExperience || 0,
       });
       if (profile.wallet?.payoutInfo) {
@@ -117,20 +127,14 @@ export default function MentorSettingsPage() {
 
   async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (!file || !authUser || !storage) return;
+    if (!file || !authUser) return;
 
-    // Show preview immediately
     const objectUrl = URL.createObjectURL(file);
     setAvatarPreview(objectUrl);
-
     setAvatarUploading(true);
     try {
-      const path = `avatars/${authUser.uid}/${Date.now()}-${file.name}`;
-      const ref = storageRef(storage, path);
-      await uploadBytes(ref, file);
-      const downloadUrl = await getDownloadURL(ref);
-
       const token = await authUser.getIdToken();
+      const downloadUrl = await uploadToStorage(file, `avatars/${authUser.uid}`, token);
       await fetch('/api/user/profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
@@ -138,8 +142,8 @@ export default function MentorSettingsPage() {
       });
       setProfile(prev => prev ? { ...prev, avatarUrl: downloadUrl } : prev);
       toast({ title: 'تم تحديث الصورة الشخصية', description: 'تم رفع صورتك الشخصية بنجاح.' });
-    } catch {
-      toast({ variant: 'destructive', title: 'خطأ!', description: 'فشل رفع الصورة الشخصية.' });
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: 'خطأ!', description: err?.message || 'فشل رفع الصورة الشخصية.' });
       setAvatarPreview(null);
     } finally {
       setAvatarUploading(false);
@@ -176,7 +180,7 @@ export default function MentorSettingsPage() {
   const avatarInitial = profile?.name?.charAt(0) || '؟';
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
+    <div className="w-full space-y-8" dir="rtl">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">إعدادات الملف الشخصي والمحفظة</h1>
         <p className="text-sm text-muted-foreground">إدارة معلوماتك المهنية وتفاصيل الدفع.</p>
@@ -241,6 +245,15 @@ export default function MentorSettingsPage() {
                     )} />
                     <FormField control={profileForm.control} name="linkedIn" render={({ field }) => (
                       <FormItem><FormLabel>رابط LinkedIn</FormLabel><FormControl><Input dir="ltr" placeholder="https://linkedin.com/in/..." {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={profileForm.control} name="website" render={({ field }) => (
+                      <FormItem><FormLabel>الموقع الشخصي</FormLabel><FormControl><Input dir="ltr" placeholder="https://..." {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={profileForm.control} name="twitter" render={({ field }) => (
+                      <FormItem><FormLabel>حساب X / Twitter</FormLabel><FormControl><Input dir="ltr" placeholder="https://x.com/..." {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={profileForm.control} name="instagram" render={({ field }) => (
+                      <FormItem><FormLabel>حساب Instagram</FormLabel><FormControl><Input dir="ltr" placeholder="https://instagram.com/..." {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
                   </div>
                   <FormField control={profileForm.control} name="bio" render={({ field }) => (

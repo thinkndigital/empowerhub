@@ -5,6 +5,7 @@ import { useState, useMemo, useRef } from "react";
 import {
   MoreHorizontal, PlusCircle, Users, Search, UserPlus, Mail, Upload, Loader2,
 } from "lucide-react";
+import { ExportButton } from "@/components/export-button";
 import type { User } from "firebase/auth";
 
 import { Badge } from "@/components/ui/badge";
@@ -182,7 +183,7 @@ export default function BeneficiariesPage() {
     setRemovingUser(true);
     try {
       await apiAction(user, { action: "removeFromOrg", userId: removeTarget.id });
-      toast({ title: "تمت الإزالة", description: `تمت إزالة ${removeTarget.name} من المنظمة.` });
+      toast({ title: "تمت الإزالة", description: `تمت إزالة ${removeTarget.name}.` });
       refetchOrg();
       refetchAll();
     } catch {
@@ -198,7 +199,7 @@ export default function BeneficiariesPage() {
     setAddingUserId(u.id);
     try {
       await apiAction(user, { action: "addToOrg", userId: u.id });
-      toast({ title: "تمت الإضافة", description: `تم إضافة ${u.name} إلى منظمتك.` });
+      toast({ title: "تمت الإضافة", description: `تمت إضافة ${u.name}.` });
       refetchOrg();
       refetchAll();
     } catch {
@@ -366,9 +367,23 @@ export default function BeneficiariesPage() {
                   <CardTitle className="flex items-center gap-2">
                     <Users className="h-5 w-5" /> المستفيدون
                   </CardTitle>
-                  <CardDescription>قائمة بجميع المستفيدين المنتسبين لمنظمتك.</CardDescription>
+                  <CardDescription>قائمة بجميع المستفيدين المسجلين.</CardDescription>
                 </div>
-                <Select value={groupFilter} onValueChange={setGroupFilter}>
+                <div className="flex gap-2 flex-wrap">
+                  <ExportButton
+                    title="قائمة المستفيدين"
+                    filename={`beneficiaries-${new Date().toISOString().slice(0,10)}`}
+                    headers={['الاسم', 'البريد الإلكتروني', 'الحالة', 'التقدم %', 'المجموعة']}
+                    rows={(orgUsers ?? []).map(u => [
+                      u.name || '',
+                      u.email || '',
+                      u.status || derivedStatus(u.progress),
+                      u.progress ?? 0,
+                      (groups ?? []).find(g => g.id === u.groupId)?.name || '',
+                    ])}
+                    options={{ summary: { 'إجمالي المستفيدين': String((orgUsers ?? []).length), 'نشطون': String((orgUsers ?? []).filter(u => (u.progress ?? 0) > 0 && (u.progress ?? 0) < 100).length), 'أكملوا البرنامج': String((orgUsers ?? []).filter(u => (u.progress ?? 0) >= 100).length) } }}
+                  />
+                  <Select value={groupFilter} onValueChange={setGroupFilter}>
                   <SelectTrigger className="w-44">
                     <SelectValue placeholder="تصفية بالمجموعة" />
                   </SelectTrigger>
@@ -379,6 +394,7 @@ export default function BeneficiariesPage() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -480,7 +496,7 @@ export default function BeneficiariesPage() {
                                 className="text-red-500"
                                 onSelect={() => setRemoveTarget(u)}
                               >
-                                إزالة من المنظمة
+                                إزالة
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -504,7 +520,7 @@ export default function BeneficiariesPage() {
                   <CardTitle className="flex items-center gap-2">
                     <Search className="h-5 w-5" /> استكشاف المستفيدين
                   </CardTitle>
-                  <CardDescription>ابحث عن مستفيدين وأضفهم إلى منظمتك.</CardDescription>
+                  <CardDescription>ابحث عن مستفيدين وأضفهم.</CardDescription>
                 </div>
                 <div className="relative">
                   <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -586,7 +602,7 @@ export default function BeneficiariesPage() {
               <CardTitle className="flex items-center gap-2">
                 <Mail className="h-5 w-5" /> دعوة عبر البريد
               </CardTitle>
-              <CardDescription>أرسل دعوة بالبريد الإلكتروني لمستفيد جديد للانضمام لمنظمتك.</CardDescription>
+              <CardDescription>أرسل دعوة بالبريد الإلكتروني لمستفيد جديد للانضمام.</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSendInvite} className="flex flex-wrap gap-3 items-end">
@@ -697,7 +713,7 @@ export default function BeneficiariesPage() {
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                   <CardTitle>المجموعات</CardTitle>
-                  <CardDescription>إدارة مجموعات المستفيدين في منظمتك.</CardDescription>
+                  <CardDescription>إدارة مجموعات المستفيدين.</CardDescription>
                 </div>
                 <Button onClick={() => setIsCreateGroupOpen(true)}>
                   <PlusCircle className="ml-2 h-4 w-4" /> إنشاء مجموعة
@@ -746,7 +762,7 @@ export default function BeneficiariesPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle>
             <AlertDialogDescription>
-              سيتم إزالة "{removeTarget?.name}" من منظمتك. يمكنه إعادة الانضمام لاحقاً.
+              سيتم إزالة "{removeTarget?.name}". يمكنه إعادة الانضمام لاحقاً.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -103,6 +103,7 @@ function StoresTab() {
   return (
     <div className="space-y-4">
       <div className="flex gap-3 items-center">
+        <span className="text-slate-400 text-sm shrink-0">{stores.length} متجر</span>
         <div className="relative flex-1 max-w-xs">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
           <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="بحث عن متجر..." className="pr-9" />
@@ -110,7 +111,6 @@ function StoresTab() {
         <Button variant="outline" size="icon" onClick={load} disabled={loading}>
           <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
         </Button>
-        <span className="text-slate-400 text-sm">{stores.length} متجر</span>
       </div>
 
       {loading ? (
@@ -143,7 +143,7 @@ function StoresTab() {
 
                 <div className="flex items-center justify-between text-xs text-slate-500 mb-3">
                   <span>{store.productsCount} منتج</span>
-                  {store.createdAt && <span>{new Date(store.createdAt).toLocaleDateString('ar-SA')}</span>}
+                  {store.createdAt && <span>{new Date(store.createdAt).toLocaleDateString('ar-EG')}</span>}
                 </div>
 
                 <div className="flex gap-2">
@@ -280,6 +280,7 @@ function ProductsTab() {
   return (
     <div className="space-y-4">
       <div className="flex gap-3 items-center">
+        <span className="text-slate-400 text-sm shrink-0">{products.length} منتج</span>
         <div className="relative flex-1 max-w-xs">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
           <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="بحث عن منتج..." className="pr-9" />
@@ -287,7 +288,6 @@ function ProductsTab() {
         <Button variant="outline" size="icon" onClick={load} disabled={loading}>
           <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
         </Button>
-        <span className="text-slate-400 text-sm">{products.length} منتج</span>
       </div>
 
       {loading ? (
@@ -314,7 +314,7 @@ function ProductsTab() {
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     {product.price != null && (
-                      <span className="text-primary text-sm font-semibold">{product.price} ر.س</span>
+                      <span className="text-primary text-sm font-semibold">{product.price} د.أ</span>
                     )}
                     {product.category && (
                       <Badge className="bg-primary/10 text-primary border-0 text-xs">{product.category}</Badge>
@@ -377,7 +377,7 @@ function ProductsTab() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>السعر (ر.س)</Label>
+                <Label>السعر (د.أ)</Label>
                 <Input value={editPrice} onChange={e => setEditPrice(e.target.value)} type="number" min="0" dir="ltr" />
               </div>
               <div className="space-y-2">

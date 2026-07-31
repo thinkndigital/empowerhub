@@ -42,7 +42,7 @@ interface PaymentConfig {
 }
 
 const defaultPaymentConfig: PaymentConfig = {
-  allowCOD: true, codLabel: 'الدفع عند الاستلام', currency: 'SAR',
+  allowCOD: true, codLabel: 'الدفع عند الاستلام', currency: 'JOD',
   moyasar: { enabled: false, label: 'موياسر' },
   stripe: { enabled: false, label: 'Stripe' },
   paypal: { enabled: false, label: 'PayPal' },
@@ -83,7 +83,7 @@ export function OrderDialog({ product, isOpen, onOpenChange }: OrderDialogProps)
   }, [isOpen]);
 
   const total = (product?.price || 0) + (product?.deliveryCost || 0);
-  const currency = paymentConfig.currency || 'SAR';
+  const currency = paymentConfig.currency || 'JOD';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -76,14 +76,14 @@ export default function AdminLoginPage() {
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="bg-white/10 border-white/20 text-white placeholder:text-slate-500 focus:border-primary pl-10"
+                  className="bg-white/10 border-white/20 text-white placeholder:text-slate-500 focus:border-primary pr-10"
                   dir="ltr"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPass(!showPass)}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
                 >
                   {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>

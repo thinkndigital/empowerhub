@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
 
     const configSnap = await adminDb.collection('config').doc('payment').get();
     const config = configSnap.exists ? configSnap.data() as any : {};
-    const currency = config?.currency || 'SAR';
+    const currency = config?.currency || 'JOD';
 
     const host = (req.headers.get('origin') || '').replace(/\/$/, '') || 'https://empowerhub.thinkndigital.com';
     const callbackUrl = `${host}/payment/callback?orderId=${orderId}&gateway=${gateway || 'moyasar'}`;
@@ -124,26 +124,37 @@ export async function POST(req: NextRequest) {
     if (gateway === 'paytabs') {
       const gw = config?.paytabs || {};
       if (!gw.enabled) return NextResponse.json({ error: 'الدفع عبر PayTabs غير مفعّل' }, { status: 400 });
-      if (!gw.profileId || !gw.serverKey) return NextResponse.json({ error: 'بيانات PayTabs غير مكتملة' }, { status: 400 });
+      if (!gw.profileId || !gw.serverKey) return NextResponse.json({ error: 'بيانات PayTabs غير مكتملة (Profile ID أو Server Key)' }, { status: 400 });
 
-      const res = await fetch('https://secure.paytabs.sa/payment/request', {
+      const regionBaseUrls: Record<string, string> = {
+        SAU: 'https://secure.paytabs.sa',
+        ARE: 'https://secure.paytabs.com',
+        EGY: 'https://secure-egypt.paytabs.com',
+        OMN: 'https://secure-oman.paytabs.com',
+        JOR: 'https://secure-jordan.paytabs.com',
+        IRQ: 'https://secure-iraq.paytabs.com',
+      };
+      const ptBase = regionBaseUrls[gw.region] || regionBaseUrls['SAU'];
+
+      const res = await fetch(`${ptBase}/payment/request`, {
         method: 'POST',
         headers: { 'authorization': gw.serverKey, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          profile_id: gw.profileId,
+          profile_id: Number(gw.profileId),
           tran_type: 'sale',
           tran_class: 'ecom',
-          cart_id: orderId,
+          cart_id: String(orderId),
           cart_description: description || `طلب #${orderId}`,
           cart_currency: currency,
-          cart_amount: amount,
+          cart_amount: Number(amount),
           callback: callbackUrl,
           return: `${host}/payment/callback?orderId=${orderId}&gateway=paytabs`,
         }),
       });
       if (!res.ok) {
-        const e = await res.json();
-        return NextResponse.json({ error: e.message || 'خطأ في PayTabs' }, { status: 500 });
+        const e = await res.json().catch(() => ({}));
+        const errMsg = e.message || e.payment_result?.response_message || `PayTabs error ${res.status}`;
+        return NextResponse.json({ error: errMsg }, { status: 500 });
       }
       const pt = await res.json();
       await adminDb.collection('orders').doc(orderId).update({ paymentId: pt.tran_ref, paymentGateway: 'paytabs' });

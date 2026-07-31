@@ -12,11 +12,11 @@ import { Palette, Save, BookOpen, Users, Copy, Key, Loader2 } from "lucide-react
 import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import { useUser } from "@/firebase/auth/use-user";
-import { useStorage } from "@/firebase/provider";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { uploadFile as uploadToStorage } from "@/lib/upload-file";
+import { applyOrgColor } from "@/lib/apply-org-color";
 
 const settingsSchema = z.object({
-  name: z.string().min(2, { message: "يجب أن يكون اسم المنظمة حرفين على الأقل." }),
+  name: z.string().min(2, { message: "يجب أن يكون الاسم حرفين على الأقل." }),
   primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, { message: "صيغة اللون غير صحيحة." }),
   logo: z.any(),
   courseSessionPrice: z.coerce.number().min(0, { message: "يجب أن يكون السعر 0 أو أكثر." }),
@@ -49,7 +49,6 @@ const hexToHsl = (hex: string): string => {
 export default function OrgSettingsPage() {
   const { toast } = useToast();
   const { user, userProfile } = useUser();
-  const storage = useStorage();
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [logoUploading, setLogoUploading] = useState(false);
@@ -100,16 +99,18 @@ export default function OrgSettingsPage() {
   }, [fetchSettings]);
 
   const primaryColor = form.watch("primaryColor");
+  const isColorDirty = form.formState.dirtyFields.primaryColor;
 
   useEffect(() => {
+    if (!isColorDirty) return;
     if (primaryColor && /^#[0-9a-fA-F]{6}$/.test(primaryColor)) {
-      document.documentElement.style.setProperty('--primary', hexToHsl(primaryColor));
+      applyOrgColor(primaryColor);
     }
-  }, [primaryColor]);
+  }, [primaryColor, isColorDirty]);
 
   async function onSubmit(values: z.infer<typeof settingsSchema>) {
     if (!user) {
-      toast({ variant: "destructive", title: "خطأ", description: "لم يتم تحديد المنظمة." });
+      toast({ variant: "destructive", title: "خطأ", description: "لم يتم تحديد الحساب." });
       return;
     }
 
@@ -123,12 +124,9 @@ export default function OrgSettingsPage() {
         mentorshipSessionPrice: values.mentorshipSessionPrice,
       };
 
-      // Upload logo via Firebase Storage Client SDK (browser-side)
-      if (values.logo && values.logo.length > 0 && storage) {
+      if (values.logo && values.logo.length > 0) {
         const file = values.logo[0] as File;
-        const storageRef = ref(storage, `org-logos/${Date.now()}-${file.name}`);
-        const snap = await uploadBytes(storageRef, file);
-        const logoUrl = await getDownloadURL(snap.ref);
+        const logoUrl = await uploadToStorage(file, 'org-logos', token);
         updateData.logoUrl = logoUrl;
         setLogoPreview(logoUrl);
         localStorage.removeItem('orgLogo');
@@ -155,7 +153,7 @@ export default function OrgSettingsPage() {
 
       toast({
         title: "تم حفظ الإعدادات",
-        description: "تم تحديث إعدادات المنظمة وستنعكس على جميع الأقسام.",
+        description: "تم تحديث الإعدادات وستنعكس على جميع الأقسام.",
       });
     } catch (err: any) {
       toast({ variant: "destructive", title: "فشل الحفظ", description: err.message });
@@ -176,8 +174,8 @@ export default function OrgSettingsPage() {
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">إعدادات المنظمة</h1>
-        <p className="text-sm text-muted-foreground">إدارة تفاصيل منظمتك، المظهر، وإعدادات الحساب.</p>
+        <h1 className="text-2xl font-bold tracking-tight">الإعدادات</h1>
+        <p className="text-sm text-muted-foreground">إدارة التفاصيل والمظهر وإعدادات الحساب.</p>
       </div>
 
       <Form {...form}>
@@ -189,7 +187,7 @@ export default function OrgSettingsPage() {
                 تخصيص المظهر
               </CardTitle>
               <CardDescription>
-                قم بتخصيص مظهر المنصة ليتناسب مع هوية منظمتك — ستنعكس التغييرات على جميع أقسام المنظمة.
+                قم بتخصيص مظهر المنصة ليتناسب مع هويتك — ستنعكس التغييرات على جميع الأقسام.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -198,12 +196,12 @@ export default function OrgSettingsPage() {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>اسم المنظمة</FormLabel>
+                    <FormLabel>اسم المنصة</FormLabel>
                     <FormControl>
-                      <Input placeholder="اسم منظمتك" {...field} />
+                      <Input placeholder="اسم المنصة" {...field} />
                     </FormControl>
                     <FormDescription>
-                      سيظهر هذا الاسم في رأس الشريط الجانبي لجميع أعضاء المنظمة.
+                      سيظهر هذا الاسم في رأس الشريط الجانبي لجميع الأعضاء.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -224,7 +222,7 @@ export default function OrgSettingsPage() {
                       </FormControl>
                     </div>
                     <FormDescription>
-                      اختر اللون الذي يمثل هوية منظمتك — سينعكس فوراً على جميع الأقسام.
+                      اختر اللون الأساسي للمنصة — سينعكس فوراً على جميع الأقسام.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -235,7 +233,7 @@ export default function OrgSettingsPage() {
                 name="logo"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>شعار المنظمة</FormLabel>
+                    <FormLabel>الشعار</FormLabel>
                     <FormControl>
                       <Input type="file" accept="image/png, image/jpeg, image/svg+xml" onChange={handleLogoChange} />
                     </FormControl>
@@ -246,7 +244,7 @@ export default function OrgSettingsPage() {
                       </div>
                     )}
                     <FormDescription>
-                      ارفع شعار منظمتك (يفضل أن يكون بصيغة SVG أو PNG). سيظهر في الشريط الجانبي.
+                      ارفع الشعار (يفضل أن يكون بصيغة SVG أو PNG). سيظهر في الشريط الجانبي.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -312,7 +310,7 @@ export default function OrgSettingsPage() {
         <Card className="border-primary/20 bg-primary/5">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-primary"><Key className="h-5 w-5" /> كود دعوة المرشدين والمدربين</CardTitle>
-            <CardDescription>شارك هذا الكود مع المرشدين والمدربين حتى يتمكنوا من التسجيل وربط حساباتهم بمنظمتك.</CardDescription>
+            <CardDescription>شارك هذا الكود مع المرشدين والمدربين حتى يتمكنوا من التسجيل وربط حساباتهم.</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-3">

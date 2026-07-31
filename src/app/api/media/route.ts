@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminStorage } from '@/lib/firebase-admin';
+import { adminAuth } from '@/lib/firebase-admin';
+import { getStorageBucket, buildDownloadUrl } from '@/lib/storage-bucket';
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
 const MAX_SIZE = 5 * 1024 * 1024; // 5 MB
-const STORAGE_BUCKET = process.env.FIREBASE_STORAGE_BUCKET || 'studio-4511819966-bc14f.firebasestorage.app';
 
 export async function POST(req: NextRequest) {
   try {
@@ -33,19 +33,17 @@ export async function POST(req: NextRequest) {
     const storagePath = `${folder}/${fileName}`;
 
     const buffer = Buffer.from(await file.arrayBuffer());
+    const downloadToken = crypto.randomUUID();
 
-    // Explicitly pass bucket name — avoids issues when Admin SDK app was
-    // previously initialised without storageBucket and bucket() returns null.
-    const bucket = adminStorage.bucket(STORAGE_BUCKET);
+    const { bucket, bucketName } = await getStorageBucket();
     const fileRef = bucket.file(storagePath);
 
     await fileRef.save(buffer, { contentType: file.type, resumable: false });
-
-    const [url] = await fileRef.getSignedUrl({
-      action: 'read',
-      expires: new Date(Date.now() + 10 * 365 * 24 * 60 * 60 * 1000),
+    await fileRef.setMetadata({
+      metadata: { firebaseStorageDownloadTokens: downloadToken },
     });
 
+    const url = buildDownloadUrl(bucketName, storagePath, downloadToken);
     return NextResponse.json({ url, path: storagePath });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });

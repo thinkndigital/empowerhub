@@ -8,6 +8,7 @@ import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
 import { Download, Users, Activity, BarChart3, TrendingUp, Target, Award, CheckCircle, BookUser, Star } from "lucide-react"
+import { exportToExcel, exportToPDF } from "@/lib/export-utils"
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
@@ -115,7 +116,25 @@ export default function OrgReportsPage() {
   }, [beneficiaries]);
 
   const handleExport = () => {
-    toast({ title: "جاري تصدير التقرير...", description: "سيتم تنزيل التقرير قريبًا." });
+    const headers = ['الاسم', 'نسبة التقدم %', 'الحالة', 'تاريخ التسجيل'];
+    const rows = beneficiaries.map(b => [
+      b.name || '',
+      b.progress ?? 0,
+      (b.progress ?? 0) >= 100 ? 'أكمل' : (b.progress ?? 0) > 0 ? 'نشط' : 'جديد',
+      b.createdAt ? new Date(b.createdAt).toLocaleDateString('ar-EG') : '',
+    ]);
+    const summary = {
+      'إجمالي المستفيدين': String(stats.total),
+      'النشطون': String(stats.active),
+      'متوسط التقدم': `${stats.avgProgress}%`,
+      'نسبة الإكمال': `${stats.completionRate}%`,
+      'جلسات منجزة': String(stats.totalSessions),
+    };
+    if (exportOptions.summary || exportOptions.progress) {
+      exportToExcel('تقرير_الأثر', headers, rows, { sheetName: 'تقرير التقدم' });
+      exportToPDF('تقارير الأثر والتحليلات', headers, rows, { summary });
+    }
+    toast({ title: "تم التصدير بنجاح" });
     setIsExportDialogOpen(false);
   };
 
