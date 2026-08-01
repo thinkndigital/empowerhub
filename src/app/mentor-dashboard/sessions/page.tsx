@@ -594,144 +594,119 @@ export default function MentorSessionsPage() {
 
         <Card className="border-0 shadow-sm">
           <CardHeader><CardTitle>الجلسات القادمة</CardTitle></CardHeader>
-          <CardContent className="space-y-4">
-            {loading && [...Array(1)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
-            {!loading && upcomingSessions.map(session => (
-              <div key={session.id} className="rounded-lg border bg-card overflow-hidden">
-                {session.bannerUrl && (
-                  <div className="w-full h-28 overflow-hidden">
-                    <img src={session.bannerUrl} alt="banner" className="w-full h-full object-cover" />
-                  </div>
-                )}
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 p-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-semibold">{session.title}</p>
-                      {session.isPublic && (
-                        <span className="inline-flex items-center gap-1 text-xs font-medium text-primary bg-primary/10 rounded-full px-2 py-0.5">
-                          <Globe className="h-3 w-3" />عام
-                        </span>
-                      )}
+          <CardContent>
+            {loading && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                {[...Array(4)].map((_, i) => <Skeleton key={i} className="aspect-video" />)}
+              </div>
+            )}
+            {!loading && upcomingSessions.length > 0 && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                {upcomingSessions.map(session => (
+                  <Card key={session.id} className="overflow-hidden flex flex-col">
+                    <div className="aspect-video overflow-hidden bg-muted flex items-center justify-center">
+                      {session.bannerUrl
+                        ? <img src={session.bannerUrl} alt="" className="w-full h-full object-cover" />
+                        : <Video className="h-8 w-8 text-muted-foreground/40" />}
                     </div>
-                    {session.description && (
-                      <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">{session.description}</p>
-                    )}
-                    <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground mt-1">
-                      {!session.isPublic && <span className="flex items-center gap-1.5"><User className="h-4 w-4" />{session.beneficiaryName}</span>}
-                      <span className="flex items-center gap-1.5"><CalendarIcon className="h-4 w-4" />{format(safeDate(session.date), "d MMMM yyyy", { locale: ar })}</span>
-                      <span className="flex items-center gap-1.5"><Clock className="h-4 w-4" />{format(safeDate(session.date), "p", { locale: ar })}</span>
-                    </div>
-                    {session.imageUrls && session.imageUrls.length > 0 && (
-                      <div className="flex gap-1.5 mt-2">
-                        {session.imageUrls.slice(0, 4).map((url, i) => (
-                          <img key={i} src={url} alt="" className="h-10 w-10 rounded object-cover border" />
-                        ))}
-                        {session.imageUrls.length > 4 && (
-                          <div className="h-10 w-10 rounded border bg-muted flex items-center justify-center text-xs text-muted-foreground">
-                            +{session.imageUrls.length - 4}
-                          </div>
+                    <CardContent className="p-4 flex-1 flex flex-col gap-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="font-semibold line-clamp-1 flex-1">{session.title}</p>
+                        {session.isPublic && (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-primary bg-primary/10 rounded-full px-2 py-0.5 shrink-0">
+                            <Globe className="h-3 w-3" />عام
+                          </span>
                         )}
                       </div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <Button size="sm" asChild disabled={!session.meetLink}>
-                      <a href={session.meetLink} target="_blank" rel="noopener noreferrer"><Video className="ml-2 h-4 w-4" />انضم للجلسة</a>
-                    </Button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => openEdit(session)}><Pencil className="ml-2 h-4 w-4" />تعديل الجلسة</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleUpdateSessionStatus(session.id, 'completed')}><Check className="ml-2 h-4 w-4" />وضع علامة كمكتملة</DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive" onClick={() => handleUpdateSessionStatus(session.id, 'cancelled')}><X className="ml-2 h-4 w-4" />إلغاء الجلسة</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
+                      {session.description && (
+                        <p className="text-sm text-muted-foreground line-clamp-2">{session.description}</p>
+                      )}
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                        {!session.isPublic && <span className="flex items-center gap-1"><User className="h-3 w-3" />{session.beneficiaryName}</span>}
+                        <span className="flex items-center gap-1"><CalendarIcon className="h-3 w-3" />{format(safeDate(session.date), "d MMM", { locale: ar })}</span>
+                        <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{format(safeDate(session.date), "p", { locale: ar })}</span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-auto pt-1">
+                        <Button size="sm" asChild disabled={!session.meetLink} className="flex-1">
+                          <a href={session.meetLink} target="_blank" rel="noopener noreferrer"><Video className="ml-2 h-3.5 w-3.5" />انضم</a>
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="shrink-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => openEdit(session)}><Pencil className="ml-2 h-4 w-4" />تعديل الجلسة</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleUpdateSessionStatus(session.id, 'completed')}><Check className="ml-2 h-4 w-4" />وضع علامة كمكتملة</DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive" onClick={() => handleUpdateSessionStatus(session.id, 'cancelled')}><X className="ml-2 h-4 w-4" />إلغاء الجلسة</DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
-            ))}
+            )}
             {!loading && upcomingSessions.length === 0 && <p className="text-center text-muted-foreground p-4">لا توجد جلسات قادمة مجدولة.</p>}
           </CardContent>
         </Card>
 
         <Card className="border-0 shadow-sm">
           <CardHeader><CardTitle>الجلسات السابقة</CardTitle></CardHeader>
-          <CardContent className="space-y-4">
-            {loading && [...Array(2)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
-            {!loading && pastSessions.map(session => {
-              const sessionDate = safeDate(session.date);
-              const isCompleted = session.status === 'completed';
-              const isCancelled = session.status === 'cancelled';
-              return (
-                <div key={session.id} className="rounded-lg border bg-card overflow-hidden">
-                  {session.bannerUrl && (
-                    <div className="w-full h-20 overflow-hidden opacity-70">
-                      <img src={session.bannerUrl} alt="banner" className="w-full h-full object-cover" />
-                    </div>
-                  )}
-                  <div className="p-4 flex justify-between items-start gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-semibold truncate">{session.title}</p>
-                        {session.isPublic && (
-                          <span className="inline-flex items-center gap-1 text-xs font-medium text-primary bg-primary/10 rounded-full px-2 py-0.5">
-                            <Globe className="h-3 w-3" />عام
-                          </span>
-                        )}
-                        {isCompleted && (
-                          <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">
-                            <Check className="h-3 w-3" />مكتملة
-                          </span>
-                        )}
-                        {isCancelled && (
-                          <span className="inline-flex items-center gap-1 text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded-full px-2 py-0.5">
-                            <X className="h-3 w-3" />ملغاة
-                          </span>
-                        )}
+          <CardContent>
+            {loading && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                {[...Array(4)].map((_, i) => <Skeleton key={i} className="aspect-video" />)}
+              </div>
+            )}
+            {!loading && pastSessions.length > 0 && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                {pastSessions.map(session => {
+                  const sessionDate = safeDate(session.date);
+                  const isCompleted = session.status === 'completed';
+                  const isCancelled = session.status === 'cancelled';
+                  return (
+                    <Card key={session.id} className="overflow-hidden flex flex-col">
+                      <div className="aspect-video overflow-hidden bg-muted flex items-center justify-center">
+                        {session.bannerUrl
+                          ? <img src={session.bannerUrl} alt="" className="w-full h-full object-cover opacity-80" />
+                          : <Video className="h-8 w-8 text-muted-foreground/40" />}
                       </div>
-                      {session.description && (
-                        <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">{session.description}</p>
-                      )}
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1.5 flex-wrap">
-                        {!session.isPublic && <span className="flex items-center gap-1.5"><User className="h-3.5 w-3.5" />{session.beneficiaryName}</span>}
-                        <span className="flex items-center gap-1.5"><CalendarIcon className="h-3.5 w-3.5" />{format(sessionDate, "d MMMM yyyy", { locale: ar })}</span>
-                        <span className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" />{format(sessionDate, "p", { locale: ar })}</span>
-                        {session.duration && (
-                          <span className="flex items-center gap-1.5 text-xs">{session.duration} دقيقة</span>
-                        )}
-                      </div>
-                      {isCompleted && (
-                        <div className="mt-2">
-                          <div className="flex items-center gap-1.5">
-                            <div className="h-1.5 rounded-full bg-green-200 flex-1 max-w-[120px]">
-                              <div className="h-1.5 rounded-full bg-green-500 w-full" />
-                            </div>
-                            <span className="text-xs text-green-600">مكتملة</span>
-                          </div>
-                        </div>
-                      )}
-                      {session.imageUrls && session.imageUrls.length > 0 && (
-                        <div className="flex gap-1.5 mt-2">
-                          {session.imageUrls.slice(0, 4).map((url, i) => (
-                            <img key={i} src={url} alt="" className="h-9 w-9 rounded object-cover border opacity-80" />
-                          ))}
-                          {session.imageUrls.length > 4 && (
-                            <div className="h-9 w-9 rounded border bg-muted flex items-center justify-center text-xs text-muted-foreground">
-                              +{session.imageUrls.length - 4}
-                            </div>
+                      <CardContent className="p-4 flex-1 flex flex-col gap-2">
+                        <p className="font-semibold line-clamp-1">{session.title}</p>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {session.isPublic && (
+                            <span className="inline-flex items-center gap-1 text-xs font-medium text-primary bg-primary/10 rounded-full px-2 py-0.5">
+                              <Globe className="h-3 w-3" />عام
+                            </span>
+                          )}
+                          {isCompleted && (
+                            <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-0.5 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800/40">
+                              <Check className="h-3 w-3" />مكتملة
+                            </span>
+                          )}
+                          {isCancelled && (
+                            <span className="inline-flex items-center gap-1 text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded-full px-2 py-0.5 dark:bg-red-950/30 dark:text-red-400 dark:border-red-800/40">
+                              <X className="h-3 w-3" />ملغاة
+                            </span>
                           )}
                         </div>
-                      )}
-                    </div>
-                    {isCompleted && (
-                      <Button variant="outline" size="sm" className="shrink-0" onClick={() => handleEvaluationClick(session)}>
-                        <Star className="ml-2 h-4 w-4" />تقييم المستفيد
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+                        {session.description && (
+                          <p className="text-sm text-muted-foreground line-clamp-2">{session.description}</p>
+                        )}
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                          {!session.isPublic && <span className="flex items-center gap-1"><User className="h-3 w-3" />{session.beneficiaryName}</span>}
+                          <span className="flex items-center gap-1"><CalendarIcon className="h-3 w-3" />{format(sessionDate, "d MMM", { locale: ar })}</span>
+                          {session.duration && <span>{session.duration} دقيقة</span>}
+                        </div>
+                        {isCompleted && (
+                          <Button variant="outline" size="sm" className="mt-auto" onClick={() => handleEvaluationClick(session)}>
+                            <Star className="ml-2 h-3.5 w-3.5" />تقييم المستفيد
+                          </Button>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
             {!loading && pastSessions.length === 0 && <p className="text-center text-muted-foreground p-4">لا توجد جلسات سابقة.</p>}
           </CardContent>
         </Card>

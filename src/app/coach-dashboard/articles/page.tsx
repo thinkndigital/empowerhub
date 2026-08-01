@@ -202,7 +202,7 @@ export default function CoachArticlesPage() {
 
       {/* Articles grid */}
       {loading ? (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-48" />)}
         </div>
       ) : articles.length === 0 ? (
@@ -212,7 +212,7 @@ export default function CoachArticlesPage() {
           <p className="text-sm mt-1">ابدأ بكتابة مقالك الأول</p>
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {articles.map(article => (
             <Card key={article.id} className="overflow-hidden">
               {article.coverImageUrl && (
