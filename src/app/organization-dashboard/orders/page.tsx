@@ -2,8 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { ShoppingBag, Clock, CheckCircle, RefreshCw, Search, DollarSign, Package } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -11,6 +10,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/status-badge";
 import { useUser } from "@/firebase/auth/use-user";
 import { cn } from "@/lib/utils";
+import { PageHeader } from "@/components/dashboard/page-header";
+import { StatCard } from "@/components/dashboard/stat-card";
 import { ExportButton } from "@/components/export-button";
 
 interface Order {
@@ -27,12 +28,7 @@ interface Order {
   createdAt?: string;
 }
 
-const statColors = [
-  { bg: "bg-primary/10",    icon: "bg-primary" },
-  { bg: "bg-amber-500/10",  icon: "bg-amber-500" },
-  { bg: "bg-emerald-500/10",icon: "bg-emerald-500" },
-  { bg: "bg-sky-500/10",    icon: "bg-sky-500" },
-];
+const statColors = ["bg-primary text-primary-foreground", "bg-amber-500 text-white", "bg-emerald-500 text-white", "bg-sky-500 text-white"];
 
 const orderStatusLabels: Record<string, string> = {
   pending: "قيد الانتظار",
@@ -80,66 +76,57 @@ export default function OrgOrdersPage() {
   };
 
   const statItems = [
-    { label: "إجمالي الطلبات",   value: String(stats.total),      sub: "طلب مسجل",        icon: <ShoppingBag />, colorIdx: 0 },
-    { label: "قيد الانتظار",     value: String(stats.pending),    sub: "بانتظار التأكيد", icon: <Clock />,       colorIdx: 1 },
-    { label: "مكتملة",           value: String(stats.completed),  sub: "تم التسليم",      icon: <CheckCircle />, colorIdx: 2 },
-    { label: "إيرادات مدفوعة",   value: `${stats.revenue.toFixed(0)} د.أ`, sub: "دفعات مؤكدة",  icon: <DollarSign />,  colorIdx: 3 },
+    { label: "إجمالي الطلبات",  value: String(stats.total),               description: "طلب مسجل",        icon: ShoppingBag, colorIdx: 0 },
+    { label: "قيد الانتظار",    value: String(stats.pending),             description: "بانتظار التأكيد", icon: Clock,       colorIdx: 1 },
+    { label: "مكتملة",          value: String(stats.completed),           description: "تم التسليم",      icon: CheckCircle, colorIdx: 2 },
+    { label: "إيرادات مدفوعة",  value: `${stats.revenue.toFixed(0)} د.أ`, description: "دفعات مؤكدة",     icon: DollarSign,  colorIdx: 3 },
   ];
 
   return (
     <div className="space-y-6 animate-fade-in-up" dir="rtl">
-      {/* ── Page header ── */}
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">طلبات المتاجر</h1>
-          <p className="page-subtitle">متابعة طلبات جميع متاجر المستفيدين في المنظمة</p>
-        </div>
-        <div className="flex gap-2">
-          <ExportButton
-            title="طلبات المتاجر"
-            filename={`orders-${new Date().toISOString().slice(0,10)}`}
-            headers={['المنتج', 'المشتري', 'الهاتف', 'المتجر', 'المبلغ (د.أ)', 'الحالة', 'طريقة الدفع', 'التاريخ']}
-            rows={orders.map(o => [
-              o.productName || '',
-              o.buyerName || '',
-              o.buyerPhone || '',
-              o.storeName || '',
-              (o.totalAmount || 0).toFixed(2),
-              orderStatusLabels[o.status] || o.status,
-              o.paymentMethod || '',
-              o.createdAt ? new Date(o.createdAt).toLocaleDateString('ar-EG') : '',
-            ])}
-            options={{ summary: { 'إجمالي الطلبات': String(stats.total), 'قيد الانتظار': String(stats.pending), 'مكتملة': String(stats.completed), 'إيرادات مدفوعة': `${stats.revenue.toFixed(0)} د.أ` } }}
-          />
-          <Button variant="outline" onClick={load} disabled={loading} className="gap-2 h-fit">
-            <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
-            تحديث
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="طلبات المتاجر"
+        description="متابعة طلبات جميع متاجر المستفيدين في المنظمة"
+        breadcrumbs={[{ label: "لوحة التحكم", href: "/organization-dashboard" }, { label: "طلبات المتاجر" }]}
+        actions={
+          <>
+            <ExportButton
+              title="طلبات المتاجر"
+              filename={`orders-${new Date().toISOString().slice(0,10)}`}
+              headers={['المنتج', 'المشتري', 'الهاتف', 'المتجر', 'المبلغ (د.أ)', 'الحالة', 'طريقة الدفع', 'التاريخ']}
+              rows={orders.map(o => [
+                o.productName || '',
+                o.buyerName || '',
+                o.buyerPhone || '',
+                o.storeName || '',
+                (o.totalAmount || 0).toFixed(2),
+                orderStatusLabels[o.status] || o.status,
+                o.paymentMethod || '',
+                o.createdAt ? new Date(o.createdAt).toLocaleDateString('ar-EG') : '',
+              ])}
+              options={{ summary: { 'إجمالي الطلبات': String(stats.total), 'قيد الانتظار': String(stats.pending), 'مكتملة': String(stats.completed), 'إيرادات مدفوعة': `${stats.revenue.toFixed(0)} د.أ` } }}
+            />
+            <Button variant="outline" onClick={load} disabled={loading} className="gap-2 h-fit">
+              <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+              تحديث
+            </Button>
+          </>
+        }
+      />
 
       {/* ── KPI Cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {statItems.map((s, i) => {
-          const c = statColors[s.colorIdx];
-          return (
-            <Card key={i} className={cn("stat-card border-0 overflow-hidden", c.bg)}>
-              <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3 pt-5 px-5">
-                <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center shrink-0 text-white [&>svg]:h-5 [&>svg]:w-5", c.icon)}>
-                  {s.icon}
-                </div>
-              </CardHeader>
-              <CardContent className="px-5 pb-5">
-                {loading
-                  ? <Skeleton className="h-8 w-20 mb-1" />
-                  : <div className="text-3xl font-bold tracking-tight">{s.value}</div>
-                }
-                <p className="text-xs text-muted-foreground mt-1.5 font-medium">{s.label}</p>
-                <p className="text-[11px] text-muted-foreground/70 mt-0.5">{s.sub}</p>
-              </CardContent>
-            </Card>
-          );
-        })}
+        {statItems.map((s, i) => (
+          <StatCard
+            key={i}
+            title={s.label}
+            value={s.value}
+            description={s.description}
+            icon={s.icon}
+            iconClassName={statColors[s.colorIdx]}
+            loading={loading}
+          />
+        ))}
       </div>
 
       {/* ── Filters ── */}

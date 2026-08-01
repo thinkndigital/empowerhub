@@ -24,6 +24,7 @@ import { useUser } from "@/firebase/auth/use-user";
 import { useAuth } from "@/firebase/provider";
 import { NotificationBell } from "@/components/notification-bell";
 import { MessageBell } from "@/components/message-bell";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 import { applyPlatformColor } from "@/lib/platform-color";
 
@@ -179,6 +180,7 @@ export default function BeneficiaryDashboardLayout({ children }: { children: Rea
             </div>
           </div>
           <div className="mr-auto flex items-center gap-1">
+            <ThemeToggle />
             <MessageBell href="/beneficiary-dashboard/messages" />
             <NotificationBell />
             <DropdownMenu>

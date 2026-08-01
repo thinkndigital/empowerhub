@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Toaster } from '@/components/ui/toaster';
 import './globals.css';
 import { FirebaseProviderDynamic } from '@/components/firebase-provider-dynamic';
+import { ThemeProvider } from '@/components/theme-provider';
 import { adminDb } from '@/lib/firebase-admin';
 
 export const metadata: Metadata = {
@@ -74,10 +75,12 @@ export default async function RootLayout({
         )}
       </head>
       <body className="font-body antialiased">
-        <FirebaseProviderDynamic>
-          {children}
-          <Toaster />
-        </FirebaseProviderDynamic>
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} storageKey="empowerhub-theme">
+          <FirebaseProviderDynamic>
+            {children}
+            <Toaster />
+          </FirebaseProviderDynamic>
+        </ThemeProvider>
       </body>
     </html>
   );

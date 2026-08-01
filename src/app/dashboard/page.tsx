@@ -7,40 +7,17 @@ import { AiRecommender } from "./ai-recommender";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { useUser } from "@/firebase/auth/use-user";
 import { format, isPast, parseISO } from "date-fns";
 import { ar } from "date-fns/locale";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
+import { StatCard } from "@/components/dashboard/stat-card";
 
 type Session = { id: string; title: string; date: string; status: string; meetLink?: string };
 type Course = { id: string; title: string; progress?: number; category?: string };
 type Order = { id: string; status: string; total?: number };
-
-const StatCard = ({
-  title, value, sub, icon, trend, color, loading
-}: {
-  title: string, value: string, sub: string, icon: React.ReactNode, trend?: string, color: string, loading?: boolean
-}) => (
-  <Card className="bg-card border border-border/70 rounded-xl overflow-hidden" style={{boxShadow:'var(--shadow-xs)'}}>
-    <CardContent className="p-5">
-      <div className="flex items-start justify-between mb-3">
-        <div className={`h-10 w-10 rounded-lg ${color} flex items-center justify-center shrink-0`}>
-          {icon}
-        </div>
-        {trend && (
-          <Badge variant="secondary" className="text-xs text-primary bg-primary/10 border-0 px-2 py-0.5 rounded-full">
-            <TrendingUp className="h-3 w-3 ml-1" />{trend}
-          </Badge>
-        )}
-      </div>
-      {loading ? <Skeleton className="h-7 w-20 mb-1" /> : <div className="text-2xl font-bold tracking-tight">{value}</div>}
-      <p className="text-xs font-medium text-muted-foreground mt-1">{title}</p>
-      <p className="text-xs text-muted-foreground/70 mt-0.5">{sub}</p>
-    </CardContent>
-  </Card>
-);
 
 export default function DashboardPage() {
   const { user: authUser, userProfile, loading: authLoading } = useUser();
@@ -112,33 +89,33 @@ export default function DashboardPage() {
         <StatCard
           title="التقدم العام"
           value={`${progress}%`}
-          sub="نسبة الإنجاز في البرنامج"
-          icon={<Activity className="h-5 w-5 text-white" />}
-          color="bg-primary"
+          description="نسبة الإنجاز في البرنامج"
+          icon={Activity}
+          iconClassName="bg-primary text-primary-foreground"
           loading={loading}
         />
         <StatCard
           title="جلسات الإرشاد"
           value={`${completedSessions}`}
-          sub="جلسة مكتملة"
-          icon={<BookOpenCheck className="h-5 w-5 text-white" />}
-          color="bg-sky-500"
+          description="جلسة مكتملة"
+          icon={BookOpenCheck}
+          iconClassName="bg-sky-500 text-white"
           loading={loading}
         />
         <StatCard
           title="إيرادات المتجر"
           value={`${storeRevenue.toFixed(0)} د.أ`}
-          sub="من الطلبات المكتملة"
-          icon={<DollarSign className="h-5 w-5 text-white" />}
-          color="bg-amber-500"
+          description="من الطلبات المكتملة"
+          icon={DollarSign}
+          iconClassName="bg-amber-500 text-white"
           loading={loading}
         />
         <StatCard
           title="الدورات المتاحة"
           value={`${courses.length}`}
-          sub="دورة تدريبية"
-          icon={<Target className="h-5 w-5 text-white" />}
-          color="bg-purple-500"
+          description="دورة تدريبية"
+          icon={Target}
+          iconClassName="bg-purple-500 text-white"
           loading={loading}
         />
       </div>

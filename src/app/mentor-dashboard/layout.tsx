@@ -28,6 +28,7 @@ import { Logo } from "@/components/logo";
 import { useUser } from "@/firebase/auth/use-user";
 import { NotificationBell } from "@/components/notification-bell";
 import { MessageBell } from "@/components/message-bell";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 import { applyPlatformColor } from "@/lib/platform-color";
 
@@ -208,6 +209,7 @@ export default function MentorDashboardLayout({ children }: { children: React.Re
             </div>
           </div>
           <div className="mr-auto flex items-center gap-1">
+            <ThemeToggle />
             <MessageBell href="/mentor-dashboard/messages" />
             <NotificationBell />
             <DropdownMenu>
