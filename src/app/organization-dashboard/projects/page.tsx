@@ -311,7 +311,7 @@ export default function OrgProjectsPage() {
 
       {/* Projects grid */}
       {loading ? (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-52" />)}
         </div>
       ) : projects.length === 0 ? (
@@ -321,7 +321,7 @@ export default function OrgProjectsPage() {
           <p className="text-sm mt-1">أنشئ أول مشروع أو فرصة</p>
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {projects.map(project => (
             <Card key={project.id} className="overflow-hidden">
               {project.coverImageUrl && (

@@ -142,7 +142,7 @@ export default function OrgLiveSessionsPage() {
       </div>
 
       {loading ? (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-48" />)}
         </div>
       ) : sessions.length === 0 ? (
@@ -152,7 +152,7 @@ export default function OrgLiveSessionsPage() {
           <p className="text-sm mt-1">ستظهر هنا جلسات المدربين المنتسبين للمنظمة</p>
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {sessions.map(session => (
             <Card key={session.id} className="overflow-hidden">
               {session.coverImageUrl && (
