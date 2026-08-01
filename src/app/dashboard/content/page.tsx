@@ -7,7 +7,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { useToast } from '@/hooks/use-toast';
-import { Download, Upload, ImageIcon, Type, Layers, Move, RefreshCw } from 'lucide-react';
+import { useUser } from '@/firebase/auth/use-user';
+import { uploadFile } from '@/lib/upload-file';
+import {
+  Download, Upload, ImageIcon, Type, Layers, Move, RefreshCw,
+  Video, Plus, X, Trash2, Library, Loader2,
+} from 'lucide-react';
 
 // ─── أحجام السوشال ميديا ───────────────────────────────────────
 const SIZES = [
@@ -23,12 +28,14 @@ const SIZES = [
   { id: 'pinterest',  label: 'Pinterest',           w: 1000, h: 1500 },
 ];
 
+const LIBRARY_SIZE = SIZES[1]; // مقاس الحفظ بالمكتبة (Instagram مربع)
 const EDITOR_W = 540; // عرض محرر المعاينة بالبكسل
 
 // ─── نوع عناصر المحرر ──────────────────────────────────────────
 interface Pos { x: number; y: number } // نسبة 0-1 من أبعاد اللوحة
 
 interface TextEl {
+  id: string;
   text: string;
   pos: Pos;
   fontSize: number;  // نسبة من عرض الصورة 0-1
@@ -41,7 +48,24 @@ interface LogoEl {
   size: number; // نسبة من عرض الصورة 0-1
 }
 
-type DragTarget = 'text' | 'logo' | null;
+interface LibraryItem {
+  id: string;
+  title: string;
+  type: 'image' | 'video';
+  mediaUrl: string;
+  createdAt?: string;
+}
+
+type DragTarget = { kind: 'text'; id: string } | { kind: 'logo' } | null;
+
+const newTextEl = (): TextEl => ({
+  id: crypto.randomUUID(),
+  text: '',
+  pos: { x: 0.5, y: 0.8 },
+  fontSize: 0.06,
+  color: '#ffffff',
+  bold: true,
+});
 
 // ─── رسم اللوحة ────────────────────────────────────────────────
 function drawCanvas(
@@ -50,7 +74,7 @@ function drawCanvas(
   bg: HTMLImageElement | null,
   logo: HTMLImageElement | null,
   logoEl: LogoEl,
-  textEl: TextEl,
+  textEls: TextEl[],
   bgColor: string,
 ) {
   ctx.clearRect(0, 0, cw, ch);
@@ -75,8 +99,9 @@ function drawCanvas(
     ctx.drawImage(logo, lx, ly, lw, lh);
   }
 
-  // نص
-  if (textEl.text) {
+  // نصوص (طبقة فوق طبقة)
+  for (const textEl of textEls) {
+    if (!textEl.text) continue;
     const fs = cw * textEl.fontSize;
     ctx.font = `${textEl.bold ? 'bold' : 'normal'} ${fs}px Cairo, Arial`;
     ctx.fillStyle = textEl.color;
@@ -92,6 +117,7 @@ function drawCanvas(
 // ─── الصفحة ────────────────────────────────────────────────────
 export default function ContentPage() {
   const { toast } = useToast();
+  const { user } = useUser();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -101,23 +127,32 @@ export default function ContentPage() {
   const [bgColor, setBgColor] = useState('#1a1a2e');
 
   // عناصر
-  const [textEl, setTextEl] = useState<TextEl>({
-    text: '',
-    pos: { x: 0.5, y: 0.8 },
-    fontSize: 0.06,
-    color: '#ffffff',
-    bold: true,
-  });
+  const [textEls, setTextEls] = useState<TextEl[]>([newTextEl()]);
+  const [selectedTextId, setSelectedTextId] = useState<string>(textEls[0].id);
   const [logoEl, setLogoEl] = useState<LogoEl>({
     pos: { x: 0.5, y: 0.15 },
     size: 0.2,
   });
+  const [contentTitle, setContentTitle] = useState('');
+
+  // فيديو
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoPreview, setVideoPreview] = useState<string | null>(null);
+  const [videoCaption, setVideoCaption] = useState('');
+
+  // المكتبة
+  const [libraryItems, setLibraryItems] = useState<LibraryItem[]>([]);
+  const [libraryLoading, setLibraryLoading] = useState(true);
+  const [savingImage, setSavingImage] = useState(false);
+  const [savingVideo, setSavingVideo] = useState(false);
 
   // أبعاد اللوحة (تتبع نسبة الصورة)
   const [editorH, setEditorH] = useState(EDITOR_W);
 
   // سحب
-  const drag = useRef<{ target: DragTarget; ox: number; oy: number } | null>(null);
+  const drag = useRef<DragTarget>(null);
+
+  const selectedText = textEls.find(t => t.id === selectedTextId) || null;
 
   // ─── تحديث أبعاد اللوحة عند تغيير الصورة ──────────────────
   useEffect(() => {
@@ -131,10 +166,30 @@ export default function ContentPage() {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    drawCanvas(ctx, EDITOR_W, editorH, bgImg, logoImg, logoEl, textEl, bgColor);
-  }, [bgImg, logoImg, logoEl, textEl, bgColor, editorH]);
+    drawCanvas(ctx, EDITOR_W, editorH, bgImg, logoImg, logoEl, textEls, bgColor);
+  }, [bgImg, logoImg, logoEl, textEls, bgColor, editorH]);
 
   useEffect(() => { redraw(); }, [redraw]);
+
+  // ─── جلب المكتبة ───────────────────────────────────────────
+  const fetchLibrary = useCallback(async () => {
+    if (!user) return;
+    setLibraryLoading(true);
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch('/api/beneficiary/social-content', {
+        headers: { authorization: `Bearer ${token}` },
+      });
+      const json = await res.json();
+      setLibraryItems(json.items || []);
+    } catch {
+      // silent
+    } finally {
+      setLibraryLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => { fetchLibrary(); }, [fetchLibrary]);
 
   // ─── رفع صورة خلفية ────────────────────────────────────────
   const onBgUpload = (e: ChangeEvent<HTMLInputElement>) => {
@@ -156,6 +211,34 @@ export default function ContentPage() {
     img.src = url;
   };
 
+  // ─── رفع فيديو ──────────────────────────────────────────────
+  const onVideoUpload = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setVideoFile(file);
+    setVideoPreview(URL.createObjectURL(file));
+  };
+
+  // ─── إدارة النصوص المتعددة ──────────────────────────────────
+  const addTextEl = () => {
+    const el = newTextEl();
+    setTextEls(prev => [...prev, el]);
+    setSelectedTextId(el.id);
+  };
+
+  const removeTextEl = (id: string) => {
+    setTextEls(prev => {
+      const next = prev.filter(t => t.id !== id);
+      if (selectedTextId === id) setSelectedTextId(next[0]?.id || '');
+      return next;
+    });
+  };
+
+  const updateSelectedText = (patch: Partial<TextEl>) => {
+    if (!selectedTextId) return;
+    setTextEls(prev => prev.map(t => (t.id === selectedTextId ? { ...t, ...patch } : t)));
+  };
+
   // ─── سحب داخل اللوحة ───────────────────────────────────────
   const getCanvasPos = (e: RMouseEvent<HTMLCanvasElement>): Pos => {
     const rect = canvasRef.current!.getBoundingClientRect();
@@ -172,38 +255,50 @@ export default function ContentPage() {
     return Math.abs(p.x - logoEl.pos.x) < hw && Math.abs(p.y - logoEl.pos.y) < hh;
   };
 
-  const hitText = (p: Pos): boolean => {
-    if (!textEl.text) return false;
-    const hw = textEl.fontSize * 4;
-    const hh = textEl.fontSize * 0.8;
-    return Math.abs(p.x - textEl.pos.x) < hw && Math.abs(p.y - textEl.pos.y) < hh;
+  const hitText = (p: Pos): TextEl | null => {
+    for (let i = textEls.length - 1; i >= 0; i--) {
+      const t = textEls[i];
+      if (!t.text) continue;
+      const hw = t.fontSize * 4;
+      const hh = t.fontSize * 0.8;
+      if (Math.abs(p.x - t.pos.x) < hw && Math.abs(p.y - t.pos.y) < hh) return t;
+    }
+    return null;
   };
 
   const onMouseDown = (e: RMouseEvent<HTMLCanvasElement>) => {
     const p = getCanvasPos(e);
-    let target: DragTarget = null;
-    if (hitLogo(p)) target = 'logo';
-    else if (hitText(p)) target = 'text';
-    if (target) drag.current = { target, ox: p.x, oy: p.y };
+    if (hitLogo(p)) {
+      drag.current = { kind: 'logo' };
+      return;
+    }
+    const hitT = hitText(p);
+    if (hitT) {
+      drag.current = { kind: 'text', id: hitT.id };
+      setSelectedTextId(hitT.id);
+    }
   };
 
   const onMouseMove = (e: RMouseEvent<HTMLCanvasElement>) => {
     if (!drag.current) return;
     const p = getCanvasPos(e);
-    const { target } = drag.current;
     const clamp = (v: number) => Math.max(0, Math.min(1, v));
-    if (target === 'logo') {
-      setLogoEl(prev => ({ ...prev, pos: { x: clamp(p.x), y: clamp(p.y) } }));
-    } else if (target === 'text') {
-      setTextEl(prev => ({ ...prev, pos: { x: clamp(p.x), y: clamp(p.y) } }));
+    const pos = { x: clamp(p.x), y: clamp(p.y) };
+    if (drag.current.kind === 'logo') {
+      setLogoEl(prev => ({ ...prev, pos }));
+    } else {
+      const id = drag.current.id;
+      setTextEls(prev => prev.map(t => (t.id === id ? { ...t, pos } : t)));
     }
   };
 
   const onMouseUp = () => { drag.current = null; };
 
   // ─── تصدير كل الأحجام ───────────────────────────────────────
+  const hasContent = () => !!bgImg || !!logoImg || textEls.some(t => t.text);
+
   const exportAll = async () => {
-    if (!bgImg && !logoImg && !textEl.text) {
+    if (!hasContent()) {
       toast({ variant: 'destructive', title: 'لا يوجد محتوى', description: 'أضف صورة أو شعار أو نص أولاً.' });
       return;
     }
@@ -215,7 +310,7 @@ export default function ContentPage() {
       canvas.width = s.w;
       canvas.height = s.h;
       const ctx = canvas.getContext('2d')!;
-      drawCanvas(ctx, s.w, s.h, bgImg, logoImg, logoEl, textEl, bgColor);
+      drawCanvas(ctx, s.w, s.h, bgImg, logoImg, logoEl, textEls, bgColor);
       await new Promise<void>((resolve) => {
         canvas.toBlob((blob) => {
           if (!blob) { resolve(); return; }
@@ -236,7 +331,7 @@ export default function ContentPage() {
     canvas.width = s.w;
     canvas.height = s.h;
     const ctx = canvas.getContext('2d')!;
-    drawCanvas(ctx, s.w, s.h, bgImg, logoImg, logoEl, textEl, bgColor);
+    drawCanvas(ctx, s.w, s.h, bgImg, logoImg, logoEl, textEls, bgColor);
     canvas.toBlob((blob) => {
       if (!blob) return;
       const a = document.createElement('a');
@@ -244,6 +339,89 @@ export default function ContentPage() {
       a.download = `empowerhub_${s.id}_${s.w}x${s.h}.png`;
       a.click();
     }, 'image/png');
+  };
+
+  // ─── حفظ الصورة الحالية بالمكتبة ─────────────────────────────
+  const saveImageToLibrary = async () => {
+    if (!user) return;
+    if (!hasContent()) {
+      toast({ variant: 'destructive', title: 'لا يوجد محتوى', description: 'أضف صورة أو شعار أو نص أولاً.' });
+      return;
+    }
+    setSavingImage(true);
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = LIBRARY_SIZE.w;
+      canvas.height = LIBRARY_SIZE.h;
+      const ctx = canvas.getContext('2d')!;
+      drawCanvas(ctx, LIBRARY_SIZE.w, LIBRARY_SIZE.h, bgImg, logoImg, logoEl, textEls, bgColor);
+
+      const blob: Blob = await new Promise((resolve, reject) => {
+        canvas.toBlob(b => (b ? resolve(b) : reject(new Error('فشل إنشاء الصورة'))), 'image/png');
+      });
+      const file = new File([blob], `content-${Date.now()}.png`, { type: 'image/png' });
+
+      const token = await user.getIdToken();
+      const mediaUrl = await uploadFile(file, 'social-content', token);
+
+      const res = await fetch('/api/beneficiary/social-content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify({ title: contentTitle || 'منشور بدون عنوان', type: 'image', mediaUrl }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'فشل الحفظ');
+
+      toast({ title: 'تم الحفظ بالمكتبة' });
+      setContentTitle('');
+      fetchLibrary();
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'فشل الحفظ', description: e.message });
+    } finally {
+      setSavingImage(false);
+    }
+  };
+
+  // ─── حفظ الفيديو بالمكتبة ────────────────────────────────────
+  const saveVideoToLibrary = async () => {
+    if (!user || !videoFile) return;
+    setSavingVideo(true);
+    try {
+      const token = await user.getIdToken();
+      const mediaUrl = await uploadFile(videoFile, 'social-content', token);
+
+      const res = await fetch('/api/beneficiary/social-content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify({ title: videoCaption || 'فيديو بدون عنوان', type: 'video', mediaUrl }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'فشل الحفظ');
+
+      toast({ title: 'تم حفظ الفيديو بالمكتبة' });
+      setVideoFile(null);
+      setVideoPreview(null);
+      setVideoCaption('');
+      fetchLibrary();
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'فشل الحفظ', description: e.message });
+    } finally {
+      setSavingVideo(false);
+    }
+  };
+
+  // ─── حذف عنصر من المكتبة ─────────────────────────────────────
+  const deleteLibraryItem = async (id: string) => {
+    if (!user) return;
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch(`/api/beneficiary/social-content?id=${id}`, {
+        method: 'DELETE',
+        headers: { authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'فشل الحذف');
+      setLibraryItems(prev => prev.filter(i => i.id !== id));
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'فشل الحذف', description: e.message });
+    }
   };
 
   return (
@@ -254,7 +432,7 @@ export default function ContentPage() {
           محتوى السوشال ميديا
         </h1>
         <p className="text-muted-foreground mt-1">
-          أضف صورتك وشعارك ونصك — صدّر لجميع المنصات دفعة واحدة
+          أضف صورتك وشعارك ونصوصك — صدّر لجميع المنصات أو احفظ بمكتبتك
         </p>
       </div>
 
@@ -333,62 +511,142 @@ export default function ContentPage() {
             </CardContent>
           </Card>
 
-          {/* النص */}
+          {/* النصوص (متعددة) */}
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
-                <Type className="h-4 w-4 text-primary" /> النص
+                <Type className="h-4 w-4 text-primary" /> النصوص
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div>
-                <Label className="text-xs mb-1 block">النص أو الرقم</Label>
-                <Input
-                  value={textEl.text}
-                  onChange={e => setTextEl(prev => ({ ...prev, text: e.target.value }))}
-                  placeholder="مثال: 0501234567"
-                  className="text-right"
-                />
+              <div className="flex flex-wrap gap-1.5">
+                {textEls.map((t, i) => (
+                  <button
+                    key={t.id}
+                    onClick={() => setSelectedTextId(t.id)}
+                    className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs border transition-colors ${
+                      t.id === selectedTextId
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted'
+                    }`}
+                  >
+                    {t.text || `نص ${i + 1}`}
+                    {textEls.length > 1 && (
+                      <X
+                        className="h-3 w-3 shrink-0"
+                        onClick={e => { e.stopPropagation(); removeTextEl(t.id); }}
+                      />
+                    )}
+                  </button>
+                ))}
+                <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={addTextEl}>
+                  <Plus className="h-3 w-3" /> نص جديد
+                </Button>
               </div>
-              <div className="flex gap-3 items-center">
-                <div className="flex-1">
-                  <Label className="text-xs mb-1 block">حجم الخط ({Math.round(textEl.fontSize * 100)}%)</Label>
-                  <Slider
-                    min={2} max={15} step={0.5}
-                    value={[Math.round(textEl.fontSize * 100)]}
-                    onValueChange={([v]) => setTextEl(prev => ({ ...prev, fontSize: v / 100 }))}
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs mb-1 block">اللون</Label>
-                  <input
-                    type="color"
-                    value={textEl.color}
-                    onChange={e => setTextEl(prev => ({ ...prev, color: e.target.value }))}
-                    className="h-9 w-12 rounded cursor-pointer border border-input"
-                  />
-                </div>
-              </div>
-              <Button
-                variant="outline" size="sm"
-                className={`w-full text-xs ${textEl.bold ? 'bg-primary/10 border-primary' : ''}`}
-                onClick={() => setTextEl(prev => ({ ...prev, bold: !prev.bold }))}
-              >
-                {textEl.bold ? 'خط عريض ✓' : 'خط عريض'}
-              </Button>
-              {textEl.text && (
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Move className="h-3 w-3" /> اسحب النص على اللوحة لتحريكه
-                </p>
+
+              {selectedText && (
+                <>
+                  <div>
+                    <Label className="text-xs mb-1 block">النص أو الرقم</Label>
+                    <Input
+                      value={selectedText.text}
+                      onChange={e => updateSelectedText({ text: e.target.value })}
+                      placeholder="مثال: 0501234567"
+                      className="text-right"
+                    />
+                  </div>
+                  <div className="flex gap-3 items-center">
+                    <div className="flex-1">
+                      <Label className="text-xs mb-1 block">حجم الخط ({Math.round(selectedText.fontSize * 100)}%)</Label>
+                      <Slider
+                        min={2} max={15} step={0.5}
+                        value={[Math.round(selectedText.fontSize * 100)]}
+                        onValueChange={([v]) => updateSelectedText({ fontSize: v / 100 })}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs mb-1 block">اللون</Label>
+                      <input
+                        type="color"
+                        value={selectedText.color}
+                        onChange={e => updateSelectedText({ color: e.target.value })}
+                        className="h-9 w-12 rounded cursor-pointer border border-input"
+                      />
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline" size="sm"
+                    className={`w-full text-xs ${selectedText.bold ? 'bg-primary/10 border-primary' : ''}`}
+                    onClick={() => updateSelectedText({ bold: !selectedText.bold })}
+                  >
+                    {selectedText.bold ? 'خط عريض ✓' : 'خط عريض'}
+                  </Button>
+                  {selectedText.text && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Move className="h-3 w-3" /> اسحب النص المحدد على اللوحة لتحريكه
+                    </p>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>
 
-          {/* تصدير */}
-          <Button className="w-full gap-2 shadow-md" onClick={exportAll} size="lg">
-            <Download className="h-5 w-5" />
-            تصدير كل الأحجام ({SIZES.length} صورة)
-          </Button>
+          {/* حفظ وتصدير */}
+          <Card>
+            <CardContent className="pt-4 space-y-2">
+              <Input
+                value={contentTitle}
+                onChange={e => setContentTitle(e.target.value)}
+                placeholder="عنوان المنشور (اختياري)"
+                className="text-right"
+              />
+              <Button className="w-full gap-2 shadow-md" onClick={exportAll} size="lg">
+                <Download className="h-5 w-5" />
+                تصدير كل الأحجام ({SIZES.length} صورة)
+              </Button>
+              <Button variant="outline" className="w-full gap-2" onClick={saveImageToLibrary} disabled={savingImage}>
+                {savingImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Library className="h-4 w-4" />}
+                حفظ في المكتبة
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* الفيديو */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Video className="h-4 w-4 text-primary" /> فيديو
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Label htmlFor="video-upload" className="cursor-pointer block">
+                <div className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-4 text-center hover:border-primary/50 transition-colors">
+                  <Upload className="h-6 w-6 mx-auto mb-1 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">
+                    {videoFile ? 'تم الرفع ✓' : 'ارفع فيديو (حتى 20 ميجابايت)'}
+                  </span>
+                </div>
+                <input id="video-upload" type="file" accept="video/mp4,video/webm,video/quicktime" className="hidden" onChange={onVideoUpload} />
+              </Label>
+              {videoPreview && (
+                <video src={videoPreview} controls className="w-full rounded-lg border border-border max-h-48" />
+              )}
+              {videoFile && (
+                <>
+                  <Input
+                    value={videoCaption}
+                    onChange={e => setVideoCaption(e.target.value)}
+                    placeholder="وصف الفيديو (اختياري)"
+                    className="text-right"
+                  />
+                  <Button className="w-full gap-2" onClick={saveVideoToLibrary} disabled={savingVideo}>
+                    {savingVideo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Library className="h-4 w-4" />}
+                    حفظ الفيديو بالمكتبة
+                  </Button>
+                </>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         {/* ── اللوحة والمعاينات ── */}
@@ -427,7 +685,7 @@ export default function ContentPage() {
                   <SizePreview
                     width={s.w} height={s.h}
                     bgImg={bgImg} logoImg={logoImg}
-                    logoEl={logoEl} textEl={textEl} bgColor={bgColor}
+                    logoEl={logoEl} textEls={textEls} bgColor={bgColor}
                   />
                   <p className="text-xs font-medium mt-1 truncate">{s.label}</p>
                   <p className="text-[10px] text-muted-foreground">{s.w}×{s.h}</p>
@@ -438,6 +696,51 @@ export default function ContentPage() {
               ))}
             </div>
           </div>
+
+          {/* المكتبة */}
+          <div>
+            <h3 className="text-sm font-medium mb-3 text-muted-foreground flex items-center gap-2">
+              <Library className="h-4 w-4" /> مكتبتي ({libraryItems.length})
+            </h3>
+            {libraryLoading ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {[...Array(3)].map((_, i) => <div key={i} className="aspect-square rounded-lg bg-muted animate-pulse" />)}
+              </div>
+            ) : libraryItems.length === 0 ? (
+              <div className="border-2 border-dashed border-muted-foreground/20 rounded-lg py-10 text-center text-sm text-muted-foreground">
+                لا يوجد محتوى محفوظ بعد — احفظ صورة أو فيديو لتظهر هنا
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {libraryItems.map(item => (
+                  <div key={item.id} className="group relative border border-border rounded-lg overflow-hidden bg-card">
+                    {item.type === 'image' ? (
+                      <img src={item.mediaUrl} alt={item.title} className="w-full aspect-square object-cover" />
+                    ) : (
+                      <video src={item.mediaUrl} className="w-full aspect-square object-cover" muted />
+                    )}
+                    <div className="p-2">
+                      <p className="text-xs font-medium truncate">{item.title || 'بدون عنوان'}</p>
+                    </div>
+                    <div className="absolute inset-x-0 top-0 flex justify-between p-1.5 opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-b from-black/50 to-transparent">
+                      <a
+                        href={item.mediaUrl} download target="_blank" rel="noopener noreferrer"
+                        className="h-7 w-7 flex items-center justify-center rounded-md bg-white/90 text-foreground hover:bg-white"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                      </a>
+                      <button
+                        onClick={() => deleteLibraryItem(item.id)}
+                        className="h-7 w-7 flex items-center justify-center rounded-md bg-white/90 text-destructive hover:bg-white"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -447,11 +750,11 @@ export default function ContentPage() {
 // ── مكوّن معاينة صغيرة لكل حجم ────────────────────────────────
 function SizePreview({
   width, height,
-  bgImg, logoImg, logoEl, textEl, bgColor,
+  bgImg, logoImg, logoEl, textEls, bgColor,
 }: {
   width: number; height: number;
   bgImg: HTMLImageElement | null; logoImg: HTMLImageElement | null;
-  logoEl: LogoEl; textEl: TextEl; bgColor: string;
+  logoEl: LogoEl; textEls: TextEl[]; bgColor: string;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const PREV = 120; // عرض المعاينة الصغيرة
@@ -462,8 +765,8 @@ function SizePreview({
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    drawCanvas(ctx, PREV, ph, bgImg, logoImg, logoEl, textEl, bgColor);
-  }, [bgImg, logoImg, logoEl, textEl, bgColor, ph]);
+    drawCanvas(ctx, PREV, ph, bgImg, logoImg, logoEl, textEls, bgColor);
+  }, [bgImg, logoImg, logoEl, textEls, bgColor, ph]);
 
   return (
     <canvas

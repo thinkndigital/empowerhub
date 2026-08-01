@@ -2,8 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth } from '@/lib/firebase-admin';
 import { getStorageBucket, buildDownloadUrl } from '@/lib/storage-bucket';
 
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
-const MAX_SIZE = 5 * 1024 * 1024; // 5 MB
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime'];
+const ALLOWED_TYPES = [...ALLOWED_IMAGE_TYPES, ...ALLOWED_VIDEO_TYPES];
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;   // 5 MB
+const MAX_VIDEO_SIZE = 20 * 1024 * 1024;  // 20 MB
 
 export async function POST(req: NextRequest) {
   try {
@@ -16,13 +19,15 @@ export async function POST(req: NextRequest) {
 
     if (!ALLOWED_TYPES.includes(file.type)) {
       return NextResponse.json(
-        { error: 'نوع الملف غير مدعوم (يُقبل: JPEG، PNG، GIF، WEBP، SVG)' },
+        { error: 'نوع الملف غير مدعوم (يُقبل: JPEG، PNG، GIF، WEBP، SVG، MP4، WEBM، MOV)' },
         { status: 400 },
       );
     }
-    if (file.size > MAX_SIZE) {
+    const isVideo = ALLOWED_VIDEO_TYPES.includes(file.type);
+    const maxSize = isVideo ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE;
+    if (file.size > maxSize) {
       return NextResponse.json(
-        { error: 'حجم الملف يتجاوز الحد الأقصى (5 ميجابايت)' },
+        { error: `حجم الملف يتجاوز الحد الأقصى (${isVideo ? '20' : '5'} ميجابايت)` },
         { status: 400 },
       );
     }
