@@ -41,8 +41,8 @@ jobs:
           GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa.json
         run: |
           BRANCH="${{ github.ref_name }}"
-          echo "Creating rollout for backend 'empower-hub' from branch: $BRANCH"
-          npx firebase-tools@latest apphosting:rollouts:create empower-hub \
+          echo "Creating rollout for backend 'empowerhub' from branch: $BRANCH"
+          npx firebase-tools@latest apphosting:rollouts:create empowerhub \
             --git-branch "$BRANCH" \
             --project studio-4511819966-bc14f \
             --non-interactive
