@@ -13,7 +13,7 @@ import { format, isPast, parseISO } from "date-fns";
 import { ar } from "date-fns/locale";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { StatCard } from "@/components/dashboard/stat-card";
+import { StatCard, StatGrid } from "@/components/dashboard/stat-card";
 
 type Session = { id: string; title: string; date: string; status: string; meetLink?: string };
 type Course = { id: string; title: string; progress?: number; category?: string };
@@ -85,13 +85,13 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <StatGrid>
         <StatCard
           title="التقدم العام"
           value={`${progress}%`}
           description="نسبة الإنجاز في البرنامج"
           icon={Activity}
-          iconClassName="bg-primary text-primary-foreground"
+          active
           loading={loading}
         />
         <StatCard
@@ -99,7 +99,6 @@ export default function DashboardPage() {
           value={`${completedSessions}`}
           description="جلسة مكتملة"
           icon={BookOpenCheck}
-          iconClassName="bg-sky-500 text-white"
           loading={loading}
         />
         <StatCard
@@ -107,7 +106,6 @@ export default function DashboardPage() {
           value={`${storeRevenue.toFixed(0)} د.أ`}
           description="من الطلبات المكتملة"
           icon={DollarSign}
-          iconClassName="bg-amber-500 text-white"
           loading={loading}
         />
         <StatCard
@@ -115,10 +113,9 @@ export default function DashboardPage() {
           value={`${courses.length}`}
           description="دورة تدريبية"
           icon={Target}
-          iconClassName="bg-purple-500 text-white"
           loading={loading}
         />
-      </div>
+      </StatGrid>
 
       {/* Progress Bar */}
       {progress > 0 && (

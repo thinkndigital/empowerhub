@@ -11,7 +11,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { useUser } from "@/firebase/auth/use-user";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/dashboard/page-header";
-import { StatCard } from "@/components/dashboard/stat-card";
+import { StatCard, StatGrid } from "@/components/dashboard/stat-card";
 import { ExportButton } from "@/components/export-button";
 
 interface Order {
@@ -27,8 +27,6 @@ interface Order {
   paymentStatus: string;
   createdAt?: string;
 }
-
-const statColors = ["bg-primary text-primary-foreground", "bg-amber-500 text-white", "bg-emerald-500 text-white", "bg-sky-500 text-white"];
 
 const orderStatusLabels: Record<string, string> = {
   pending: "قيد الانتظار",
@@ -76,10 +74,10 @@ export default function OrgOrdersPage() {
   };
 
   const statItems = [
-    { label: "إجمالي الطلبات",  value: String(stats.total),               description: "طلب مسجل",        icon: ShoppingBag, colorIdx: 0 },
-    { label: "قيد الانتظار",    value: String(stats.pending),             description: "بانتظار التأكيد", icon: Clock,       colorIdx: 1 },
-    { label: "مكتملة",          value: String(stats.completed),           description: "تم التسليم",      icon: CheckCircle, colorIdx: 2 },
-    { label: "إيرادات مدفوعة",  value: `${stats.revenue.toFixed(0)} د.أ`, description: "دفعات مؤكدة",     icon: DollarSign,  colorIdx: 3 },
+    { label: "إجمالي الطلبات",  value: String(stats.total),               description: "طلب مسجل",        icon: ShoppingBag },
+    { label: "قيد الانتظار",    value: String(stats.pending),             description: "بانتظار التأكيد", icon: Clock },
+    { label: "مكتملة",          value: String(stats.completed),           description: "تم التسليم",      icon: CheckCircle },
+    { label: "إيرادات مدفوعة",  value: `${stats.revenue.toFixed(0)} د.أ`, description: "دفعات مؤكدة",     icon: DollarSign },
   ];
 
   return (
@@ -115,7 +113,7 @@ export default function OrgOrdersPage() {
       />
 
       {/* ── KPI Cards ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <StatGrid>
         {statItems.map((s, i) => (
           <StatCard
             key={i}
@@ -123,11 +121,11 @@ export default function OrgOrdersPage() {
             value={s.value}
             description={s.description}
             icon={s.icon}
-            iconClassName={statColors[s.colorIdx]}
+            active={i === 0}
             loading={loading}
           />
         ))}
-      </div>
+      </StatGrid>
 
       {/* ── Filters ── */}
       <div className="flex gap-3 flex-wrap">
