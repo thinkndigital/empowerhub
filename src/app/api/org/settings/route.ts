@@ -31,10 +31,15 @@ export async function PUT(req: NextRequest) {
 
     const body = await req.json();
 
-    // Remove any undefined / null values that Firestore rejects
+    // Organizations may only edit their own operational settings — brand
+    // color (primaryColor) is admin-only and managed from the admin panel.
+    const allowedFields = ['name', 'logoUrl', 'courseSessionPrice', 'mentorshipSessionPrice'];
+
+    // Remove any undefined / null values that Firestore rejects, and drop
+    // any field outside the allowlist.
     const clean: Record<string, any> = {};
     for (const [k, v] of Object.entries(body)) {
-      if (v !== undefined && v !== null) clean[k] = v;
+      if (allowedFields.includes(k) && v !== undefined && v !== null) clean[k] = v;
     }
 
     // set+merge safely creates the document if it does not exist yet

@@ -13,38 +13,13 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import { useUser } from "@/firebase/auth/use-user";
 import { uploadFile as uploadToStorage } from "@/lib/upload-file";
-import { applyOrgColor } from "@/lib/apply-org-color";
 
 const settingsSchema = z.object({
   name: z.string().min(2, { message: "يجب أن يكون الاسم حرفين على الأقل." }),
-  primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, { message: "صيغة اللون غير صحيحة." }),
   logo: z.any(),
   courseSessionPrice: z.coerce.number().min(0, { message: "يجب أن يكون السعر 0 أو أكثر." }),
   mentorshipSessionPrice: z.coerce.number().min(0, { message: "يجب أن يكون السعر 0 أو أكثر." }),
 });
-
-const hexToHsl = (hex: string): string => {
-  hex = hex.replace(/^#/, '');
-  let r = parseInt(hex.substring(0, 2), 16);
-  let g = parseInt(hex.substring(2, 4), 16);
-  let b = parseInt(hex.substring(4, 6), 16);
-  r /= 255; g /= 255; b /= 255;
-  let cmin = Math.min(r, g, b), cmax = Math.max(r, g, b), delta = cmax - cmin, h = 0, s = 0, l = 0;
-  l = (cmax + cmin) / 2;
-  if (delta !== 0) {
-    s = l > 0.5 ? delta / (2 - cmax - cmin) : delta / (cmax + cmin);
-    switch (cmax) {
-      case r: h = (g - b) / delta + (g < b ? 6 : 0); break;
-      case g: h = (b - r) / delta + 2; break;
-      case b: h = (r - g) / delta + 4; break;
-    }
-    h = Math.round(h * 60);
-  }
-  if (h < 0) h += 360;
-  s = Math.round(s * 100);
-  l = Math.round(l * 100);
-  return `${h} ${s}% ${l}%`;
-};
 
 export default function OrgSettingsPage() {
   const { toast } = useToast();
@@ -59,7 +34,6 @@ export default function OrgSettingsPage() {
     resolver: zodResolver(settingsSchema),
     defaultValues: {
       name: "EmpowerHub",
-      primaryColor: "#2563eb",
       courseSessionPrice: 50,
       mentorshipSessionPrice: 30,
     },
@@ -77,7 +51,6 @@ export default function OrgSettingsPage() {
       const data = json.org;
       if (!data) return;
       if (data.name) form.setValue('name', data.name);
-      if (data.primaryColor) form.setValue('primaryColor', data.primaryColor);
       if (data.logoUrl) setLogoPreview(data.logoUrl);
       if (data.courseSessionPrice != null) form.setValue('courseSessionPrice', data.courseSessionPrice);
       if (data.mentorshipSessionPrice != null) form.setValue('mentorshipSessionPrice', data.mentorshipSessionPrice);
@@ -85,10 +58,8 @@ export default function OrgSettingsPage() {
     } catch {
       // Fallback to localStorage
       const savedName = localStorage.getItem('orgName');
-      const savedColor = localStorage.getItem('orgPrimaryColor');
       const savedLogo = localStorage.getItem('orgLogo');
       if (savedName) form.setValue('name', savedName);
-      if (savedColor) form.setValue('primaryColor', savedColor);
       if (savedLogo) setLogoPreview(savedLogo);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -97,16 +68,6 @@ export default function OrgSettingsPage() {
   useEffect(() => {
     fetchSettings();
   }, [fetchSettings]);
-
-  const primaryColor = form.watch("primaryColor");
-  const isColorDirty = form.formState.dirtyFields.primaryColor;
-
-  useEffect(() => {
-    if (!isColorDirty) return;
-    if (primaryColor && /^#[0-9a-fA-F]{6}$/.test(primaryColor)) {
-      applyOrgColor(primaryColor);
-    }
-  }, [primaryColor, isColorDirty]);
 
   async function onSubmit(values: z.infer<typeof settingsSchema>) {
     if (!user) {
@@ -119,7 +80,6 @@ export default function OrgSettingsPage() {
       const token = await user.getIdToken();
       const updateData: Record<string, any> = {
         name: values.name,
-        primaryColor: values.primaryColor,
         courseSessionPrice: values.courseSessionPrice,
         mentorshipSessionPrice: values.mentorshipSessionPrice,
       };
@@ -147,7 +107,6 @@ export default function OrgSettingsPage() {
 
       // Also save to localStorage as cache
       localStorage.setItem('orgName', values.name);
-      localStorage.setItem('orgPrimaryColor', values.primaryColor);
 
       window.dispatchEvent(new Event('org-settings-change'));
 
@@ -202,27 +161,6 @@ export default function OrgSettingsPage() {
                     </FormControl>
                     <FormDescription>
                       سيظهر هذا الاسم في رأس الشريط الجانبي لجميع الأعضاء.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="primaryColor"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>اللون الأساسي</FormLabel>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <FormControl>
-                        <Input type="color" className="w-12 h-10 p-1" {...field} />
-                      </FormControl>
-                      <FormControl>
-                        <Input className="w-40 max-w-full" {...field} />
-                      </FormControl>
-                    </div>
-                    <FormDescription>
-                      اختر اللون الأساسي للمنصة — سينعكس فوراً على جميع الأقسام.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

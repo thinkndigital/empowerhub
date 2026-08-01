@@ -75,7 +75,7 @@ export default async function RootLayout({
         )}
       </head>
       <body className="font-body antialiased">
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} storageKey="empowerhub-theme">
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} storageKey="empowerhub-theme">
           <FirebaseProviderDynamic>
             {children}
             <Toaster />

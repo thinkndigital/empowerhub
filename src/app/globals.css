@@ -20,8 +20,8 @@ body {
     --popover:             0   0%  100%;
     --popover-foreground:  224 71%  4%;
 
-    /* ─── Primary – Violet (Mosaic accent) ─────────── */
-    --primary:             263 70% 58%;   /* violet-500 #8B5CF6 */
+    /* ─── Primary – Blue ────────────────────────────── */
+    --primary:             221 83% 53%;   /* blue-600 #2563EB */
     --primary-foreground:  0   0%  100%;
 
     /* ─── Secondary ────────────────────────────────── */
@@ -33,8 +33,8 @@ body {
     --muted-foreground:    220 9%  46%;   /* gray-500 */
 
     /* ─── Accent ───────────────────────────────────── */
-    --accent:              263 70% 97%;   /* violet-50 */
-    --accent-foreground:   263 70% 40%;
+    --accent:              221 83% 96%;   /* blue-50 */
+    --accent-foreground:   221 83% 40%;
 
     /* ─── Destructive ──────────────────────────────── */
     --destructive:         0   84% 60%;
@@ -43,7 +43,7 @@ body {
     /* ─── Border / Input / Ring ────────────────────── */
     --border:              220 13% 91%;   /* gray-200 */
     --input:               220 13% 91%;
-    --ring:                263 70% 58%;
+    --ring:                221 83% 53%;
 
     /* ─── Radius ────────────────────────────────────── */
     --radius:              0.625rem;      /* 10px */
@@ -56,21 +56,21 @@ body {
     --shadow-card: var(--shadow-xs);
 
     /* ─── Charts ───────────────────────────────────── */
-    --chart-1:   263 70% 58%;   /* violet  */
+    --chart-1:   221 83% 53%;   /* blue    */
     --chart-2:   213 94% 68%;   /* sky     */
     --chart-3:   142 71% 45%;   /* green   */
     --chart-4:    32 95% 53%;   /* amber   */
     --chart-5:   346 77% 58%;   /* red     */
 
-    /* ─── Sidebar – Light (Mosaic style) ───────────── */
+    /* ─── Sidebar – Light ────────────────────────────── */
     --sidebar-background:          0   0%  100%;   /* white */
     --sidebar-foreground:          220  9% 46%;    /* gray-500 inactive */
-    --sidebar-primary:             263 70% 58%;    /* violet active */
+    --sidebar-primary:             221 83% 53%;    /* blue active */
     --sidebar-primary-foreground:  0   0%  100%;
-    --sidebar-accent:              263 70% 97%;    /* violet-50 active bg */
-    --sidebar-accent-foreground:   263 70% 40%;    /* dark violet text */
+    --sidebar-accent:              221 83% 96%;    /* blue-50 active bg */
+    --sidebar-accent-foreground:   221 83% 40%;    /* dark blue text */
     --sidebar-border:              220 13% 91%;    /* gray-200 */
-    --sidebar-ring:                263 70% 58%;
+    --sidebar-ring:                221 83% 53%;
   }
 
   .dark {
@@ -80,19 +80,19 @@ body {
     --card-foreground:      210 40% 95%;
     --popover:              222 47%  8%;
     --popover-foreground:   210 40% 95%;
-    --primary:              263 70% 65%;
+    --primary:              217 91% 60%;
     --primary-foreground:   224 71%  4%;
     --secondary:            222 47% 14%;
     --secondary-foreground: 210 40% 90%;
     --muted:                222 47% 14%;
     --muted-foreground:     215 20% 52%;
-    --accent:               263 70% 15%;
-    --accent-foreground:    263 70% 75%;
+    --accent:               217 91% 18%;
+    --accent-foreground:    217 91% 75%;
     --destructive:          0   62% 48%;
     --destructive-foreground: 0 0% 100%;
     --border:               222 47% 18%;
     --input:                222 47% 18%;
-    --ring:                 263 70% 65%;
+    --ring:                 217 91% 60%;
 
     --shadow-xs:   0 1px 1px 0 rgb(0 0 0 / 0.30), 0 1px 2px 0 rgb(0 0 0 / 0.20);
     --shadow-sm:   0 1px 3px 0 rgb(0 0 0 / 0.35), 0 1px 2px -1px rgb(0 0 0 / 0.22);
@@ -100,7 +100,7 @@ body {
     --shadow-lg:   0 12px 24px -4px rgb(0 0 0 / 0.45), 0 4px 8px -2px rgb(0 0 0 / 0.32);
     --shadow-card: var(--shadow-xs);
 
-    --chart-1:   263 70% 65%;
+    --chart-1:   217 91% 60%;
     --chart-2:   213 94% 68%;
     --chart-3:   142 71% 55%;
     --chart-4:    32 95% 63%;
@@ -108,12 +108,12 @@ body {
 
     --sidebar-background:         222 47%  7%;
     --sidebar-foreground:         215 20% 50%;
-    --sidebar-primary:            263 70% 65%;
+    --sidebar-primary:            217 91% 60%;
     --sidebar-primary-foreground: 0   0%  100%;
-    --sidebar-accent:             263 70% 18%;
-    --sidebar-accent-foreground:  263 70% 80%;
+    --sidebar-accent:             217 91% 18%;
+    --sidebar-accent-foreground:  217 91% 80%;
     --sidebar-border:             222 47% 14%;
-    --sidebar-ring:                263 70% 65%;
+    --sidebar-ring:                217 91% 60%;
   }
 }
 
@@ -125,21 +125,22 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════
-   MOSAIC SIDEBAR ACTIVE GRADIENT
-   Mirrors Mosaic's from-violet-500/[0.12] to-violet-500/[0.04]
+   SIDEBAR ACTIVE GRADIENT
+   Driven by --sidebar-primary so org/platform brand color
+   customization (see apply-org-color.ts) is respected.
 ═══════════════════════════════════════════════════ */
 /* RTL — sidebar on the right, gradient flows right→left */
 [data-sidebar="menu-button"][data-active="true"] {
   background: linear-gradient(
     to right,
-    rgba(139, 92, 246, 0.04),
-    rgba(139, 92, 246, 0.12)
+    hsl(var(--sidebar-primary) / 0.04),
+    hsl(var(--sidebar-primary) / 0.12)
   ) !important;
-  color: hsl(263 70% 52%) !important;
+  color: hsl(var(--sidebar-primary)) !important;
   font-weight: 500;
 }
 [data-sidebar="menu-button"][data-active="true"] svg {
-  color: hsl(263 70% 52%) !important;
+  color: hsl(var(--sidebar-primary)) !important;
 }
 [data-sidebar="menu-button"]:hover:not([data-active="true"]) {
   color: hsl(224 71% 10%) !important;
@@ -147,13 +148,13 @@ body {
 .dark [data-sidebar="menu-button"][data-active="true"] {
   background: linear-gradient(
     to right,
-    rgba(139, 92, 246, 0.08),
-    rgba(139, 92, 246, 0.24)
+    hsl(var(--sidebar-primary) / 0.08),
+    hsl(var(--sidebar-primary) / 0.24)
   ) !important;
-  color: hsl(263 70% 72%) !important;
+  color: hsl(var(--sidebar-primary)) !important;
 }
 .dark [data-sidebar="menu-button"][data-active="true"] svg {
-  color: hsl(263 70% 72%) !important;
+  color: hsl(var(--sidebar-primary)) !important;
 }
 
 /* ═══════════════════════════════════════════════════
@@ -401,7 +402,7 @@ html { scroll-behavior: smooth; }
    GRADIENT TEXT
 ═══════════════════════════════════════════════════ */
 .gradient-text {
-  background: linear-gradient(135deg, hsl(var(--primary)), hsl(263 70% 72%));
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(199 89% 60%));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -429,7 +430,7 @@ html { scroll-behavior: smooth; }
 ═══════════════════════════════════════════════════ */
 .badge-active   { @apply bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200/60 dark:border-emerald-800/40; }
 .badge-pending  { @apply bg-amber-500/10   text-amber-700   dark:text-amber-400   border-amber-200/60   dark:border-amber-800/40; }
-.badge-completed{ @apply bg-violet-500/10  text-violet-700  dark:text-violet-400  border-violet-200/60  dark:border-violet-800/40; }
+.badge-completed{ @apply bg-teal-500/10    text-teal-700    dark:text-teal-400    border-teal-200/60    dark:border-teal-800/40; }
 .badge-new      { @apply bg-sky-500/10     text-sky-700     dark:text-sky-400     border-sky-200/60     dark:border-sky-800/40; }
 .badge-inactive { @apply bg-slate-500/10   text-slate-600   dark:text-slate-400   border-slate-200/50   dark:border-slate-700/40; }
 .badge-cancelled{ @apply bg-red-500/10     text-red-700     dark:text-red-400     border-red-200/50     dark:border-red-800/40; }
