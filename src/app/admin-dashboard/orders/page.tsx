@@ -566,7 +566,7 @@ export default function AdminFinancialOrdersPage() {
                 <option value="coach">مدرب</option>
               </select>
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="grossAmount">الإجمالي</Label>
                 <Input

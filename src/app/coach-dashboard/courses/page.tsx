@@ -497,7 +497,7 @@ export default function CoachCoursesPage() {
                 )} />
 
                 {/* Price + Duration + Language */}
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <FormField control={addCourseForm.control} name="price" render={({ field }) => (
                     <FormItem>
                       <FormLabel>السعر ({currencySymbol})</FormLabel>

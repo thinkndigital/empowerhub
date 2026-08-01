@@ -342,7 +342,7 @@ export default function SiteEditorPage() {
                   <p className="text-slate-500 text-center py-6">لا توجد إحصائيات. أضف واحدة!</p>
                 ) : config.stats.map((stat, i) => (
                   <div key={i} className="flex gap-3 items-start p-3 bg-slate-700/30 rounded-xl border border-white/5">
-                    <div className="flex-1 grid grid-cols-3 gap-2">
+                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2">
                       <div>
                         <Label className="text-xs text-slate-500">الرقم/القيمة</Label>
                         <Input value={stat.value} onChange={e => updateStat(i, 'value', e.target.value)} placeholder="500+" className="mt-1 h-8 text-sm" />
