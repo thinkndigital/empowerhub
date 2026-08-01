@@ -29,7 +29,6 @@ import { useUser } from "@/firebase/auth/use-user";
 import { NotificationBell } from "@/components/notification-bell";
 import { MessageBell } from "@/components/message-bell";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { cn } from "@/lib/utils";
 import { applyPlatformColor } from "@/lib/platform-color";
 
 const allMentorMenuItems = [
@@ -141,15 +140,10 @@ export default function MentorDashboardLayout({ children }: { children: React.Re
                     asChild
                     isActive={active}
                     tooltip={item.label}
-                    className={cn(
-                      "rounded-xl h-10 px-3 gap-3 text-sm font-medium transition-all duration-200",
-                      active
-                        ? "bg-sidebar-accent text-sidebar-accent-foreground border-r-[3px] border-sidebar-primary"
-                        : "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground border-r-[3px] border-transparent"
-                    )}
+                    className="rounded-xl h-10 px-3 gap-3 text-sm font-medium transition-colors hover:bg-sidebar-accent/40"
                   >
                     <Link href={item.href}>
-                      <item.icon className={cn("h-4 w-4 shrink-0", active ? "text-sidebar-primary" : "")} />
+                      <item.icon className="h-4 w-4 shrink-0" />
                       <span>{item.label}</span>
                     </Link>
                   </SidebarMenuButton>
@@ -162,13 +156,9 @@ export default function MentorDashboardLayout({ children }: { children: React.Re
         <SidebarFooter className="border-t border-sidebar-border/60 p-3 space-y-1">
           <SidebarMenuButton
             asChild
+            isActive={isActive('/mentor-dashboard/settings')}
             tooltip="الإعدادات"
-            className={cn(
-              "rounded-xl h-10 px-3 gap-3 text-sm font-medium transition-all duration-200",
-              isActive('/mentor-dashboard/settings')
-                ? "bg-sidebar-accent text-sidebar-accent-foreground border-r-[3px] border-sidebar-primary"
-                : "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground border-r-[3px] border-transparent"
-            )}
+            className="rounded-xl h-10 px-3 gap-3 text-sm font-medium transition-colors hover:bg-sidebar-accent/40"
           >
             <Link href="/mentor-dashboard/settings">
               <Settings className="h-4 w-4 shrink-0" />
