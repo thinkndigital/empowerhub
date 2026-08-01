@@ -29,6 +29,7 @@ import { Logo } from "@/components/logo";
 import { useUser } from "@/firebase/auth/use-user";
 import { NotificationBell } from "@/components/notification-bell";
 import { MessageBell } from "@/components/message-bell";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const menuItems = [
   { href: "/dashboard", label: "لوحة التحكم", icon: LayoutGrid },
@@ -179,6 +180,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
           </div>
           <div className="flex items-center gap-1">
+            <ThemeToggle />
             <MessageBell href="/dashboard/messages" />
             <NotificationBell />
             <DropdownMenu>

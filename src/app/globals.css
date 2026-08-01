@@ -76,9 +76,9 @@ body {
   .dark {
     --background:           224 71%  4%;
     --foreground:           210 40% 95%;
-    --card:                 222 47%  8%;
+    --card:                 222 40% 11%;
     --card-foreground:      210 40% 95%;
-    --popover:              222 47%  8%;
+    --popover:              222 40% 11%;
     --popover-foreground:   210 40% 95%;
     --primary:              217 91% 60%;
     --primary-foreground:   224 71%  4%;
@@ -106,7 +106,7 @@ body {
     --chart-4:    32 95% 63%;
     --chart-5:   346 77% 68%;
 
-    --sidebar-background:         222 47%  7%;
+    --sidebar-background:         222 47%  9%;
     --sidebar-foreground:         215 20% 50%;
     --sidebar-primary:            217 91% 60%;
     --sidebar-primary-foreground: 0   0%  100%;
