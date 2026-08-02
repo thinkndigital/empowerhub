@@ -171,12 +171,12 @@ export default function SubscriptionsPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'إجمالي المنظمات', value: stats.total, color: 'text-white', bg: 'bg-slate-700/30' },
+          { label: 'إجمالي المنظمات', value: stats.total, color: 'text-white', bg: 'bg-white/[0.03]' },
           { label: 'اشتراكات نشطة', value: stats.active, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
           { label: 'منتهية الصلاحية', value: stats.expired, color: 'text-red-400', bg: 'bg-red-500/10' },
           { label: 'بدون اشتراك', value: stats.noSub, color: 'text-yellow-400', bg: 'bg-yellow-500/10' },
         ].map(s => (
-          <Card key={s.label} className={`${s.bg} border-white/10`}>
+          <Card key={s.label} className={`${s.bg} border-white/[0.08]`}>
             <CardContent className="p-4 text-center">
               <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
               <p className="text-slate-400 text-xs mt-1">{s.label}</p>
@@ -189,12 +189,12 @@ export default function SubscriptionsPage() {
       {loading ? (
         <p className="text-slate-400 text-center py-12">جاري التحميل...</p>
       ) : (
-        <Card className="bg-slate-800/50 border-white/10">
+        <Card className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20">
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-white/10">
+                  <tr className="border-b border-white/[0.08]">
                     <th className="text-right text-slate-400 text-xs px-4 py-3">المنظمة</th>
                     <th className="text-right text-slate-400 text-xs px-4 py-3 hidden sm:table-cell">الخطة</th>
                     <th className="text-right text-slate-400 text-xs px-4 py-3">الحالة</th>

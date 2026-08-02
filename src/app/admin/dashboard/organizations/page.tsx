@@ -465,7 +465,7 @@ export default function OrganizationsPage() {
 
       <div className="relative">
         <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-        <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="بحث عن منظمة..." className="bg-slate-800 border-white/10 text-white pr-10" />
+        <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="بحث عن منظمة..." className="bg-slate-800 border-white/[0.08] text-white pr-10" />
       </div>
 
       {loading ? (
@@ -478,7 +478,7 @@ export default function OrganizationsPage() {
             const color = org.primaryColor || "#6366f1";
             const initial = (org.name || "م")[0];
             return (
-              <Card key={org.id} className="bg-slate-800/50 border-white/10 hover:border-white/20 transition-all w-full overflow-hidden">
+              <Card key={org.id} className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20 hover:border-white/20 transition-all w-full overflow-hidden">
                 <CardContent className="p-4">
                   {/* Header: logo + info + dropdown */}
                   <div className="flex items-start gap-3 mb-3 min-w-0">

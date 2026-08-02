@@ -177,7 +177,7 @@ export default function ContentPage() {
           </Button>
         </div>
 
-        <Card className="bg-slate-800/50 border-white/10">
+        <Card className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20">
           <CardContent className="p-0">
             {list.length === 0 ? (
               <p className="text-slate-500 text-center py-10">لا يوجد محتوى بعد</p>
@@ -185,7 +185,7 @@ export default function ContentPage() {
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b border-white/10">
+                    <tr className="border-b border-white/[0.08]">
                       <th className="text-right text-slate-400 text-xs px-4 py-3">العنوان</th>
                       <th className="text-right text-slate-400 text-xs px-4 py-3 hidden sm:table-cell">
                         {col === 'projects' ? 'المنظمة' : col === 'articles' ? 'الكاتب' : col === 'courses' ? 'المدرب' : 'المدرب'}
@@ -255,7 +255,7 @@ export default function ContentPage() {
     <div className="space-y-2" key="coverImageUrl">
       <Label className="text-slate-300 text-xs">صورة الغلاف</Label>
       {(coverPreview || addForm.coverImageUrl) && (
-        <img src={coverPreview || addForm.coverImageUrl} alt="" className="w-full h-28 object-cover rounded-lg border border-white/10" />
+        <img src={coverPreview || addForm.coverImageUrl} alt="" className="w-full h-28 object-cover rounded-lg border border-white/[0.08]" />
       )}
       <div className="flex gap-2">
         <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverChange} />
@@ -271,7 +271,7 @@ export default function ContentPage() {
         value={addForm.coverImageUrl || ''}
         onChange={e => { setAddForm(p => ({ ...p, coverImageUrl: e.target.value })); setCoverPreview(null); }}
         placeholder="أو أدخل رابط الصورة https://..."
-        className="bg-slate-800 border-white/10 text-white text-xs"
+        className="bg-slate-800 border-white/[0.08] text-white text-xs"
       />
     </div>
   );
@@ -284,15 +284,15 @@ export default function ContentPage() {
         <Label className="text-slate-300 text-xs">{label}</Label>
         {type === 'textarea' ? (
           <Textarea value={addForm[key] || ''} onChange={e => setAddForm(p => ({ ...p, [key]: e.target.value }))}
-            className="bg-slate-800 border-white/10 text-white text-sm resize-none" rows={3} />
+            className="bg-slate-800 border-white/[0.08] text-white text-sm resize-none" rows={3} />
         ) : type === 'select' ? (
           <Select value={addForm[key] || ''} onValueChange={v => setAddForm(p => ({ ...p, [key]: v }))}>
-            <SelectTrigger className="bg-slate-800 border-white/10 text-white text-sm"><SelectValue placeholder="اختر..." /></SelectTrigger>
+            <SelectTrigger className="bg-slate-800 border-white/[0.08] text-white text-sm"><SelectValue placeholder="اختر..." /></SelectTrigger>
             <SelectContent>{options?.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
           </Select>
         ) : (
           <Input value={addForm[key] || ''} onChange={e => setAddForm(p => ({ ...p, [key]: e.target.value }))}
-            className="bg-slate-800 border-white/10 text-white text-sm" />
+            className="bg-slate-800 border-white/[0.08] text-white text-sm" />
         )}
       </div>
     );
@@ -366,7 +366,7 @@ export default function ContentPage() {
         <div className="text-slate-400 text-center py-16 animate-pulse">جاري تحميل المحتوى...</div>
       ) : (
         <Tabs defaultValue="projects">
-          <TabsList className="bg-slate-800 border border-white/10 h-auto flex-wrap gap-0.5">
+          <TabsList className="bg-slate-800 border border-white/[0.08] h-auto flex-wrap gap-0.5">
             {Object.entries(COLLECTIONS).map(([key, meta]) => (
               <TabsTrigger key={key} value={key}
                 className="data-[state=active]:bg-primary data-[state=active]:text-white text-slate-400 text-xs sm:text-sm">

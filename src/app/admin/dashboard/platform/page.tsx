@@ -166,7 +166,7 @@ export default function PlatformConfigPage() {
       </div>
 
       {/* Identity */}
-      <Card className="bg-slate-800/50 border-white/10">
+      <Card className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20">
         <CardHeader><CardTitle className="text-white text-base">هوية المنصة</CardTitle></CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -202,7 +202,7 @@ export default function PlatformConfigPage() {
         const enabledCount = Object.values(current).filter(Boolean).length;
         const total = Object.keys(sections).length;
         return (
-          <Card key={dash.key} className="bg-slate-800/50 border-white/10">
+          <Card key={dash.key} className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20">
             <CardHeader>
               <div className="flex items-center gap-3">
                 <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${dash.bg}`}>
@@ -228,7 +228,7 @@ export default function PlatformConfigPage() {
             <CardContent>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {Object.entries(sections).map(([key, label]) => (
-                  <div key={key} className={`flex items-center justify-between p-3 rounded-xl border transition-all ${current[key] ? 'border-primary/40 bg-primary/5' : 'border-white/10 bg-slate-900/30'}`}>
+                  <div key={key} className={`flex items-center justify-between p-3 rounded-xl border transition-all ${current[key] ? 'border-primary/40 bg-primary/5' : 'border-white/[0.08] bg-slate-900/30'}`}>
                     <span className="text-sm text-slate-300">{label}</span>
                     <Switch
                       checked={current[key] ?? true}

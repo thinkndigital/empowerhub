@@ -162,7 +162,7 @@ export default function PlansPage() {
             return (
               <Card
                 key={plan.id}
-                className={`relative bg-slate-800/60 border transition-all ${plan.highlighted ? 'border-primary shadow-lg shadow-primary/20' : 'border-white/10 hover:border-white/20'}`}
+                className={`relative bg-slate-800/60 border transition-all ${plan.highlighted ? 'border-primary shadow-lg shadow-primary/20' : 'border-white/[0.08] hover:border-white/20'}`}
               >
                 {plan.highlighted && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
@@ -213,7 +213,7 @@ export default function PlansPage() {
                   {plan.description && <p className="text-slate-400 text-sm mb-4">{plan.description}</p>}
 
                   {/* Limits */}
-                  <div className="grid grid-cols-2 gap-2 mb-4 p-3 bg-slate-700/30 rounded-xl">
+                  <div className="grid grid-cols-2 gap-2 mb-4 p-3 bg-white/[0.03] rounded-xl">
                     {[
                       { label: 'مستخدم', val: plan.limits?.maxUsers },
                       { label: 'مرشد', val: plan.limits?.maxMentors },
@@ -319,7 +319,7 @@ export default function PlansPage() {
             </div>
 
             {/* Highlighted */}
-            <div className="sm:col-span-2 flex items-center justify-between p-3 bg-slate-700/30 rounded-xl border border-white/10">
+            <div className="sm:col-span-2 flex items-center justify-between p-3 bg-white/[0.03] rounded-xl border border-white/[0.08]">
               <div>
                 <p className="text-white text-sm font-medium">خطة مميزة</p>
                 <p className="text-slate-400 text-xs">يظهر عليها "الأكثر شعبية"</p>

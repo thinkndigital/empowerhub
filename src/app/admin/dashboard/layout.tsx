@@ -79,23 +79,23 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
     return (
       <div className="flex flex-col h-full">
         {/* Logo */}
-        <div className="p-5 border-b border-white/10">
+        <div className="p-5 border-b border-white/[0.06]">
           <div className="flex items-center gap-3">
-            <div className="bg-primary/20 p-2 rounded-xl flex-shrink-0">
+            <div className="bg-primary/15 ring-1 ring-primary/25 p-2 rounded-xl flex-shrink-0">
               <Shield className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <p className="text-white font-bold text-sm">EmpowerHub</p>
-              <p className="text-slate-400 text-xs">لوحة الإدارة</p>
+              <p className="text-white font-bold text-sm tracking-tight">EmpowerHub</p>
+              <p className="text-slate-500 text-xs">لوحة الإدارة</p>
             </div>
           </div>
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 p-3 overflow-y-auto space-y-4">
+        <nav className="flex-1 p-3 overflow-y-auto space-y-5">
           {navGroups.map(group => (
             <div key={group.label}>
-              <p className="text-slate-600 text-xs font-semibold uppercase tracking-wider px-3 mb-1">{group.label}</p>
+              <p className="text-slate-600 text-[11px] font-semibold uppercase tracking-widest px-3 mb-1.5">{group.label}</p>
               <div className="space-y-0.5">
                 {group.items.map(item => (
                   <Link
@@ -105,8 +105,8 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
                     className={cn(
                       "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150",
                       isActive(item)
-                        ? "bg-primary text-white shadow-md shadow-primary/30"
-                        : "text-slate-400 hover:text-white hover:bg-white/8"
+                        ? "bg-primary text-white shadow-lg shadow-primary/25"
+                        : "text-slate-400 hover:text-white hover:bg-white/[0.05]"
                     )}
                   >
                     <item.icon className="h-4 w-4 flex-shrink-0" />
@@ -119,7 +119,7 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
         </nav>
 
         {/* Footer */}
-        <div className="p-3 border-t border-white/10">
+        <div className="p-3 border-t border-white/[0.06]">
           <button
             onClick={handleLogout}
             className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all w-full"
@@ -133,9 +133,13 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
   }
 
   return (
-    <div className="dark min-h-screen bg-slate-950 flex" dir="rtl">
+    <div
+      className="dark min-h-screen bg-slate-950 flex"
+      style={{ backgroundImage: 'radial-gradient(ellipse 80% 50% at 50% -10%, hsl(var(--primary) / 0.16), transparent)' }}
+      dir="rtl"
+    >
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex w-60 flex-shrink-0 bg-slate-900 border-l border-white/10 flex-col">
+      <aside className="hidden lg:flex w-64 flex-shrink-0 bg-slate-900/70 backdrop-blur-xl border-l border-white/[0.06] flex-col">
         <SidebarContent />
       </aside>
 
@@ -143,7 +147,7 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
       {sidebarOpen && (
         <div className="lg:hidden fixed inset-0 z-50 flex">
           <div className="fixed inset-0 bg-black/60" onClick={() => setSidebarOpen(false)} />
-          <aside className="relative w-60 bg-slate-900 flex flex-col z-10">
+          <aside className="relative w-64 bg-slate-900 flex flex-col z-10">
             <button onClick={() => setSidebarOpen(false)} className="absolute top-4 right-4 text-slate-400 hover:text-white">
               <X className="h-5 w-5" />
             </button>
@@ -155,9 +159,9 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top bar */}
-        <header className="h-14 bg-slate-900/80 backdrop-blur border-b border-white/10 flex items-center gap-4 px-4 lg:px-6 sticky top-0 z-30">
+        <header className="h-14 bg-slate-950/60 backdrop-blur-xl border-b border-white/[0.06] flex items-center gap-4 px-4 lg:px-6 sticky top-0 z-30">
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
+            <div className="h-8 w-8 rounded-full bg-primary/15 ring-1 ring-primary/25 flex items-center justify-center">
               <Shield className="h-4 w-4 text-primary" />
             </div>
             <span className="text-slate-300 text-sm hidden sm:block">المشرف العام</span>

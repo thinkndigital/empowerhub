@@ -59,7 +59,7 @@ const defaultConfig: SiteConfig = {
 
 function SaveBar({ onSave, saving, saved }: { onSave: () => void; saving: boolean; saved: boolean }) {
   return (
-    <div className="sticky top-14 z-20 bg-slate-900/95 backdrop-blur border-b border-white/10 px-4 py-3 flex items-center justify-between">
+    <div className="sticky top-14 z-20 bg-slate-900/95 backdrop-blur border-b border-white/[0.08] px-4 py-3 flex items-center justify-between">
       <Button onClick={onSave} disabled={saving} className={`gap-2 ${saved ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-primary hover:bg-primary/90'}`}>
         <Save className="h-4 w-4" />
         {saving ? 'جاري الحفظ...' : saved ? 'تم الحفظ ✓' : 'حفظ جميع التغييرات'}
@@ -99,7 +99,7 @@ function ImageUploadField({ label, value, onChange, storagePath }: {
         </label>
       </div>
       {value && (
-        <div className="h-20 w-20 border border-white/20 rounded-xl overflow-hidden bg-slate-700/30">
+        <div className="h-20 w-20 border border-white/20 rounded-xl overflow-hidden bg-white/[0.03]">
           <img src={value} alt="" className="h-full w-full object-contain" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
         </div>
       )}
@@ -227,7 +227,7 @@ export default function SiteEditorPage() {
 
       <div className="pt-4">
         <Tabs defaultValue="identity">
-          <TabsList className="bg-slate-800 border border-white/10 w-full flex-wrap h-auto gap-1 p-1">
+          <TabsList className="bg-slate-800 border border-white/[0.08] w-full flex-wrap h-auto gap-1 p-1">
             {[
               { value: 'identity', label: 'الهوية', icon: Globe },
               { value: 'hero', label: 'الترحيب', icon: ImageIcon },
@@ -252,7 +252,7 @@ export default function SiteEditorPage() {
 
           {/* IDENTITY */}
           <TabsContent value="identity" className="mt-4">
-            <Card className="bg-slate-800/50 border-white/10">
+            <Card className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20">
               <CardHeader><CardTitle className="text-white text-base">هوية الموقع والشعار</CardTitle></CardHeader>
               <CardContent className="space-y-5">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -272,7 +272,7 @@ export default function SiteEditorPage() {
                       type="color"
                       value={config.primaryColor || '#3b82f6'}
                       onChange={e => setConfig(c => ({ ...c, primaryColor: e.target.value }))}
-                      className="h-10 w-10 rounded-lg border border-white/10 bg-transparent cursor-pointer p-0.5"
+                      className="h-10 w-10 rounded-lg border border-white/[0.08] bg-transparent cursor-pointer p-0.5"
                     />
                     <Input
                       value={config.primaryColor || '#3b82f6'}
@@ -291,7 +291,7 @@ export default function SiteEditorPage() {
 
           {/* HERO */}
           <TabsContent value="hero" className="mt-4">
-            <Card className="bg-slate-800/50 border-white/10">
+            <Card className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20">
               <CardHeader><CardTitle className="text-white text-base">قسم الترحيب (Hero Section)</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
@@ -313,7 +313,7 @@ export default function SiteEditorPage() {
                   </div>
                 </div>
                 <ImageUploadField label="صورة الخلفية (اختياري)" value={config.hero.backgroundImage} onChange={url => setHero('backgroundImage', url)} storagePath="site/hero" />
-                <div className="rounded-xl overflow-hidden border border-white/10">
+                <div className="rounded-xl overflow-hidden border border-white/[0.08]">
                   <div
                     className="p-8 text-center bg-gradient-to-br from-primary/20 to-purple-900/30"
                     style={config.hero.backgroundImage ? { backgroundImage: `url(${config.hero.backgroundImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}
@@ -332,7 +332,7 @@ export default function SiteEditorPage() {
 
           {/* STATS */}
           <TabsContent value="stats" className="mt-4">
-            <Card className="bg-slate-800/50 border-white/10">
+            <Card className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-white text-base">الإحصائيات</CardTitle>
                 <Button size="sm" onClick={addStat} className="gap-1"><Plus className="h-3.5 w-3.5" />إضافة</Button>
@@ -341,7 +341,7 @@ export default function SiteEditorPage() {
                 {config.stats.length === 0 ? (
                   <p className="text-slate-500 text-center py-6">لا توجد إحصائيات. أضف واحدة!</p>
                 ) : config.stats.map((stat, i) => (
-                  <div key={i} className="flex gap-3 items-start p-3 bg-slate-700/30 rounded-xl border border-white/5">
+                  <div key={i} className="flex gap-3 items-start p-3 bg-white/[0.03] rounded-xl border border-white/5">
                     <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2">
                       <div>
                         <Label className="text-xs text-slate-500">الرقم/القيمة</Label>
@@ -358,7 +358,7 @@ export default function SiteEditorPage() {
                   </div>
                 ))}
                 {config.stats.length > 0 && (
-                  <div className="mt-4 p-4 bg-slate-700/30 rounded-xl border border-white/10">
+                  <div className="mt-4 p-4 bg-white/[0.03] rounded-xl border border-white/[0.08]">
                     <p className="text-slate-500 text-xs mb-3">معاينة:</p>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                       {config.stats.map((s, i) => (
@@ -376,7 +376,7 @@ export default function SiteEditorPage() {
 
           {/* FEATURES */}
           <TabsContent value="features" className="mt-4">
-            <Card className="bg-slate-800/50 border-white/10">
+            <Card className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-white text-base">بطاقات المميزات</CardTitle>
                 <Button size="sm" onClick={addFeature} className="gap-1"><Plus className="h-3.5 w-3.5" />إضافة ميزة</Button>
@@ -385,7 +385,7 @@ export default function SiteEditorPage() {
                 {config.features.length === 0 ? (
                   <p className="text-slate-500 text-center py-6">لا توجد ميزات. أضف واحدة!</p>
                 ) : config.features.map((feat, i) => (
-                  <div key={i} className="p-3 bg-slate-700/30 rounded-xl border border-white/5 space-y-2">
+                  <div key={i} className="p-3 bg-white/[0.03] rounded-xl border border-white/5 space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-slate-400 text-xs font-medium">ميزة {i + 1}</span>
                       <Button size="sm" variant="ghost" onClick={() => removeFeature(i)} className="h-7 w-7 p-0 text-slate-500 hover:text-red-400">
@@ -414,7 +414,7 @@ export default function SiteEditorPage() {
 
           {/* OPPORTUNITIES */}
           <TabsContent value="opportunities" className="mt-4">
-            <Card className="bg-slate-800/50 border-white/10">
+            <Card className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-white text-base">قسم الفرص المتاحة</CardTitle>
                 <Button size="sm" onClick={addOpportunity} className="gap-1"><Plus className="h-3.5 w-3.5" />إضافة فرصة</Button>
@@ -424,7 +424,7 @@ export default function SiteEditorPage() {
                 {config.opportunities.length === 0 ? (
                   <p className="text-slate-500 text-center py-6">لا توجد فرص. أضف واحدة!</p>
                 ) : config.opportunities.map((opp, i) => (
-                  <div key={i} className="p-3 bg-slate-700/30 rounded-xl border border-white/5 space-y-2">
+                  <div key={i} className="p-3 bg-white/[0.03] rounded-xl border border-white/5 space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-slate-400 text-xs font-medium">فرصة {i + 1}</span>
                       <Button size="sm" variant="ghost" onClick={() => removeOpportunity(i)} className="h-7 w-7 p-0 text-slate-500 hover:text-red-400">
@@ -434,25 +434,25 @@ export default function SiteEditorPage() {
                     <div className="grid grid-cols-2 gap-2">
                       <div>
                         <Label className="text-xs text-slate-500">العنوان</Label>
-                        <input value={opp.title} onChange={e => updateOpportunity(i, 'title', e.target.value)} placeholder="اسم الفرصة" className="mt-1 w-full h-8 text-sm bg-slate-900/60 border border-white/10 rounded-md px-2 text-white placeholder-slate-500" />
+                        <input value={opp.title} onChange={e => updateOpportunity(i, 'title', e.target.value)} placeholder="اسم الفرصة" className="mt-1 w-full h-8 text-sm bg-slate-900/60 border border-white/[0.08] rounded-md px-2 text-white placeholder-slate-500" />
                       </div>
                       <div>
                         <Label className="text-xs text-slate-500">الشارة (اختياري)</Label>
-                        <input value={opp.badge} onChange={e => updateOpportunity(i, 'badge', e.target.value)} placeholder="متاح الآن" className="mt-1 w-full h-8 text-sm bg-slate-900/60 border border-white/10 rounded-md px-2 text-white placeholder-slate-500" />
+                        <input value={opp.badge} onChange={e => updateOpportunity(i, 'badge', e.target.value)} placeholder="متاح الآن" className="mt-1 w-full h-8 text-sm bg-slate-900/60 border border-white/[0.08] rounded-md px-2 text-white placeholder-slate-500" />
                       </div>
                     </div>
                     <div>
                       <Label className="text-xs text-slate-500">الوصف</Label>
-                      <input value={opp.description} onChange={e => updateOpportunity(i, 'description', e.target.value)} placeholder="وصف الفرصة..." className="mt-1 w-full h-8 text-sm bg-slate-900/60 border border-white/10 rounded-md px-2 text-white placeholder-slate-500" />
+                      <input value={opp.description} onChange={e => updateOpportunity(i, 'description', e.target.value)} placeholder="وصف الفرصة..." className="mt-1 w-full h-8 text-sm bg-slate-900/60 border border-white/[0.08] rounded-md px-2 text-white placeholder-slate-500" />
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
                         <Label className="text-xs text-slate-500">اللون (Tailwind class)</Label>
-                        <input value={opp.color} onChange={e => updateOpportunity(i, 'color', e.target.value)} placeholder="bg-primary" className="mt-1 w-full h-8 text-sm bg-slate-900/60 border border-white/10 rounded-md px-2 text-white placeholder-slate-500 font-mono" dir="ltr" />
+                        <input value={opp.color} onChange={e => updateOpportunity(i, 'color', e.target.value)} placeholder="bg-primary" className="mt-1 w-full h-8 text-sm bg-slate-900/60 border border-white/[0.08] rounded-md px-2 text-white placeholder-slate-500 font-mono" dir="ltr" />
                       </div>
                       <div>
                         <Label className="text-xs text-slate-500">الرابط (اختياري)</Label>
-                        <input value={opp.link} onChange={e => updateOpportunity(i, 'link', e.target.value)} placeholder="/register" className="mt-1 w-full h-8 text-sm bg-slate-900/60 border border-white/10 rounded-md px-2 text-white placeholder-slate-500" dir="ltr" />
+                        <input value={opp.link} onChange={e => updateOpportunity(i, 'link', e.target.value)} placeholder="/register" className="mt-1 w-full h-8 text-sm bg-slate-900/60 border border-white/[0.08] rounded-md px-2 text-white placeholder-slate-500" dir="ltr" />
                       </div>
                     </div>
                   </div>
@@ -463,7 +463,7 @@ export default function SiteEditorPage() {
 
           {/* HOW IT WORKS */}
           <TabsContent value="howitworks" className="mt-4">
-            <Card className="bg-slate-800/50 border-white/10">
+            <Card className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-white text-base">خطوات "كيف تعمل المنصة"</CardTitle>
                 <Button size="sm" onClick={addStep} className="gap-1"><Plus className="h-3.5 w-3.5" />إضافة خطوة</Button>
@@ -472,7 +472,7 @@ export default function SiteEditorPage() {
                 {config.howItWorks.length === 0 ? (
                   <p className="text-slate-500 text-center py-6">لا توجد خطوات.</p>
                 ) : config.howItWorks.map((step, i) => (
-                  <div key={i} className="p-3 bg-slate-700/30 rounded-xl border border-white/5 space-y-2">
+                  <div key={i} className="p-3 bg-white/[0.03] rounded-xl border border-white/5 space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-slate-400 text-xs font-medium">خطوة {i + 1}</span>
                       <Button size="sm" variant="ghost" onClick={() => removeStep(i)} className="h-7 w-7 p-0 text-slate-500 hover:text-red-400">
@@ -501,7 +501,7 @@ export default function SiteEditorPage() {
 
           {/* ROLES */}
           <TabsContent value="roles" className="mt-4">
-            <Card className="bg-slate-800/50 border-white/10">
+            <Card className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-white text-base">بطاقات الأدوار (انضم إلينا)</CardTitle>
                 <Button size="sm" onClick={addRole} className="gap-1"><Plus className="h-3.5 w-3.5" />إضافة دور</Button>
@@ -510,7 +510,7 @@ export default function SiteEditorPage() {
                 {config.roles.length === 0 ? (
                   <p className="text-slate-500 text-center py-6">لا توجد أدوار.</p>
                 ) : config.roles.map((role, i) => (
-                  <div key={i} className="p-3 bg-slate-700/30 rounded-xl border border-white/5 space-y-2">
+                  <div key={i} className="p-3 bg-white/[0.03] rounded-xl border border-white/5 space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-slate-400 text-xs font-medium">دور {i + 1}</span>
                       <Button size="sm" variant="ghost" onClick={() => removeRole(i)} className="h-7 w-7 p-0 text-slate-500 hover:text-red-400">
@@ -543,7 +543,7 @@ export default function SiteEditorPage() {
 
           {/* BLOG POSTS */}
           <TabsContent value="blog" className="mt-4">
-            <Card className="bg-slate-800/50 border-white/10">
+            <Card className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-white text-base">قسم الموارد والمقالات</CardTitle>
                 <Button size="sm" onClick={addBlogPost} className="gap-1"><Plus className="h-3.5 w-3.5" />إضافة مقال</Button>
@@ -552,7 +552,7 @@ export default function SiteEditorPage() {
                 {config.blogPosts.length === 0 ? (
                   <p className="text-slate-500 text-center py-6">لا توجد مقالات. أضف واحداً!</p>
                 ) : config.blogPosts.map((post, i) => (
-                  <div key={i} className="p-3 bg-slate-700/30 rounded-xl border border-white/5 space-y-2">
+                  <div key={i} className="p-3 bg-white/[0.03] rounded-xl border border-white/5 space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-slate-400 text-xs font-medium">مقال {i + 1}</span>
                       <Button size="sm" variant="ghost" onClick={() => removeBlogPost(i)} className="h-7 w-7 p-0 text-slate-500 hover:text-red-400">
@@ -562,25 +562,25 @@ export default function SiteEditorPage() {
                     <div className="grid grid-cols-2 gap-2">
                       <div>
                         <Label className="text-xs text-slate-500">العنوان</Label>
-                        <input value={post.title} onChange={e => updateBlogPost(i, 'title', e.target.value)} placeholder="عنوان المقال" className="mt-1 w-full h-8 text-sm bg-slate-900/60 border border-white/10 rounded-md px-2 text-white placeholder-slate-500" />
+                        <input value={post.title} onChange={e => updateBlogPost(i, 'title', e.target.value)} placeholder="عنوان المقال" className="mt-1 w-full h-8 text-sm bg-slate-900/60 border border-white/[0.08] rounded-md px-2 text-white placeholder-slate-500" />
                       </div>
                       <div>
                         <Label className="text-xs text-slate-500">التصنيف</Label>
-                        <input value={post.category} onChange={e => updateBlogPost(i, 'category', e.target.value)} placeholder="مسار مهني" className="mt-1 w-full h-8 text-sm bg-slate-900/60 border border-white/10 rounded-md px-2 text-white placeholder-slate-500" />
+                        <input value={post.category} onChange={e => updateBlogPost(i, 'category', e.target.value)} placeholder="مسار مهني" className="mt-1 w-full h-8 text-sm bg-slate-900/60 border border-white/[0.08] rounded-md px-2 text-white placeholder-slate-500" />
                       </div>
                     </div>
                     <div>
                       <Label className="text-xs text-slate-500">المقتطف</Label>
-                      <input value={post.excerpt} onChange={e => updateBlogPost(i, 'excerpt', e.target.value)} placeholder="وصف مختصر للمقال..." className="mt-1 w-full h-8 text-sm bg-slate-900/60 border border-white/10 rounded-md px-2 text-white placeholder-slate-500" />
+                      <input value={post.excerpt} onChange={e => updateBlogPost(i, 'excerpt', e.target.value)} placeholder="وصف مختصر للمقال..." className="mt-1 w-full h-8 text-sm bg-slate-900/60 border border-white/[0.08] rounded-md px-2 text-white placeholder-slate-500" />
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
                         <Label className="text-xs text-slate-500">رابط الصورة (اختياري)</Label>
-                        <input value={post.imageUrl} onChange={e => updateBlogPost(i, 'imageUrl', e.target.value)} placeholder="https://..." className="mt-1 w-full h-8 text-sm bg-slate-900/60 border border-white/10 rounded-md px-2 text-white placeholder-slate-500 font-mono" dir="ltr" />
+                        <input value={post.imageUrl} onChange={e => updateBlogPost(i, 'imageUrl', e.target.value)} placeholder="https://..." className="mt-1 w-full h-8 text-sm bg-slate-900/60 border border-white/[0.08] rounded-md px-2 text-white placeholder-slate-500 font-mono" dir="ltr" />
                       </div>
                       <div>
                         <Label className="text-xs text-slate-500">رابط المقال (اختياري)</Label>
-                        <input value={post.link} onChange={e => updateBlogPost(i, 'link', e.target.value)} placeholder="https://..." className="mt-1 w-full h-8 text-sm bg-slate-900/60 border border-white/10 rounded-md px-2 text-white placeholder-slate-500 font-mono" dir="ltr" />
+                        <input value={post.link} onChange={e => updateBlogPost(i, 'link', e.target.value)} placeholder="https://..." className="mt-1 w-full h-8 text-sm bg-slate-900/60 border border-white/[0.08] rounded-md px-2 text-white placeholder-slate-500 font-mono" dir="ltr" />
                       </div>
                     </div>
                   </div>
@@ -591,7 +591,7 @@ export default function SiteEditorPage() {
 
           {/* TESTIMONIALS */}
           <TabsContent value="testimonials" className="mt-4">
-            <Card className="bg-slate-800/50 border-white/10">
+            <Card className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-white text-base">آراء المستخدمين (Testimonials)</CardTitle>
                 <Button size="sm" onClick={addTestimonial} className="gap-1"><Plus className="h-3.5 w-3.5" />إضافة رأي</Button>
@@ -600,7 +600,7 @@ export default function SiteEditorPage() {
                 {config.testimonials.length === 0 ? (
                   <p className="text-slate-500 text-center py-6">لا توجد آراء.</p>
                 ) : config.testimonials.map((t, i) => (
-                  <div key={i} className="p-3 bg-slate-700/30 rounded-xl border border-white/5 space-y-2">
+                  <div key={i} className="p-3 bg-white/[0.03] rounded-xl border border-white/5 space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-slate-400 text-xs font-medium">رأي {i + 1}</span>
                       <Button size="sm" variant="ghost" onClick={() => removeTestimonial(i)} className="h-7 w-7 p-0 text-slate-500 hover:text-red-400">
@@ -644,7 +644,7 @@ export default function SiteEditorPage() {
 
           {/* CONTACT */}
           <TabsContent value="contact" className="mt-4">
-            <Card className="bg-slate-800/50 border-white/10">
+            <Card className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20">
               <CardHeader><CardTitle className="text-white text-base">معلومات التواصل</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
@@ -670,7 +670,7 @@ export default function SiteEditorPage() {
 
           {/* CTA BANNER */}
           <TabsContent value="cta" className="mt-4">
-            <Card className="bg-slate-800/50 border-white/10">
+            <Card className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20">
               <CardHeader><CardTitle className="text-white text-base">بانر الدعوة للعمل (CTA Banner)</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
@@ -692,7 +692,7 @@ export default function SiteEditorPage() {
                   </div>
                 </div>
                 {/* Preview */}
-                <div className="rounded-xl overflow-hidden border border-white/10">
+                <div className="rounded-xl overflow-hidden border border-white/[0.08]">
                   <div className="p-8 text-center bg-primary">
                     <h2 className="text-white text-xl font-bold mb-2">{config.ctaBanner.title || 'العنوان...'}</h2>
                     <p className="text-white/80 text-sm mb-4">{config.ctaBanner.subtitle || 'الوصف...'}</p>
@@ -708,7 +708,7 @@ export default function SiteEditorPage() {
 
           {/* SECTIONS */}
           <TabsContent value="sections" className="mt-4">
-            <Card className="bg-slate-800/50 border-white/10">
+            <Card className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20">
               <CardHeader><CardTitle className="text-white text-base">تشغيل وإيقاف الأقسام</CardTitle></CardHeader>
               <CardContent className="space-y-3">
                 {[
@@ -727,7 +727,7 @@ export default function SiteEditorPage() {
                   { key: 'showContact' as const, label: 'قسم التواصل', desc: 'نموذج ومعلومات التواصل' },
                   { key: 'showCTA' as const, label: 'قسم الدعوة للعمل', desc: 'بانر التسجيل في نهاية الصفحة' },
                 ].map(item => (
-                  <div key={item.key} className="flex items-center justify-between p-4 bg-slate-700/30 rounded-xl border border-white/5 hover:border-white/10 transition-all">
+                  <div key={item.key} className="flex items-center justify-between p-4 bg-white/[0.03] rounded-xl border border-white/5 hover:border-white/[0.08] transition-all">
                     <div className="flex items-center gap-3">
                       {config.sections[item.key]
                         ? <Eye className="h-4 w-4 text-emerald-400" />
@@ -747,7 +747,7 @@ export default function SiteEditorPage() {
 
           {/* FOOTER */}
           <TabsContent value="footer" className="mt-4">
-            <Card className="bg-slate-800/50 border-white/10">
+            <Card className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20">
               <CardHeader><CardTitle className="text-white text-base">الفوتر وروابط التواصل</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">

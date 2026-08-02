@@ -70,7 +70,7 @@ export default function LandingEditorPage() {
       </div>
 
       {/* Hero Section */}
-      <Card className="bg-slate-800/50 border-white/10">
+      <Card className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20">
         <CardHeader><CardTitle className="text-white text-base">قسم الترحيب (Hero)</CardTitle></CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -78,7 +78,7 @@ export default function LandingEditorPage() {
             <Input
               value={config.heroTitle}
               onChange={e => setConfig(c => ({ ...c, heroTitle: e.target.value }))}
-              className="bg-slate-700 border-white/10 text-white"
+              className="bg-slate-700 border-white/[0.08] text-white"
               placeholder="عنوان الصفحة..."
             />
           </div>
@@ -87,7 +87,7 @@ export default function LandingEditorPage() {
             <Textarea
               value={config.heroSubtitle}
               onChange={e => setConfig(c => ({ ...c, heroSubtitle: e.target.value }))}
-              className="bg-slate-700 border-white/10 text-white resize-none"
+              className="bg-slate-700 border-white/[0.08] text-white resize-none"
               rows={3}
               placeholder="وصف قصير..."
             />
@@ -97,7 +97,7 @@ export default function LandingEditorPage() {
             <Input
               value={config.heroCtaText}
               onChange={e => setConfig(c => ({ ...c, heroCtaText: e.target.value }))}
-              className="bg-slate-700 border-white/10 text-white"
+              className="bg-slate-700 border-white/[0.08] text-white"
               placeholder="ابدأ الآن"
             />
           </div>
@@ -105,7 +105,7 @@ export default function LandingEditorPage() {
       </Card>
 
       {/* Sections Toggles */}
-      <Card className="bg-slate-800/50 border-white/10">
+      <Card className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20">
         <CardHeader><CardTitle className="text-white text-base">الأقسام المرئية</CardTitle></CardHeader>
         <CardContent className="space-y-4">
           {[
@@ -113,7 +113,7 @@ export default function LandingEditorPage() {
             { key: "showProducts" as const, label: "قسم المنتجات والمتجر", desc: "عرض منتجات المستفيدين" },
             { key: "showTestimonials" as const, label: "قسم آراء المستخدمين", desc: "عرض شهادات المستفيدين" },
           ].map(item => (
-            <div key={item.key} className="flex items-center justify-between p-4 bg-slate-700/30 rounded-xl border border-white/5">
+            <div key={item.key} className="flex items-center justify-between p-4 bg-white/[0.03] rounded-xl border border-white/5">
               <div>
                 <p className="text-white text-sm font-medium">{item.label}</p>
                 <p className="text-slate-400 text-xs mt-0.5">{item.desc}</p>
@@ -128,10 +128,10 @@ export default function LandingEditorPage() {
       </Card>
 
       {/* Preview */}
-      <Card className="bg-slate-800/50 border-white/10">
+      <Card className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20">
         <CardHeader><CardTitle className="text-white text-base flex items-center gap-2"><Globe className="h-4 w-4 text-primary" />معاينة</CardTitle></CardHeader>
         <CardContent>
-          <div className="bg-gradient-to-br from-primary/20 to-purple-900/20 rounded-xl p-6 border border-white/10 text-center">
+          <div className="bg-gradient-to-br from-primary/20 to-purple-900/20 rounded-xl p-6 border border-white/[0.08] text-center">
             <h2 className="text-white text-2xl font-bold mb-2">{config.heroTitle || "..."}</h2>
             <p className="text-slate-300 text-sm mb-4">{config.heroSubtitle || "..."}</p>
             <button className="bg-primary text-white px-6 py-2 rounded-lg text-sm font-medium">{config.heroCtaText || "..."}</button>

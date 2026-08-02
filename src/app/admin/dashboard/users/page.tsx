@@ -99,10 +99,10 @@ export default function UsersPage() {
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="بحث بالاسم أو البريد..." className="bg-slate-800 border-white/10 text-white pr-10" />
+          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="بحث بالاسم أو البريد..." className="bg-slate-800 border-white/[0.08] text-white pr-10" />
         </div>
         <Select value={roleFilter} onValueChange={setRoleFilter}>
-          <SelectTrigger className="w-full sm:w-44 bg-slate-800 border-white/10 text-slate-300">
+          <SelectTrigger className="w-full sm:w-44 bg-slate-800 border-white/[0.08] text-slate-300">
             <SelectValue placeholder="كل الأدوار" />
           </SelectTrigger>
           <SelectContent>
@@ -117,7 +117,7 @@ export default function UsersPage() {
       </div>
 
       {/* Table */}
-      <Card className="bg-slate-800/50 border-white/10">
+      <Card className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20">
         <CardContent className="p-0">
           {loading ? (
             <div className="text-slate-400 text-center py-12">جاري التحميل...</div>
@@ -127,7 +127,7 @@ export default function UsersPage() {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-white/10">
+                  <tr className="border-b border-white/[0.08]">
                     <th className="text-right text-slate-400 text-xs font-medium px-4 py-3">المستخدم</th>
                     <th className="text-right text-slate-400 text-xs font-medium px-4 py-3 hidden md:table-cell">البريد</th>
                     <th className="text-right text-slate-400 text-xs font-medium px-4 py-3">الدور</th>

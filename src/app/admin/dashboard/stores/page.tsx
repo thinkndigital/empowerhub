@@ -158,7 +158,7 @@ function StoresTab() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filtered.map(store => (
-            <Card key={store.id} className={`bg-slate-800/50 border-white/10 transition-all ${store.hidden ? 'opacity-50' : ''}`}>
+            <Card key={store.id} className={`bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20 transition-all ${store.hidden ? 'opacity-50' : ''}`}>
               <CardContent className="p-4">
                 <div className="flex items-start gap-3 mb-3">
                   <div className="h-10 w-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary flex-shrink-0">
@@ -200,7 +200,7 @@ function StoresTab() {
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </AlertDialogTrigger>
-                    <AlertDialogContent className="bg-slate-800 border-white/10">
+                    <AlertDialogContent className="bg-slate-800 border-white/[0.08]">
                       <AlertDialogHeader>
                         <AlertDialogTitle className="text-white">حذف المتجر</AlertDialogTitle>
                         <AlertDialogDescription className="text-slate-400">هل أنت متأكد من حذف متجر "{store.name}"؟ هذا الإجراء لا يمكن التراجع عنه.</AlertDialogDescription>
@@ -220,7 +220,7 @@ function StoresTab() {
 
       {/* Edit Dialog */}
       <Dialog open={!!editStore} onOpenChange={o => !o && setEditStore(null)}>
-        <DialogContent className="bg-slate-800 border-white/10 text-white" dir="rtl">
+        <DialogContent className="bg-slate-800 border-white/[0.08] text-white" dir="rtl">
           <DialogHeader>
             <DialogTitle>تعديل المتجر</DialogTitle>
           </DialogHeader>
@@ -335,7 +335,7 @@ function ProductsTab() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filtered.map(product => (
-            <Card key={product.id} className={`bg-slate-800/50 border-white/10 overflow-hidden transition-all ${product.hidden ? 'opacity-50' : ''}`}>
+            <Card key={product.id} className={`bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20 overflow-hidden transition-all ${product.hidden ? 'opacity-50' : ''}`}>
               {product.imageUrl && (
                 <div className="h-28 w-full bg-slate-700 overflow-hidden">
                   <img src={product.imageUrl} alt={product.name} className="h-full w-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
@@ -381,7 +381,7 @@ function ProductsTab() {
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </AlertDialogTrigger>
-                    <AlertDialogContent className="bg-slate-800 border-white/10">
+                    <AlertDialogContent className="bg-slate-800 border-white/[0.08]">
                       <AlertDialogHeader>
                         <AlertDialogTitle className="text-white">حذف المنتج</AlertDialogTitle>
                         <AlertDialogDescription className="text-slate-400">هل أنت متأكد من حذف "{product.name}"؟</AlertDialogDescription>
@@ -401,7 +401,7 @@ function ProductsTab() {
 
       {/* Edit Dialog */}
       <Dialog open={!!editProduct} onOpenChange={o => !o && setEditProduct(null)}>
-        <DialogContent className="bg-slate-800 border-white/10 text-white" dir="rtl">
+        <DialogContent className="bg-slate-800 border-white/[0.08] text-white" dir="rtl">
           <DialogHeader>
             <DialogTitle>تعديل المنتج</DialogTitle>
           </DialogHeader>
@@ -489,11 +489,11 @@ function OrdersTab() {
         </Button>
       </div>
 
-      <Card className="bg-slate-800/50 border-white/10">
+      <Card className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20">
         <CardContent className="p-0">
           <Table>
             <TableHeader>
-              <TableRow className="border-white/10 hover:bg-transparent">
+              <TableRow className="border-white/[0.08] hover:bg-transparent">
                 <TableHead className="text-slate-400">المنتج</TableHead>
                 <TableHead className="text-slate-400">المتجر</TableHead>
                 <TableHead className="text-slate-400">الزبون</TableHead>
@@ -504,9 +504,9 @@ function OrdersTab() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loading && <TableRow className="border-white/10"><TableCell colSpan={7} className="h-24 text-center text-slate-400">جاري التحميل...</TableCell></TableRow>}
+              {loading && <TableRow className="border-white/[0.08]"><TableCell colSpan={7} className="h-24 text-center text-slate-400">جاري التحميل...</TableCell></TableRow>}
               {!loading && filtered.map(o => (
-                <TableRow key={o.id} className="border-white/10">
+                <TableRow key={o.id} className="border-white/[0.08]">
                   <TableCell className="text-white text-sm">{o.productName || '—'}</TableCell>
                   <TableCell className="text-slate-300 text-sm">{o.storeName || '—'}</TableCell>
                   <TableCell className="text-slate-300 text-sm">{o.buyerName || '—'}</TableCell>
@@ -527,7 +527,7 @@ function OrdersTab() {
                 </TableRow>
               ))}
               {!loading && filtered.length === 0 && (
-                <TableRow className="border-white/10"><TableCell colSpan={7} className="h-24 text-center text-slate-400">لا توجد طلبات</TableCell></TableRow>
+                <TableRow className="border-white/[0.08]"><TableCell colSpan={7} className="h-24 text-center text-slate-400">لا توجد طلبات</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
@@ -603,21 +603,21 @@ function CustomersTab() {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <Card className="bg-slate-800/50 border-white/10">
+        <Card className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20">
           <CardContent className="pt-4 pb-4">
             <Users className="h-4 w-4 text-purple-400 mb-2" />
             <p className="text-lg font-bold text-white">{loading ? '...' : stats.total}</p>
             <p className="text-xs text-slate-400">إجمالي العملاء</p>
           </CardContent>
         </Card>
-        <Card className="bg-slate-800/50 border-white/10">
+        <Card className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20">
           <CardContent className="pt-4 pb-4">
             <Repeat className="h-4 w-4 text-blue-400 mb-2" />
             <p className="text-lg font-bold text-white">{loading ? '...' : stats.repeat}</p>
             <p className="text-xs text-slate-400">عملاء متكررون</p>
           </CardContent>
         </Card>
-        <Card className="bg-slate-800/50 border-white/10">
+        <Card className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20">
           <CardContent className="pt-4 pb-4">
             <ShoppingCart className="h-4 w-4 text-emerald-400 mb-2" />
             <p className="text-lg font-bold text-white">{loading ? '...' : `${stats.revenue.toFixed(2)} د.أ`}</p>
@@ -649,11 +649,11 @@ function CustomersTab() {
         </Button>
       </div>
 
-      <Card className="bg-slate-800/50 border-white/10">
+      <Card className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20">
         <CardContent className="p-0">
           <Table>
             <TableHeader>
-              <TableRow className="border-white/10 hover:bg-transparent">
+              <TableRow className="border-white/[0.08] hover:bg-transparent">
                 <TableHead className="text-slate-400">العميل</TableHead>
                 <TableHead className="text-slate-400">الهاتف</TableHead>
                 <TableHead className="text-slate-400">العنوان</TableHead>
@@ -663,9 +663,9 @@ function CustomersTab() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loading && <TableRow className="border-white/10"><TableCell colSpan={6} className="h-24 text-center text-slate-400">جاري التحميل...</TableCell></TableRow>}
+              {loading && <TableRow className="border-white/[0.08]"><TableCell colSpan={6} className="h-24 text-center text-slate-400">جاري التحميل...</TableCell></TableRow>}
               {!loading && filtered.map(c => (
-                <TableRow key={c.key} className="border-white/10">
+                <TableRow key={c.key} className="border-white/[0.08]">
                   <TableCell className="text-white text-sm font-medium">{c.name}</TableCell>
                   <TableCell dir="ltr">
                     {c.phone ? (
@@ -693,7 +693,7 @@ function CustomersTab() {
                 </TableRow>
               ))}
               {!loading && filtered.length === 0 && (
-                <TableRow className="border-white/10"><TableCell colSpan={6} className="h-24 text-center text-slate-400">لا يوجد عملاء بعد</TableCell></TableRow>
+                <TableRow className="border-white/[0.08]"><TableCell colSpan={6} className="h-24 text-center text-slate-400">لا يوجد عملاء بعد</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
@@ -712,7 +712,7 @@ export default function StoresAdminPage() {
       </div>
 
       <Tabs defaultValue="stores">
-        <TabsList className="bg-slate-800 border border-white/10">
+        <TabsList className="bg-slate-800 border border-white/[0.08]">
           <TabsTrigger value="stores" className="data-[state=active]:bg-primary data-[state=active]:text-white text-slate-400 gap-2">
             <Store className="h-4 w-4" />
             المتاجر

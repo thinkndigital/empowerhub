@@ -134,7 +134,7 @@ function GatewayCard({ gwDef, value, onChange }: {
   const set = (k: string, v: any) => onChange({ ...value, [k]: v });
 
   return (
-    <Card className="bg-slate-800/50 border-white/10">
+    <Card className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20">
       <CardContent className="p-0">
         <div className="flex items-center gap-3 p-4 cursor-pointer" onClick={() => setOpen(o => !o)}>
           <span className="text-2xl">{gwDef.logo}</span>
@@ -150,7 +150,7 @@ function GatewayCard({ gwDef, value, onChange }: {
         </div>
 
         {open && (
-          <div className="px-4 pb-4 border-t border-white/10 pt-4 space-y-4">
+          <div className="px-4 pb-4 border-t border-white/[0.08] pt-4 space-y-4">
             <div className="space-y-2">
               <Label>التسمية في نموذج الطلب</Label>
               <Input value={value.label || ''} onChange={e => set('label', e.target.value)} placeholder={gwDef.name} />
@@ -162,7 +162,7 @@ function GatewayCard({ gwDef, value, onChange }: {
                   <select
                     value={value[f.key] || f.options[0]}
                     onChange={e => set(f.key, e.target.value)}
-                    className="w-full rounded-md border border-white/10 bg-slate-900 text-white px-3 py-2 text-sm"
+                    className="w-full rounded-md border border-white/[0.08] bg-slate-900 text-white px-3 py-2 text-sm"
                     dir="ltr"
                   >
                     {f.options.map(o => <option key={o} value={o}>{o}</option>)}
@@ -246,7 +246,7 @@ export default function PaymentConfigPage() {
       </div>
 
       {/* Summary */}
-      <div className="flex items-center gap-3 p-4 bg-slate-800/50 border border-white/10 rounded-xl">
+      <div className="flex items-center gap-3 p-4 bg-slate-800/50 border border-white/[0.08] rounded-xl">
         <CreditCard className="h-5 w-5 text-primary" />
         <div className="flex-1">
           <p className="text-white text-sm font-medium">وسائل الدفع المفعّلة</p>
@@ -256,7 +256,7 @@ export default function PaymentConfigPage() {
       </div>
 
       {/* COD */}
-      <Card className="bg-slate-800/50 border-white/10">
+      <Card className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20">
         <CardContent className="p-4">
           <div className="flex items-center gap-3">
             <span className="text-2xl">💵</span>
@@ -270,7 +270,7 @@ export default function PaymentConfigPage() {
             <Switch checked={config.allowCOD} onCheckedChange={v => setConfig(c => ({ ...c, allowCOD: v }))} />
           </div>
           {config.allowCOD && (
-            <div className="mt-3 pt-3 border-t border-white/10 space-y-3">
+            <div className="mt-3 pt-3 border-t border-white/[0.08] space-y-3">
               <div className="space-y-1.5">
                 <Label>نص الزر في نموذج الطلب</Label>
                 <Input value={config.codLabel} onChange={e => setConfig(c => ({ ...c, codLabel: e.target.value }))} placeholder="الدفع عند الاستلام" />
@@ -281,7 +281,7 @@ export default function PaymentConfigPage() {
       </Card>
 
       {/* Currency */}
-      <Card className="bg-slate-800/50 border-white/10">
+      <Card className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20">
         <CardContent className="p-4">
           <div className="flex items-center gap-3">
             <span className="text-2xl">💱</span>

@@ -46,7 +46,7 @@ export default function AdminDashboardPage() {
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         {statCards.map(card => (
           <Link key={card.key} href={card.href}>
-            <Card className="bg-slate-800/50 border-white/10 hover:border-white/20 hover:bg-slate-800 transition-all cursor-pointer group">
+            <Card className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20 hover:border-white/20 hover:bg-slate-800 transition-all cursor-pointer group">
               <CardContent className="p-5">
                 <div className="flex items-center justify-between">
                   <div>
@@ -88,7 +88,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Organizations List */}
-      <Card className="bg-slate-800/50 border-white/10">
+      <Card className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20">
         <CardHeader className="flex flex-row items-center justify-between pb-4">
           <CardTitle className="text-white text-lg">المنظمات المسجلة</CardTitle>
           <Link href="/admin/dashboard/organizations">
@@ -104,7 +104,7 @@ export default function AdminDashboardPage() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {orgs.map(org => (
-                <div key={org.id} className="bg-slate-700/30 border border-white/10 rounded-xl p-4 flex items-center gap-3">
+                <div key={org.id} className="bg-white/[0.03] border border-white/[0.08] rounded-xl p-4 flex items-center gap-3">
                   <div
                     className="h-10 w-10 rounded-xl flex-shrink-0 flex items-center justify-center text-white font-bold text-sm"
                     style={{ backgroundColor: org.primaryColor || '#6366f1' }}
