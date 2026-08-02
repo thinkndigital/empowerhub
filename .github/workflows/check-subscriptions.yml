@@ -1,0 +1,15 @@
+name: Daily Subscription Check (reminders + auto-lock)
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  check_subscriptions:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call subscription check endpoint
+        run: |
+          curl -sf -X POST "https://empowerhub.thinkndigital.com/api/cron/check-subscriptions" \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}"

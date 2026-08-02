@@ -18,6 +18,32 @@ export async function POST(req: NextRequest) {
     const orderDoc = await adminDb.collection('orders').doc(orderId).get();
     const orderData = orderDoc.exists ? orderDoc.data() : null;
 
+    if (orderData?.type === 'subscription' && orderData.orgId && orderData.planId) {
+      const now = new Date();
+      const endDate = new Date(now);
+      if (orderData.billingCycle === 'annual') endDate.setFullYear(endDate.getFullYear() + 1);
+      else endDate.setMonth(endDate.getMonth() + 1);
+
+      await adminDb.collection('subscriptions').doc(orderData.orgId).set({
+        orgId: orderData.orgId,
+        planId: orderData.planId,
+        planKey: orderData.planKey || orderData.planId,
+        planName: orderData.planName || '',
+        billingCycle: orderData.billingCycle || 'monthly',
+        status: 'active',
+        startDate: now,
+        endDate,
+        renewalDate: endDate,
+        lastReminderAt: null,
+        lastPaymentId: orderId,
+        updatedAt: now,
+      }, { merge: true });
+
+      await adminDb.collection('organizations').doc(orderData.orgId).update({
+        plan: orderData.planKey || orderData.planId,
+      }).catch(() => {});
+    }
+
     return NextResponse.json({
       ok: true,
       order: orderData
@@ -25,6 +51,7 @@ export async function POST(req: NextRequest) {
             type: orderData.type || 'product',
             courseId: orderData.courseId || '',
             userId: orderData.userId || '',
+            orgId: orderData.orgId || '',
           }
         : null,
     });

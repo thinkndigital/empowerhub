@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { checkOrgLimit } from '@/lib/plan-limits';
 
 export async function POST(req: NextRequest) {
   try {
@@ -8,6 +9,16 @@ export async function POST(req: NextRequest) {
 
     if (!name || !email || !role) {
       return NextResponse.json({ error: 'name, email, and role are required' }, { status: 400 });
+    }
+
+    if (organizationId) {
+      const limitKey = role === 'beneficiary' ? 'maxUsers' : role === 'mentor' || role === 'coach' ? 'maxMentors' : null;
+      if (limitKey) {
+        const limitCheck = await checkOrgLimit(organizationId, limitKey);
+        if (!limitCheck.allowed) {
+          return NextResponse.json({ error: limitCheck.message }, { status: 403 });
+        }
+      }
     }
 
     // Create Firebase Auth user

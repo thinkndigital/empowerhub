@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { checkOrgLimit } from '@/lib/plan-limits';
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { name, email, password, role, organizationName, orgInviteCode } = body;
+    const { name, email, password, role, organizationName, orgInviteCode, plan } = body;
 
     if (!name || !email || !password || !role) {
       return NextResponse.json(
@@ -24,6 +25,8 @@ export async function POST(req: NextRequest) {
     let organizationId: string | undefined;
 
     // 2. If registering as organization admin, create the org document
+    let pendingPlanId: string | undefined;
+    let pendingPlanPrice = 0;
     if (role === 'organization') {
       const orgRef = adminDb.collection('organizations').doc();
       organizationId = orgRef.id;
@@ -35,7 +38,31 @@ export async function POST(req: NextRequest) {
         createdAt: new Date().toISOString(),
         primaryColor: '#2563eb',
         inviteCode: Math.random().toString(36).substring(2, 8).toUpperCase(),
+        ...(plan ? { plan } : {}),
       });
+
+      // If the chosen plan is a real, paid plan, create a pending subscription
+      // awaiting payment. Free/unmatched plans stay unlocked (no subscription doc).
+      if (plan) {
+        const planSnap = await adminDb.collection('plans').where('key', '==', plan).limit(1).get();
+        if (!planSnap.empty) {
+          const planDoc = planSnap.docs[0];
+          const planData = planDoc.data() as any;
+          if ((planData.priceMonthly || 0) > 0) {
+            pendingPlanId = planDoc.id;
+            pendingPlanPrice = planData.priceMonthly;
+            await adminDb.collection('subscriptions').doc(organizationId).set({
+              orgId: organizationId,
+              planId: planDoc.id,
+              planKey: plan,
+              planName: planData.name || plan,
+              billingCycle: 'monthly',
+              status: 'pending',
+              createdAt: new Date(),
+            });
+          }
+        }
+      }
     }
 
     // 3. If registering as mentor/coach with a non-empty invite code, validate and link to org
@@ -46,7 +73,13 @@ export async function POST(req: NextRequest) {
         .get();
 
       if (!orgsSnapshot.empty) {
-        organizationId = orgsSnapshot.docs[0].id;
+        const candidateOrgId = orgsSnapshot.docs[0].id;
+        const limitCheck = await checkOrgLimit(candidateOrgId, 'maxMentors');
+        if (!limitCheck.allowed) {
+          await adminAuth.deleteUser(uid);
+          return NextResponse.json({ error: limitCheck.message }, { status: 403 });
+        }
+        organizationId = candidateOrgId;
       } else {
         await adminAuth.deleteUser(uid);
         return NextResponse.json(
@@ -80,6 +113,9 @@ export async function POST(req: NextRequest) {
       success: true,
       uid,
       organizationId,
+      requiresPayment: !!pendingPlanId,
+      planId: pendingPlanId,
+      planPrice: pendingPlanPrice,
       message: 'تم إنشاء الحساب بنجاح.',
     });
 

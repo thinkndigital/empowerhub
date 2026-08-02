@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
+import { checkOrgLimit } from '@/lib/plan-limits';
 
 export async function POST(req: NextRequest) {
   try {
@@ -21,6 +22,16 @@ export async function POST(req: NextRequest) {
 
     const orgDoc = orgsSnapshot.docs[0];
     const organizationId = orgDoc.id;
+
+    const userSnap = await adminDb.collection('users').doc(uid).get();
+    const role = userSnap.data()?.role;
+    const limitKey = role === 'beneficiary' ? 'maxUsers' : role === 'mentor' || role === 'coach' ? 'maxMentors' : null;
+    if (limitKey) {
+      const limitCheck = await checkOrgLimit(organizationId, limitKey);
+      if (!limitCheck.allowed) {
+        return NextResponse.json({ error: limitCheck.message }, { status: 403 });
+      }
+    }
 
     await Promise.all([
       adminDb.collection('users').doc(uid).set({ organizationId }, { merge: true }),

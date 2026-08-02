@@ -242,9 +242,8 @@ function RegisterForm() {
         } catch { /* non-fatal */ }
       }
 
-      // Org with paid plan → pending payment
-      const planObj = PLANS.find((p) => p.id === plan);
-      if (values.role === "organization" && planObj && planObj.priceNum > 0) {
+      // Org with paid plan → pending payment (server decides based on real plan price)
+      if (values.role === "organization" && data.requiresPayment) {
         toast({
           title: "تم إنشاء الحساب!",
           description: "يرجى إتمام الدفع لتفعيل منصتك.",

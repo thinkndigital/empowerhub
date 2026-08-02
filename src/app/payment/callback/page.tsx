@@ -14,6 +14,7 @@ export default function PaymentCallbackPage() {
   const [message, setMessage] = useState('');
   const [isCourseOrder, setIsCourseOrder] = useState(false);
   const [courseId, setCourseId] = useState('');
+  const [isSubscriptionOrder, setIsSubscriptionOrder] = useState(false);
   const [isPopup, setIsPopup] = useState(false);
 
   useEffect(() => {
@@ -60,6 +61,10 @@ export default function PaymentCallbackPage() {
                 body: JSON.stringify({}),
               });
             } catch { /* non-fatal */ }
+          }
+          if (data.order?.type === 'subscription') {
+            setIsSubscriptionOrder(true);
+            setMessage('تم الدفع بنجاح! تم تفعيل اشتراكك ويمكنك الآن استخدام لوحة التحكم.');
           }
         })
         .catch(() => {});
@@ -153,11 +158,18 @@ export default function PaymentCallbackPage() {
                   <Link href="/login">سجّل الدخول للوصول للدورة</Link>
                 </Button>
               )}
-              <Button asChild variant={isCourseOrder ? 'outline' : 'default'} className="w-full">
-                <Link href={isCourseOrder ? '/dashboard/training' : '/market'}>
-                  {isCourseOrder ? 'دوراتي' : 'العودة للمتجر'}
-                </Link>
-              </Button>
+              {isSubscriptionOrder && (
+                <Button asChild className="w-full">
+                  <Link href="/organization-dashboard">الذهاب للوحة التحكم</Link>
+                </Button>
+              )}
+              {!isSubscriptionOrder && (
+                <Button asChild variant={isCourseOrder ? 'outline' : 'default'} className="w-full">
+                  <Link href={isCourseOrder ? '/dashboard/training' : '/market'}>
+                    {isCourseOrder ? 'دوراتي' : 'العودة للمتجر'}
+                  </Link>
+                </Button>
+              )}
             </div>
           </>
         )}

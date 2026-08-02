@@ -30,6 +30,7 @@ import { useUser } from "@/firebase/auth/use-user";
 import { NotificationBell } from "@/components/notification-bell";
 import { MessageBell } from "@/components/message-bell";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { SubscriptionLockedScreen } from "@/components/subscription-locked-screen";
 
 const menuItems = [
   { href: "/dashboard", label: "لوحة التحكم", icon: LayoutGrid },
@@ -51,6 +52,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const [avatarUrl, setAvatarUrl] = useState('');
   const [platformLogo, setPlatformLogo] = useState('');
+  const [subStatus, setSubStatus] = useState<{ locked: boolean; orgId?: string; planKey?: string; isAdmin?: boolean } | null>(null);
+
+  useEffect(() => {
+    if (!authUser) return;
+    authUser.getIdToken().then(token => {
+      fetch('/api/org/subscription-status', { headers: { authorization: `Bearer ${token}` } })
+        .then(r => r.json())
+        .then(d => setSubStatus(d))
+        .catch(() => setSubStatus({ locked: false }));
+    });
+  }, [authUser]);
 
   useEffect(() => {
     if (!authUser) return;
@@ -123,6 +135,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const displayName = userProfile?.name || authUser?.displayName || 'مستفيد';
   const displayEmail = userProfile?.email || authUser?.email || '';
+
+  if (subStatus?.locked) {
+    return <SubscriptionLockedScreen isAdmin={!!subStatus.isAdmin} orgId={subStatus.orgId || ''} planKey={subStatus.planKey || ''} />;
+  }
 
   return (
     <SidebarProvider dir="rtl">
