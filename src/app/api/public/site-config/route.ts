@@ -54,7 +54,16 @@ const defaultConfig = {
     subtitle: 'سجّل مجاناً اليوم وابدأ رحلتك نحو التمكين والنجاح مع EmpowerHub',
     primaryText: 'ابدأ مجاناً الآن',
     secondaryText: 'تجربة المنصة أولاً',
+    backgroundColor: '',
   },
+  sectionStyles: {
+    hero: { bg: '' },
+    stats: { bg: '', iconColor: '' },
+    features: { bg: '', iconColor: '' },
+    opportunities: { bg: '', iconColor: '' },
+    howItWorks: { bg: '', iconColor: '' },
+    roles: { bg: '', iconColor: '' },
+  } as Record<string, { bg?: string; iconColor?: string }>,
   authBranding: {
     imageUrl: '',
     title: 'منصة التمكين الرقمي',
@@ -116,6 +125,12 @@ export async function GET() {
       contact: { ...defaultConfig.contact, ...data?.contact },
       ctaBanner: { ...defaultConfig.ctaBanner, ...data?.ctaBanner },
       authBranding: { ...defaultConfig.authBranding, ...data?.authBranding },
+      sectionStyles: Object.fromEntries(
+        Object.keys(defaultConfig.sectionStyles).map(k => [
+          k,
+          { ...(defaultConfig.sectionStyles as any)[k], ...(data?.sectionStyles?.[k] || {}) },
+        ])
+      ),
       stats: data?.stats ?? defaultConfig.stats,
       features: data?.features ?? defaultConfig.features,
       opportunities: data?.opportunities ?? defaultConfig.opportunities,

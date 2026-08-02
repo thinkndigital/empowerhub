@@ -17,6 +17,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useCurrency } from '@/hooks/use-currency';
 import { applyOrgColor } from '@/lib/apply-org-color';
+import { getDynamicIcon } from '@/lib/dynamic-icons';
 import { OrderDialog } from '@/components/order-dialog';
 import { SessionBookingDialog } from '@/components/session-booking-dialog';
 import { CourseEnrollDialog } from '@/components/course-enroll-dialog';
@@ -111,8 +112,9 @@ interface SiteConfig {
   testimonials: { name: string; role: string; text: string; stars: number }[];
   blogPosts?: { title: string; excerpt: string; category: string; imageUrl?: string; link?: string }[];
   contact: { phone: string; whatsapp: string; whatsappLink: string; email: string };
-  ctaBanner: { title: string; subtitle: string; primaryText: string; secondaryText: string };
+  ctaBanner: { title: string; subtitle: string; primaryText: string; secondaryText: string; backgroundColor?: string };
   roles: { title: string; description: string; icon: string; badge: string; link: string }[];
+  sectionStyles?: Record<string, { bg?: string; iconColor?: string }>;
   sections: {
     showStats: boolean; showFeatures: boolean; showOpportunities: boolean; showHowItWorks: boolean;
     showRoles: boolean; showMentors: boolean; showCoaches: boolean; showCourses: boolean; showBlog: boolean;
@@ -572,6 +574,8 @@ export default function LandingPage() {
     ...(cfg?.sections ?? {}),
   };
 
+  const sectionStyle = (key: string) => cfg?.sectionStyles?.[key] || {};
+
   const heroTitle = cfg?.hero?.title || 'بوابتك للتمكين والنجاح';
   const heroSubtitle = cfg?.hero?.subtitle || 'منصة متكاملة تجمع بين التدريب المتخصص، الإرشاد الشخصي، والتجارة الإلكترونية لمساعدتك على بناء مستقبلك.';
   const heroCta = cfg?.hero?.ctaText || 'ابدأ رحلتك مجاناً';
@@ -715,7 +719,10 @@ export default function LandingPage() {
       <main>
 
         {/* ── Hero ────────────────────────────────────────────────────────────── */}
-        <section className="relative min-h-[85vh] lg:min-h-screen flex items-center overflow-hidden bg-background">
+        <section
+          className="relative min-h-[85vh] lg:min-h-screen flex items-center overflow-hidden bg-background"
+          style={sectionStyle('hero').bg ? { backgroundColor: sectionStyle('hero').bg } : undefined}
+        >
           {/* Subtle grid pattern */}
           <div
             className="absolute inset-0 opacity-[0.025] pointer-events-none"
@@ -868,36 +875,56 @@ export default function LandingPage() {
 
         {/* ── Impact Strip ────────────────────────────────────────────────────── */}
         {sections.showStats && (
-          <section className="border-y border-border">
+          <section
+            className="border-y border-border"
+            style={sectionStyle('stats').bg ? { backgroundColor: sectionStyle('stats').bg } : undefined}
+          >
             {/* gap-px + bg-border creates 1px dividers in all directions regardless of RTL */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-border">
-              {statsData.map((s, i) => (
-                <div key={i} className="bg-card text-center py-8 sm:py-10 px-4 sm:px-6">
-                  <div className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-foreground tabular-nums tracking-tight mb-1.5">
-                    {s.value}
+              {statsData.map((s, i) => {
+                const StatIcon = getDynamicIcon(s.icon);
+                const iconColor = sectionStyle('stats').iconColor;
+                return (
+                  <div
+                    key={i}
+                    className={`text-center py-8 sm:py-10 px-4 sm:px-6 ${sectionStyle('stats').bg ? '' : 'bg-card'}`}
+                    style={sectionStyle('stats').bg ? { backgroundColor: sectionStyle('stats').bg } : undefined}
+                  >
+                    <StatIcon className="h-5 w-5 mx-auto mb-2 text-primary" style={iconColor ? { color: iconColor } : undefined} />
+                    <div className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-foreground tabular-nums tracking-tight mb-1.5">
+                      {s.value}
+                    </div>
+                    <div className="text-xs sm:text-sm text-muted-foreground">{s.label}</div>
                   </div>
-                  <div className="text-xs sm:text-sm text-muted-foreground">{s.label}</div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </section>
         )}
 
         {/* ── Features ─────────────────────────────────────────────────────────── */}
         {sections.showFeatures && featuresData.length > 0 && (
-          <section className="py-16 sm:py-20 md:py-28">
+          <section
+            className="py-16 sm:py-20 md:py-28"
+            style={sectionStyle('features').bg ? { backgroundColor: sectionStyle('features').bg } : undefined}
+          >
             <div className="container">
               <div className="text-center mb-12 sm:mb-16">
                 <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">لماذا EmpowerHub</p>
                 <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground">مميزات تصنع فرقاً حقيقياً</h2>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {featuresData.map((f, i) => (
-                  <div key={i} className="p-6 rounded-2xl border border-border bg-card">
-                    <h3 className="text-base font-bold text-foreground mb-2">{f.title}</h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{f.description}</p>
-                  </div>
-                ))}
+                {featuresData.map((f, i) => {
+                  const FeatureIcon = getDynamicIcon(f.icon);
+                  const iconColor = sectionStyle('features').iconColor;
+                  return (
+                    <div key={i} className="p-6 rounded-2xl border border-border bg-card">
+                      <FeatureIcon className="h-6 w-6 mb-3 text-primary" style={iconColor ? { color: iconColor } : undefined} />
+                      <h3 className="text-base font-bold text-foreground mb-2">{f.title}</h3>
+                      <p className="text-sm text-muted-foreground leading-relaxed">{f.description}</p>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </section>
@@ -905,7 +932,11 @@ export default function LandingPage() {
 
         {/* ── How It Works ────────────────────────────────────────────────────── */}
         {sections.showHowItWorks && howItWorksData.length > 0 && (
-          <section id="how-it-works" className="py-16 sm:py-20 md:py-28">
+          <section
+            id="how-it-works"
+            className="py-16 sm:py-20 md:py-28"
+            style={sectionStyle('howItWorks').bg ? { backgroundColor: sectionStyle('howItWorks').bg } : undefined}
+          >
             <div className="container">
               {/* Centered header */}
               <div className="text-center mb-14 sm:mb-20">
@@ -917,23 +948,28 @@ export default function LandingPage() {
 
               {/* 3-column horizontal grid */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-10 md:gap-8 lg:gap-14">
-                {howItWorksData.map((item, i) => (
-                  <div key={i} className="flex flex-col">
-                    {/* Giant ghost number */}
-                    <span className="text-8xl sm:text-9xl md:text-[8rem] lg:text-[9rem] font-extrabold text-foreground/[0.06] leading-none select-none tabular-nums mb-4">
-                      {String(i + 1).padStart(2, '0')}
-                    </span>
-                    {/* Step content — overlaps the number slightly */}
-                    <div className="-mt-4 sm:-mt-6">
-                      <h3 className="text-xl sm:text-2xl font-bold text-foreground mb-2 sm:mb-3">
-                        {item.title}
-                      </h3>
-                      <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
-                        {item.desc}
-                      </p>
+                {howItWorksData.map((item, i) => {
+                  const StepIcon = getDynamicIcon(item.icon);
+                  const iconColor = sectionStyle('howItWorks').iconColor;
+                  return (
+                    <div key={i} className="flex flex-col">
+                      {/* Giant ghost number */}
+                      <span className="text-8xl sm:text-9xl md:text-[8rem] lg:text-[9rem] font-extrabold text-foreground/[0.06] leading-none select-none tabular-nums mb-4">
+                        {String(i + 1).padStart(2, '0')}
+                      </span>
+                      {/* Step content — overlaps the number slightly */}
+                      <div className="-mt-4 sm:-mt-6">
+                        <StepIcon className="h-6 w-6 mb-2 text-primary" style={iconColor ? { color: iconColor } : undefined} />
+                        <h3 className="text-xl sm:text-2xl font-bold text-foreground mb-2 sm:mb-3">
+                          {item.title}
+                        </h3>
+                        <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
+                          {item.desc}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </section>
@@ -979,7 +1015,11 @@ export default function LandingPage() {
 
         {/* ── Roles / Join ────────────────────────────────────────────────────── */}
         {sections.showRoles && rolesData.length > 0 && (
-          <section id="roles" className="py-16 sm:py-20 md:py-28">
+          <section
+            id="roles"
+            className="py-16 sm:py-20 md:py-28"
+            style={sectionStyle('roles').bg ? { backgroundColor: sectionStyle('roles').bg } : undefined}
+          >
             <div className="container">
               <div className="text-center mb-10 sm:mb-14">
                 <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">انضم إلينا</p>
@@ -991,26 +1031,28 @@ export default function LandingPage() {
                 </p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {rolesData.map((role, i) => (
-                  <Link
-                    key={i}
-                    href={role.link || '/register'}
-                    className="group p-5 rounded-2xl border border-border hover:border-primary/40 bg-card transition-all flex flex-col gap-3"
-                  >
-                    <div className="text-xs font-bold text-primary/30 tabular-nums tracking-widest">
-                      {String(i + 1).padStart(2, '0')}
-                    </div>
-                    <div>
-                      <h3 className="text-base font-bold text-foreground group-hover:text-primary transition-colors mb-1.5">
-                        {role.title}
-                      </h3>
-                      <p className="text-sm text-muted-foreground leading-relaxed">{role.description}</p>
-                    </div>
-                    <div className="flex items-center gap-1 text-xs font-semibold text-primary mt-auto">
-                      ابدأ الآن <ArrowLeft className="h-3 w-3" />
-                    </div>
-                  </Link>
-                ))}
+                {rolesData.map((role, i) => {
+                  const RoleIcon = getDynamicIcon(role.icon);
+                  const iconColor = sectionStyle('roles').iconColor;
+                  return (
+                    <Link
+                      key={i}
+                      href={role.link || '/register'}
+                      className="group p-5 rounded-2xl border border-border hover:border-primary/40 bg-card transition-all flex flex-col gap-3"
+                    >
+                      <RoleIcon className="h-6 w-6 text-primary" style={iconColor ? { color: iconColor } : undefined} />
+                      <div>
+                        <h3 className="text-base font-bold text-foreground group-hover:text-primary transition-colors mb-1.5">
+                          {role.title}
+                        </h3>
+                        <p className="text-sm text-muted-foreground leading-relaxed">{role.description}</p>
+                      </div>
+                      <div className="flex items-center gap-1 text-xs font-semibold text-primary mt-auto">
+                        ابدأ الآن <ArrowLeft className="h-3 w-3" />
+                      </div>
+                    </Link>
+                  );
+                })}
               </div>
             </div>
           </section>
@@ -1438,7 +1480,11 @@ export default function LandingPage() {
 
         {/* ── Latest Projects / Opportunities ─────────────────────────────────── */}
         {sections.showOpportunities && latestProjects.length > 0 && (
-          <section id="opportunities-live" className="py-16 sm:py-20 md:py-28">
+          <section
+            id="opportunities-live"
+            className="py-16 sm:py-20 md:py-28"
+            style={sectionStyle('opportunities').bg ? { backgroundColor: sectionStyle('opportunities').bg } : undefined}
+          >
             <div className="container">
               <div className="text-center mb-10 sm:mb-12">
                 <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">فرص حقيقية</p>
@@ -1466,7 +1512,10 @@ export default function LandingPage() {
                         />
                       ) : (
                         <div className="w-full h-full bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center">
-                          <Briefcase className="h-8 w-8 text-primary/20" />
+                          <Briefcase
+                            className="h-8 w-8 text-primary/20"
+                            style={sectionStyle('opportunities').iconColor ? { color: sectionStyle('opportunities').iconColor, opacity: 0.5 } : undefined}
+                          />
                         </div>
                       )}
                     </div>
@@ -1646,12 +1695,15 @@ export default function LandingPage() {
 
         {/* ── CTA Block ───────────────────────────────────────────────────────── */}
         {sections.showCTA && (
-          <section className="py-16 sm:py-20 md:py-28 bg-foreground text-background">
+          <section
+            className={`py-16 sm:py-20 md:py-28 ${cfg?.ctaBanner?.backgroundColor ? 'text-white' : 'bg-foreground text-background'}`}
+            style={cfg?.ctaBanner?.backgroundColor ? { backgroundColor: cfg.ctaBanner.backgroundColor } : undefined}
+          >
             <div className="container text-center">
               <h2 className="text-2xl sm:text-3xl md:text-5xl font-extrabold tracking-tight mb-4 sm:mb-5 leading-tight">
                 {ctaBanner.title}
               </h2>
-              <p className="text-sm sm:text-base md:text-lg text-background/60 mb-7 sm:mb-9 max-w-xl mx-auto leading-relaxed">
+              <p className={`text-sm sm:text-base md:text-lg mb-7 sm:mb-9 max-w-xl mx-auto leading-relaxed ${cfg?.ctaBanner?.backgroundColor ? 'text-white/70' : 'text-background/60'}`}>
                 {ctaBanner.subtitle}
               </p>
               <div className="flex flex-col sm:flex-row justify-center gap-3">
@@ -1661,7 +1713,12 @@ export default function LandingPage() {
                     <ArrowLeft className="mr-2 h-4 w-4" />
                   </Link>
                 </Button>
-                <Button size="lg" variant="outline" asChild className="h-12 px-7 text-base border-background/30 text-background hover:bg-background/10 w-full sm:w-auto">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  asChild
+                  className={`h-12 px-7 text-base w-full sm:w-auto ${cfg?.ctaBanner?.backgroundColor ? 'border-white/30 text-white hover:bg-white/10' : 'border-background/30 text-background hover:bg-background/10'}`}
+                >
                   <Link href="/try-roles">{ctaBanner.secondaryText}</Link>
                 </Button>
               </div>

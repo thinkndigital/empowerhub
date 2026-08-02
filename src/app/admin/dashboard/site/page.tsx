@@ -32,9 +32,10 @@ interface SiteConfig {
   testimonials: { name: string; role: string; text: string; stars: number }[];
   blogPosts: { title: string; excerpt: string; category: string; imageUrl: string; link: string }[];
   contact: { phone: string; whatsapp: string; whatsappLink: string; email: string };
-  ctaBanner: { title: string; subtitle: string; primaryText: string; secondaryText: string };
+  ctaBanner: { title: string; subtitle: string; primaryText: string; secondaryText: string; backgroundColor: string };
   authBranding: { imageUrl: string; title: string; subtitle: string };
   roles: { title: string; description: string; icon: string; badge: string; link: string }[];
+  sectionStyles: Record<string, { bg?: string; iconColor?: string }>;
   sections: {
     showStats: boolean; showFeatures: boolean; showOpportunities: boolean; showHowItWorks: boolean;
     showRoles: boolean; showMentors: boolean; showCoaches: boolean; showBlog: boolean;
@@ -52,9 +53,12 @@ const defaultConfig: SiteConfig = {
   hero: { title: '', subtitle: '', ctaText: 'ابدأ الآن', ctaSecondaryText: 'تعرف على المزيد', backgroundImage: '' },
   stats: [], features: [], opportunities: [], howItWorks: [], testimonials: [], blogPosts: [],
   contact: { phone: '', whatsapp: '', whatsappLink: '', email: '' },
-  ctaBanner: { title: '', subtitle: '', primaryText: 'ابدأ مجاناً الآن', secondaryText: 'تجربة المنصة أولاً' },
+  ctaBanner: { title: '', subtitle: '', primaryText: 'ابدأ مجاناً الآن', secondaryText: 'تجربة المنصة أولاً', backgroundColor: '' },
   authBranding: { imageUrl: '', title: '', subtitle: '' },
   roles: [],
+  sectionStyles: {
+    hero: {}, stats: {}, features: {}, opportunities: {}, howItWorks: {}, roles: {},
+  },
   sections: {
     showStats: true, showFeatures: true, showOpportunities: true, showHowItWorks: true,
     showRoles: true, showMentors: true, showCoaches: true, showBlog: true,
@@ -113,6 +117,52 @@ function ImageUploadField({ label, value, onChange, storagePath }: {
   );
 }
 
+function ColorField({ label, value, defaultSwatch, onChange, hint, placeholder }: {
+  label: string; value: string; defaultSwatch: string; onChange: (v: string) => void; hint?: string; placeholder?: string;
+}) {
+  return (
+    <div className="space-y-2">
+      <Label>{label}</Label>
+      <div className="flex items-center gap-2">
+        <input
+          type="color"
+          value={value || defaultSwatch}
+          onChange={e => onChange(e.target.value)}
+          className="h-10 w-10 shrink-0 rounded-lg border border-border bg-transparent cursor-pointer p-0.5"
+        />
+        <Input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder || 'فارغ = افتراضي'} className="font-mono" dir="ltr" />
+      </div>
+      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+    </div>
+  );
+}
+
+function SectionStyleFields({ config, sectionKey, setSectionStyle, withIcon = true }: {
+  config: SiteConfig; sectionKey: string; setSectionStyle: (section: string, field: 'bg' | 'iconColor', v: string) => void; withIcon?: boolean;
+}) {
+  const style = config.sectionStyles[sectionKey] || {};
+  return (
+    <div className={`grid grid-cols-1 ${withIcon ? 'sm:grid-cols-2' : ''} gap-4 p-3 rounded-xl border border-border bg-muted/30`}>
+      <ColorField
+        label="خلفية القسم"
+        value={style.bg || ''}
+        defaultSwatch="#ffffff"
+        onChange={v => setSectionStyle(sectionKey, 'bg', v)}
+        hint="فارغ = خلفية الموقع الافتراضية"
+      />
+      {withIcon && (
+        <ColorField
+          label="لون الأيقونات"
+          value={style.iconColor || ''}
+          defaultSwatch="#3b82f6"
+          onChange={v => setSectionStyle(sectionKey, 'iconColor', v)}
+          hint="فارغ = اللون الرئيسي للمنصة"
+        />
+      )}
+    </div>
+  );
+}
+
 export default function SiteEditorPage() {
   const [config, setConfig] = useState<SiteConfig>(defaultConfig);
   const [loading, setLoading] = useState(true);
@@ -136,6 +186,12 @@ export default function SiteEditorPage() {
           contact: { ...defaultConfig.contact, ...d.config.contact },
           ctaBanner: { ...defaultConfig.ctaBanner, ...d.config.ctaBanner },
           authBranding: { ...defaultConfig.authBranding, ...d.config.authBranding },
+          sectionStyles: Object.fromEntries(
+            Object.keys(defaultConfig.sectionStyles).map(k => [
+              k,
+              { ...defaultConfig.sectionStyles[k], ...(d.config.sectionStyles?.[k] || {}) },
+            ])
+          ),
           howItWorks: d.config.howItWorks ?? defaultConfig.howItWorks,
           testimonials: d.config.testimonials ?? defaultConfig.testimonials,
           blogPosts: d.config.blogPosts ?? defaultConfig.blogPosts,
@@ -169,6 +225,8 @@ export default function SiteEditorPage() {
     setConfig(c => ({ ...c, footer: { ...c.footer, [k]: v } }));
   const setContact = (k: keyof SiteConfig['contact'], v: string) =>
     setConfig(c => ({ ...c, contact: { ...c.contact, [k]: v } }));
+  const setSectionStyle = (section: string, field: 'bg' | 'iconColor', v: string) =>
+    setConfig(c => ({ ...c, sectionStyles: { ...c.sectionStyles, [section]: { ...c.sectionStyles[section], [field]: v } } }));
   const setBanner = (k: keyof SiteConfig['ctaBanner'], v: string) =>
     setConfig(c => ({ ...c, ctaBanner: { ...c.ctaBanner, [k]: v } }));
   const setAuthBranding = (k: keyof SiteConfig['authBranding'], v: string) =>
@@ -363,6 +421,7 @@ export default function SiteEditorPage() {
                   </div>
                 </div>
                 <ImageUploadField label="صورة الخلفية (اختياري)" value={config.hero.backgroundImage} onChange={url => setHero('backgroundImage', url)} storagePath="site/hero" />
+                <SectionStyleFields config={config} sectionKey="hero" setSectionStyle={setSectionStyle} withIcon={false} />
                 <div className="rounded-xl overflow-hidden border border-border">
                   <div
                     className="p-8 text-center bg-gradient-to-br from-primary/20 to-purple-900/30"
@@ -423,7 +482,7 @@ export default function SiteEditorPage() {
                   <p className="text-muted-foreground text-center py-6">لا توجد إحصائيات. أضف واحدة!</p>
                 ) : config.stats.map((stat, i) => (
                   <div key={i} className="flex gap-3 items-start p-3 bg-muted/40 rounded-xl border border-border">
-                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-4 gap-2">
                       <div>
                         <Label className="text-xs text-muted-foreground">الرقم/القيمة</Label>
                         <Input value={stat.value} onChange={e => updateStat(i, 'value', e.target.value)} placeholder="500+" className="mt-1 h-8 text-sm" />
@@ -432,12 +491,17 @@ export default function SiteEditorPage() {
                         <Label className="text-xs text-muted-foreground">التسمية</Label>
                         <Input value={stat.label} onChange={e => updateStat(i, 'label', e.target.value)} placeholder="مستفيد نشط" className="mt-1 h-8 text-sm" />
                       </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">الأيقونة</Label>
+                        <Input value={stat.icon} onChange={e => updateStat(i, 'icon', e.target.value)} placeholder="Users" className="mt-1 h-8 text-sm" dir="ltr" />
+                      </div>
                     </div>
                     <Button size="sm" variant="ghost" onClick={() => removeStat(i)} className="h-8 w-8 p-0 text-muted-foreground hover:text-red-400 mt-4 flex-shrink-0">
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>
                 ))}
+                <SectionStyleFields config={config} sectionKey="stats" setSectionStyle={setSectionStyle} />
                 {config.stats.length > 0 && (
                   <div className="mt-4 p-4 bg-muted/40 rounded-xl border border-border">
                     <p className="text-muted-foreground text-xs mb-3">معاينة:</p>
@@ -489,6 +553,7 @@ export default function SiteEditorPage() {
                     </div>
                   </div>
                 ))}
+                <SectionStyleFields config={config} sectionKey="features" setSectionStyle={setSectionStyle} />
               </CardContent>
             </Card>
           </TabsContent>
@@ -538,6 +603,10 @@ export default function SiteEditorPage() {
                     </div>
                   </div>
                 ))}
+                <div className="pt-2 space-y-2">
+                  <p className="text-xs text-muted-foreground">تحكم بمظهر القسم الظاهر فعليًا بالموقع ("أحدث الفرص والمشاريع")</p>
+                  <SectionStyleFields config={config} sectionKey="opportunities" setSectionStyle={setSectionStyle} />
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -560,7 +629,7 @@ export default function SiteEditorPage() {
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                       <div>
                         <Label className="text-xs text-muted-foreground">رقم الخطوة</Label>
                         <Input value={step.step} onChange={e => updateStep(i, 'step', e.target.value)} placeholder="١" className="mt-1 h-8 text-sm" />
@@ -569,6 +638,10 @@ export default function SiteEditorPage() {
                         <Label className="text-xs text-muted-foreground">العنوان</Label>
                         <Input value={step.title} onChange={e => updateStep(i, 'title', e.target.value)} placeholder="أنشئ حسابك" className="mt-1 h-8 text-sm" />
                       </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">الأيقونة</Label>
+                        <Input value={step.icon} onChange={e => updateStep(i, 'icon', e.target.value)} placeholder="UserCheck" className="mt-1 h-8 text-sm" dir="ltr" />
+                      </div>
                     </div>
                     <div>
                       <Label className="text-xs text-muted-foreground">الوصف</Label>
@@ -576,6 +649,7 @@ export default function SiteEditorPage() {
                     </div>
                   </div>
                 ))}
+                <SectionStyleFields config={config} sectionKey="howItWorks" setSectionStyle={setSectionStyle} />
               </CardContent>
             </Card>
           </TabsContent>
@@ -598,7 +672,7 @@ export default function SiteEditorPage() {
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                       <div>
                         <Label className="text-xs text-muted-foreground">العنوان</Label>
                         <Input value={role.title} onChange={e => updateRole(i, 'title', e.target.value)} placeholder="كمستفيد" className="mt-1 h-8 text-sm" />
@@ -606,6 +680,10 @@ export default function SiteEditorPage() {
                       <div>
                         <Label className="text-xs text-muted-foreground">الشارة (اختياري)</Label>
                         <Input value={role.badge} onChange={e => updateRole(i, 'badge', e.target.value)} placeholder="الأكثر شعبية" className="mt-1 h-8 text-sm" />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">الأيقونة</Label>
+                        <Input value={role.icon} onChange={e => updateRole(i, 'icon', e.target.value)} placeholder="UserCheck" className="mt-1 h-8 text-sm" dir="ltr" />
                       </div>
                     </div>
                     <div>
@@ -618,6 +696,7 @@ export default function SiteEditorPage() {
                     </div>
                   </div>
                 ))}
+                <SectionStyleFields config={config} sectionKey="roles" setSectionStyle={setSectionStyle} />
               </CardContent>
             </Card>
           </TabsContent>
@@ -772,14 +851,24 @@ export default function SiteEditorPage() {
                     <Input value={config.ctaBanner.secondaryText} onChange={e => setBanner('secondaryText', e.target.value)} placeholder="تجربة المنصة أولاً" />
                   </div>
                 </div>
-                {/* Preview */}
+                <ColorField
+                  label="لون خلفية البانر"
+                  value={config.ctaBanner.backgroundColor}
+                  defaultSwatch="#111827"
+                  onChange={v => setBanner('backgroundColor', v)}
+                  hint="فارغ = التصميم الافتراضي (خلفية داكنة تتبع الثيم)"
+                />
+                {/* Preview — matches the real banner's default vs. custom-color behavior */}
                 <div className="rounded-xl overflow-hidden border border-border">
-                  <div className="p-8 text-center bg-primary">
-                    <h2 className="text-foreground text-xl font-bold mb-2">{config.ctaBanner.title || 'العنوان...'}</h2>
-                    <p className="text-foreground/80 text-sm mb-4">{config.ctaBanner.subtitle || 'الوصف...'}</p>
+                  <div
+                    className={`p-8 text-center ${config.ctaBanner.backgroundColor ? 'text-white' : 'bg-foreground text-background'}`}
+                    style={config.ctaBanner.backgroundColor ? { backgroundColor: config.ctaBanner.backgroundColor } : undefined}
+                  >
+                    <h2 className="text-xl font-bold mb-2">{config.ctaBanner.title || 'العنوان...'}</h2>
+                    <p className={`text-sm mb-4 ${config.ctaBanner.backgroundColor ? 'text-white/70' : 'text-background/60'}`}>{config.ctaBanner.subtitle || 'الوصف...'}</p>
                     <div className="flex gap-2 justify-center flex-wrap">
-                      <span className="bg-white text-primary px-4 py-1.5 rounded-lg text-sm font-bold">{config.ctaBanner.primaryText}</span>
-                      <span className="border border-border text-foreground px-4 py-1.5 rounded-lg text-sm">{config.ctaBanner.secondaryText}</span>
+                      <span className="bg-secondary text-foreground px-4 py-1.5 rounded-lg text-sm font-bold">{config.ctaBanner.primaryText}</span>
+                      <span className={`border px-4 py-1.5 rounded-lg text-sm ${config.ctaBanner.backgroundColor ? 'border-white/30 text-white' : 'border-background/30 text-background'}`}>{config.ctaBanner.secondaryText}</span>
                     </div>
                   </div>
                 </div>

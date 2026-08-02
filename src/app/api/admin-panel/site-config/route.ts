@@ -54,7 +54,16 @@ const defaultConfig = {
     subtitle: 'سجّل مجاناً اليوم وابدأ رحلتك نحو التمكين والنجاح',
     primaryText: 'ابدأ مجاناً الآن',
     secondaryText: 'تجربة المنصة أولاً',
+    backgroundColor: '',
   },
+  sectionStyles: {
+    hero: { bg: '' },
+    stats: { bg: '', iconColor: '' },
+    features: { bg: '', iconColor: '' },
+    opportunities: { bg: '', iconColor: '' },
+    howItWorks: { bg: '', iconColor: '' },
+    roles: { bg: '', iconColor: '' },
+  } as Record<string, { bg?: string; iconColor?: string }>,
   authBranding: {
     imageUrl: '',
     title: 'منصة التمكين الرقمي',
@@ -107,6 +116,12 @@ export async function GET() {
     contact: { ...defaultConfig.contact, ...d?.contact },
     ctaBanner: { ...defaultConfig.ctaBanner, ...d?.ctaBanner },
     authBranding: { ...defaultConfig.authBranding, ...d?.authBranding },
+    sectionStyles: Object.fromEntries(
+      Object.keys(defaultConfig.sectionStyles).map(k => [
+        k,
+        { ...(defaultConfig.sectionStyles as any)[k], ...(d?.sectionStyles?.[k] || {}) },
+      ])
+    ),
     stats: d?.stats ?? defaultConfig.stats,
     features: d?.features ?? defaultConfig.features,
     opportunities: d?.opportunities ?? defaultConfig.opportunities,
