@@ -99,12 +99,14 @@ interface Plan {
   features: string[];
 }
 
+interface CtaButton { text: string; link: string; style: 'primary' | 'outline' }
+
 interface SiteConfig {
   siteName: string;
   tagline: string;
   primaryColor?: string;
   logoUrl: string;
-  hero: { title: string; subtitle: string; ctaText: string; ctaSecondaryText: string; backgroundImage: string };
+  hero: { title: string; subtitle: string; ctaText: string; ctaSecondaryText: string; backgroundImage: string; buttons?: CtaButton[] };
   stats: { label: string; value: string; icon: string }[];
   features: { title: string; description: string; icon: string }[];
   opportunities?: { title: string; description: string; icon: string; badge?: string; color?: string; link?: string }[];
@@ -112,7 +114,7 @@ interface SiteConfig {
   testimonials: { name: string; role: string; text: string; stars: number }[];
   blogPosts?: { title: string; excerpt: string; category: string; imageUrl?: string; link?: string }[];
   contact: { phone: string; whatsapp: string; whatsappLink: string; email: string };
-  ctaBanner: { title: string; subtitle: string; primaryText: string; secondaryText: string; backgroundColor?: string };
+  ctaBanner: { title: string; subtitle: string; primaryText: string; secondaryText: string; backgroundColor?: string; buttons?: CtaButton[] };
   roles: { title: string; description: string; icon: string; badge: string; link: string }[];
   sectionStyles?: Record<string, { bg?: string; iconColor?: string }>;
   sections: {
@@ -578,8 +580,10 @@ export default function LandingPage() {
 
   const heroTitle = cfg?.hero?.title || 'بوابتك للتمكين والنجاح';
   const heroSubtitle = cfg?.hero?.subtitle || 'منصة متكاملة تجمع بين التدريب المتخصص، الإرشاد الشخصي، والتجارة الإلكترونية لمساعدتك على بناء مستقبلك.';
-  const heroCta = cfg?.hero?.ctaText || 'ابدأ رحلتك مجاناً';
-  const heroCtaSecondary = cfg?.hero?.ctaSecondaryText || 'كيف تعمل المنصة';
+  const heroButtons: CtaButton[] = cfg?.hero?.buttons !== undefined ? cfg.hero.buttons : [
+    { text: cfg?.hero?.ctaText || 'ابدأ رحلتك مجاناً', link: '/register', style: 'primary' },
+    { text: cfg?.hero?.ctaSecondaryText || 'كيف تعمل المنصة', link: '#how-it-works', style: 'outline' },
+  ];
 
   const statsData = cfg?.stats?.length ? cfg.stats : [
     { label: 'مستفيد نشط', value: '2,500+', icon: 'Users' },
@@ -619,6 +623,10 @@ export default function LandingPage() {
     primaryText: 'ابدأ مجاناً الآن',
     secondaryText: 'تجربة المنصة أولاً',
   };
+  const ctaButtons: CtaButton[] = cfg?.ctaBanner?.buttons !== undefined ? cfg.ctaBanner.buttons : [
+    { text: ctaBanner.primaryText || 'ابدأ مجاناً الآن', link: '/register', style: 'primary' },
+    { text: ctaBanner.secondaryText || 'تجربة المنصة أولاً', link: '/try-roles', style: 'outline' },
+  ];
 
   const opportunitiesData = cfg?.opportunities?.length ? cfg.opportunities : [
     { title: 'مشاريع منزلية ناجحة', description: 'أطلق مشروعك من المنزل وابنِ متجرك الإلكتروني مع دعم متكامل من الفكرة حتى أول عملية بيع ناجحة.', icon: 'Store', badge: 'جديد', color: 'bg-amber-500', link: '/register' },
@@ -758,15 +766,20 @@ export default function LandingPage() {
 
                 {/* CTAs */}
                 <div className="flex flex-col sm:flex-row justify-center lg:justify-start gap-3 mb-8 sm:mb-10">
-                  <Button size="lg" asChild className="h-12 px-7 text-base font-semibold shadow-sm w-full sm:w-auto">
-                    <Link href="/register">
-                      {heroCta}
-                      <ArrowLeft className="mr-2 h-4 w-4" />
-                    </Link>
-                  </Button>
-                  <Button size="lg" variant="outline" asChild className="h-12 px-7 text-base w-full sm:w-auto">
-                    <Link href="#how-it-works">{heroCtaSecondary}</Link>
-                  </Button>
+                  {heroButtons.map((btn, i) => (
+                    <Button
+                      key={i}
+                      size="lg"
+                      variant={btn.style === 'outline' ? 'outline' : 'default'}
+                      asChild
+                      className="h-12 px-7 text-base font-semibold shadow-sm w-full sm:w-auto"
+                    >
+                      <Link href={btn.link || '/register'}>
+                        {btn.text}
+                        {btn.style !== 'outline' && <ArrowLeft className="mr-2 h-4 w-4" />}
+                      </Link>
+                    </Button>
+                  ))}
                 </div>
 
                 {/* Trust strip */}
@@ -1707,20 +1720,24 @@ export default function LandingPage() {
                 {ctaBanner.subtitle}
               </p>
               <div className="flex flex-col sm:flex-row justify-center gap-3">
-                <Button size="lg" variant="secondary" asChild className="h-12 px-7 text-base font-semibold text-foreground w-full sm:w-auto">
-                  <Link href="/register">
-                    {ctaBanner.primaryText}
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                  </Link>
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  asChild
-                  className={`h-12 px-7 text-base w-full sm:w-auto ${cfg?.ctaBanner?.backgroundColor ? 'border-white/30 text-white hover:bg-white/10' : 'border-background/30 text-background hover:bg-background/10'}`}
-                >
-                  <Link href="/try-roles">{ctaBanner.secondaryText}</Link>
-                </Button>
+                {ctaButtons.map((btn, i) => btn.style === 'outline' ? (
+                  <Button
+                    key={i}
+                    size="lg"
+                    variant="outline"
+                    asChild
+                    className={`h-12 px-7 text-base w-full sm:w-auto ${cfg?.ctaBanner?.backgroundColor ? 'border-white/30 text-white hover:bg-white/10' : 'border-background/30 text-background hover:bg-background/10'}`}
+                  >
+                    <Link href={btn.link || '/try-roles'}>{btn.text}</Link>
+                  </Button>
+                ) : (
+                  <Button key={i} size="lg" variant="secondary" asChild className="h-12 px-7 text-base font-semibold text-foreground w-full sm:w-auto">
+                    <Link href={btn.link || '/register'}>
+                      {btn.text}
+                      <ArrowLeft className="mr-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                ))}
               </div>
             </div>
           </section>

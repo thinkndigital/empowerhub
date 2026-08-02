@@ -16,6 +16,8 @@ import { useUser } from "@/firebase/auth/use-user";
 import { uploadFile as uploadToStorage } from "@/lib/upload-file";
 import { applyOrgColor } from "@/lib/apply-org-color";
 
+interface CtaButton { text: string; link: string; style: 'primary' | 'outline' }
+
 interface SiteConfig {
   siteName: string;
   tagline: string;
@@ -24,7 +26,7 @@ interface SiteConfig {
   hoverColor: string;
   logoUrl: string;
   faviconUrl: string;
-  hero: { title: string; subtitle: string; ctaText: string; ctaSecondaryText: string; backgroundImage: string };
+  hero: { title: string; subtitle: string; ctaText: string; ctaSecondaryText: string; backgroundImage: string; buttons: CtaButton[] };
   stats: { label: string; value: string; icon: string }[];
   features: { title: string; description: string; icon: string }[];
   opportunities: { title: string; description: string; icon: string; badge: string; color: string; link: string }[];
@@ -32,7 +34,7 @@ interface SiteConfig {
   testimonials: { name: string; role: string; text: string; stars: number }[];
   blogPosts: { title: string; excerpt: string; category: string; imageUrl: string; link: string }[];
   contact: { phone: string; whatsapp: string; whatsappLink: string; email: string };
-  ctaBanner: { title: string; subtitle: string; primaryText: string; secondaryText: string; backgroundColor: string };
+  ctaBanner: { title: string; subtitle: string; primaryText: string; secondaryText: string; backgroundColor: string; buttons: CtaButton[] };
   authBranding: { imageUrl: string; title: string; subtitle: string };
   roles: { title: string; description: string; icon: string; badge: string; link: string }[];
   sectionStyles: Record<string, { bg?: string; iconColor?: string }>;
@@ -50,10 +52,22 @@ const defaultConfig: SiteConfig = {
   secondaryColor: '',
   hoverColor: '',
   logoUrl: '', faviconUrl: '',
-  hero: { title: '', subtitle: '', ctaText: 'ابدأ الآن', ctaSecondaryText: 'تعرف على المزيد', backgroundImage: '' },
+  hero: {
+    title: '', subtitle: '', ctaText: 'ابدأ الآن', ctaSecondaryText: 'تعرف على المزيد', backgroundImage: '',
+    buttons: [
+      { text: 'ابدأ الآن', link: '/register', style: 'primary' },
+      { text: 'تعرف على المزيد', link: '#how-it-works', style: 'outline' },
+    ],
+  },
   stats: [], features: [], opportunities: [], howItWorks: [], testimonials: [], blogPosts: [],
   contact: { phone: '', whatsapp: '', whatsappLink: '', email: '' },
-  ctaBanner: { title: '', subtitle: '', primaryText: 'ابدأ مجاناً الآن', secondaryText: 'تجربة المنصة أولاً', backgroundColor: '' },
+  ctaBanner: {
+    title: '', subtitle: '', primaryText: 'ابدأ مجاناً الآن', secondaryText: 'تجربة المنصة أولاً', backgroundColor: '',
+    buttons: [
+      { text: 'ابدأ مجاناً الآن', link: '/register', style: 'primary' },
+      { text: 'تجربة المنصة أولاً', link: '/try-roles', style: 'outline' },
+    ],
+  },
   authBranding: { imageUrl: '', title: '', subtitle: '' },
   roles: [],
   sectionStyles: {
@@ -163,6 +177,46 @@ function SectionStyleFields({ config, sectionKey, setSectionStyle, withIcon = tr
   );
 }
 
+function ButtonsEditor({ buttons, onAdd, onUpdate, onRemove }: {
+  buttons: CtaButton[];
+  onAdd: () => void;
+  onUpdate: (i: number, k: keyof CtaButton, v: string) => void;
+  onRemove: (i: number) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <Label>الأزرار</Label>
+        <Button type="button" size="sm" variant="outline" onClick={onAdd} className="gap-1 h-7 text-xs">
+          <Plus className="h-3 w-3" />إضافة زر
+        </Button>
+      </div>
+      {buttons.length === 0 && (
+        <p className="text-muted-foreground text-xs py-2">لا توجد أزرار — القسم سيظهر بدون أزرار.</p>
+      )}
+      <div className="space-y-2">
+        {buttons.map((btn, i) => (
+          <div key={i} className="flex flex-col sm:flex-row gap-2 items-start sm:items-center p-2.5 rounded-lg border border-border bg-muted/30">
+            <Input value={btn.text} onChange={e => onUpdate(i, 'text', e.target.value)} placeholder="نص الزر" className="h-8 text-sm flex-1" />
+            <Input value={btn.link} onChange={e => onUpdate(i, 'link', e.target.value)} placeholder="/register" dir="ltr" className="h-8 text-sm flex-1 font-mono" />
+            <select
+              value={btn.style}
+              onChange={e => onUpdate(i, 'style', e.target.value)}
+              className="h-8 text-sm border border-border rounded-md bg-background px-2 shrink-0"
+            >
+              <option value="primary">تعبئة</option>
+              <option value="outline">إطار</option>
+            </select>
+            <Button type="button" size="sm" variant="ghost" onClick={() => onRemove(i)} className="h-8 w-8 p-0 text-muted-foreground hover:text-red-400 shrink-0">
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function SiteEditorPage() {
   const [config, setConfig] = useState<SiteConfig>(defaultConfig);
   const [loading, setLoading] = useState(true);
@@ -231,6 +285,18 @@ export default function SiteEditorPage() {
     setConfig(c => ({ ...c, ctaBanner: { ...c.ctaBanner, [k]: v } }));
   const setAuthBranding = (k: keyof SiteConfig['authBranding'], v: string) =>
     setConfig(c => ({ ...c, authBranding: { ...c.authBranding, [k]: v } }));
+
+  // Generic add/update/remove for a CtaButton[] living at config[group].buttons
+  const addButton = (group: 'hero' | 'ctaBanner') =>
+    setConfig(c => ({ ...c, [group]: { ...c[group], buttons: [...c[group].buttons, { text: 'زر جديد', link: '/register', style: 'primary' as const }] } }));
+  const updateButton = (group: 'hero' | 'ctaBanner', i: number, k: keyof CtaButton, v: string) =>
+    setConfig(c => {
+      const buttons = [...c[group].buttons];
+      buttons[i] = { ...buttons[i], [k]: v };
+      return { ...c, [group]: { ...c[group], buttons } };
+    });
+  const removeButton = (group: 'hero' | 'ctaBanner', i: number) =>
+    setConfig(c => ({ ...c, [group]: { ...c[group], buttons: c[group].buttons.filter((_, idx) => idx !== i) } }));
 
   // Stats
   const addStat = () => setConfig(c => ({ ...c, stats: [...c.stats, { label: '', value: '', icon: 'Users' }] }));
@@ -410,16 +476,12 @@ export default function SiteEditorPage() {
                   <Label>العنوان الفرعي</Label>
                   <Textarea value={config.hero.subtitle} onChange={e => setHero('subtitle', e.target.value)} rows={3} className="resize-none" placeholder="وصف مختصر..." />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label>نص الزر الرئيسي</Label>
-                    <Input value={config.hero.ctaText} onChange={e => setHero('ctaText', e.target.value)} placeholder="ابدأ الآن" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>نص الزر الثانوي</Label>
-                    <Input value={config.hero.ctaSecondaryText} onChange={e => setHero('ctaSecondaryText', e.target.value)} placeholder="تعرف على المزيد" />
-                  </div>
-                </div>
+                <ButtonsEditor
+                  buttons={config.hero.buttons}
+                  onAdd={() => addButton('hero')}
+                  onUpdate={(i, k, v) => updateButton('hero', i, k, v)}
+                  onRemove={i => removeButton('hero', i)}
+                />
                 <ImageUploadField label="صورة الخلفية (اختياري)" value={config.hero.backgroundImage} onChange={url => setHero('backgroundImage', url)} storagePath="site/hero" />
                 <SectionStyleFields config={config} sectionKey="hero" setSectionStyle={setSectionStyle} withIcon={false} />
                 <div className="rounded-xl overflow-hidden border border-border">
@@ -430,8 +492,14 @@ export default function SiteEditorPage() {
                     <h2 className="text-foreground text-xl font-bold mb-2">{config.hero.title || 'العنوان الرئيسي'}</h2>
                     <p className="text-foreground/90 text-sm mb-4 whitespace-pre-line">{config.hero.subtitle || 'الوصف...'}</p>
                     <div className="flex gap-2 justify-center flex-wrap">
-                      <span className="bg-primary text-primary-foreground px-4 py-1.5 rounded-lg text-sm">{config.hero.ctaText || 'ابدأ الآن'}</span>
-                      <span className="border border-border text-foreground px-4 py-1.5 rounded-lg text-sm">{config.hero.ctaSecondaryText || 'تعرف على المزيد'}</span>
+                      {config.hero.buttons.map((btn, i) => (
+                        <span
+                          key={i}
+                          className={`px-4 py-1.5 rounded-lg text-sm ${btn.style === 'outline' ? 'border border-border text-foreground' : 'bg-primary text-primary-foreground'}`}
+                        >
+                          {btn.text}
+                        </span>
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -841,16 +909,12 @@ export default function SiteEditorPage() {
                   <Label>العنوان الفرعي</Label>
                   <Textarea value={config.ctaBanner.subtitle} onChange={e => setBanner('subtitle', e.target.value)} rows={2} className="resize-none" placeholder="سجّل مجاناً اليوم..." />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label>نص الزر الرئيسي</Label>
-                    <Input value={config.ctaBanner.primaryText} onChange={e => setBanner('primaryText', e.target.value)} placeholder="ابدأ مجاناً الآن" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>نص الزر الثانوي</Label>
-                    <Input value={config.ctaBanner.secondaryText} onChange={e => setBanner('secondaryText', e.target.value)} placeholder="تجربة المنصة أولاً" />
-                  </div>
-                </div>
+                <ButtonsEditor
+                  buttons={config.ctaBanner.buttons}
+                  onAdd={() => addButton('ctaBanner')}
+                  onUpdate={(i, k, v) => updateButton('ctaBanner', i, k, v)}
+                  onRemove={i => removeButton('ctaBanner', i)}
+                />
                 <ColorField
                   label="لون خلفية البانر"
                   value={config.ctaBanner.backgroundColor}
@@ -867,8 +931,18 @@ export default function SiteEditorPage() {
                     <h2 className="text-xl font-bold mb-2">{config.ctaBanner.title || 'العنوان...'}</h2>
                     <p className={`text-sm mb-4 ${config.ctaBanner.backgroundColor ? 'text-white/70' : 'text-background/60'}`}>{config.ctaBanner.subtitle || 'الوصف...'}</p>
                     <div className="flex gap-2 justify-center flex-wrap">
-                      <span className="bg-secondary text-foreground px-4 py-1.5 rounded-lg text-sm font-bold">{config.ctaBanner.primaryText}</span>
-                      <span className={`border px-4 py-1.5 rounded-lg text-sm ${config.ctaBanner.backgroundColor ? 'border-white/30 text-white' : 'border-background/30 text-background'}`}>{config.ctaBanner.secondaryText}</span>
+                      {config.ctaBanner.buttons.map((btn, i) => (
+                        <span
+                          key={i}
+                          className={`px-4 py-1.5 rounded-lg text-sm ${
+                            btn.style === 'outline'
+                              ? `border ${config.ctaBanner.backgroundColor ? 'border-white/30 text-white' : 'border-background/30 text-background'}`
+                              : 'bg-secondary text-foreground font-bold'
+                          }`}
+                        >
+                          {btn.text}
+                        </span>
+                      ))}
                     </div>
                   </div>
                 </div>
