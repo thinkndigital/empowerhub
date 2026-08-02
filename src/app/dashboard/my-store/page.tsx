@@ -42,9 +42,9 @@ type Product = z.infer<typeof formSchema> & { id: string; beneficiaryId?: string
 type Order = {
   id: string;
   productName: string;
-  customerName: string;
-  orderDate?: any;
-  total?: number;
+  buyerName: string;
+  createdAt?: any;
+  totalAmount?: number;
   status: 'pending' | 'shipped' | 'delivered' | 'cancelled';
 };
 
@@ -90,12 +90,12 @@ export default function MyStorePage() {
   }, [authLoading, authUser, fetchData]);
 
   const storeStats = useMemo(() => {
-    const totalRevenue = orders.filter(o => o.status === 'delivered').reduce((sum, o) => sum + (o.total || 0), 0);
+    const totalRevenue = orders.filter(o => o.status === 'delivered').reduce((sum, o) => sum + (o.totalAmount || 0), 0);
     return {
       totalProducts: products.length,
       totalRevenue: totalRevenue.toFixed(2),
       totalOrders: `${orders.length}`,
-      newCustomers: `${new Set(orders.map(o => o.customerName)).size}`,
+      newCustomers: `${new Set(orders.map(o => o.buyerName).filter(Boolean)).size}`,
     };
   }, [products, orders]);
 
@@ -307,8 +307,8 @@ export default function MyStorePage() {
               {!isLoading && orders.map(order => (
                 <TableRow key={order.id}>
                   <TableCell className="font-medium">{order.productName}</TableCell>
-                  <TableCell>{order.customerName}</TableCell>
-                  <TableCell>{order.orderDate ? format(new Date(order.orderDate._seconds ? order.orderDate._seconds * 1000 : order.orderDate), "d MMMM yyyy", { locale: ar }) : 'غير محدد'}</TableCell>
+                  <TableCell>{order.buyerName || 'غير محدد'}</TableCell>
+                  <TableCell>{order.createdAt ? format(new Date(order.createdAt._seconds ? order.createdAt._seconds * 1000 : order.createdAt), "d MMMM yyyy", { locale: ar }) : 'غير محدد'}</TableCell>
                   <TableCell>
                     <Badge variant={statusMap[order.status]?.variant} className={order.status === 'delivered' ? 'text-green-600 border-green-600' : ''}>
                       {statusMap[order.status]?.text}
