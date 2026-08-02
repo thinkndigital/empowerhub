@@ -23,7 +23,7 @@ export default function AdminSettingsPage() {
         <p className="text-muted-foreground text-sm">إعدادات لوحة الإدارة</p>
       </div>
 
-      <Card className="bg-card border-border shadow-lg shadow-black/20">
+      <Card className="border-0 shadow-sm">
         <CardHeader><CardTitle className="text-foreground text-base flex items-center gap-2"><Shield className="h-4 w-4 text-primary" />معلومات الجلسة</CardTitle></CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between p-3 bg-muted/40 rounded-lg">
@@ -37,7 +37,7 @@ export default function AdminSettingsPage() {
         </CardContent>
       </Card>
 
-      <Card className="bg-card border-border shadow-lg shadow-black/20">
+      <Card className="border-0 shadow-sm">
         <CardHeader><CardTitle className="text-foreground text-base flex items-center gap-2"><Info className="h-4 w-4 text-blue-400" />معلومات المنصة</CardTitle></CardHeader>
         <CardContent className="space-y-3 text-sm">
           <div className="flex justify-between text-muted-foreground p-2">

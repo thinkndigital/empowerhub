@@ -8,7 +8,7 @@ import {
   Video, GraduationCap, FileText, Briefcase, Store, Quote, Layout,
 } from "lucide-react";
 import { signOut } from "firebase/auth";
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useAuth } from "@/firebase/provider";
 
 import {
@@ -51,6 +51,13 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
   const router = useRouter();
   const { user: authUser, userProfile: realUserProfile, loading } = useUser();
   const auth = useAuth();
+  const [platformLogo, setPlatformLogo] = useState('');
+
+  useEffect(() => {
+    fetch('/api/public/platform-config').then(r => r.json()).then(d => {
+      if (d.config?.logoUrl) setPlatformLogo(d.config.logoUrl);
+    }).catch(() => {});
+  }, []);
 
   const handleLogout = async () => {
     if (auth) await signOut(auth);
@@ -86,8 +93,10 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
       <Sidebar side="right">
         <SidebarHeader className="border-b border-sidebar-border">
           <div className="flex items-center gap-3 px-3 py-4">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-accent">
-              <Logo className="h-6 w-6" />
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-accent overflow-hidden">
+              {platformLogo
+                ? <img src={platformLogo} alt="شعار" className="h-full w-full object-contain" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                : <Logo className="h-6 w-6" />}
             </div>
             <div className="flex flex-col">
               <span className="text-sm font-semibold text-sidebar-accent-foreground">EmpowerHub</span>

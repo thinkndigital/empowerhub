@@ -5,11 +5,23 @@ import { FirebaseProviderDynamic } from '@/components/firebase-provider-dynamic'
 import { ThemeProvider } from '@/components/theme-provider';
 import { adminDb } from '@/lib/firebase-admin';
 
-export const metadata: Metadata = {
-  title: 'EmpowerHub | منصة التمكين الرقمي',
-  description: 'منصة متكاملة للتمكين الرقمي تجمع التدريب، الإرشاد، والتجارة الإلكترونية.',
-  keywords: 'تمكين, تدريب, إرشاد, تجارة إلكترونية, ريادة أعمال',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  let faviconUrl = '';
+  try {
+    const [platformSnap, siteSnap] = await Promise.all([
+      adminDb.collection('config').doc('platform').get(),
+      adminDb.collection('config').doc('site').get(),
+    ]);
+    faviconUrl = platformSnap.data()?.faviconUrl || siteSnap.data()?.faviconUrl || '';
+  } catch {}
+
+  return {
+    title: 'EmpowerHub | منصة التمكين الرقمي',
+    description: 'منصة متكاملة للتمكين الرقمي تجمع التدريب، الإرشاد، والتجارة الإلكترونية.',
+    keywords: 'تمكين, تدريب, إرشاد, تجارة إلكترونية, ريادة أعمال',
+    ...(faviconUrl ? { icons: { icon: faviconUrl } } : {}),
+  };
+}
 
 export const viewport: Viewport = {
   width: 'device-width',

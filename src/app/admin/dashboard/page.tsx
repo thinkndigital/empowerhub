@@ -46,7 +46,7 @@ export default function AdminDashboardPage() {
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         {statCards.map(card => (
           <Link key={card.key} href={card.href}>
-            <Card className="bg-card border-border shadow-lg shadow-black/20 hover:border-border hover:bg-muted transition-all cursor-pointer group">
+            <Card className="border-0 shadow-sm hover:border-border hover:bg-muted transition-all cursor-pointer group">
               <CardContent className="p-5">
                 <div className="flex items-center justify-between">
                   <div>
@@ -88,7 +88,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Organizations List */}
-      <Card className="bg-card border-border shadow-lg shadow-black/20">
+      <Card className="border-0 shadow-sm">
         <CardHeader className="flex flex-row items-center justify-between pb-4">
           <CardTitle className="text-foreground text-lg">المنظمات المسجلة</CardTitle>
           <Link href="/admin/dashboard/organizations">

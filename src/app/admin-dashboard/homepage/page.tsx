@@ -11,7 +11,8 @@ import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Save, Plus, Trash2, Globe, Palette, Layout, Phone } from "lucide-react";
+import { Save, Plus, Trash2, Globe, Palette, Layout, Phone, Upload } from "lucide-react";
+import { uploadFile as uploadToStorage } from "@/lib/upload-file";
 
 interface SiteConfig {
   siteName?: string;
@@ -46,6 +47,19 @@ export default function AdminHomepagePage() {
   const [config, setConfig] = useState<SiteConfig>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+
+  const handleLogoFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    setUploadingLogo(true);
+    try {
+      const token = await user.getIdToken();
+      const url = await uploadToStorage(file, 'site/logo', token);
+      setConfig(c => ({ ...c, logoUrl: url }));
+    } catch {}
+    setUploadingLogo(false);
+  };
 
   const fetchConfig = useCallback(async () => {
     try {
@@ -134,8 +148,21 @@ export default function AdminHomepagePage() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label>رابط الشعار (Logo URL)</Label>
-                  <Input value={config.logoUrl || ''} onChange={e => set('logoUrl', e.target.value)} placeholder="https://..." dir="ltr" />
+                  <Label>شعار المنصة (Logo)</Label>
+                  <div className="flex gap-2 items-start">
+                    <Input value={config.logoUrl || ''} onChange={e => set('logoUrl', e.target.value)} placeholder="https://..." dir="ltr" className="flex-1" />
+                    <label className="cursor-pointer flex-shrink-0">
+                      <Button type="button" variant="outline" size="icon" disabled={uploadingLogo} asChild>
+                        <span>{uploadingLogo ? <span className="text-xs">⏳</span> : <Upload className="h-4 w-4" />}</span>
+                      </Button>
+                      <input type="file" accept="image/*" className="hidden" onChange={handleLogoFile} />
+                    </label>
+                    {config.logoUrl && (
+                      <div className="h-10 w-10 rounded-lg border border-border overflow-hidden bg-muted/40 flex-shrink-0">
+                        <img src={config.logoUrl} alt="" className="h-full w-full object-contain" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="space-y-1.5">
                   <Label className="flex items-center gap-2"><Palette className="h-4 w-4" />اللون الرئيسي (Hex)</Label>

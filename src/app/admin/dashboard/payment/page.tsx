@@ -134,7 +134,7 @@ function GatewayCard({ gwDef, value, onChange }: {
   const set = (k: string, v: any) => onChange({ ...value, [k]: v });
 
   return (
-    <Card className="bg-card border-border shadow-lg shadow-black/20">
+    <Card className="border-0 shadow-sm">
       <CardContent className="p-0">
         <div className="flex items-center gap-3 p-4 cursor-pointer" onClick={() => setOpen(o => !o)}>
           <span className="text-2xl">{gwDef.logo}</span>
@@ -256,7 +256,7 @@ export default function PaymentConfigPage() {
       </div>
 
       {/* COD */}
-      <Card className="bg-card border-border shadow-lg shadow-black/20">
+      <Card className="border-0 shadow-sm">
         <CardContent className="p-4">
           <div className="flex items-center gap-3">
             <span className="text-2xl">💵</span>
@@ -281,7 +281,7 @@ export default function PaymentConfigPage() {
       </Card>
 
       {/* Currency */}
-      <Card className="bg-card border-border shadow-lg shadow-black/20">
+      <Card className="border-0 shadow-sm">
         <CardContent className="p-4">
           <div className="flex items-center gap-3">
             <span className="text-2xl">💱</span>

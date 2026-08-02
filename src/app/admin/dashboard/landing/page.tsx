@@ -70,7 +70,7 @@ export default function LandingEditorPage() {
       </div>
 
       {/* Hero Section */}
-      <Card className="bg-card border-border shadow-lg shadow-black/20">
+      <Card className="border-0 shadow-sm">
         <CardHeader><CardTitle className="text-foreground text-base">قسم الترحيب (Hero)</CardTitle></CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -105,7 +105,7 @@ export default function LandingEditorPage() {
       </Card>
 
       {/* Sections Toggles */}
-      <Card className="bg-card border-border shadow-lg shadow-black/20">
+      <Card className="border-0 shadow-sm">
         <CardHeader><CardTitle className="text-foreground text-base">الأقسام المرئية</CardTitle></CardHeader>
         <CardContent className="space-y-4">
           {[
@@ -128,7 +128,7 @@ export default function LandingEditorPage() {
       </Card>
 
       {/* Preview */}
-      <Card className="bg-card border-border shadow-lg shadow-black/20">
+      <Card className="border-0 shadow-sm">
         <CardHeader><CardTitle className="text-foreground text-base flex items-center gap-2"><Globe className="h-4 w-4 text-primary" />معاينة</CardTitle></CardHeader>
         <CardContent>
           <div className="bg-gradient-to-br from-primary/20 to-purple-900/20 rounded-xl p-6 border border-border text-center">

@@ -189,7 +189,7 @@ export default function SubscriptionsPage() {
       {loading ? (
         <p className="text-muted-foreground text-center py-12">جاري التحميل...</p>
       ) : (
-        <Card className="bg-card border-border shadow-lg shadow-black/20">
+        <Card className="border-0 shadow-sm">
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full">

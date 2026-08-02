@@ -166,7 +166,7 @@ export default function PlatformConfigPage() {
       </div>
 
       {/* Identity */}
-      <Card className="bg-card border-border shadow-lg shadow-black/20">
+      <Card className="border-0 shadow-sm">
         <CardHeader><CardTitle className="text-foreground text-base">هوية المنصة</CardTitle></CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -202,7 +202,7 @@ export default function PlatformConfigPage() {
         const enabledCount = Object.values(current).filter(Boolean).length;
         const total = Object.keys(sections).length;
         return (
-          <Card key={dash.key} className="bg-card border-border shadow-lg shadow-black/20">
+          <Card key={dash.key} className="border-0 shadow-sm">
             <CardHeader>
               <div className="flex items-center gap-3">
                 <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${dash.bg}`}>

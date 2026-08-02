@@ -41,7 +41,7 @@ function PeopleTable({ data, onEdit, onDelete }: { data: Person[]; onEdit: (p: P
         <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="بحث..." className="bg-muted border-border text-foreground pr-10" />
       </div>
-      <Card className="bg-card border-border shadow-lg shadow-black/20">
+      <Card className="border-0 shadow-sm">
         <CardContent className="p-0">
           {filtered.length === 0 ? (
             <p className="text-muted-foreground text-center py-10">لا يوجد بيانات</p>
@@ -237,11 +237,11 @@ export default function MentorsPage() {
         <div className="text-muted-foreground text-center py-12">جاري التحميل...</div>
       ) : (
         <Tabs defaultValue="mentors">
-          <TabsList className="bg-muted border border-border">
-            <TabsTrigger value="mentors" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white text-muted-foreground">
+          <TabsList className="bg-muted rounded-xl p-1 gap-1">
+            <TabsTrigger value="mentors" className="rounded-lg border-0 data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-sm text-muted-foreground hover:text-foreground">
               المرشدون ({mentors.length})
             </TabsTrigger>
-            <TabsTrigger value="coaches" className="data-[state=active]:bg-orange-600 data-[state=active]:text-white text-muted-foreground">
+            <TabsTrigger value="coaches" className="rounded-lg border-0 data-[state=active]:bg-orange-600 data-[state=active]:text-white data-[state=active]:shadow-sm text-muted-foreground hover:text-foreground">
               المدربون ({coaches.length})
             </TabsTrigger>
           </TabsList>

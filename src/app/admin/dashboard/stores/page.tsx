@@ -158,7 +158,7 @@ function StoresTab() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filtered.map(store => (
-            <Card key={store.id} className={`bg-card border-border shadow-lg shadow-black/20 transition-all ${store.hidden ? 'opacity-50' : ''}`}>
+            <Card key={store.id} className={`border-0 shadow-sm transition-all ${store.hidden ? 'opacity-50' : ''}`}>
               <CardContent className="p-4">
                 <div className="flex items-start gap-3 mb-3">
                   <div className="h-10 w-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary flex-shrink-0">
@@ -335,7 +335,7 @@ function ProductsTab() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filtered.map(product => (
-            <Card key={product.id} className={`bg-card border-border shadow-lg shadow-black/20 overflow-hidden transition-all ${product.hidden ? 'opacity-50' : ''}`}>
+            <Card key={product.id} className={`border-0 shadow-sm overflow-hidden transition-all ${product.hidden ? 'opacity-50' : ''}`}>
               {product.imageUrl && (
                 <div className="h-28 w-full bg-muted overflow-hidden">
                   <img src={product.imageUrl} alt={product.name} className="h-full w-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
@@ -489,7 +489,7 @@ function OrdersTab() {
         </Button>
       </div>
 
-      <Card className="bg-card border-border shadow-lg shadow-black/20">
+      <Card className="border-0 shadow-sm">
         <CardContent className="p-0">
           <Table>
             <TableHeader>
@@ -603,21 +603,21 @@ function CustomersTab() {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <Card className="bg-card border-border shadow-lg shadow-black/20">
+        <Card className="border-0 shadow-sm">
           <CardContent className="pt-4 pb-4">
             <Users className="h-4 w-4 text-purple-400 mb-2" />
             <p className="text-lg font-bold text-foreground">{loading ? '...' : stats.total}</p>
             <p className="text-xs text-muted-foreground">إجمالي العملاء</p>
           </CardContent>
         </Card>
-        <Card className="bg-card border-border shadow-lg shadow-black/20">
+        <Card className="border-0 shadow-sm">
           <CardContent className="pt-4 pb-4">
             <Repeat className="h-4 w-4 text-blue-400 mb-2" />
             <p className="text-lg font-bold text-foreground">{loading ? '...' : stats.repeat}</p>
             <p className="text-xs text-muted-foreground">عملاء متكررون</p>
           </CardContent>
         </Card>
-        <Card className="bg-card border-border shadow-lg shadow-black/20">
+        <Card className="border-0 shadow-sm">
           <CardContent className="pt-4 pb-4">
             <ShoppingCart className="h-4 w-4 text-emerald-400 mb-2" />
             <p className="text-lg font-bold text-foreground">{loading ? '...' : `${stats.revenue.toFixed(2)} د.أ`}</p>
@@ -649,7 +649,7 @@ function CustomersTab() {
         </Button>
       </div>
 
-      <Card className="bg-card border-border shadow-lg shadow-black/20">
+      <Card className="border-0 shadow-sm">
         <CardContent className="p-0">
           <Table>
             <TableHeader>
@@ -712,20 +712,20 @@ export default function StoresAdminPage() {
       </div>
 
       <Tabs defaultValue="stores">
-        <TabsList className="bg-muted border border-border">
-          <TabsTrigger value="stores" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-muted-foreground gap-2">
+        <TabsList className="bg-muted rounded-xl p-1 gap-1">
+          <TabsTrigger value="stores" className="rounded-lg border-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-muted-foreground hover:text-foreground gap-2">
             <Store className="h-4 w-4" />
             المتاجر
           </TabsTrigger>
-          <TabsTrigger value="products" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-muted-foreground gap-2">
+          <TabsTrigger value="products" className="rounded-lg border-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-muted-foreground hover:text-foreground gap-2">
             <Package className="h-4 w-4" />
             المنتجات
           </TabsTrigger>
-          <TabsTrigger value="orders" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-muted-foreground gap-2">
+          <TabsTrigger value="orders" className="rounded-lg border-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-muted-foreground hover:text-foreground gap-2">
             <ShoppingCart className="h-4 w-4" />
             الطلبات
           </TabsTrigger>
-          <TabsTrigger value="customers" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-muted-foreground gap-2">
+          <TabsTrigger value="customers" className="rounded-lg border-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-muted-foreground hover:text-foreground gap-2">
             <Users className="h-4 w-4" />
             العملاء
           </TabsTrigger>

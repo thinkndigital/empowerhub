@@ -50,6 +50,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const auth = useAuth();
 
   const [avatarUrl, setAvatarUrl] = useState('');
+  const [platformLogo, setPlatformLogo] = useState('');
 
   useEffect(() => {
     if (!authUser) return;
@@ -59,6 +60,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         .catch(() => {})
     );
   }, [authUser]);
+
+  useEffect(() => {
+    fetch('/api/public/platform-config').then(r => r.json()).then(d => {
+      if (d.config?.logoUrl) setPlatformLogo(d.config.logoUrl);
+    }).catch(() => {});
+  }, []);
 
   const handleLogout = async () => {
     if (auth) await signOut(auth);
@@ -123,8 +130,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <SidebarHeader className="border-b border-sidebar-border/70">
           <div className="flex items-center gap-3 px-4 py-5">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg overflow-hidden bg-primary/10">
-              {organization?.logoUrl
-                ? <Image src={organization.logoUrl} alt="شعار المنظمة" width={32} height={32} className="h-full w-full object-contain" />
+              {(organization?.logoUrl || platformLogo)
+                ? <Image src={organization?.logoUrl || platformLogo} alt="شعار" width={32} height={32} className="h-full w-full object-contain" />
                 : <Logo className="h-5 w-5 text-primary" />}
             </div>
             <div className="flex flex-col min-w-0">

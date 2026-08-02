@@ -227,7 +227,7 @@ export default function SiteEditorPage() {
 
       <div className="pt-4">
         <Tabs defaultValue="identity">
-          <TabsList className="bg-muted border border-border w-full flex-wrap h-auto gap-1 p-1">
+          <TabsList className="bg-muted rounded-xl w-full flex-wrap h-auto gap-1 p-1">
             {[
               { value: 'identity', label: 'الهوية', icon: Globe },
               { value: 'hero', label: 'الترحيب', icon: ImageIcon },
@@ -243,7 +243,7 @@ export default function SiteEditorPage() {
               { value: 'sections', label: 'الأقسام', icon: Eye },
               { value: 'footer', label: 'الفوتر', icon: Link2 },
             ].map(t => (
-              <TabsTrigger key={t.value} value={t.value} className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-muted-foreground gap-1 text-xs">
+              <TabsTrigger key={t.value} value={t.value} className="rounded-lg border-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-muted-foreground hover:text-foreground gap-1 text-xs">
                 <t.icon className="h-3 w-3" />
                 {t.label}
               </TabsTrigger>
@@ -252,7 +252,7 @@ export default function SiteEditorPage() {
 
           {/* IDENTITY */}
           <TabsContent value="identity" className="mt-4">
-            <Card className="bg-card border-border shadow-lg shadow-black/20">
+            <Card className="border-0 shadow-sm">
               <CardHeader><CardTitle className="text-foreground text-base">هوية الموقع والشعار</CardTitle></CardHeader>
               <CardContent className="space-y-5">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -291,7 +291,7 @@ export default function SiteEditorPage() {
 
           {/* HERO */}
           <TabsContent value="hero" className="mt-4">
-            <Card className="bg-card border-border shadow-lg shadow-black/20">
+            <Card className="border-0 shadow-sm">
               <CardHeader><CardTitle className="text-foreground text-base">قسم الترحيب (Hero Section)</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
@@ -332,7 +332,7 @@ export default function SiteEditorPage() {
 
           {/* STATS */}
           <TabsContent value="stats" className="mt-4">
-            <Card className="bg-card border-border shadow-lg shadow-black/20">
+            <Card className="border-0 shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-foreground text-base">الإحصائيات</CardTitle>
                 <Button size="sm" onClick={addStat} className="gap-1"><Plus className="h-3.5 w-3.5" />إضافة</Button>
@@ -376,7 +376,7 @@ export default function SiteEditorPage() {
 
           {/* FEATURES */}
           <TabsContent value="features" className="mt-4">
-            <Card className="bg-card border-border shadow-lg shadow-black/20">
+            <Card className="border-0 shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-foreground text-base">بطاقات المميزات</CardTitle>
                 <Button size="sm" onClick={addFeature} className="gap-1"><Plus className="h-3.5 w-3.5" />إضافة ميزة</Button>
@@ -414,7 +414,7 @@ export default function SiteEditorPage() {
 
           {/* OPPORTUNITIES */}
           <TabsContent value="opportunities" className="mt-4">
-            <Card className="bg-card border-border shadow-lg shadow-black/20">
+            <Card className="border-0 shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-foreground text-base">قسم الفرص المتاحة</CardTitle>
                 <Button size="sm" onClick={addOpportunity} className="gap-1"><Plus className="h-3.5 w-3.5" />إضافة فرصة</Button>
@@ -463,7 +463,7 @@ export default function SiteEditorPage() {
 
           {/* HOW IT WORKS */}
           <TabsContent value="howitworks" className="mt-4">
-            <Card className="bg-card border-border shadow-lg shadow-black/20">
+            <Card className="border-0 shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-foreground text-base">خطوات "كيف تعمل المنصة"</CardTitle>
                 <Button size="sm" onClick={addStep} className="gap-1"><Plus className="h-3.5 w-3.5" />إضافة خطوة</Button>
@@ -501,7 +501,7 @@ export default function SiteEditorPage() {
 
           {/* ROLES */}
           <TabsContent value="roles" className="mt-4">
-            <Card className="bg-card border-border shadow-lg shadow-black/20">
+            <Card className="border-0 shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-foreground text-base">بطاقات الأدوار (انضم إلينا)</CardTitle>
                 <Button size="sm" onClick={addRole} className="gap-1"><Plus className="h-3.5 w-3.5" />إضافة دور</Button>
@@ -543,7 +543,7 @@ export default function SiteEditorPage() {
 
           {/* BLOG POSTS */}
           <TabsContent value="blog" className="mt-4">
-            <Card className="bg-card border-border shadow-lg shadow-black/20">
+            <Card className="border-0 shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-foreground text-base">قسم الموارد والمقالات</CardTitle>
                 <Button size="sm" onClick={addBlogPost} className="gap-1"><Plus className="h-3.5 w-3.5" />إضافة مقال</Button>
@@ -591,7 +591,7 @@ export default function SiteEditorPage() {
 
           {/* TESTIMONIALS */}
           <TabsContent value="testimonials" className="mt-4">
-            <Card className="bg-card border-border shadow-lg shadow-black/20">
+            <Card className="border-0 shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-foreground text-base">آراء المستخدمين (Testimonials)</CardTitle>
                 <Button size="sm" onClick={addTestimonial} className="gap-1"><Plus className="h-3.5 w-3.5" />إضافة رأي</Button>
@@ -644,7 +644,7 @@ export default function SiteEditorPage() {
 
           {/* CONTACT */}
           <TabsContent value="contact" className="mt-4">
-            <Card className="bg-card border-border shadow-lg shadow-black/20">
+            <Card className="border-0 shadow-sm">
               <CardHeader><CardTitle className="text-foreground text-base">معلومات التواصل</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
@@ -670,7 +670,7 @@ export default function SiteEditorPage() {
 
           {/* CTA BANNER */}
           <TabsContent value="cta" className="mt-4">
-            <Card className="bg-card border-border shadow-lg shadow-black/20">
+            <Card className="border-0 shadow-sm">
               <CardHeader><CardTitle className="text-foreground text-base">بانر الدعوة للعمل (CTA Banner)</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
@@ -708,7 +708,7 @@ export default function SiteEditorPage() {
 
           {/* SECTIONS */}
           <TabsContent value="sections" className="mt-4">
-            <Card className="bg-card border-border shadow-lg shadow-black/20">
+            <Card className="border-0 shadow-sm">
               <CardHeader><CardTitle className="text-foreground text-base">تشغيل وإيقاف الأقسام</CardTitle></CardHeader>
               <CardContent className="space-y-3">
                 {[
@@ -747,7 +747,7 @@ export default function SiteEditorPage() {
 
           {/* FOOTER */}
           <TabsContent value="footer" className="mt-4">
-            <Card className="bg-card border-border shadow-lg shadow-black/20">
+            <Card className="border-0 shadow-sm">
               <CardHeader><CardTitle className="text-foreground text-base">الفوتر وروابط التواصل</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">

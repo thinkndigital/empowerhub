@@ -478,7 +478,7 @@ export default function OrganizationsPage() {
             const color = org.primaryColor || "#6366f1";
             const initial = (org.name || "م")[0];
             return (
-              <Card key={org.id} className="bg-card border-border shadow-lg shadow-black/20 hover:border-border transition-all w-full overflow-hidden">
+              <Card key={org.id} className="border-0 shadow-sm hover:border-border transition-all w-full overflow-hidden">
                 <CardContent className="p-4">
                   {/* Header: logo + info + dropdown */}
                   <div className="flex items-start gap-3 mb-3 min-w-0">

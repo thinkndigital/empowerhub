@@ -177,7 +177,7 @@ export default function ContentPage() {
           </Button>
         </div>
 
-        <Card className="bg-card border-border shadow-lg shadow-black/20">
+        <Card className="border-0 shadow-sm">
           <CardContent className="p-0">
             {list.length === 0 ? (
               <p className="text-muted-foreground text-center py-10">لا يوجد محتوى بعد</p>
@@ -366,10 +366,10 @@ export default function ContentPage() {
         <div className="text-muted-foreground text-center py-16 animate-pulse">جاري تحميل المحتوى...</div>
       ) : (
         <Tabs defaultValue="projects">
-          <TabsList className="bg-muted border border-border h-auto flex-wrap gap-0.5">
+          <TabsList className="bg-muted rounded-xl h-auto flex-wrap gap-0.5 p-1">
             {Object.entries(COLLECTIONS).map(([key, meta]) => (
               <TabsTrigger key={key} value={key}
-                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-muted-foreground text-xs sm:text-sm">
+                className="rounded-lg border-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-muted-foreground hover:text-foreground text-xs sm:text-sm">
                 {meta.label}
                 <span className="mr-1.5 text-[10px] opacity-70">({(items[key] || []).length})</span>
               </TabsTrigger>

@@ -52,6 +52,7 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [checking, setChecking] = useState(true);
+  const [platformLogo, setPlatformLogo] = useState('');
 
   useEffect(() => {
     fetch("/api/admin-panel/stats").then(r => {
@@ -59,6 +60,12 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
       else setChecking(false);
     }).catch(() => router.replace("/admin"));
   }, [router]);
+
+  useEffect(() => {
+    fetch('/api/public/platform-config').then(r => r.json()).then(d => {
+      if (d.config?.logoUrl) setPlatformLogo(d.config.logoUrl);
+    }).catch(() => {});
+  }, []);
 
   const handleLogout = async () => {
     await fetch("/api/admin-panel/auth", { method: "DELETE" });
@@ -82,8 +89,10 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
         {/* Logo */}
         <div className="p-5 border-b border-sidebar-border">
           <div className="flex items-center gap-3">
-            <div className="bg-primary/15 ring-1 ring-primary/25 p-2 rounded-xl flex-shrink-0">
-              <Shield className="h-6 w-6 text-primary" />
+            <div className="bg-primary/15 ring-1 ring-primary/25 p-2 rounded-xl flex-shrink-0 h-10 w-10 flex items-center justify-center overflow-hidden">
+              {platformLogo
+                ? <img src={platformLogo} alt="شعار" className="h-full w-full object-contain" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                : <Shield className="h-6 w-6 text-primary" />}
             </div>
             <div>
               <p className="text-sidebar-accent-foreground font-bold text-sm tracking-tight">EmpowerHub</p>
@@ -162,8 +171,10 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
         {/* Top bar */}
         <header className="h-14 bg-background/70 backdrop-blur-xl border-b border-border flex items-center gap-4 px-4 lg:px-6 sticky top-0 z-30">
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-full bg-primary/15 ring-1 ring-primary/25 flex items-center justify-center">
-              <Shield className="h-4 w-4 text-primary" />
+            <div className="h-8 w-8 rounded-full bg-primary/15 ring-1 ring-primary/25 flex items-center justify-center overflow-hidden">
+              {platformLogo
+                ? <img src={platformLogo} alt="شعار" className="h-full w-full object-contain" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                : <Shield className="h-4 w-4 text-primary" />}
             </div>
             <span className="text-foreground text-sm hidden sm:block">المشرف العام</span>
           </div>
