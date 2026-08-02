@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Store, Package, Eye, EyeOff, Trash2, Search, RefreshCw, Edit2, X, Check } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Store, Package, Eye, EyeOff, Trash2, Search, RefreshCw, Edit2, X, Check, ShoppingCart, Users, Phone, MapPin, Download, Printer, Repeat } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
@@ -16,6 +17,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { exportToExcel, exportToPDF } from "@/lib/export-utils";
 
 interface StoreItem {
   id: string;
@@ -42,6 +44,39 @@ interface ProductItem {
   storeId?: string;
   createdAt?: string;
 }
+
+interface OrderItem {
+  id: string;
+  productName: string;
+  storeName: string;
+  buyerName: string;
+  buyerPhone: string;
+  buyerAddress: string;
+  totalAmount: number;
+  status: string;
+  paymentMethod: string;
+  paymentStatus: string;
+  createdAt?: string;
+}
+
+interface CustomerRow {
+  key: string;
+  name: string;
+  phone: string;
+  address: string;
+  ordersCount: number;
+  totalSpent: number;
+  lastOrderAt?: string;
+}
+
+const orderStatusLabel: Record<string, string> = {
+  pending: 'قيد الانتظار',
+  confirmed: 'مؤكد',
+  shipped: 'تم الشحن',
+  completed: 'مكتمل',
+  delivered: 'تم التوصيل',
+  cancelled: 'ملغي',
+};
 
 function StoresTab() {
   const [stores, setStores] = useState<StoreItem[]>([]);
@@ -396,6 +431,278 @@ function ProductsTab() {
   );
 }
 
+function OrdersTab() {
+  const [orders, setOrders] = useState<OrderItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+
+  const load = async () => {
+    setLoading(true);
+    const r = await fetch('/api/admin-panel/stores?type=orders');
+    const d = await r.json();
+    setOrders(d.orders || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const filtered = orders.filter(o =>
+    o.buyerName?.toLowerCase().includes(search.toLowerCase()) ||
+    o.buyerPhone?.includes(search) ||
+    o.storeName?.toLowerCase().includes(search.toLowerCase()) ||
+    o.productName?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const exportHeaders = ["المنتج", "المتجر", "الزبون", "الهاتف", "المبلغ (د.أ)", "الحالة", "التاريخ"];
+  const exportRows = filtered.map(o => [
+    o.productName || '—',
+    o.storeName || '—',
+    o.buyerName || '—',
+    o.buyerPhone || '—',
+    o.totalAmount.toFixed(2),
+    orderStatusLabel[o.status] || o.status,
+    o.createdAt ? new Date(o.createdAt).toLocaleDateString('ar-EG') : '—',
+  ]);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-3 items-center flex-wrap">
+        <span className="text-slate-400 text-sm shrink-0">{orders.length} طلب</span>
+        <div className="relative flex-1 max-w-xs">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="بحث بالزبون، الهاتف، المتجر..." className="pr-9" />
+        </div>
+        <div className="flex-1" />
+        <Button variant="outline" size="icon" onClick={load} disabled={loading}>
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+        </Button>
+        <Button variant="outline" size="sm" className="gap-2" disabled={loading || filtered.length === 0} onClick={() => exportToExcel('طلبات_المنصة', exportHeaders, exportRows, { sheetName: 'الطلبات' })}>
+          <Download className="h-4 w-4" />
+          Excel
+        </Button>
+        <Button variant="outline" size="sm" className="gap-2" disabled={loading || filtered.length === 0} onClick={() => exportToPDF('طلبات المنصة - EmpowerHub', exportHeaders, exportRows, { summary: {
+          'إجمالي الطلبات': String(filtered.length),
+          'إجمالي المبيعات': `${filtered.reduce((s, o) => s + o.totalAmount, 0).toFixed(2)} د.أ`,
+        } })}>
+          <Printer className="h-4 w-4" />
+          PDF
+        </Button>
+      </div>
+
+      <Card className="bg-slate-800/50 border-white/10">
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow className="border-white/10 hover:bg-transparent">
+                <TableHead className="text-slate-400">المنتج</TableHead>
+                <TableHead className="text-slate-400">المتجر</TableHead>
+                <TableHead className="text-slate-400">الزبون</TableHead>
+                <TableHead className="text-slate-400">الهاتف</TableHead>
+                <TableHead className="text-slate-400">المبلغ</TableHead>
+                <TableHead className="text-slate-400">الحالة</TableHead>
+                <TableHead className="text-slate-400">التاريخ</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading && <TableRow className="border-white/10"><TableCell colSpan={7} className="h-24 text-center text-slate-400">جاري التحميل...</TableCell></TableRow>}
+              {!loading && filtered.map(o => (
+                <TableRow key={o.id} className="border-white/10">
+                  <TableCell className="text-white text-sm">{o.productName || '—'}</TableCell>
+                  <TableCell className="text-slate-300 text-sm">{o.storeName || '—'}</TableCell>
+                  <TableCell className="text-slate-300 text-sm">{o.buyerName || '—'}</TableCell>
+                  <TableCell className="text-slate-400 text-sm" dir="ltr">{o.buyerPhone || '—'}</TableCell>
+                  <TableCell className="text-primary text-sm font-semibold">{o.totalAmount.toFixed(2)} د.أ</TableCell>
+                  <TableCell>
+                    <Badge className={`border-0 text-xs ${
+                      o.status === 'completed' || o.status === 'delivered' || o.status === 'confirmed'
+                        ? 'bg-emerald-500/20 text-emerald-400'
+                        : o.status === 'pending'
+                        ? 'bg-amber-500/20 text-amber-400'
+                        : 'bg-red-500/20 text-red-400'
+                    }`}>
+                      {orderStatusLabel[o.status] || o.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-slate-500 text-xs">{o.createdAt ? new Date(o.createdAt).toLocaleDateString('ar-EG') : '—'}</TableCell>
+                </TableRow>
+              ))}
+              {!loading && filtered.length === 0 && (
+                <TableRow className="border-white/10"><TableCell colSpan={7} className="h-24 text-center text-slate-400">لا توجد طلبات</TableCell></TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function CustomersTab() {
+  const [orders, setOrders] = useState<OrderItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+
+  const load = async () => {
+    setLoading(true);
+    const r = await fetch('/api/admin-panel/stores?type=orders');
+    const d = await r.json();
+    setOrders(d.orders || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const customers = useMemo<CustomerRow[]>(() => {
+    const map = new Map<string, CustomerRow>();
+    for (const o of orders) {
+      if (o.status === 'cancelled') continue;
+      const key = (o.buyerPhone || o.buyerName || '').trim() || o.id;
+      const existing = map.get(key);
+      if (existing) {
+        existing.ordersCount += 1;
+        existing.totalSpent += o.totalAmount;
+        if (!existing.address && o.buyerAddress) existing.address = o.buyerAddress;
+        if (o.createdAt && (!existing.lastOrderAt || new Date(o.createdAt) > new Date(existing.lastOrderAt))) {
+          existing.lastOrderAt = o.createdAt;
+        }
+      } else {
+        map.set(key, {
+          key,
+          name: o.buyerName || 'غير محدد',
+          phone: o.buyerPhone || '',
+          address: o.buyerAddress || '',
+          ordersCount: 1,
+          totalSpent: o.totalAmount,
+          lastOrderAt: o.createdAt,
+        });
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => new Date(b.lastOrderAt || 0).getTime() - new Date(a.lastOrderAt || 0).getTime());
+  }, [orders]);
+
+  const filtered = customers.filter(c =>
+    c.name.toLowerCase().includes(search.toLowerCase()) || c.phone.includes(search)
+  );
+
+  const stats = {
+    total: customers.length,
+    repeat: customers.filter(c => c.ordersCount > 1).length,
+    revenue: customers.reduce((s, c) => s + c.totalSpent, 0),
+  };
+
+  const exportHeaders = ["اسم العميل", "الهاتف", "العنوان", "عدد الطلبات", "إجمالي الإنفاق (د.أ)", "آخر طلب"];
+  const exportRows = filtered.map(c => [
+    c.name,
+    c.phone || '—',
+    c.address || '—',
+    c.ordersCount,
+    c.totalSpent.toFixed(2),
+    c.lastOrderAt ? new Date(c.lastOrderAt).toLocaleDateString('ar-EG') : '—',
+  ]);
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <Card className="bg-slate-800/50 border-white/10">
+          <CardContent className="pt-4 pb-4">
+            <Users className="h-4 w-4 text-purple-400 mb-2" />
+            <p className="text-lg font-bold text-white">{loading ? '...' : stats.total}</p>
+            <p className="text-xs text-slate-400">إجمالي العملاء</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-slate-800/50 border-white/10">
+          <CardContent className="pt-4 pb-4">
+            <Repeat className="h-4 w-4 text-blue-400 mb-2" />
+            <p className="text-lg font-bold text-white">{loading ? '...' : stats.repeat}</p>
+            <p className="text-xs text-slate-400">عملاء متكررون</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-slate-800/50 border-white/10">
+          <CardContent className="pt-4 pb-4">
+            <ShoppingCart className="h-4 w-4 text-emerald-400 mb-2" />
+            <p className="text-lg font-bold text-white">{loading ? '...' : `${stats.revenue.toFixed(2)} د.أ`}</p>
+            <p className="text-xs text-slate-400">إجمالي المبيعات</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="flex gap-3 items-center flex-wrap">
+        <div className="relative flex-1 max-w-xs">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="بحث بالاسم أو رقم الهاتف..." className="pr-9" />
+        </div>
+        <div className="flex-1" />
+        <Button variant="outline" size="icon" onClick={load} disabled={loading}>
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+        </Button>
+        <Button variant="outline" size="sm" className="gap-2" disabled={loading || filtered.length === 0} onClick={() => exportToExcel('عملاء_المنصة', exportHeaders, exportRows, { sheetName: 'العملاء' })}>
+          <Download className="h-4 w-4" />
+          Excel
+        </Button>
+        <Button variant="outline" size="sm" className="gap-2" disabled={loading || filtered.length === 0} onClick={() => exportToPDF('عملاء المنصة - EmpowerHub', exportHeaders, exportRows, { summary: {
+          'إجمالي العملاء': String(stats.total),
+          'عملاء متكررون': String(stats.repeat),
+          'إجمالي المبيعات': `${stats.revenue.toFixed(2)} د.أ`,
+        } })}>
+          <Printer className="h-4 w-4" />
+          PDF
+        </Button>
+      </div>
+
+      <Card className="bg-slate-800/50 border-white/10">
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow className="border-white/10 hover:bg-transparent">
+                <TableHead className="text-slate-400">العميل</TableHead>
+                <TableHead className="text-slate-400">الهاتف</TableHead>
+                <TableHead className="text-slate-400">العنوان</TableHead>
+                <TableHead className="text-slate-400">عدد الطلبات</TableHead>
+                <TableHead className="text-slate-400">إجمالي الإنفاق</TableHead>
+                <TableHead className="text-slate-400">آخر طلب</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading && <TableRow className="border-white/10"><TableCell colSpan={6} className="h-24 text-center text-slate-400">جاري التحميل...</TableCell></TableRow>}
+              {!loading && filtered.map(c => (
+                <TableRow key={c.key} className="border-white/10">
+                  <TableCell className="text-white text-sm font-medium">{c.name}</TableCell>
+                  <TableCell dir="ltr">
+                    {c.phone ? (
+                      <a href={`tel:${c.phone}`} className="flex items-center gap-1.5 text-slate-300 hover:text-primary text-sm">
+                        <Phone className="h-3.5 w-3.5 flex-shrink-0" />
+                        {c.phone}
+                      </a>
+                    ) : <span className="text-slate-500">—</span>}
+                  </TableCell>
+                  <TableCell className="text-sm text-slate-400 max-w-[220px]">
+                    {c.address ? (
+                      <span className="flex items-center gap-1.5">
+                        <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
+                        <span className="truncate">{c.address}</span>
+                      </span>
+                    ) : '—'}
+                  </TableCell>
+                  <TableCell>
+                    <Badge className={`border-0 text-xs ${c.ordersCount > 1 ? 'bg-primary/20 text-primary' : 'bg-slate-700 text-slate-400'}`}>{c.ordersCount}</Badge>
+                  </TableCell>
+                  <TableCell className="text-emerald-400 text-sm font-semibold">{c.totalSpent.toFixed(2)} د.أ</TableCell>
+                  <TableCell className="text-slate-500 text-xs">
+                    {c.lastOrderAt ? new Date(c.lastOrderAt).toLocaleDateString('ar-EG') : '—'}
+                  </TableCell>
+                </TableRow>
+              ))}
+              {!loading && filtered.length === 0 && (
+                <TableRow className="border-white/10"><TableCell colSpan={6} className="h-24 text-center text-slate-400">لا يوجد عملاء بعد</TableCell></TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export default function StoresAdminPage() {
   return (
     <div className="space-y-6" dir="rtl">
@@ -414,6 +721,14 @@ export default function StoresAdminPage() {
             <Package className="h-4 w-4" />
             المنتجات
           </TabsTrigger>
+          <TabsTrigger value="orders" className="data-[state=active]:bg-primary data-[state=active]:text-white text-slate-400 gap-2">
+            <ShoppingCart className="h-4 w-4" />
+            الطلبات
+          </TabsTrigger>
+          <TabsTrigger value="customers" className="data-[state=active]:bg-primary data-[state=active]:text-white text-slate-400 gap-2">
+            <Users className="h-4 w-4" />
+            العملاء
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="stores" className="mt-4">
@@ -421,6 +736,12 @@ export default function StoresAdminPage() {
         </TabsContent>
         <TabsContent value="products" className="mt-4">
           <ProductsTab />
+        </TabsContent>
+        <TabsContent value="orders" className="mt-4">
+          <OrdersTab />
+        </TabsContent>
+        <TabsContent value="customers" className="mt-4">
+          <CustomersTab />
         </TabsContent>
       </Tabs>
     </div>

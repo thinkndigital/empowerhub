@@ -19,6 +19,28 @@ export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const type = url.searchParams.get('type') || 'stores';
 
+  if (type === 'orders') {
+    const snap = await adminDb.collection('orders').get();
+    const orders = snap.docs.map(d => {
+      const data = d.data();
+      return {
+        id: d.id,
+        productName: data.productName || '',
+        storeName: data.storeName || '',
+        buyerName: data.buyerName || '',
+        buyerPhone: data.buyerPhone || '',
+        buyerAddress: data.buyerAddress || '',
+        totalAmount: data.totalAmount || 0,
+        status: data.status || 'pending',
+        paymentMethod: data.paymentMethod || 'cod',
+        paymentStatus: data.paymentStatus || 'unpaid',
+        createdAt: normalizeDate(data.createdAt),
+      };
+    });
+    orders.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+    return NextResponse.json({ orders });
+  }
+
   if (type === 'products') {
     const snap = await adminDb.collection('products').get();
     const products = snap.docs.map(d => {
