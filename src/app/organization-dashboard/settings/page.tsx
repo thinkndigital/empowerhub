@@ -5,14 +5,34 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Palette, Save, BookOpen, Users, Copy, Key, Loader2 } from "lucide-react";
+import { Palette, Save, BookOpen, Users, Copy, Key, Loader2, CreditCard, CheckCircle2, ArrowUpCircle } from "lucide-react";
 import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useUser } from "@/firebase/auth/use-user";
 import { uploadFile as uploadToStorage } from "@/lib/upload-file";
+
+interface SubscriptionPlan {
+  id: string;
+  key: string;
+  name: string;
+  priceMonthly: number;
+  currency: string;
+  features: string[];
+}
+
+interface SubscriptionInfo {
+  orgId: string;
+  isFree: boolean;
+  currentPlan: SubscriptionPlan | null;
+  status: string | null;
+  daysLeft: number | null;
+  upgradablePlans: SubscriptionPlan[];
+}
 
 const settingsSchema = z.object({
   name: z.string().min(2, { message: "يجب أن يكون الاسم حرفين على الأقل." }),
@@ -28,6 +48,7 @@ export default function OrgSettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [logoUploading, setLogoUploading] = useState(false);
   const [inviteCode, setInviteCode] = useState<string | null>(null);
+  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
   const logoFileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<z.infer<typeof settingsSchema>>({
@@ -68,6 +89,16 @@ export default function OrgSettingsPage() {
   useEffect(() => {
     fetchSettings();
   }, [fetchSettings]);
+
+  useEffect(() => {
+    if (!user) return;
+    user.getIdToken().then(token => {
+      fetch('/api/org/subscription', { headers: { authorization: `Bearer ${token}` } })
+        .then(r => r.json())
+        .then(d => { if (!d.error) setSubscription(d); })
+        .catch(() => {});
+    });
+  }, [user]);
 
   async function onSubmit(values: z.infer<typeof settingsSchema>) {
     if (!user) {
@@ -136,6 +167,81 @@ export default function OrgSettingsPage() {
         <h1 className="text-2xl font-bold tracking-tight">الإعدادات</h1>
         <p className="text-sm text-muted-foreground">إدارة التفاصيل والمظهر وإعدادات الحساب.</p>
       </div>
+
+      {subscription && (
+        <Card className="border-0 shadow-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5" />
+              الاشتراك
+            </CardTitle>
+            <CardDescription>خطة اشتراكك الحالية ومدتها المتبقية.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <div className="flex flex-wrap items-center gap-3 rounded-lg border p-4 bg-muted/30">
+              <Badge variant={subscription.isFree ? "secondary" : "default"} className="text-sm">
+                {subscription.isFree ? "خطة مجانية" : subscription.currentPlan?.name || "خطة مدفوعة"}
+              </Badge>
+              {!subscription.isFree && subscription.status === "locked" && (
+                <Badge variant="destructive">منتهي الصلاحية</Badge>
+              )}
+              {!subscription.isFree && subscription.daysLeft != null && subscription.status !== "locked" && (
+                <span className="text-sm text-muted-foreground">
+                  {subscription.daysLeft > 0
+                    ? `متبقي ${subscription.daysLeft} يوم على التجديد`
+                    : "الاشتراك بحاجة إلى تجديد"}
+                </span>
+              )}
+              {subscription.isFree && (
+                <span className="text-sm text-muted-foreground">لا يوجد تاريخ انتهاء لهذه الخطة</span>
+              )}
+              {(subscription.status === "locked" || (subscription.daysLeft != null && subscription.daysLeft <= 0)) && subscription.currentPlan && (
+                <Button asChild size="sm" className="mr-auto">
+                  <Link href={`/payment?plan=${subscription.currentPlan.key}&orgId=${subscription.orgId}`}>
+                    تجديد الاشتراك الآن
+                  </Link>
+                </Button>
+              )}
+            </div>
+
+            {subscription.upgradablePlans.length > 0 && (
+              <div className="space-y-3">
+                <p className="text-sm font-medium flex items-center gap-2">
+                  <ArrowUpCircle className="h-4 w-4" />
+                  ترقية الخطة لفتح مزايا إضافية
+                </p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {subscription.upgradablePlans.map((plan) => (
+                    <div key={plan.id} className="rounded-lg border p-4 flex flex-col gap-3">
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold">{plan.name}</span>
+                        <span className="text-primary font-bold">
+                          {plan.priceMonthly.toLocaleString()} {plan.currency}/شهر
+                        </span>
+                      </div>
+                      {plan.features.length > 0 && (
+                        <ul className="space-y-1">
+                          {plan.features.slice(0, 3).map((f, i) => (
+                            <li key={i} className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                              {f}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                      <Button asChild size="sm" variant="outline">
+                        <Link href={`/payment?plan=${plan.key}&orgId=${subscription.orgId}`}>
+                          الترقية لهذه الخطة
+                        </Link>
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
