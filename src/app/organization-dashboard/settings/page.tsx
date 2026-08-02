@@ -30,8 +30,25 @@ interface SubscriptionInfo {
   isFree: boolean;
   currentPlan: SubscriptionPlan | null;
   status: string | null;
+  billingCycle: string;
+  startDate?: string;
+  endDate?: string;
   daysLeft: number | null;
+  permanentFree: boolean;
   upgradablePlans: SubscriptionPlan[];
+}
+
+const SUB_STATUS_LABELS: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+  trial: { label: "تجريبية", variant: "secondary" },
+  active: { label: "نشط", variant: "default" },
+  expired: { label: "منتهي", variant: "destructive" },
+  pending: { label: "بانتظار الدفع", variant: "outline" },
+  cancelled: { label: "ملغي", variant: "destructive" },
+};
+
+function formatDate(d?: string) {
+  if (!d) return "—";
+  return new Date(d).toLocaleDateString("ar-EG", { year: "numeric", month: "long", day: "numeric" });
 }
 
 const settingsSchema = z.object({
@@ -175,32 +192,58 @@ export default function OrgSettingsPage() {
               <CreditCard className="h-5 w-5" />
               الاشتراك
             </CardTitle>
-            <CardDescription>خطة اشتراكك الحالية ومدتها المتبقية.</CardDescription>
+            <CardDescription>خطة اشتراكك الحالية وتفاصيلها.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
-            <div className="flex flex-wrap items-center gap-3 rounded-lg border p-4 bg-muted/30">
-              <Badge variant={subscription.isFree ? "secondary" : "default"} className="text-sm">
-                {subscription.isFree ? "خطة مجانية" : subscription.currentPlan?.name || "خطة مدفوعة"}
-              </Badge>
-              {!subscription.isFree && subscription.status === "locked" && (
-                <Badge variant="destructive">منتهي الصلاحية</Badge>
-              )}
-              {!subscription.isFree && subscription.daysLeft != null && subscription.status !== "locked" && (
-                <span className="text-sm text-muted-foreground">
-                  {subscription.daysLeft > 0
-                    ? `متبقي ${subscription.daysLeft} يوم على التجديد`
-                    : "الاشتراك بحاجة إلى تجديد"}
-                </span>
-              )}
-              {subscription.isFree && (
-                <span className="text-sm text-muted-foreground">لا يوجد تاريخ انتهاء لهذه الخطة</span>
-              )}
-              {(subscription.status === "locked" || (subscription.daysLeft != null && subscription.daysLeft <= 0)) && subscription.currentPlan && (
-                <Button asChild size="sm" className="mr-auto">
-                  <Link href={`/payment?plan=${subscription.currentPlan.key}&orgId=${subscription.orgId}`}>
-                    تجديد الاشتراك الآن
-                  </Link>
-                </Button>
+            <div className="rounded-lg border p-4 bg-muted/30 space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant={subscription.isFree ? "secondary" : "default"} className="text-sm">
+                  {subscription.isFree ? "خطة مجانية" : subscription.currentPlan?.name || "خطة مدفوعة"}
+                </Badge>
+                {subscription.permanentFree ? (
+                  <Badge variant="secondary">منظمة مجانية دائمًا</Badge>
+                ) : (
+                  subscription.status && SUB_STATUS_LABELS[subscription.status] && (
+                    <Badge variant={SUB_STATUS_LABELS[subscription.status].variant}>
+                      {SUB_STATUS_LABELS[subscription.status].label}
+                    </Badge>
+                  )
+                )}
+                {!subscription.isFree && (
+                  <Badge variant="outline">{subscription.billingCycle === "annual" ? "سنوي" : "شهري"}</Badge>
+                )}
+                {(subscription.status === "expired" || subscription.status === "pending") && !subscription.permanentFree && (
+                  <Button asChild size="sm" className="mr-auto">
+                    <Link href={`/payment?plan=${subscription.currentPlan?.key || ""}&orgId=${subscription.orgId}`}>
+                      {subscription.status === "pending" ? "إتمام الدفع الآن" : "تجديد الاشتراك الآن"}
+                    </Link>
+                  </Button>
+                )}
+              </div>
+
+              {subscription.permanentFree ? (
+                <p className="text-sm text-muted-foreground">منح المشرف العام منظمتك وصولاً مجانيًا دائمًا — لا حاجة للدفع.</p>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
+                  <div>
+                    <p className="text-muted-foreground text-xs">تاريخ البدء</p>
+                    <p className="font-medium">{formatDate(subscription.startDate)}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground text-xs">
+                      {subscription.status === "trial" ? "نهاية الفترة التجريبية" : "تاريخ الانتهاء"}
+                    </p>
+                    <p className="font-medium">{formatDate(subscription.endDate)}</p>
+                  </div>
+                  {subscription.daysLeft != null && (
+                    <div>
+                      <p className="text-muted-foreground text-xs">الأيام المتبقية</p>
+                      <p className={`font-medium ${subscription.daysLeft <= 7 ? "text-destructive" : ""}`}>
+                        {subscription.daysLeft > 0 ? `${subscription.daysLeft} يوم` : "منتهية"}
+                      </p>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
 

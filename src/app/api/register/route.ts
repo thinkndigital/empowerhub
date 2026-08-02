@@ -41,27 +41,53 @@ export async function POST(req: NextRequest) {
         ...(plan ? { plan } : {}),
       });
 
-      // If the chosen plan is a real, paid plan, create a pending subscription
-      // awaiting payment. Free/unmatched plans stay unlocked (no subscription doc).
+      // Every new org gets a tracked subscription: a real paid plan starts out
+      // "pending" (awaiting payment before it activates), while a free/unmatched
+      // plan gets a 30-day free trial that the daily cron expires automatically
+      // unless an admin grants the org permanentFree status.
+      let planDocId: string | undefined;
+      let planName = plan || '';
+      let priceMonthly = 0;
       if (plan) {
         const planSnap = await adminDb.collection('plans').where('key', '==', plan).limit(1).get();
         if (!planSnap.empty) {
           const planDoc = planSnap.docs[0];
           const planData = planDoc.data() as any;
-          if ((planData.priceMonthly || 0) > 0) {
-            pendingPlanId = planDoc.id;
-            pendingPlanPrice = planData.priceMonthly;
-            await adminDb.collection('subscriptions').doc(organizationId).set({
-              orgId: organizationId,
-              planId: planDoc.id,
-              planKey: plan,
-              planName: planData.name || plan,
-              billingCycle: 'monthly',
-              status: 'pending',
-              createdAt: new Date(),
-            });
-          }
+          planDocId = planDoc.id;
+          planName = planData.name || plan;
+          priceMonthly = planData.priceMonthly || 0;
         }
+      }
+
+      if (priceMonthly > 0) {
+        pendingPlanId = planDocId;
+        pendingPlanPrice = priceMonthly;
+        await adminDb.collection('subscriptions').doc(organizationId).set({
+          orgId: organizationId,
+          planId: planDocId,
+          planKey: plan,
+          planName,
+          billingCycle: 'monthly',
+          status: 'pending',
+          createdAt: new Date(),
+        });
+      } else {
+        const now = new Date();
+        const trialEnd = new Date(now);
+        trialEnd.setDate(trialEnd.getDate() + 30);
+        await adminDb.collection('subscriptions').doc(organizationId).set({
+          orgId: organizationId,
+          planId: planDocId || null,
+          planKey: plan || 'free',
+          planName: planName || 'خطة مجانية',
+          billingCycle: 'monthly',
+          price: 0,
+          status: 'trial',
+          startDate: now,
+          endDate: trialEnd,
+          permanentFree: false,
+          createdAt: now,
+        });
       }
     }
 

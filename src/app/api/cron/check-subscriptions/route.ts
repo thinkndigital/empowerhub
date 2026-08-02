@@ -16,9 +16,10 @@ function toDate(value: any): Date | null {
   return null;
 }
 
-// Daily job (called by a scheduled GitHub Action) that:
-// - reminds an org's admin once a paid subscription has 30 days or fewer left, once per day
-// - locks a subscription once its end date has passed
+// Daily job (called by a scheduled GitHub Action) that, for every "active" (paid) or
+// "trial" (free, 30-day) subscription not marked permanentFree by an admin:
+// - reminds the org's admin once it has 30 days or fewer left, once per day
+// - expires it once its end date has passed
 export async function POST(req: NextRequest) {
   const secret = req.headers.get('x-cron-secret');
   if (!secret || secret !== process.env.CRON_SECRET) {
@@ -26,22 +27,25 @@ export async function POST(req: NextRequest) {
   }
 
   const now = new Date();
-  const snap = await adminDb.collection('subscriptions').where('status', '==', 'active').get();
+  const snap = await adminDb.collection('subscriptions').where('status', 'in', ['active', 'trial']).get();
 
   let reminded = 0;
-  let locked = 0;
+  let expired = 0;
 
   for (const doc of snap.docs) {
     const sub = doc.data() as any;
+    if (sub.permanentFree) continue;
+
     const orgId = sub.orgId || doc.id;
     const endDate = toDate(sub.endDate);
     if (!endDate) continue;
 
     const daysLeft = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    const isTrial = sub.status === 'trial';
 
     if (daysLeft <= 0) {
-      await doc.ref.update({ status: 'locked', lockedAt: now });
-      locked++;
+      await doc.ref.update({ status: 'expired', expiredAt: now });
+      expired++;
       continue;
     }
 
@@ -54,8 +58,10 @@ export async function POST(req: NextRequest) {
       if (adminId) {
         await adminDb.collection('notifications').add({
           userId: adminId,
-          title: 'تذكير بتجديد الاشتراك',
-          body: `باقي ${daysLeft} يوم على انتهاء اشتراك منظمتك. يرجى السداد لتفادي إيقاف المنصة.`,
+          title: isTrial ? 'تذكير بانتهاء الفترة التجريبية المجانية' : 'تذكير بتجديد الاشتراك',
+          body: isTrial
+            ? `باقي ${daysLeft} يوم على انتهاء الفترة التجريبية المجانية لمنظمتك. اشترك بخطة مدفوعة لتفادي إيقاف إضافة أعضاء جدد.`
+            : `باقي ${daysLeft} يوم على انتهاء اشتراك منظمتك. يرجى السداد لتفادي إيقاف إضافة أعضاء جدد.`,
           link: '/organization-dashboard/settings',
           read: false,
           createdAt: now,
@@ -66,5 +72,5 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true, checked: snap.size, reminded, locked });
+  return NextResponse.json({ ok: true, checked: snap.size, reminded, expired });
 }

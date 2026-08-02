@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
@@ -32,6 +33,7 @@ interface OrgSub {
     price: number;
     currency: string;
     notes?: string;
+    permanentFree?: boolean;
   } | null;
 }
 
@@ -65,7 +67,7 @@ export default function SubscriptionsPage() {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     planId: '', status: 'active', billingCycle: 'monthly',
-    startDate: '', endDate: '', price: 0, currency: 'JOD', notes: '',
+    startDate: '', endDate: '', price: 0, currency: 'JOD', notes: '', permanentFree: false,
   });
 
   const load = () => {
@@ -96,6 +98,7 @@ export default function SubscriptionsPage() {
       price: sub?.price || 0,
       currency: sub?.currency || 'JOD',
       notes: sub?.notes || '',
+      permanentFree: sub?.permanentFree || false,
     });
   };
 
@@ -358,6 +361,17 @@ export default function SubscriptionsPage() {
             <div className="space-y-2">
               <Label>ملاحظات</Label>
               <Input value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="ملاحظات إضافية..." />
+            </div>
+
+            {/* Permanent free access */}
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div>
+                <Label>منح اشتراك مجاني دائم</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  تتجاهل هذه المنظمة انتهاء الفترة التجريبية أو الاشتراك ولا تُقفل أبدًا.
+                </p>
+              </div>
+              <Switch checked={form.permanentFree} onCheckedChange={v => setForm(f => ({ ...f, permanentFree: v }))} />
             </div>
           </div>
           <DialogFooter>

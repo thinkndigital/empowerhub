@@ -51,21 +51,26 @@ export async function checkOrgLimit(orgId: string | undefined | null, limitKey: 
   return { allowed: true };
 }
 
-// Checks whether an organization's subscription is currently locked (expired, unpaid).
-// Locking only blocks the org from adding new beneficiaries/mentors/coaches — everyone
-// already in the org keeps full access to their dashboard and can keep publishing
-// courses, sessions, and products as normal.
+// Checks whether an organization's subscription currently allows adding new members.
+// Only "trial" (free, within its 30 days) and "active" (paid, currently valid) subscriptions
+// allow it — "pending" (paid plan never completed payment), "expired" (trial or paid lapsed),
+// and "cancelled" all block it. An admin can grant permanentFree to skip expiry entirely.
+// Blocking only affects the org's "add member" actions — everyone already in the org keeps
+// full access to their dashboard and can keep publishing courses, sessions, and products.
 export async function checkOrgLocked(orgId: string | undefined | null): Promise<LimitCheckResult> {
   if (!orgId) return { allowed: true };
 
   const subSnap = await adminDb.collection('subscriptions').doc(orgId).get();
   if (!subSnap.exists) return { allowed: true };
 
-  if (subSnap.data()?.status === 'locked') {
-    return {
-      allowed: false,
-      message: 'اشتراك منظمتك منتهٍ. يرجى إتمام الدفع لإضافة أعضاء جدد للمنظمة.',
-    };
-  }
-  return { allowed: true };
+  const sub = subSnap.data();
+  if (sub?.permanentFree) return { allowed: true };
+  if (sub?.status === 'trial' || sub?.status === 'active') return { allowed: true };
+
+  return {
+    allowed: false,
+    message: sub?.status === 'expired'
+      ? 'انتهت الفترة التجريبية المجانية أو الاشتراك المدفوع لمنظمتك. يرجى الاشتراك أو التجديد لإضافة أعضاء جدد.'
+      : 'اشتراك منظمتك غير مفعّل. يرجى إتمام الدفع لإضافة أعضاء جدد للمنظمة.',
+  };
 }

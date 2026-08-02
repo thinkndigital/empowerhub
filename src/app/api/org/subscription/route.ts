@@ -61,9 +61,12 @@ export async function GET(req: NextRequest) {
       orgId,
       isFree,
       currentPlan,
-      status: sub?.status || (isFree ? 'active' : null),
+      status: sub?.status || (isFree ? 'trial' : null),
+      billingCycle: sub?.billingCycle || 'monthly',
+      startDate: normalizeDate(sub?.startDate),
       endDate,
       daysLeft,
+      permanentFree: !!sub?.permanentFree,
       upgradablePlans: allPlans.filter(p => p.priceMonthly > 0 && p.key !== planKey),
     });
   } catch (e: any) {
