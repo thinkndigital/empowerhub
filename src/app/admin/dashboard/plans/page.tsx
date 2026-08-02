@@ -136,8 +136,8 @@ export default function PlansPage() {
     <div className="space-y-6" dir="rtl">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">خطط الاشتراك</h1>
-          <p className="text-slate-400 text-sm">إدارة خطط التسعير والميزات لكل خطة</p>
+          <h1 className="text-2xl font-bold text-foreground">خطط الاشتراك</h1>
+          <p className="text-muted-foreground text-sm">إدارة خطط التسعير والميزات لكل خطة</p>
         </div>
         <Button onClick={openAdd} className="bg-primary gap-2 w-full sm:w-auto">
           <Plus className="h-4 w-4" />
@@ -146,10 +146,10 @@ export default function PlansPage() {
       </div>
 
       {loading ? (
-        <p className="text-slate-400 text-center py-16">جاري التحميل...</p>
+        <p className="text-muted-foreground text-center py-16">جاري التحميل...</p>
       ) : plans.length === 0 ? (
         <div className="text-center py-16 space-y-4">
-          <p className="text-slate-500">لا توجد خطط. أضف خطتك الأولى!</p>
+          <p className="text-muted-foreground">لا توجد خطط. أضف خطتك الأولى!</p>
           <Button onClick={openAdd} variant="outline" className="gap-2">
             <Plus className="h-4 w-4" />
             إضافة خطة
@@ -162,11 +162,11 @@ export default function PlansPage() {
             return (
               <Card
                 key={plan.id}
-                className={`relative bg-slate-800/60 border transition-all ${plan.highlighted ? 'border-primary shadow-lg shadow-primary/20' : 'border-white/[0.08] hover:border-white/20'}`}
+                className={`relative bg-muted/70 border transition-all ${plan.highlighted ? 'border-primary shadow-lg shadow-primary/20' : 'border-border hover:border-border'}`}
               >
                 {plan.highlighted && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <span className="bg-primary text-white text-xs px-3 py-1 rounded-full font-medium">الأكثر شعبية</span>
+                    <span className="bg-primary text-primary-foreground text-xs px-3 py-1 rounded-full font-medium">الأكثر شعبية</span>
                   </div>
                 )}
                 <CardContent className="p-6">
@@ -177,15 +177,15 @@ export default function PlansPage() {
                         <PlanIcon className="h-6 w-6" style={{ color: plan.color }} />
                       </div>
                       <div>
-                        <h3 className="text-white font-bold text-lg">{plan.name}</h3>
-                        {plan.nameEn && <p className="text-slate-500 text-xs">{plan.nameEn}</p>}
+                        <h3 className="text-foreground font-bold text-lg">{plan.name}</h3>
+                        {plan.nameEn && <p className="text-muted-foreground text-xs">{plan.nameEn}</p>}
                       </div>
                     </div>
                     <div className="flex gap-1">
-                      <Button size="sm" variant="ghost" onClick={() => openEdit(plan)} className="h-8 w-8 p-0 text-slate-400 hover:text-white">
+                      <Button size="sm" variant="ghost" onClick={() => openEdit(plan)} className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground">
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
-                      <Button size="sm" variant="ghost" onClick={() => setDeletePlan(plan)} className="h-8 w-8 p-0 text-slate-400 hover:text-red-400">
+                      <Button size="sm" variant="ghost" onClick={() => setDeletePlan(plan)} className="h-8 w-8 p-0 text-muted-foreground hover:text-red-400">
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>
@@ -194,11 +194,11 @@ export default function PlansPage() {
                   {/* Pricing */}
                   <div className="mb-4">
                     <div className="flex items-baseline gap-1">
-                      <span className="text-3xl font-bold text-white">{plan.priceMonthly.toLocaleString()}</span>
-                      <span className="text-slate-400 text-sm">{plan.currency}/شهر</span>
+                      <span className="text-3xl font-bold text-foreground">{plan.priceMonthly.toLocaleString()}</span>
+                      <span className="text-muted-foreground text-sm">{plan.currency}/شهر</span>
                     </div>
                     {plan.priceAnnual > 0 && (
-                      <p className="text-slate-500 text-xs mt-1">
+                      <p className="text-muted-foreground text-xs mt-1">
                         أو {plan.priceAnnual.toLocaleString()} {plan.currency}/سنة
                         {' '}
                         <span className="text-emerald-400">
@@ -210,10 +210,10 @@ export default function PlansPage() {
                   </div>
 
                   {/* Description */}
-                  {plan.description && <p className="text-slate-400 text-sm mb-4">{plan.description}</p>}
+                  {plan.description && <p className="text-muted-foreground text-sm mb-4">{plan.description}</p>}
 
                   {/* Limits */}
-                  <div className="grid grid-cols-2 gap-2 mb-4 p-3 bg-white/[0.03] rounded-xl">
+                  <div className="grid grid-cols-2 gap-2 mb-4 p-3 bg-muted/40 rounded-xl">
                     {[
                       { label: 'مستخدم', val: plan.limits?.maxUsers },
                       { label: 'مرشد', val: plan.limits?.maxMentors },
@@ -221,8 +221,8 @@ export default function PlansPage() {
                       { label: 'GB تخزين', val: plan.limits?.maxStorage },
                     ].map(item => (
                       <div key={item.label} className="text-center">
-                        <p className="text-white font-bold text-sm">{item.val === -1 ? '∞' : item.val}</p>
-                        <p className="text-slate-500 text-xs">{item.label}</p>
+                        <p className="text-foreground font-bold text-sm">{item.val === -1 ? '∞' : item.val}</p>
+                        <p className="text-muted-foreground text-xs">{item.label}</p>
                       </div>
                     ))}
                   </div>
@@ -230,13 +230,13 @@ export default function PlansPage() {
                   {/* Features */}
                   <ul className="space-y-1.5">
                     {(plan.features || []).slice(0, 4).map((f, i) => (
-                      <li key={i} className="flex items-center gap-2 text-slate-300 text-sm">
+                      <li key={i} className="flex items-center gap-2 text-foreground/90 text-sm">
                         <Check className="h-3.5 w-3.5 flex-shrink-0" style={{ color: plan.color }} />
                         {f}
                       </li>
                     ))}
                     {(plan.features || []).length > 4 && (
-                      <li className="text-slate-500 text-xs pr-5">+{plan.features.length - 4} ميزات أخرى</li>
+                      <li className="text-muted-foreground text-xs pr-5">+{plan.features.length - 4} ميزات أخرى</li>
                     )}
                   </ul>
                 </CardContent>
@@ -309,9 +309,9 @@ export default function PlansPage() {
                       key={ic}
                       type="button"
                       onClick={() => setForm(f => ({ ...f, icon: ic }))}
-                      className={`h-10 w-10 rounded-xl flex items-center justify-center border transition-all ${form.icon === ic ? 'border-primary bg-primary/20' : 'border-white/20 hover:border-white/40'}`}
+                      className={`h-10 w-10 rounded-xl flex items-center justify-center border transition-all ${form.icon === ic ? 'border-primary bg-primary/20' : 'border-border hover:border-border'}`}
                     >
-                      <Ic className="h-5 w-5 text-white" />
+                      <Ic className="h-5 w-5 text-foreground" />
                     </button>
                   );
                 })}
@@ -319,10 +319,10 @@ export default function PlansPage() {
             </div>
 
             {/* Highlighted */}
-            <div className="sm:col-span-2 flex items-center justify-between p-3 bg-white/[0.03] rounded-xl border border-white/[0.08]">
+            <div className="sm:col-span-2 flex items-center justify-between p-3 bg-muted/40 rounded-xl border border-border">
               <div>
-                <p className="text-white text-sm font-medium">خطة مميزة</p>
-                <p className="text-slate-400 text-xs">يظهر عليها "الأكثر شعبية"</p>
+                <p className="text-foreground text-sm font-medium">خطة مميزة</p>
+                <p className="text-muted-foreground text-xs">يظهر عليها "الأكثر شعبية"</p>
               </div>
               <Switch checked={form.highlighted} onCheckedChange={v => setForm(f => ({ ...f, highlighted: v }))} />
             </div>
@@ -357,7 +357,7 @@ export default function PlansPage() {
                   { key: 'maxStorage' as const, label: 'تخزين (GB)' },
                 ].map(item => (
                   <div key={item.key} className="space-y-1">
-                    <Label className="text-xs text-slate-400">{item.label}</Label>
+                    <Label className="text-xs text-muted-foreground">{item.label}</Label>
                     <Input
                       type="number"
                       value={form.limits[item.key]}

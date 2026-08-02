@@ -41,7 +41,7 @@ const statusConfig: Record<string, { label: string; color: string; icon: any }> 
   active: { label: 'نشط', color: 'text-emerald-400 bg-emerald-500/20 border-emerald-500/30', icon: CheckCircle },
   expired: { label: 'منتهي', color: 'text-red-400 bg-red-500/20 border-red-500/30', icon: XCircle },
   trial: { label: 'تجريبي', color: 'text-blue-400 bg-blue-500/20 border-blue-500/30', icon: Clock },
-  cancelled: { label: 'ملغي', color: 'text-slate-400 bg-slate-500/20 border-slate-500/30', icon: XCircle },
+  cancelled: { label: 'ملغي', color: 'text-muted-foreground bg-muted-foreground/20 border-muted-foreground/30', icon: XCircle },
   pending: { label: 'معلق', color: 'text-yellow-400 bg-yellow-500/20 border-yellow-500/30', icon: Clock },
 };
 
@@ -146,8 +146,8 @@ export default function SubscriptionsPage() {
     <div className="space-y-6" dir="rtl">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-white">الاشتراكات</h1>
-          <p className="text-slate-400 text-sm">إدارة اشتراكات المنظمات وتتبع حالتها</p>
+          <h1 className="text-2xl font-bold text-foreground">الاشتراكات</h1>
+          <p className="text-muted-foreground text-sm">إدارة اشتراكات المنظمات وتتبع حالتها</p>
         </div>
         <ExportButton
           title="اشتراكات المنظمات"
@@ -171,15 +171,15 @@ export default function SubscriptionsPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'إجمالي المنظمات', value: stats.total, color: 'text-white', bg: 'bg-white/[0.03]' },
+          { label: 'إجمالي المنظمات', value: stats.total, color: 'text-foreground', bg: 'bg-muted/40' },
           { label: 'اشتراكات نشطة', value: stats.active, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
           { label: 'منتهية الصلاحية', value: stats.expired, color: 'text-red-400', bg: 'bg-red-500/10' },
           { label: 'بدون اشتراك', value: stats.noSub, color: 'text-yellow-400', bg: 'bg-yellow-500/10' },
         ].map(s => (
-          <Card key={s.label} className={`${s.bg} border-white/[0.08]`}>
+          <Card key={s.label} className={`${s.bg} border-border`}>
             <CardContent className="p-4 text-center">
               <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
-              <p className="text-slate-400 text-xs mt-1">{s.label}</p>
+              <p className="text-muted-foreground text-xs mt-1">{s.label}</p>
             </CardContent>
           </Card>
         ))}
@@ -187,20 +187,20 @@ export default function SubscriptionsPage() {
 
       {/* Table */}
       {loading ? (
-        <p className="text-slate-400 text-center py-12">جاري التحميل...</p>
+        <p className="text-muted-foreground text-center py-12">جاري التحميل...</p>
       ) : (
-        <Card className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20">
+        <Card className="bg-card border-border shadow-lg shadow-black/20">
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-white/[0.08]">
-                    <th className="text-right text-slate-400 text-xs px-4 py-3">المنظمة</th>
-                    <th className="text-right text-slate-400 text-xs px-4 py-3 hidden sm:table-cell">الخطة</th>
-                    <th className="text-right text-slate-400 text-xs px-4 py-3">الحالة</th>
-                    <th className="text-right text-slate-400 text-xs px-4 py-3 hidden md:table-cell">تاريخ الانتهاء</th>
-                    <th className="text-right text-slate-400 text-xs px-4 py-3 hidden lg:table-cell">السعر</th>
-                    <th className="text-right text-slate-400 text-xs px-4 py-3">إجراءات</th>
+                  <tr className="border-b border-border">
+                    <th className="text-right text-muted-foreground text-xs px-4 py-3">المنظمة</th>
+                    <th className="text-right text-muted-foreground text-xs px-4 py-3 hidden sm:table-cell">الخطة</th>
+                    <th className="text-right text-muted-foreground text-xs px-4 py-3">الحالة</th>
+                    <th className="text-right text-muted-foreground text-xs px-4 py-3 hidden md:table-cell">تاريخ الانتهاء</th>
+                    <th className="text-right text-muted-foreground text-xs px-4 py-3 hidden lg:table-cell">السعر</th>
+                    <th className="text-right text-muted-foreground text-xs px-4 py-3">إجراءات</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -211,17 +211,17 @@ export default function SubscriptionsPage() {
                     const days = daysLeft(sub?.endDate);
 
                     return (
-                      <tr key={item.org.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                      <tr key={item.org.id} className="border-b border-border hover:bg-accent/50 transition-colors">
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
                             <div className="h-8 w-8 rounded-lg bg-primary/20 flex items-center justify-center text-primary text-sm font-bold flex-shrink-0">
                               {item.org.name?.[0] || '?'}
                             </div>
-                            <span className="text-white text-sm font-medium">{item.org.name || '—'}</span>
+                            <span className="text-foreground text-sm font-medium">{item.org.name || '—'}</span>
                           </div>
                         </td>
                         <td className="px-4 py-3 hidden sm:table-cell">
-                          <span className="text-slate-300 text-sm">{sub?.planName || item.org.plan || '—'}</span>
+                          <span className="text-foreground/90 text-sm">{sub?.planName || item.org.plan || '—'}</span>
                         </td>
                         <td className="px-4 py-3">
                           {sub ? (
@@ -230,12 +230,12 @@ export default function SubscriptionsPage() {
                               {statusInfo.label}
                             </span>
                           ) : (
-                            <span className="text-slate-500 text-xs">—</span>
+                            <span className="text-muted-foreground text-xs">—</span>
                           )}
                         </td>
                         <td className="px-4 py-3 hidden md:table-cell">
                           <div>
-                            <span className="text-slate-300 text-sm">{formatDate(sub?.endDate)}</span>
+                            <span className="text-foreground/90 text-sm">{formatDate(sub?.endDate)}</span>
                             {days !== null && days >= 0 && days <= 30 && (
                               <p className={`text-xs mt-0.5 ${days <= 7 ? 'text-red-400' : 'text-yellow-400'}`}>
                                 {days === 0 ? 'ينتهي اليوم' : `${days} يوم`}
@@ -246,14 +246,14 @@ export default function SubscriptionsPage() {
                         </td>
                         <td className="px-4 py-3 hidden lg:table-cell">
                           {sub?.price ? (
-                            <span className="text-white text-sm font-medium">{sub.price.toLocaleString()} {sub.currency}</span>
+                            <span className="text-foreground text-sm font-medium">{sub.price.toLocaleString()} {sub.currency}</span>
                           ) : (
-                            <span className="text-slate-500 text-sm">—</span>
+                            <span className="text-muted-foreground text-sm">—</span>
                           )}
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex gap-1">
-                            <Button size="sm" variant="ghost" onClick={() => openEdit(item)} className="h-8 px-2 text-slate-400 hover:text-white text-xs gap-1">
+                            <Button size="sm" variant="ghost" onClick={() => openEdit(item)} className="h-8 px-2 text-muted-foreground hover:text-foreground text-xs gap-1">
                               <Pencil className="h-3 w-3" />
                               <span className="hidden sm:inline">تعديل</span>
                             </Button>

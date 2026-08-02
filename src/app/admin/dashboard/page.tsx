@@ -20,7 +20,7 @@ const statCards = [
 ];
 
 const planColors: Record<string, string> = {
-  free: "bg-slate-500/20 text-slate-300",
+  free: "bg-muted-foreground/20 text-foreground/90",
   pro: "bg-blue-500/20 text-blue-300",
   enterprise: "bg-purple-500/20 text-purple-300",
 };
@@ -38,20 +38,20 @@ export default function AdminDashboardPage() {
     <div className="space-y-6" dir="rtl">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-white">لوحة التحكم الرئيسية</h1>
-        <p className="text-slate-400 text-sm mt-1">نظرة عامة على منصة EmpowerHub</p>
+        <h1 className="text-2xl font-bold text-foreground">لوحة التحكم الرئيسية</h1>
+        <p className="text-muted-foreground text-sm mt-1">نظرة عامة على منصة EmpowerHub</p>
       </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         {statCards.map(card => (
           <Link key={card.key} href={card.href}>
-            <Card className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20 hover:border-white/20 hover:bg-slate-800 transition-all cursor-pointer group">
+            <Card className="bg-card border-border shadow-lg shadow-black/20 hover:border-border hover:bg-muted transition-all cursor-pointer group">
               <CardContent className="p-5">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-slate-400 text-xs mb-1">{card.label}</p>
-                    <p className="text-3xl font-bold text-white">
+                    <p className="text-muted-foreground text-xs mb-1">{card.label}</p>
+                    <p className="text-3xl font-bold text-foreground">
                       {stats ? stats[card.key as keyof Stats] : "—"}
                     </p>
                   </div>
@@ -88,11 +88,11 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Organizations List */}
-      <Card className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20">
+      <Card className="bg-card border-border shadow-lg shadow-black/20">
         <CardHeader className="flex flex-row items-center justify-between pb-4">
-          <CardTitle className="text-white text-lg">المنظمات المسجلة</CardTitle>
+          <CardTitle className="text-foreground text-lg">المنظمات المسجلة</CardTitle>
           <Link href="/admin/dashboard/organizations">
-            <Button variant="ghost" size="sm" className="text-slate-400 hover:text-white gap-1">
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground gap-1">
               <span>عرض الكل</span>
               <ArrowLeft className="h-3 w-3" />
             </Button>
@@ -100,19 +100,19 @@ export default function AdminDashboardPage() {
         </CardHeader>
         <CardContent>
           {orgs.length === 0 ? (
-            <p className="text-slate-500 text-center py-8">لا توجد منظمات</p>
+            <p className="text-muted-foreground text-center py-8">لا توجد منظمات</p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {orgs.map(org => (
-                <div key={org.id} className="bg-white/[0.03] border border-white/[0.08] rounded-xl p-4 flex items-center gap-3">
+                <div key={org.id} className="bg-muted/40 border border-border rounded-xl p-4 flex items-center gap-3">
                   <div
-                    className="h-10 w-10 rounded-xl flex-shrink-0 flex items-center justify-center text-white font-bold text-sm"
+                    className="h-10 w-10 rounded-xl flex-shrink-0 flex items-center justify-center text-foreground font-bold text-sm"
                     style={{ backgroundColor: org.primaryColor || '#6366f1' }}
                   >
                     {org.name?.[0] || '?'}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-white text-sm font-medium truncate">{org.name}</p>
+                    <p className="text-foreground text-sm font-medium truncate">{org.name}</p>
                     <span className={`text-xs px-2 py-0.5 rounded-full ${planColors[org.plan] || planColors.free}`}>
                       {org.plan || 'free'}
                     </span>

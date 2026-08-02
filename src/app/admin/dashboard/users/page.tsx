@@ -91,18 +91,18 @@ export default function UsersPage() {
   return (
     <div className="space-y-6" dir="rtl">
       <div>
-        <h1 className="text-2xl font-bold text-white">المستخدمون</h1>
-        <p className="text-slate-400 text-sm">إدارة جميع المستخدمين في المنصة</p>
+        <h1 className="text-2xl font-bold text-foreground">المستخدمون</h1>
+        <p className="text-muted-foreground text-sm">إدارة جميع المستخدمين في المنصة</p>
       </div>
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="بحث بالاسم أو البريد..." className="bg-slate-800 border-white/[0.08] text-white pr-10" />
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="بحث بالاسم أو البريد..." className="bg-muted border-border text-foreground pr-10" />
         </div>
         <Select value={roleFilter} onValueChange={setRoleFilter}>
-          <SelectTrigger className="w-full sm:w-44 bg-slate-800 border-white/[0.08] text-slate-300">
+          <SelectTrigger className="w-full sm:w-44 bg-muted border-border text-foreground/90">
             <SelectValue placeholder="كل الأدوار" />
           </SelectTrigger>
           <SelectContent>
@@ -117,38 +117,38 @@ export default function UsersPage() {
       </div>
 
       {/* Table */}
-      <Card className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20">
+      <Card className="bg-card border-border shadow-lg shadow-black/20">
         <CardContent className="p-0">
           {loading ? (
-            <div className="text-slate-400 text-center py-12">جاري التحميل...</div>
+            <div className="text-muted-foreground text-center py-12">جاري التحميل...</div>
           ) : filtered.length === 0 ? (
-            <div className="text-slate-500 text-center py-12">لا يوجد مستخدمون</div>
+            <div className="text-muted-foreground text-center py-12">لا يوجد مستخدمون</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-white/[0.08]">
-                    <th className="text-right text-slate-400 text-xs font-medium px-4 py-3">المستخدم</th>
-                    <th className="text-right text-slate-400 text-xs font-medium px-4 py-3 hidden md:table-cell">البريد</th>
-                    <th className="text-right text-slate-400 text-xs font-medium px-4 py-3">الدور</th>
-                    <th className="text-right text-slate-400 text-xs font-medium px-4 py-3 hidden sm:table-cell">الحالة</th>
-                    <th className="text-right text-slate-400 text-xs font-medium px-4 py-3">إجراءات</th>
+                  <tr className="border-b border-border">
+                    <th className="text-right text-muted-foreground text-xs font-medium px-4 py-3">المستخدم</th>
+                    <th className="text-right text-muted-foreground text-xs font-medium px-4 py-3 hidden md:table-cell">البريد</th>
+                    <th className="text-right text-muted-foreground text-xs font-medium px-4 py-3">الدور</th>
+                    <th className="text-right text-muted-foreground text-xs font-medium px-4 py-3 hidden sm:table-cell">الحالة</th>
+                    <th className="text-right text-muted-foreground text-xs font-medium px-4 py-3">إجراءات</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.map(user => (
-                    <tr key={user.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                    <tr key={user.id} className="border-b border-border hover:bg-accent/50 transition-colors">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           <Avatar className="h-8 w-8">
                             <AvatarImage src={user.avatarUrl} />
-                            <AvatarFallback className="bg-slate-700 text-slate-300 text-xs">{user.name?.[0]}</AvatarFallback>
+                            <AvatarFallback className="bg-muted text-foreground/90 text-xs">{user.name?.[0]}</AvatarFallback>
                           </Avatar>
-                          <span className="text-white text-sm font-medium truncate max-w-[120px]">{user.name || '—'}</span>
+                          <span className="text-foreground text-sm font-medium truncate max-w-[120px]">{user.name || '—'}</span>
                         </div>
                       </td>
                       <td className="px-4 py-3 hidden md:table-cell">
-                        <span className="text-slate-400 text-sm">{user.email}</span>
+                        <span className="text-muted-foreground text-sm">{user.email}</span>
                       </td>
                       <td className="px-4 py-3">
                         <span className={`text-xs px-2 py-0.5 rounded-full border ${roleBadge[user.role] || roleBadge.beneficiary}`}>
@@ -162,10 +162,10 @@ export default function UsersPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex gap-2">
-                          <Button size="sm" variant="ghost" onClick={() => openEdit(user)} className="h-8 w-8 p-0 text-slate-400 hover:text-white">
+                          <Button size="sm" variant="ghost" onClick={() => openEdit(user)} className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground">
                             <Pencil className="h-3.5 w-3.5" />
                           </Button>
-                          <Button size="sm" variant="ghost" onClick={() => setDeleteUser(user)} className="h-8 w-8 p-0 text-slate-400 hover:text-red-400">
+                          <Button size="sm" variant="ghost" onClick={() => setDeleteUser(user)} className="h-8 w-8 p-0 text-muted-foreground hover:text-red-400">
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>

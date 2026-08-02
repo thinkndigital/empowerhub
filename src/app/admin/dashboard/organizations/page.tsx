@@ -52,7 +52,7 @@ interface OrgSections {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const planColors: Record<string, string> = {
-  free: "bg-slate-500/20 text-slate-300 border-slate-500/30",
+  free: "bg-muted-foreground/20 text-foreground/90 border-muted-foreground/30",
   pro: "bg-blue-500/20 text-blue-300 border-blue-500/30",
   enterprise: "bg-purple-500/20 text-purple-300 border-purple-500/30",
 };
@@ -118,16 +118,16 @@ function LogoUploadField({ value, onChange }: { value: string; onChange: (v: str
     <div className="space-y-2">
       <Label>شعار المنظمة</Label>
       <div className="flex gap-3 items-center">
-        <div className="h-16 w-16 rounded-xl border border-white/20 overflow-hidden bg-slate-700/50 flex items-center justify-center flex-shrink-0">
+        <div className="h-16 w-16 rounded-xl border border-border overflow-hidden bg-muted/60 flex items-center justify-center flex-shrink-0">
           {value
             ? <img src={value} alt="" className="h-full w-full object-contain" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-            : <span className="text-slate-500 text-xs text-center">لا شعار</span>}
+            : <span className="text-muted-foreground text-xs text-center">لا شعار</span>}
         </div>
         <div className="flex-1 space-y-2 min-w-0">
           <Input value={value} onChange={e => onChange(e.target.value)} placeholder="https://..." dir="ltr" className="font-mono text-sm" />
           <label className="cursor-pointer">
             <Button type="button" variant="outline" size="sm" disabled={uploading} asChild>
-              <span className="border-white/20 text-slate-300 hover:text-white hover:bg-white/10 gap-2">
+              <span className="border-border text-foreground/90 hover:text-foreground hover:bg-accent gap-2">
                 {uploading ? <span className="text-xs">جاري الرفع...</span> : <><Upload className="h-3 w-3" />رفع صورة</>}
               </span>
             </Button>
@@ -167,8 +167,8 @@ function OrgFormFields({ form, onChange }: { form: OrgForm; onChange: (f: OrgFor
       <div className="space-y-2">
         <Label>اللون الرئيسي</Label>
         <div className="flex items-center gap-3">
-          <input type="color" value={form.primaryColor || '#6366f1'} onChange={e => onChange({ ...form, primaryColor: e.target.value })} className="h-10 w-12 rounded cursor-pointer border border-white/20 bg-transparent" />
-          <div className="h-10 w-10 rounded-lg border border-white/20 flex-shrink-0" style={{ backgroundColor: form.primaryColor || '#6366f1' }} />
+          <input type="color" value={form.primaryColor || '#6366f1'} onChange={e => onChange({ ...form, primaryColor: e.target.value })} className="h-10 w-12 rounded cursor-pointer border border-border bg-transparent" />
+          <div className="h-10 w-10 rounded-lg border border-border flex-shrink-0" style={{ backgroundColor: form.primaryColor || '#6366f1' }} />
           <Input value={form.primaryColor} onChange={e => onChange({ ...form, primaryColor: e.target.value })} className="flex-1 font-mono text-sm" dir="ltr" placeholder="#6366f1" />
         </div>
       </div>
@@ -181,14 +181,14 @@ function OrgFormFields({ form, onChange }: { form: OrgForm; onChange: (f: OrgFor
 
 function PersonRow({ person }: { person: Person }) {
   return (
-    <div className="flex items-center gap-3 py-2 border-b border-white/5 last:border-0">
+    <div className="flex items-center gap-3 py-2 border-b border-border last:border-0">
       <Avatar className="h-8 w-8 flex-shrink-0">
         <AvatarImage src={person.avatarUrl} />
-        <AvatarFallback className="bg-slate-700 text-xs text-slate-300">{(person.name || '?')[0]}</AvatarFallback>
+        <AvatarFallback className="bg-muted text-xs text-foreground/90">{(person.name || '?')[0]}</AvatarFallback>
       </Avatar>
       <div className="flex-1 min-w-0">
-        <p className="text-white text-sm font-medium truncate">{person.name || '—'}</p>
-        <p className="text-slate-400 text-xs truncate">{person.email}</p>
+        <p className="text-foreground text-sm font-medium truncate">{person.name || '—'}</p>
+        <p className="text-muted-foreground text-xs truncate">{person.email}</p>
       </div>
       <Badge className={`text-xs border-0 ${statusBadge[person.status || 'active']}`}>
         {statusLabel[person.status || 'active']}
@@ -220,7 +220,7 @@ function OrgOverviewModal({ org, onClose }: { org: Org; onClose: () => void }) {
       <DialogContent dir="rtl" className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-xl flex items-center justify-center text-white font-bold text-xl flex-shrink-0 overflow-hidden" style={{ backgroundColor: color }}>
+            <div className="h-12 w-12 rounded-xl flex items-center justify-center text-foreground font-bold text-xl flex-shrink-0 overflow-hidden" style={{ backgroundColor: color }}>
               {org.logoUrl
                 ? <img src={org.logoUrl} alt="" className="h-full w-full object-contain" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                 : (org.name || 'م')[0]}
@@ -455,8 +455,8 @@ export default function OrganizationsPage() {
     <div className="space-y-6 max-w-full" dir="rtl">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">المنظمات</h1>
-          <p className="text-slate-400 text-sm">إدارة جميع المنظمات المسجلة — {orgs.length} منظمة</p>
+          <h1 className="text-2xl font-bold text-foreground">المنظمات</h1>
+          <p className="text-muted-foreground text-sm">إدارة جميع المنظمات المسجلة — {orgs.length} منظمة</p>
         </div>
         <Button onClick={() => setAddOpen(true)} className="bg-primary hover:bg-primary/90 gap-2 w-full sm:w-auto">
           <Plus className="h-4 w-4" />إضافة منظمة
@@ -464,47 +464,47 @@ export default function OrganizationsPage() {
       </div>
 
       <div className="relative">
-        <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-        <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="بحث عن منظمة..." className="bg-slate-800 border-white/[0.08] text-white pr-10" />
+        <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+        <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="بحث عن منظمة..." className="bg-muted border-border text-foreground pr-10" />
       </div>
 
       {loading ? (
-        <p className="text-slate-400 text-center py-16">جاري التحميل...</p>
+        <p className="text-muted-foreground text-center py-16">جاري التحميل...</p>
       ) : filtered.length === 0 ? (
-        <p className="text-slate-500 text-center py-16">لا توجد منظمات</p>
+        <p className="text-muted-foreground text-center py-16">لا توجد منظمات</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 w-full">
           {filtered.map(org => {
             const color = org.primaryColor || "#6366f1";
             const initial = (org.name || "م")[0];
             return (
-              <Card key={org.id} className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20 hover:border-white/20 transition-all w-full overflow-hidden">
+              <Card key={org.id} className="bg-card border-border shadow-lg shadow-black/20 hover:border-border transition-all w-full overflow-hidden">
                 <CardContent className="p-4">
                   {/* Header: logo + info + dropdown */}
                   <div className="flex items-start gap-3 mb-3 min-w-0">
-                    <div className="h-12 w-12 rounded-xl flex-shrink-0 flex items-center justify-center text-white font-bold text-lg overflow-hidden" style={{ backgroundColor: color }}>
+                    <div className="h-12 w-12 rounded-xl flex-shrink-0 flex items-center justify-center text-foreground font-bold text-lg overflow-hidden" style={{ backgroundColor: color }}>
                       {org.logoUrl
                         ? <img src={org.logoUrl} alt="" className="h-full w-full object-contain" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                         : initial}
                     </div>
                     <div className="flex-1 min-w-0 overflow-hidden">
-                      <h3 className="text-white font-semibold truncate text-sm">{org.name || "—"}</h3>
+                      <h3 className="text-foreground font-semibold truncate text-sm">{org.name || "—"}</h3>
                       <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                         <span className={`text-xs px-1.5 py-0.5 rounded-full border ${planColors[org.plan] || planColors.free}`}>
                           {planLabels[org.plan] || "مجاني"}
                         </span>
-                        <span className="flex items-center gap-1 text-xs text-slate-500 min-w-0">
-                          <span className="h-2.5 w-2.5 rounded-full flex-shrink-0 border border-white/20" style={{ backgroundColor: color }} />
+                        <span className="flex items-center gap-1 text-xs text-muted-foreground min-w-0">
+                          <span className="h-2.5 w-2.5 rounded-full flex-shrink-0 border border-border" style={{ backgroundColor: color }} />
                           <span className="truncate font-mono">{color}</span>
                         </span>
                       </div>
-                      {org.inviteCode && <p className="text-slate-500 text-xs mt-0.5 font-mono truncate">كود: {org.inviteCode}</p>}
+                      {org.inviteCode && <p className="text-muted-foreground text-xs mt-0.5 font-mono truncate">كود: {org.inviteCode}</p>}
                     </div>
 
                     {/* Dropdown menu */}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0 text-slate-400 hover:text-white hover:bg-white/10">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0 text-muted-foreground hover:text-foreground hover:bg-accent">
                           <MoreVertical className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -530,13 +530,13 @@ export default function OrganizationsPage() {
 
                   {/* Quick action buttons */}
                   <div className="grid grid-cols-3 gap-1.5">
-                    <Button size="sm" variant="outline" onClick={() => setOverviewOrg(org)} className="border-white/20 text-slate-300 hover:text-white hover:bg-white/10 gap-1 text-xs px-2">
+                    <Button size="sm" variant="outline" onClick={() => setOverviewOrg(org)} className="border-border text-foreground/90 hover:text-foreground hover:bg-accent gap-1 text-xs px-2">
                       <Eye className="h-3 w-3 flex-shrink-0" /><span className="truncate">عرض</span>
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => setSectionsOrg(org)} className="border-white/20 text-slate-300 hover:text-white hover:bg-white/10 gap-1 text-xs px-2">
+                    <Button size="sm" variant="outline" onClick={() => setSectionsOrg(org)} className="border-border text-foreground/90 hover:text-foreground hover:bg-accent gap-1 text-xs px-2">
                       <Sliders className="h-3 w-3 flex-shrink-0" /><span className="truncate">الأقسام</span>
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => openEdit(org)} className="border-white/20 text-slate-300 hover:text-white hover:bg-white/10 gap-1 text-xs px-2">
+                    <Button size="sm" variant="outline" onClick={() => openEdit(org)} className="border-border text-foreground/90 hover:text-foreground hover:bg-accent gap-1 text-xs px-2">
                       <Pencil className="h-3 w-3 flex-shrink-0" /><span className="truncate">تعديل</span>
                     </Button>
                   </div>

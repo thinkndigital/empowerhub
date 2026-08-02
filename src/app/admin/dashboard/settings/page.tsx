@@ -19,32 +19,32 @@ export default function AdminSettingsPage() {
   return (
     <div className="space-y-6 max-w-lg" dir="rtl">
       <div>
-        <h1 className="text-2xl font-bold text-white">الإعدادات</h1>
-        <p className="text-slate-400 text-sm">إعدادات لوحة الإدارة</p>
+        <h1 className="text-2xl font-bold text-foreground">الإعدادات</h1>
+        <p className="text-muted-foreground text-sm">إعدادات لوحة الإدارة</p>
       </div>
 
-      <Card className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20">
-        <CardHeader><CardTitle className="text-white text-base flex items-center gap-2"><Shield className="h-4 w-4 text-primary" />معلومات الجلسة</CardTitle></CardHeader>
+      <Card className="bg-card border-border shadow-lg shadow-black/20">
+        <CardHeader><CardTitle className="text-foreground text-base flex items-center gap-2"><Shield className="h-4 w-4 text-primary" />معلومات الجلسة</CardTitle></CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between p-3 bg-white/[0.03] rounded-lg">
-            <span className="text-slate-400 text-sm">اسم المستخدم</span>
-            <span className="text-white text-sm font-mono">admin</span>
+          <div className="flex items-center justify-between p-3 bg-muted/40 rounded-lg">
+            <span className="text-muted-foreground text-sm">اسم المستخدم</span>
+            <span className="text-foreground text-sm font-mono">admin</span>
           </div>
-          <div className="flex items-center justify-between p-3 bg-white/[0.03] rounded-lg">
-            <span className="text-slate-400 text-sm">الصلاحية</span>
+          <div className="flex items-center justify-between p-3 bg-muted/40 rounded-lg">
+            <span className="text-muted-foreground text-sm">الصلاحية</span>
             <span className="text-emerald-400 text-sm">مشرف عام</span>
           </div>
         </CardContent>
       </Card>
 
-      <Card className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20">
-        <CardHeader><CardTitle className="text-white text-base flex items-center gap-2"><Info className="h-4 w-4 text-blue-400" />معلومات المنصة</CardTitle></CardHeader>
+      <Card className="bg-card border-border shadow-lg shadow-black/20">
+        <CardHeader><CardTitle className="text-foreground text-base flex items-center gap-2"><Info className="h-4 w-4 text-blue-400" />معلومات المنصة</CardTitle></CardHeader>
         <CardContent className="space-y-3 text-sm">
-          <div className="flex justify-between text-slate-400 p-2">
-            <span>المنصة</span><span className="text-white">EmpowerHub</span>
+          <div className="flex justify-between text-muted-foreground p-2">
+            <span>المنصة</span><span className="text-foreground">EmpowerHub</span>
           </div>
-          <div className="flex justify-between text-slate-400 p-2">
-            <span>Firebase Project</span><span className="text-white font-mono text-xs">studio-4511819966-bc14f</span>
+          <div className="flex justify-between text-muted-foreground p-2">
+            <span>Firebase Project</span><span className="text-foreground font-mono text-xs">studio-4511819966-bc14f</span>
           </div>
         </CardContent>
       </Card>

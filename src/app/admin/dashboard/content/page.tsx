@@ -163,36 +163,36 @@ export default function ContentPage() {
       <div className="space-y-4">
         {/* Summary */}
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-sm text-slate-400">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <span className="text-emerald-400 font-semibold">{published}</span> منشور
             <span className="mr-2 text-yellow-400 font-semibold">{drafts}</span> مسودة
-            <span className="mr-2 text-slate-500">{list.length} إجمالي</span>
+            <span className="mr-2 text-muted-foreground">{list.length} إجمالي</span>
           </div>
-          <Button size="sm" variant="ghost" onClick={load} className="text-slate-400 hover:text-white h-7 w-7 p-0">
+          <Button size="sm" variant="ghost" onClick={load} className="text-muted-foreground hover:text-foreground h-7 w-7 p-0">
             <RefreshCw className="h-3.5 w-3.5" />
           </Button>
-          <Button size="sm" onClick={() => openAdd(col)} className="mr-auto bg-primary hover:bg-primary/80 text-white gap-1.5 h-8 text-xs">
+          <Button size="sm" onClick={() => openAdd(col)} className="mr-auto bg-primary hover:bg-primary/80 text-primary-foreground gap-1.5 h-8 text-xs">
             <Plus className="h-3.5 w-3.5" />
             إضافة جديد
           </Button>
         </div>
 
-        <Card className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20">
+        <Card className="bg-card border-border shadow-lg shadow-black/20">
           <CardContent className="p-0">
             {list.length === 0 ? (
-              <p className="text-slate-500 text-center py-10">لا يوجد محتوى بعد</p>
+              <p className="text-muted-foreground text-center py-10">لا يوجد محتوى بعد</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b border-white/[0.08]">
-                      <th className="text-right text-slate-400 text-xs px-4 py-3">العنوان</th>
-                      <th className="text-right text-slate-400 text-xs px-4 py-3 hidden sm:table-cell">
+                    <tr className="border-b border-border">
+                      <th className="text-right text-muted-foreground text-xs px-4 py-3">العنوان</th>
+                      <th className="text-right text-muted-foreground text-xs px-4 py-3 hidden sm:table-cell">
                         {col === 'projects' ? 'المنظمة' : col === 'articles' ? 'الكاتب' : col === 'courses' ? 'المدرب' : 'المدرب'}
                       </th>
-                      <th className="text-right text-slate-400 text-xs px-4 py-3">الحالة</th>
-                      <th className="text-right text-slate-400 text-xs px-4 py-3 hidden md:table-cell">تاريخ الإنشاء</th>
-                      <th className="text-right text-slate-400 text-xs px-4 py-3">إجراءات</th>
+                      <th className="text-right text-muted-foreground text-xs px-4 py-3">الحالة</th>
+                      <th className="text-right text-muted-foreground text-xs px-4 py-3 hidden md:table-cell">تاريخ الإنشاء</th>
+                      <th className="text-right text-muted-foreground text-xs px-4 py-3">إجراءات</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -201,19 +201,19 @@ export default function ContentPage() {
                       const subtitle = meta.subtitleField ? item[meta.subtitleField] : '';
                       const key = `${col}-${item.id}`;
                       return (
-                        <tr key={item.id} className="border-b border-white/5 hover:bg-white/5">
+                        <tr key={item.id} className="border-b border-border hover:bg-accent/50">
                           <td className="px-4 py-3">
-                            <p className="text-white text-sm font-medium line-clamp-1">{title}</p>
-                            {col === 'projects' && item.type && <p className="text-xs text-slate-500 mt-0.5">{item.type}</p>}
+                            <p className="text-foreground text-sm font-medium line-clamp-1">{title}</p>
+                            {col === 'projects' && item.type && <p className="text-xs text-muted-foreground mt-0.5">{item.type}</p>}
                           </td>
                           <td className="px-4 py-3 hidden sm:table-cell">
-                            <span className="text-slate-400 text-xs">{subtitle || '—'}</span>
+                            <span className="text-muted-foreground text-xs">{subtitle || '—'}</span>
                           </td>
                           <td className="px-4 py-3">
                             <StatusBadge status={item.status} />
                           </td>
                           <td className="px-4 py-3 hidden md:table-cell">
-                            <span className="text-slate-500 text-xs">{formatDate(item.createdAt)}</span>
+                            <span className="text-muted-foreground text-xs">{formatDate(item.createdAt)}</span>
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex gap-1.5">
@@ -232,7 +232,7 @@ export default function ContentPage() {
                               <Button
                                 size="sm" variant="ghost"
                                 onClick={() => setDeleteTarget({ col, id: item.id, title })}
-                                className="h-7 w-7 p-0 text-slate-400 hover:text-red-400"
+                                className="h-7 w-7 p-0 text-muted-foreground hover:text-red-400"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
                               </Button>
@@ -253,16 +253,16 @@ export default function ContentPage() {
 
   const coverUploadField = (
     <div className="space-y-2" key="coverImageUrl">
-      <Label className="text-slate-300 text-xs">صورة الغلاف</Label>
+      <Label className="text-foreground/90 text-xs">صورة الغلاف</Label>
       {(coverPreview || addForm.coverImageUrl) && (
-        <img src={coverPreview || addForm.coverImageUrl} alt="" className="w-full h-28 object-cover rounded-lg border border-white/[0.08]" />
+        <img src={coverPreview || addForm.coverImageUrl} alt="" className="w-full h-28 object-cover rounded-lg border border-border" />
       )}
       <div className="flex gap-2">
         <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverChange} />
         <Button type="button" size="sm" variant="outline"
           onClick={() => coverInputRef.current?.click()}
           disabled={uploadingCover}
-          className="border-white/20 text-slate-300 hover:text-white gap-1.5 flex-1">
+          className="border-border text-foreground/90 hover:text-foreground gap-1.5 flex-1">
           <Upload className="h-3.5 w-3.5" />
           {uploadingCover ? 'جاري الرفع...' : 'رفع صورة'}
         </Button>
@@ -271,7 +271,7 @@ export default function ContentPage() {
         value={addForm.coverImageUrl || ''}
         onChange={e => { setAddForm(p => ({ ...p, coverImageUrl: e.target.value })); setCoverPreview(null); }}
         placeholder="أو أدخل رابط الصورة https://..."
-        className="bg-slate-800 border-white/[0.08] text-white text-xs"
+        className="bg-muted border-border text-foreground text-xs"
       />
     </div>
   );
@@ -281,18 +281,18 @@ export default function ContentPage() {
     if (!showAdd) return null;
     const f = (key: string, label: string, type: 'input' | 'textarea' | 'select' = 'input', options?: string[]) => (
       <div className="space-y-1.5" key={key}>
-        <Label className="text-slate-300 text-xs">{label}</Label>
+        <Label className="text-foreground/90 text-xs">{label}</Label>
         {type === 'textarea' ? (
           <Textarea value={addForm[key] || ''} onChange={e => setAddForm(p => ({ ...p, [key]: e.target.value }))}
-            className="bg-slate-800 border-white/[0.08] text-white text-sm resize-none" rows={3} />
+            className="bg-muted border-border text-foreground text-sm resize-none" rows={3} />
         ) : type === 'select' ? (
           <Select value={addForm[key] || ''} onValueChange={v => setAddForm(p => ({ ...p, [key]: v }))}>
-            <SelectTrigger className="bg-slate-800 border-white/[0.08] text-white text-sm"><SelectValue placeholder="اختر..." /></SelectTrigger>
+            <SelectTrigger className="bg-muted border-border text-foreground text-sm"><SelectValue placeholder="اختر..." /></SelectTrigger>
             <SelectContent>{options?.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
           </Select>
         ) : (
           <Input value={addForm[key] || ''} onChange={e => setAddForm(p => ({ ...p, [key]: e.target.value }))}
-            className="bg-slate-800 border-white/[0.08] text-white text-sm" />
+            className="bg-muted border-border text-foreground text-sm" />
         )}
       </div>
     );
@@ -347,8 +347,8 @@ export default function ContentPage() {
   return (
     <div className="space-y-6" dir="rtl">
       <div>
-        <h1 className="text-2xl font-bold text-white">إدارة المحتوى</h1>
-        <p className="text-slate-400 text-sm mt-1">نشر وإلغاء نشر وإدارة جميع المحتوى على المنصة</p>
+        <h1 className="text-2xl font-bold text-foreground">إدارة المحتوى</h1>
+        <p className="text-muted-foreground text-sm mt-1">نشر وإلغاء نشر وإدارة جميع المحتوى على المنصة</p>
       </div>
 
       {/* Legend */}
@@ -359,17 +359,17 @@ export default function ContentPage() {
         <span className="flex items-center gap-2">
           <EyeOff className="h-4 w-4" /> المحتوى <strong>كمسودة</strong> لا يظهر للزوار
         </span>
-        <span className="text-slate-400 mr-auto text-xs">اضغط أيقونة العين لتغيير الحالة فوراً</span>
+        <span className="text-muted-foreground mr-auto text-xs">اضغط أيقونة العين لتغيير الحالة فوراً</span>
       </div>
 
       {loading ? (
-        <div className="text-slate-400 text-center py-16 animate-pulse">جاري تحميل المحتوى...</div>
+        <div className="text-muted-foreground text-center py-16 animate-pulse">جاري تحميل المحتوى...</div>
       ) : (
         <Tabs defaultValue="projects">
-          <TabsList className="bg-slate-800 border border-white/[0.08] h-auto flex-wrap gap-0.5">
+          <TabsList className="bg-muted border border-border h-auto flex-wrap gap-0.5">
             {Object.entries(COLLECTIONS).map(([key, meta]) => (
               <TabsTrigger key={key} value={key}
-                className="data-[state=active]:bg-primary data-[state=active]:text-white text-slate-400 text-xs sm:text-sm">
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-muted-foreground text-xs sm:text-sm">
                 {meta.label}
                 <span className="mr-1.5 text-[10px] opacity-70">({(items[key] || []).length})</span>
               </TabsTrigger>

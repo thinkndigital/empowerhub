@@ -138,9 +138,9 @@ function StoresTab() {
   return (
     <div className="space-y-4">
       <div className="flex gap-3 items-center">
-        <span className="text-slate-400 text-sm shrink-0">{stores.length} متجر</span>
+        <span className="text-muted-foreground text-sm shrink-0">{stores.length} متجر</span>
         <div className="relative flex-1 max-w-xs">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="بحث عن متجر..." className="pr-9" />
         </div>
         <Button variant="outline" size="icon" onClick={load} disabled={loading}>
@@ -149,16 +149,16 @@ function StoresTab() {
       </div>
 
       {loading ? (
-        <div className="text-center py-12 text-slate-400">جاري التحميل...</div>
+        <div className="text-center py-12 text-muted-foreground">جاري التحميل...</div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-12 text-slate-400">
+        <div className="text-center py-12 text-muted-foreground">
           <Store className="h-10 w-10 mx-auto mb-3 opacity-30" />
           <p>لا توجد متاجر</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filtered.map(store => (
-            <Card key={store.id} className={`bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20 transition-all ${store.hidden ? 'opacity-50' : ''}`}>
+            <Card key={store.id} className={`bg-card border-border shadow-lg shadow-black/20 transition-all ${store.hidden ? 'opacity-50' : ''}`}>
               <CardContent className="p-4">
                 <div className="flex items-start gap-3 mb-3">
                   <div className="h-10 w-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary flex-shrink-0">
@@ -169,14 +169,14 @@ function StoresTab() {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-white font-semibold text-sm truncate">{store.name}</p>
-                    <p className="text-slate-400 text-xs truncate">{store.beneficiaryName || 'بدون صاحب'}</p>
-                    {store.location && <p className="text-slate-500 text-xs truncate">{store.location}</p>}
+                    <p className="text-foreground font-semibold text-sm truncate">{store.name}</p>
+                    <p className="text-muted-foreground text-xs truncate">{store.beneficiaryName || 'بدون صاحب'}</p>
+                    {store.location && <p className="text-muted-foreground text-xs truncate">{store.location}</p>}
                   </div>
-                  {store.hidden && <Badge className="bg-slate-700 text-slate-400 text-xs border-0 flex-shrink-0">مخفي</Badge>}
+                  {store.hidden && <Badge className="bg-muted text-muted-foreground text-xs border-0 flex-shrink-0">مخفي</Badge>}
                 </div>
 
-                <div className="flex items-center justify-between text-xs text-slate-500 mb-3">
+                <div className="flex items-center justify-between text-xs text-muted-foreground mb-3">
                   <span>{store.productsCount} منتج</span>
                   {store.createdAt && <span>{new Date(store.createdAt).toLocaleDateString('ar-EG')}</span>}
                 </div>
@@ -185,25 +185,25 @@ function StoresTab() {
                   <Button
                     size="sm"
                     variant="outline"
-                    className={`flex-1 gap-1.5 text-xs h-8 ${store.hidden ? 'text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10' : 'text-slate-400 hover:text-slate-200'}`}
+                    className={`flex-1 gap-1.5 text-xs h-8 ${store.hidden ? 'text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10' : 'text-muted-foreground hover:text-foreground'}`}
                     onClick={() => toggleHidden(store)}
                   >
                     {store.hidden ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
                     {store.hidden ? 'إظهار' : 'إخفاء'}
                   </Button>
-                  <Button size="sm" variant="outline" className="h-8 w-8 p-0 text-slate-400 hover:text-blue-400 hover:border-blue-500/30" onClick={() => openEdit(store)}>
+                  <Button size="sm" variant="outline" className="h-8 w-8 p-0 text-muted-foreground hover:text-blue-400 hover:border-blue-500/30" onClick={() => openEdit(store)}>
                     <Edit2 className="h-3.5 w-3.5" />
                   </Button>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button size="sm" variant="outline" className="h-8 w-8 p-0 text-slate-400 hover:text-red-400 hover:border-red-500/30">
+                      <Button size="sm" variant="outline" className="h-8 w-8 p-0 text-muted-foreground hover:text-red-400 hover:border-red-500/30">
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </AlertDialogTrigger>
-                    <AlertDialogContent className="bg-slate-800 border-white/[0.08]">
+                    <AlertDialogContent className="bg-muted border-border">
                       <AlertDialogHeader>
-                        <AlertDialogTitle className="text-white">حذف المتجر</AlertDialogTitle>
-                        <AlertDialogDescription className="text-slate-400">هل أنت متأكد من حذف متجر "{store.name}"؟ هذا الإجراء لا يمكن التراجع عنه.</AlertDialogDescription>
+                        <AlertDialogTitle className="text-foreground">حذف المتجر</AlertDialogTitle>
+                        <AlertDialogDescription className="text-muted-foreground">هل أنت متأكد من حذف متجر "{store.name}"؟ هذا الإجراء لا يمكن التراجع عنه.</AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel>إلغاء</AlertDialogCancel>
@@ -220,7 +220,7 @@ function StoresTab() {
 
       {/* Edit Dialog */}
       <Dialog open={!!editStore} onOpenChange={o => !o && setEditStore(null)}>
-        <DialogContent className="bg-slate-800 border-white/[0.08] text-white" dir="rtl">
+        <DialogContent className="bg-muted border-border text-foreground" dir="rtl">
           <DialogHeader>
             <DialogTitle>تعديل المتجر</DialogTitle>
           </DialogHeader>
@@ -308,16 +308,16 @@ function ProductsTab() {
   const statusColor: Record<string, string> = {
     published: 'bg-emerald-500/20 text-emerald-400',
     منشورة: 'bg-emerald-500/20 text-emerald-400',
-    draft: 'bg-slate-600/40 text-slate-400',
-    مسودة: 'bg-slate-600/40 text-slate-400',
+    draft: 'bg-muted text-muted-foreground',
+    مسودة: 'bg-muted text-muted-foreground',
   };
 
   return (
     <div className="space-y-4">
       <div className="flex gap-3 items-center">
-        <span className="text-slate-400 text-sm shrink-0">{products.length} منتج</span>
+        <span className="text-muted-foreground text-sm shrink-0">{products.length} منتج</span>
         <div className="relative flex-1 max-w-xs">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="بحث عن منتج..." className="pr-9" />
         </div>
         <Button variant="outline" size="icon" onClick={load} disabled={loading}>
@@ -326,26 +326,26 @@ function ProductsTab() {
       </div>
 
       {loading ? (
-        <div className="text-center py-12 text-slate-400">جاري التحميل...</div>
+        <div className="text-center py-12 text-muted-foreground">جاري التحميل...</div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-12 text-slate-400">
+        <div className="text-center py-12 text-muted-foreground">
           <Package className="h-10 w-10 mx-auto mb-3 opacity-30" />
           <p>لا توجد منتجات</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filtered.map(product => (
-            <Card key={product.id} className={`bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20 overflow-hidden transition-all ${product.hidden ? 'opacity-50' : ''}`}>
+            <Card key={product.id} className={`bg-card border-border shadow-lg shadow-black/20 overflow-hidden transition-all ${product.hidden ? 'opacity-50' : ''}`}>
               {product.imageUrl && (
-                <div className="h-28 w-full bg-slate-700 overflow-hidden">
+                <div className="h-28 w-full bg-muted overflow-hidden">
                   <img src={product.imageUrl} alt={product.name} className="h-full w-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
                 </div>
               )}
               <CardContent className="p-4">
                 <div className="mb-3">
                   <div className="flex items-start justify-between gap-2 mb-1">
-                    <p className="text-white font-semibold text-sm line-clamp-2 flex-1">{product.name}</p>
-                    {product.hidden && <Badge className="bg-slate-700 text-slate-400 text-xs border-0 flex-shrink-0">مخفي</Badge>}
+                    <p className="text-foreground font-semibold text-sm line-clamp-2 flex-1">{product.name}</p>
+                    {product.hidden && <Badge className="bg-muted text-muted-foreground text-xs border-0 flex-shrink-0">مخفي</Badge>}
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     {product.price != null && (
@@ -355,7 +355,7 @@ function ProductsTab() {
                       <Badge className="bg-primary/10 text-primary border-0 text-xs">{product.category}</Badge>
                     )}
                     {product.status && (
-                      <Badge className={`border-0 text-xs ${statusColor[product.status] || 'bg-slate-600/40 text-slate-400'}`}>
+                      <Badge className={`border-0 text-xs ${statusColor[product.status] || 'bg-muted text-muted-foreground'}`}>
                         {product.status}
                       </Badge>
                     )}
@@ -366,25 +366,25 @@ function ProductsTab() {
                   <Button
                     size="sm"
                     variant="outline"
-                    className={`flex-1 gap-1.5 text-xs h-8 ${product.hidden ? 'text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10' : 'text-slate-400 hover:text-slate-200'}`}
+                    className={`flex-1 gap-1.5 text-xs h-8 ${product.hidden ? 'text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10' : 'text-muted-foreground hover:text-foreground'}`}
                     onClick={() => toggleHidden(product)}
                   >
                     {product.hidden ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
                     {product.hidden ? 'إظهار' : 'إخفاء'}
                   </Button>
-                  <Button size="sm" variant="outline" className="h-8 w-8 p-0 text-slate-400 hover:text-blue-400 hover:border-blue-500/30" onClick={() => openEdit(product)}>
+                  <Button size="sm" variant="outline" className="h-8 w-8 p-0 text-muted-foreground hover:text-blue-400 hover:border-blue-500/30" onClick={() => openEdit(product)}>
                     <Edit2 className="h-3.5 w-3.5" />
                   </Button>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button size="sm" variant="outline" className="h-8 w-8 p-0 text-slate-400 hover:text-red-400 hover:border-red-500/30">
+                      <Button size="sm" variant="outline" className="h-8 w-8 p-0 text-muted-foreground hover:text-red-400 hover:border-red-500/30">
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </AlertDialogTrigger>
-                    <AlertDialogContent className="bg-slate-800 border-white/[0.08]">
+                    <AlertDialogContent className="bg-muted border-border">
                       <AlertDialogHeader>
-                        <AlertDialogTitle className="text-white">حذف المنتج</AlertDialogTitle>
-                        <AlertDialogDescription className="text-slate-400">هل أنت متأكد من حذف "{product.name}"؟</AlertDialogDescription>
+                        <AlertDialogTitle className="text-foreground">حذف المنتج</AlertDialogTitle>
+                        <AlertDialogDescription className="text-muted-foreground">هل أنت متأكد من حذف "{product.name}"؟</AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel>إلغاء</AlertDialogCancel>
@@ -401,7 +401,7 @@ function ProductsTab() {
 
       {/* Edit Dialog */}
       <Dialog open={!!editProduct} onOpenChange={o => !o && setEditProduct(null)}>
-        <DialogContent className="bg-slate-800 border-white/[0.08] text-white" dir="rtl">
+        <DialogContent className="bg-muted border-border text-foreground" dir="rtl">
           <DialogHeader>
             <DialogTitle>تعديل المنتج</DialogTitle>
           </DialogHeader>
@@ -467,9 +467,9 @@ function OrdersTab() {
   return (
     <div className="space-y-4">
       <div className="flex gap-3 items-center flex-wrap">
-        <span className="text-slate-400 text-sm shrink-0">{orders.length} طلب</span>
+        <span className="text-muted-foreground text-sm shrink-0">{orders.length} طلب</span>
         <div className="relative flex-1 max-w-xs">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="بحث بالزبون، الهاتف، المتجر..." className="pr-9" />
         </div>
         <div className="flex-1" />
@@ -489,28 +489,28 @@ function OrdersTab() {
         </Button>
       </div>
 
-      <Card className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20">
+      <Card className="bg-card border-border shadow-lg shadow-black/20">
         <CardContent className="p-0">
           <Table>
             <TableHeader>
-              <TableRow className="border-white/[0.08] hover:bg-transparent">
-                <TableHead className="text-slate-400">المنتج</TableHead>
-                <TableHead className="text-slate-400">المتجر</TableHead>
-                <TableHead className="text-slate-400">الزبون</TableHead>
-                <TableHead className="text-slate-400">الهاتف</TableHead>
-                <TableHead className="text-slate-400">المبلغ</TableHead>
-                <TableHead className="text-slate-400">الحالة</TableHead>
-                <TableHead className="text-slate-400">التاريخ</TableHead>
+              <TableRow className="border-border hover:bg-transparent">
+                <TableHead className="text-muted-foreground">المنتج</TableHead>
+                <TableHead className="text-muted-foreground">المتجر</TableHead>
+                <TableHead className="text-muted-foreground">الزبون</TableHead>
+                <TableHead className="text-muted-foreground">الهاتف</TableHead>
+                <TableHead className="text-muted-foreground">المبلغ</TableHead>
+                <TableHead className="text-muted-foreground">الحالة</TableHead>
+                <TableHead className="text-muted-foreground">التاريخ</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loading && <TableRow className="border-white/[0.08]"><TableCell colSpan={7} className="h-24 text-center text-slate-400">جاري التحميل...</TableCell></TableRow>}
+              {loading && <TableRow className="border-border"><TableCell colSpan={7} className="h-24 text-center text-muted-foreground">جاري التحميل...</TableCell></TableRow>}
               {!loading && filtered.map(o => (
-                <TableRow key={o.id} className="border-white/[0.08]">
-                  <TableCell className="text-white text-sm">{o.productName || '—'}</TableCell>
-                  <TableCell className="text-slate-300 text-sm">{o.storeName || '—'}</TableCell>
-                  <TableCell className="text-slate-300 text-sm">{o.buyerName || '—'}</TableCell>
-                  <TableCell className="text-slate-400 text-sm" dir="ltr">{o.buyerPhone || '—'}</TableCell>
+                <TableRow key={o.id} className="border-border">
+                  <TableCell className="text-foreground text-sm">{o.productName || '—'}</TableCell>
+                  <TableCell className="text-foreground/90 text-sm">{o.storeName || '—'}</TableCell>
+                  <TableCell className="text-foreground/90 text-sm">{o.buyerName || '—'}</TableCell>
+                  <TableCell className="text-muted-foreground text-sm" dir="ltr">{o.buyerPhone || '—'}</TableCell>
                   <TableCell className="text-primary text-sm font-semibold">{o.totalAmount.toFixed(2)} د.أ</TableCell>
                   <TableCell>
                     <Badge className={`border-0 text-xs ${
@@ -523,11 +523,11 @@ function OrdersTab() {
                       {orderStatusLabel[o.status] || o.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-slate-500 text-xs">{o.createdAt ? new Date(o.createdAt).toLocaleDateString('ar-EG') : '—'}</TableCell>
+                  <TableCell className="text-muted-foreground text-xs">{o.createdAt ? new Date(o.createdAt).toLocaleDateString('ar-EG') : '—'}</TableCell>
                 </TableRow>
               ))}
               {!loading && filtered.length === 0 && (
-                <TableRow className="border-white/[0.08]"><TableCell colSpan={7} className="h-24 text-center text-slate-400">لا توجد طلبات</TableCell></TableRow>
+                <TableRow className="border-border"><TableCell colSpan={7} className="h-24 text-center text-muted-foreground">لا توجد طلبات</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
@@ -603,32 +603,32 @@ function CustomersTab() {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <Card className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20">
+        <Card className="bg-card border-border shadow-lg shadow-black/20">
           <CardContent className="pt-4 pb-4">
             <Users className="h-4 w-4 text-purple-400 mb-2" />
-            <p className="text-lg font-bold text-white">{loading ? '...' : stats.total}</p>
-            <p className="text-xs text-slate-400">إجمالي العملاء</p>
+            <p className="text-lg font-bold text-foreground">{loading ? '...' : stats.total}</p>
+            <p className="text-xs text-muted-foreground">إجمالي العملاء</p>
           </CardContent>
         </Card>
-        <Card className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20">
+        <Card className="bg-card border-border shadow-lg shadow-black/20">
           <CardContent className="pt-4 pb-4">
             <Repeat className="h-4 w-4 text-blue-400 mb-2" />
-            <p className="text-lg font-bold text-white">{loading ? '...' : stats.repeat}</p>
-            <p className="text-xs text-slate-400">عملاء متكررون</p>
+            <p className="text-lg font-bold text-foreground">{loading ? '...' : stats.repeat}</p>
+            <p className="text-xs text-muted-foreground">عملاء متكررون</p>
           </CardContent>
         </Card>
-        <Card className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20">
+        <Card className="bg-card border-border shadow-lg shadow-black/20">
           <CardContent className="pt-4 pb-4">
             <ShoppingCart className="h-4 w-4 text-emerald-400 mb-2" />
-            <p className="text-lg font-bold text-white">{loading ? '...' : `${stats.revenue.toFixed(2)} د.أ`}</p>
-            <p className="text-xs text-slate-400">إجمالي المبيعات</p>
+            <p className="text-lg font-bold text-foreground">{loading ? '...' : `${stats.revenue.toFixed(2)} د.أ`}</p>
+            <p className="text-xs text-muted-foreground">إجمالي المبيعات</p>
           </CardContent>
         </Card>
       </div>
 
       <div className="flex gap-3 items-center flex-wrap">
         <div className="relative flex-1 max-w-xs">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="بحث بالاسم أو رقم الهاتف..." className="pr-9" />
         </div>
         <div className="flex-1" />
@@ -649,33 +649,33 @@ function CustomersTab() {
         </Button>
       </div>
 
-      <Card className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20">
+      <Card className="bg-card border-border shadow-lg shadow-black/20">
         <CardContent className="p-0">
           <Table>
             <TableHeader>
-              <TableRow className="border-white/[0.08] hover:bg-transparent">
-                <TableHead className="text-slate-400">العميل</TableHead>
-                <TableHead className="text-slate-400">الهاتف</TableHead>
-                <TableHead className="text-slate-400">العنوان</TableHead>
-                <TableHead className="text-slate-400">عدد الطلبات</TableHead>
-                <TableHead className="text-slate-400">إجمالي الإنفاق</TableHead>
-                <TableHead className="text-slate-400">آخر طلب</TableHead>
+              <TableRow className="border-border hover:bg-transparent">
+                <TableHead className="text-muted-foreground">العميل</TableHead>
+                <TableHead className="text-muted-foreground">الهاتف</TableHead>
+                <TableHead className="text-muted-foreground">العنوان</TableHead>
+                <TableHead className="text-muted-foreground">عدد الطلبات</TableHead>
+                <TableHead className="text-muted-foreground">إجمالي الإنفاق</TableHead>
+                <TableHead className="text-muted-foreground">آخر طلب</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loading && <TableRow className="border-white/[0.08]"><TableCell colSpan={6} className="h-24 text-center text-slate-400">جاري التحميل...</TableCell></TableRow>}
+              {loading && <TableRow className="border-border"><TableCell colSpan={6} className="h-24 text-center text-muted-foreground">جاري التحميل...</TableCell></TableRow>}
               {!loading && filtered.map(c => (
-                <TableRow key={c.key} className="border-white/[0.08]">
-                  <TableCell className="text-white text-sm font-medium">{c.name}</TableCell>
+                <TableRow key={c.key} className="border-border">
+                  <TableCell className="text-foreground text-sm font-medium">{c.name}</TableCell>
                   <TableCell dir="ltr">
                     {c.phone ? (
-                      <a href={`tel:${c.phone}`} className="flex items-center gap-1.5 text-slate-300 hover:text-primary text-sm">
+                      <a href={`tel:${c.phone}`} className="flex items-center gap-1.5 text-foreground/90 hover:text-primary text-sm">
                         <Phone className="h-3.5 w-3.5 flex-shrink-0" />
                         {c.phone}
                       </a>
-                    ) : <span className="text-slate-500">—</span>}
+                    ) : <span className="text-muted-foreground">—</span>}
                   </TableCell>
-                  <TableCell className="text-sm text-slate-400 max-w-[220px]">
+                  <TableCell className="text-sm text-muted-foreground max-w-[220px]">
                     {c.address ? (
                       <span className="flex items-center gap-1.5">
                         <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
@@ -684,16 +684,16 @@ function CustomersTab() {
                     ) : '—'}
                   </TableCell>
                   <TableCell>
-                    <Badge className={`border-0 text-xs ${c.ordersCount > 1 ? 'bg-primary/20 text-primary' : 'bg-slate-700 text-slate-400'}`}>{c.ordersCount}</Badge>
+                    <Badge className={`border-0 text-xs ${c.ordersCount > 1 ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'}`}>{c.ordersCount}</Badge>
                   </TableCell>
                   <TableCell className="text-emerald-400 text-sm font-semibold">{c.totalSpent.toFixed(2)} د.أ</TableCell>
-                  <TableCell className="text-slate-500 text-xs">
+                  <TableCell className="text-muted-foreground text-xs">
                     {c.lastOrderAt ? new Date(c.lastOrderAt).toLocaleDateString('ar-EG') : '—'}
                   </TableCell>
                 </TableRow>
               ))}
               {!loading && filtered.length === 0 && (
-                <TableRow className="border-white/[0.08]"><TableCell colSpan={6} className="h-24 text-center text-slate-400">لا يوجد عملاء بعد</TableCell></TableRow>
+                <TableRow className="border-border"><TableCell colSpan={6} className="h-24 text-center text-muted-foreground">لا يوجد عملاء بعد</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
@@ -707,25 +707,25 @@ export default function StoresAdminPage() {
   return (
     <div className="space-y-6" dir="rtl">
       <div>
-        <h1 className="text-2xl font-bold text-white">المتاجر والمنتجات</h1>
-        <p className="text-slate-400 text-sm">إدارة متاجر المستفيدين ومنتجاتهم — يمكنك الإخفاء أو التعديل أو الحذف</p>
+        <h1 className="text-2xl font-bold text-foreground">المتاجر والمنتجات</h1>
+        <p className="text-muted-foreground text-sm">إدارة متاجر المستفيدين ومنتجاتهم — يمكنك الإخفاء أو التعديل أو الحذف</p>
       </div>
 
       <Tabs defaultValue="stores">
-        <TabsList className="bg-slate-800 border border-white/[0.08]">
-          <TabsTrigger value="stores" className="data-[state=active]:bg-primary data-[state=active]:text-white text-slate-400 gap-2">
+        <TabsList className="bg-muted border border-border">
+          <TabsTrigger value="stores" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-muted-foreground gap-2">
             <Store className="h-4 w-4" />
             المتاجر
           </TabsTrigger>
-          <TabsTrigger value="products" className="data-[state=active]:bg-primary data-[state=active]:text-white text-slate-400 gap-2">
+          <TabsTrigger value="products" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-muted-foreground gap-2">
             <Package className="h-4 w-4" />
             المنتجات
           </TabsTrigger>
-          <TabsTrigger value="orders" className="data-[state=active]:bg-primary data-[state=active]:text-white text-slate-400 gap-2">
+          <TabsTrigger value="orders" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-muted-foreground gap-2">
             <ShoppingCart className="h-4 w-4" />
             الطلبات
           </TabsTrigger>
-          <TabsTrigger value="customers" className="data-[state=active]:bg-primary data-[state=active]:text-white text-slate-400 gap-2">
+          <TabsTrigger value="customers" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-muted-foreground gap-2">
             <Users className="h-4 w-4" />
             العملاء
           </TabsTrigger>

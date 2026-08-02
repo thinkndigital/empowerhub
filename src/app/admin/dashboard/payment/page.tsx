@@ -118,7 +118,7 @@ function SecretInput({ value, onChange, placeholder }: { value: string; onChange
         dir="ltr"
         className="font-mono text-sm pr-10"
       />
-      <button type="button" onClick={() => setShow(s => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white">
+      <button type="button" onClick={() => setShow(s => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
         {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
       </button>
     </div>
@@ -134,23 +134,23 @@ function GatewayCard({ gwDef, value, onChange }: {
   const set = (k: string, v: any) => onChange({ ...value, [k]: v });
 
   return (
-    <Card className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20">
+    <Card className="bg-card border-border shadow-lg shadow-black/20">
       <CardContent className="p-0">
         <div className="flex items-center gap-3 p-4 cursor-pointer" onClick={() => setOpen(o => !o)}>
           <span className="text-2xl">{gwDef.logo}</span>
           <div className="flex-1 min-w-0">
-            <p className="text-white font-semibold text-sm">{gwDef.name}</p>
-            <p className="text-slate-400 text-xs truncate">{gwDef.desc}</p>
+            <p className="text-foreground font-semibold text-sm">{gwDef.name}</p>
+            <p className="text-muted-foreground text-xs truncate">{gwDef.desc}</p>
           </div>
-          <Badge className={value.enabled ? 'bg-emerald-500/20 text-emerald-400 border-0' : 'bg-slate-700/50 text-slate-500 border-0'}>
+          <Badge className={value.enabled ? 'bg-emerald-500/20 text-emerald-400 border-0' : 'bg-muted/60 text-muted-foreground border-0'}>
             {value.enabled ? 'مفعّل' : 'معطّل'}
           </Badge>
           <Switch checked={value.enabled} onCheckedChange={v => set('enabled', v)} onClick={e => e.stopPropagation()} />
-          {open ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
+          {open ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
         </div>
 
         {open && (
-          <div className="px-4 pb-4 border-t border-white/[0.08] pt-4 space-y-4">
+          <div className="px-4 pb-4 border-t border-border pt-4 space-y-4">
             <div className="space-y-2">
               <Label>التسمية في نموذج الطلب</Label>
               <Input value={value.label || ''} onChange={e => set('label', e.target.value)} placeholder={gwDef.name} />
@@ -162,7 +162,7 @@ function GatewayCard({ gwDef, value, onChange }: {
                   <select
                     value={value[f.key] || f.options[0]}
                     onChange={e => set(f.key, e.target.value)}
-                    className="w-full rounded-md border border-white/[0.08] bg-slate-900 text-white px-3 py-2 text-sm"
+                    className="w-full rounded-md border border-border bg-card text-foreground px-3 py-2 text-sm"
                     dir="ltr"
                   >
                     {f.options.map(o => <option key={o} value={o}>{o}</option>)}
@@ -172,7 +172,7 @@ function GatewayCard({ gwDef, value, onChange }: {
                 ) : (
                   <Input value={value[f.key] || ''} onChange={e => set(f.key, e.target.value)} dir="ltr" className="font-mono text-sm" />
                 )}
-                {f.hint && <p className="text-slate-500 text-xs">{f.hint}</p>}
+                {f.hint && <p className="text-muted-foreground text-xs">{f.hint}</p>}
               </div>
             ))}
             {!value.enabled && (
@@ -234,43 +234,43 @@ export default function PaymentConfigPage() {
 
   const setGw = (key: GwKey, v: GwConfig) => setConfig(c => ({ ...c, [key]: v }));
 
-  if (loading) return <div className="text-slate-400 text-center py-16">جاري التحميل...</div>;
+  if (loading) return <div className="text-muted-foreground text-center py-16">جاري التحميل...</div>;
 
   const enabledCount = GATEWAYS.filter(g => config[g.key]?.enabled).length + (config.allowCOD ? 1 : 0);
 
   return (
     <div className="space-y-6 max-w-2xl" dir="rtl">
       <div>
-        <h1 className="text-2xl font-bold text-white">بوابات الدفع</h1>
-        <p className="text-slate-400 text-sm">تهيئة وسائل الدفع المتاحة لمتاجر المستفيدين</p>
+        <h1 className="text-2xl font-bold text-foreground">بوابات الدفع</h1>
+        <p className="text-muted-foreground text-sm">تهيئة وسائل الدفع المتاحة لمتاجر المستفيدين</p>
       </div>
 
       {/* Summary */}
-      <div className="flex items-center gap-3 p-4 bg-slate-800/50 border border-white/[0.08] rounded-xl">
+      <div className="flex items-center gap-3 p-4 bg-muted/60 border border-border rounded-xl">
         <CreditCard className="h-5 w-5 text-primary" />
         <div className="flex-1">
-          <p className="text-white text-sm font-medium">وسائل الدفع المفعّلة</p>
-          <p className="text-slate-400 text-xs">{enabledCount === 0 ? 'لم يتم تفعيل أي وسيلة دفع بعد' : `${enabledCount} وسيل${enabledCount === 1 ? 'ة' : 'ة'} مفعّلة`}</p>
+          <p className="text-foreground text-sm font-medium">وسائل الدفع المفعّلة</p>
+          <p className="text-muted-foreground text-xs">{enabledCount === 0 ? 'لم يتم تفعيل أي وسيلة دفع بعد' : `${enabledCount} وسيل${enabledCount === 1 ? 'ة' : 'ة'} مفعّلة`}</p>
         </div>
         <Badge className="bg-primary/20 text-primary border-0">{enabledCount}</Badge>
       </div>
 
       {/* COD */}
-      <Card className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20">
+      <Card className="bg-card border-border shadow-lg shadow-black/20">
         <CardContent className="p-4">
           <div className="flex items-center gap-3">
             <span className="text-2xl">💵</span>
             <div className="flex-1">
-              <p className="text-white font-semibold text-sm">الدفع عند الاستلام (COD)</p>
-              <p className="text-slate-400 text-xs">الدفع نقداً عند استلام الطلب</p>
+              <p className="text-foreground font-semibold text-sm">الدفع عند الاستلام (COD)</p>
+              <p className="text-muted-foreground text-xs">الدفع نقداً عند استلام الطلب</p>
             </div>
-            <Badge className={config.allowCOD ? 'bg-emerald-500/20 text-emerald-400 border-0' : 'bg-slate-700/50 text-slate-500 border-0'}>
+            <Badge className={config.allowCOD ? 'bg-emerald-500/20 text-emerald-400 border-0' : 'bg-muted/60 text-muted-foreground border-0'}>
               {config.allowCOD ? 'مفعّل' : 'معطّل'}
             </Badge>
             <Switch checked={config.allowCOD} onCheckedChange={v => setConfig(c => ({ ...c, allowCOD: v }))} />
           </div>
           {config.allowCOD && (
-            <div className="mt-3 pt-3 border-t border-white/[0.08] space-y-3">
+            <div className="mt-3 pt-3 border-t border-border space-y-3">
               <div className="space-y-1.5">
                 <Label>نص الزر في نموذج الطلب</Label>
                 <Input value={config.codLabel} onChange={e => setConfig(c => ({ ...c, codLabel: e.target.value }))} placeholder="الدفع عند الاستلام" />
@@ -281,13 +281,13 @@ export default function PaymentConfigPage() {
       </Card>
 
       {/* Currency */}
-      <Card className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20">
+      <Card className="bg-card border-border shadow-lg shadow-black/20">
         <CardContent className="p-4">
           <div className="flex items-center gap-3">
             <span className="text-2xl">💱</span>
             <div className="flex-1">
-              <p className="text-white font-semibold text-sm">العملة الافتراضية</p>
-              <p className="text-slate-400 text-xs">تُستخدم في جميع بوابات الدفع</p>
+              <p className="text-foreground font-semibold text-sm">العملة الافتراضية</p>
+              <p className="text-muted-foreground text-xs">تُستخدم في جميع بوابات الدفع</p>
             </div>
             <Input
               value={config.currency}
@@ -303,7 +303,7 @@ export default function PaymentConfigPage() {
 
       {/* Gateway cards */}
       <div>
-        <h2 className="text-white font-semibold mb-3">بوابات الدفع الإلكتروني</h2>
+        <h2 className="text-foreground font-semibold mb-3">بوابات الدفع الإلكتروني</h2>
         <div className="space-y-3">
           {GATEWAYS.map(gw => (
             <GatewayCard key={gw.key} gwDef={gw} value={config[gw.key]} onChange={v => setGw(gw.key, v)} />

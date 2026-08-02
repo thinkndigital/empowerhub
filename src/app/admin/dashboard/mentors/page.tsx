@@ -38,40 +38,40 @@ function PeopleTable({ data, onEdit, onDelete }: { data: Person[]; onEdit: (p: P
   return (
     <div className="space-y-4">
       <div className="relative">
-        <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-        <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="بحث..." className="bg-slate-800 border-white/[0.08] text-white pr-10" />
+        <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="بحث..." className="bg-muted border-border text-foreground pr-10" />
       </div>
-      <Card className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20">
+      <Card className="bg-card border-border shadow-lg shadow-black/20">
         <CardContent className="p-0">
           {filtered.length === 0 ? (
-            <p className="text-slate-500 text-center py-10">لا يوجد بيانات</p>
+            <p className="text-muted-foreground text-center py-10">لا يوجد بيانات</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-white/[0.08]">
-                    <th className="text-right text-slate-400 text-xs px-4 py-3">الاسم</th>
-                    <th className="text-right text-slate-400 text-xs px-4 py-3 hidden md:table-cell">البريد</th>
-                    <th className="text-right text-slate-400 text-xs px-4 py-3 hidden sm:table-cell">التخصصات</th>
-                    <th className="text-right text-slate-400 text-xs px-4 py-3">الحالة</th>
-                    <th className="text-right text-slate-400 text-xs px-4 py-3">إجراءات</th>
+                  <tr className="border-b border-border">
+                    <th className="text-right text-muted-foreground text-xs px-4 py-3">الاسم</th>
+                    <th className="text-right text-muted-foreground text-xs px-4 py-3 hidden md:table-cell">البريد</th>
+                    <th className="text-right text-muted-foreground text-xs px-4 py-3 hidden sm:table-cell">التخصصات</th>
+                    <th className="text-right text-muted-foreground text-xs px-4 py-3">الحالة</th>
+                    <th className="text-right text-muted-foreground text-xs px-4 py-3">إجراءات</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.map(p => (
-                    <tr key={p.id} className="border-b border-white/5 hover:bg-white/5">
+                    <tr key={p.id} className="border-b border-border hover:bg-accent/50">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           <Avatar className="h-8 w-8">
                             <AvatarImage src={p.avatarUrl} />
-                            <AvatarFallback className="bg-slate-700 text-xs text-slate-300">{p.name?.[0]}</AvatarFallback>
+                            <AvatarFallback className="bg-muted text-xs text-foreground/90">{p.name?.[0]}</AvatarFallback>
                           </Avatar>
-                          <span className="text-white text-sm">{p.name || '—'}</span>
+                          <span className="text-foreground text-sm">{p.name || '—'}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3 hidden md:table-cell"><span className="text-slate-400 text-sm">{p.email}</span></td>
+                      <td className="px-4 py-3 hidden md:table-cell"><span className="text-muted-foreground text-sm">{p.email}</span></td>
                       <td className="px-4 py-3 hidden sm:table-cell">
-                        <span className="text-slate-400 text-xs">
+                        <span className="text-muted-foreground text-xs">
                           {Array.isArray(p.specializations) ? p.specializations.join('، ') : '—'}
                         </span>
                       </td>
@@ -82,10 +82,10 @@ function PeopleTable({ data, onEdit, onDelete }: { data: Person[]; onEdit: (p: P
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex gap-2">
-                          <Button size="sm" variant="ghost" onClick={() => onEdit(p)} className="h-8 w-8 p-0 text-slate-400 hover:text-white">
+                          <Button size="sm" variant="ghost" onClick={() => onEdit(p)} className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground">
                             <Pencil className="h-3.5 w-3.5" />
                           </Button>
-                          <Button size="sm" variant="ghost" onClick={() => onDelete(p)} className="h-8 w-8 p-0 text-slate-400 hover:text-red-400">
+                          <Button size="sm" variant="ghost" onClick={() => onDelete(p)} className="h-8 w-8 p-0 text-muted-foreground hover:text-red-400">
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>
@@ -200,13 +200,13 @@ export default function MentorsPage() {
 
   const field = (key: keyof typeof form, label: string, type: 'input' | 'textarea' = 'input', placeholder = '') => (
     <div className="space-y-1.5">
-      <Label className="text-slate-300 text-xs">{label}</Label>
+      <Label className="text-foreground/90 text-xs">{label}</Label>
       {type === 'textarea' ? (
         <Textarea
           value={form[key]}
           onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
           placeholder={placeholder}
-          className="bg-slate-800 border-white/[0.08] text-white text-sm resize-none"
+          className="bg-muted border-border text-foreground text-sm resize-none"
           rows={3}
         />
       ) : (
@@ -214,7 +214,7 @@ export default function MentorsPage() {
           value={form[key]}
           onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
           placeholder={placeholder}
-          className="bg-slate-800 border-white/[0.08] text-white text-sm"
+          className="bg-muted border-border text-foreground text-sm"
         />
       )}
     </div>
@@ -224,8 +224,8 @@ export default function MentorsPage() {
     <div className="space-y-6" dir="rtl">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">المرشدون والمدربون</h1>
-          <p className="text-slate-400 text-sm">إدارة جميع المرشدين والمدربين في المنصة</p>
+          <h1 className="text-2xl font-bold text-foreground">المرشدون والمدربون</h1>
+          <p className="text-muted-foreground text-sm">إدارة جميع المرشدين والمدربين في المنصة</p>
         </div>
         <Button onClick={() => setShowAdd(true)} className="bg-purple-600 hover:bg-purple-700 text-white gap-2">
           <Plus className="h-4 w-4" />
@@ -234,14 +234,14 @@ export default function MentorsPage() {
       </div>
 
       {loading ? (
-        <div className="text-slate-400 text-center py-12">جاري التحميل...</div>
+        <div className="text-muted-foreground text-center py-12">جاري التحميل...</div>
       ) : (
         <Tabs defaultValue="mentors">
-          <TabsList className="bg-slate-800 border border-white/[0.08]">
-            <TabsTrigger value="mentors" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white text-slate-400">
+          <TabsList className="bg-muted border border-border">
+            <TabsTrigger value="mentors" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white text-muted-foreground">
               المرشدون ({mentors.length})
             </TabsTrigger>
-            <TabsTrigger value="coaches" className="data-[state=active]:bg-orange-600 data-[state=active]:text-white text-slate-400">
+            <TabsTrigger value="coaches" className="data-[state=active]:bg-orange-600 data-[state=active]:text-white text-muted-foreground">
               المدربون ({coaches.length})
             </TabsTrigger>
           </TabsList>
@@ -265,11 +265,11 @@ export default function MentorsPage() {
           <div className="space-y-4 py-2">
             {/* Role picker */}
             <div className="space-y-1.5">
-              <Label className="text-slate-300 text-xs">النوع</Label>
+              <Label className="text-foreground/90 text-xs">النوع</Label>
               <div className="flex gap-2">
                 {(['mentor', 'coach'] as const).map(r => (
                   <button key={r} onClick={() => setAddRole(r)}
-                    className={`px-4 py-1.5 rounded-full text-xs font-medium border transition-colors ${addRole === r ? (r === 'mentor' ? 'bg-purple-600 border-purple-500 text-white' : 'bg-orange-600 border-orange-500 text-white') : 'border-white/20 text-slate-400 hover:text-white'}`}>
+                    className={`px-4 py-1.5 rounded-full text-xs font-medium border transition-colors ${addRole === r ? (r === 'mentor' ? 'bg-purple-600 border-purple-500 text-white' : 'bg-orange-600 border-orange-500 text-white') : 'border-border text-muted-foreground hover:text-foreground'}`}>
                     {r === 'mentor' ? 'مرشد' : 'مدرب'}
                   </button>
                 ))}
@@ -278,13 +278,13 @@ export default function MentorsPage() {
 
             {/* Avatar upload */}
             <div className="space-y-2">
-              <Label className="text-slate-300 text-xs">الصورة الشخصية</Label>
+              <Label className="text-foreground/90 text-xs">الصورة الشخصية</Label>
               <div className="flex items-center gap-3">
-                <div className="h-16 w-16 rounded-full border border-white/20 overflow-hidden bg-slate-800 flex-shrink-0">
+                <div className="h-16 w-16 rounded-full border border-border overflow-hidden bg-muted flex-shrink-0">
                   {(avatarPreview || form.avatarUrl) ? (
                     <img src={avatarPreview || form.avatarUrl} alt="" className="h-full w-full object-cover" />
                   ) : (
-                    <div className="h-full w-full flex items-center justify-center text-slate-500 text-xs">صورة</div>
+                    <div className="h-full w-full flex items-center justify-center text-muted-foreground text-xs">صورة</div>
                   )}
                 </div>
                 <div className="flex flex-col gap-1.5 flex-1">
@@ -292,16 +292,16 @@ export default function MentorsPage() {
                   <Button type="button" size="sm" variant="outline"
                     onClick={() => avatarInputRef.current?.click()}
                     disabled={uploading}
-                    className="border-white/20 text-slate-300 hover:text-white gap-1.5 w-fit">
+                    className="border-border text-foreground/90 hover:text-foreground gap-1.5 w-fit">
                     <Upload className="h-3.5 w-3.5" />
                     {uploading ? 'جاري الرفع...' : 'رفع صورة'}
                   </Button>
-                  <span className="text-xs text-slate-500">أو</span>
+                  <span className="text-xs text-muted-foreground">أو</span>
                   <Input
                     value={form.avatarUrl}
                     onChange={e => { setForm(f => ({ ...f, avatarUrl: e.target.value })); setAvatarPreview(null); }}
                     placeholder="رابط الصورة https://..."
-                    className="bg-slate-800 border-white/[0.08] text-white text-xs h-8"
+                    className="bg-muted border-border text-foreground text-xs h-8"
                   />
                 </div>
               </div>

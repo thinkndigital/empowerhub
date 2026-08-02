@@ -88,18 +88,18 @@ function ImageUploadField({ label, value, onChange, hint }: { label: string; val
       <div className="flex gap-2 items-start">
         <div className="flex-1 space-y-2">
           <Input value={value} onChange={e => onChange(e.target.value)} placeholder="https://..." dir="ltr" className="font-mono text-sm" />
-          {hint && <p className="text-slate-500 text-xs">{hint}</p>}
+          {hint && <p className="text-muted-foreground text-xs">{hint}</p>}
         </div>
         <label className="cursor-pointer flex-shrink-0">
           <Button type="button" variant="outline" size="icon" disabled={uploading} asChild>
-            <span className="border-white/20 text-slate-300 hover:text-white hover:bg-white/10">
+            <span className="border-border text-foreground/90 hover:text-foreground hover:bg-accent">
               {uploading ? <span className="text-xs">⏳</span> : <Upload className="h-4 w-4" />}
             </span>
           </Button>
           <input type="file" accept="image/*" className="hidden" onChange={handleFile} />
         </label>
         {value && (
-          <div className="h-10 w-10 rounded-lg border border-white/20 overflow-hidden bg-slate-700/50 flex-shrink-0">
+          <div className="h-10 w-10 rounded-lg border border-border overflow-hidden bg-muted/60 flex-shrink-0">
             <img src={value} alt="" className="h-full w-full object-contain" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
           </div>
         )}
@@ -156,18 +156,18 @@ export default function PlatformConfigPage() {
     }));
   };
 
-  if (loading) return <div className="text-slate-400 text-center py-16">جاري التحميل...</div>;
+  if (loading) return <div className="text-muted-foreground text-center py-16">جاري التحميل...</div>;
 
   return (
     <div className="space-y-6 max-w-3xl" dir="rtl">
       <div>
-        <h1 className="text-2xl font-bold text-white">تخصيص المنصة</h1>
-        <p className="text-slate-400 text-sm">تعديل الشعار والنصوص وتفعيل أو إيقاف أقسام لوحات التحكم</p>
+        <h1 className="text-2xl font-bold text-foreground">تخصيص المنصة</h1>
+        <p className="text-muted-foreground text-sm">تعديل الشعار والنصوص وتفعيل أو إيقاف أقسام لوحات التحكم</p>
       </div>
 
       {/* Identity */}
-      <Card className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20">
-        <CardHeader><CardTitle className="text-white text-base">هوية المنصة</CardTitle></CardHeader>
+      <Card className="bg-card border-border shadow-lg shadow-black/20">
+        <CardHeader><CardTitle className="text-foreground text-base">هوية المنصة</CardTitle></CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -202,20 +202,20 @@ export default function PlatformConfigPage() {
         const enabledCount = Object.values(current).filter(Boolean).length;
         const total = Object.keys(sections).length;
         return (
-          <Card key={dash.key} className="bg-slate-900/60 border-white/[0.08] shadow-lg shadow-black/20">
+          <Card key={dash.key} className="bg-card border-border shadow-lg shadow-black/20">
             <CardHeader>
               <div className="flex items-center gap-3">
                 <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${dash.bg}`}>
                   <DashIcon className={`h-5 w-5 ${dash.color}`} />
                 </div>
                 <div className="flex-1">
-                  <CardTitle className="text-white text-base">{dash.label}</CardTitle>
-                  <p className="text-slate-400 text-xs">{enabledCount} من {total} قسم مفعّل</p>
+                  <CardTitle className="text-foreground text-base">{dash.label}</CardTitle>
+                  <p className="text-muted-foreground text-xs">{enabledCount} من {total} قسم مفعّل</p>
                 </div>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="text-slate-400 hover:text-white text-xs"
+                  className="text-muted-foreground hover:text-foreground text-xs"
                   onClick={() => {
                     const allEnabled = Object.keys(sections).every(k => current[k]);
                     Object.keys(sections).forEach(k => setSection(dash.key, k, !allEnabled));
@@ -228,8 +228,8 @@ export default function PlatformConfigPage() {
             <CardContent>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {Object.entries(sections).map(([key, label]) => (
-                  <div key={key} className={`flex items-center justify-between p-3 rounded-xl border transition-all ${current[key] ? 'border-primary/40 bg-primary/5' : 'border-white/[0.08] bg-slate-900/30'}`}>
-                    <span className="text-sm text-slate-300">{label}</span>
+                  <div key={key} className={`flex items-center justify-between p-3 rounded-xl border transition-all ${current[key] ? 'border-primary/40 bg-primary/5' : 'border-border bg-card/50'}`}>
+                    <span className="text-sm text-foreground/90">{label}</span>
                     <Switch
                       checked={current[key] ?? true}
                       onCheckedChange={v => setSection(dash.key, key, v)}
