@@ -20,6 +20,8 @@ interface SiteConfig {
   siteName: string;
   tagline: string;
   primaryColor: string;
+  secondaryColor: string;
+  hoverColor: string;
   logoUrl: string;
   faviconUrl: string;
   hero: { title: string; subtitle: string; ctaText: string; ctaSecondaryText: string; backgroundImage: string };
@@ -44,6 +46,8 @@ interface SiteConfig {
 const defaultConfig: SiteConfig = {
   siteName: 'EmpowerHub', tagline: 'منصة التمكين الرقمي',
   primaryColor: '#3b82f6',
+  secondaryColor: '',
+  hoverColor: '',
   logoUrl: '', faviconUrl: '',
   hero: { title: '', subtitle: '', ctaText: 'ابدأ الآن', ctaSecondaryText: 'تعرف على المزيد', backgroundImage: '' },
   stats: [], features: [], opportunities: [], howItWorks: [], testimonials: [], blogPosts: [],
@@ -62,7 +66,7 @@ const defaultConfig: SiteConfig = {
 function SaveBar({ onSave, saving, saved }: { onSave: () => void; saving: boolean; saved: boolean }) {
   return (
     <div className="sticky top-14 z-20 bg-background/95 backdrop-blur border-b border-border px-4 py-3 flex items-center justify-between">
-      <Button onClick={onSave} disabled={saving} className={`gap-2 ${saved ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-primary hover:bg-primary/90'}`}>
+      <Button onClick={onSave} disabled={saving} className={`gap-2 ${saved ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-primary hover:bg-primary-hover'}`}>
         <Save className="h-4 w-4" />
         {saving ? 'جاري الحفظ...' : saved ? 'تم الحفظ ✓' : 'حفظ جميع التغييرات'}
       </Button>
@@ -117,8 +121,8 @@ export default function SiteEditorPage() {
 
   // Live-preview brand color in the admin panel itself
   useEffect(() => {
-    if (config.primaryColor) applyOrgColor(config.primaryColor);
-  }, [config.primaryColor]);
+    if (config.primaryColor) applyOrgColor(config.primaryColor, { secondary: config.secondaryColor, hover: config.hoverColor });
+  }, [config.primaryColor, config.secondaryColor, config.hoverColor]);
 
   useEffect(() => {
     fetch('/api/admin-panel/site-config').then(r => r.json()).then(d => {
@@ -271,22 +275,62 @@ export default function SiteEditorPage() {
                     <Input value={config.tagline} onChange={e => setConfig(c => ({ ...c, tagline: e.target.value }))} placeholder="منصة التمكين الرقمي" />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>اللون الرئيسي للمنصة</Label>
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="color"
-                      value={config.primaryColor || '#3b82f6'}
-                      onChange={e => setConfig(c => ({ ...c, primaryColor: e.target.value }))}
-                      className="h-10 w-10 rounded-lg border border-border bg-transparent cursor-pointer p-0.5"
-                    />
-                    <Input
-                      value={config.primaryColor || '#3b82f6'}
-                      onChange={e => setConfig(c => ({ ...c, primaryColor: e.target.value }))}
-                      placeholder="#3b82f6"
-                      className="max-w-[140px] font-mono"
-                    />
-                    <p className="text-xs text-muted-foreground">يؤثر على لون الأزرار والعناصر في صفحة الهبوط</p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label>اللون الرئيسي</Label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={config.primaryColor || '#3b82f6'}
+                        onChange={e => setConfig(c => ({ ...c, primaryColor: e.target.value }))}
+                        className="h-10 w-10 shrink-0 rounded-lg border border-border bg-transparent cursor-pointer p-0.5"
+                      />
+                      <Input
+                        value={config.primaryColor || '#3b82f6'}
+                        onChange={e => setConfig(c => ({ ...c, primaryColor: e.target.value }))}
+                        placeholder="#3b82f6"
+                        className="font-mono"
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">لون الأزرار الرئيسية والعناصر البارزة في كل المنصة</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>لون الهوفر (Hover)</Label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={config.hoverColor || config.primaryColor || '#3b82f6'}
+                        onChange={e => setConfig(c => ({ ...c, hoverColor: e.target.value }))}
+                        className="h-10 w-10 shrink-0 rounded-lg border border-border bg-transparent cursor-pointer p-0.5"
+                      />
+                      <Input
+                        value={config.hoverColor}
+                        onChange={e => setConfig(c => ({ ...c, hoverColor: e.target.value }))}
+                        placeholder="فارغ = تعتيم تلقائي للون الرئيسي"
+                        className="font-mono"
+                        dir="ltr"
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">لون الأزرار الرئيسية عند تمرير الفأرة (Hover) بكل المنصة</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>اللون الثانوي</Label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={config.secondaryColor || '#e5e7eb'}
+                        onChange={e => setConfig(c => ({ ...c, secondaryColor: e.target.value }))}
+                        className="h-10 w-10 shrink-0 rounded-lg border border-border bg-transparent cursor-pointer p-0.5"
+                      />
+                      <Input
+                        value={config.secondaryColor}
+                        onChange={e => setConfig(c => ({ ...c, secondaryColor: e.target.value }))}
+                        placeholder="فارغ = افتراضي"
+                        className="font-mono"
+                        dir="ltr"
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">لون أزرار "ثانوي" (variant=secondary) بكل المنصة</p>
                   </div>
                 </div>
                 <ImageUploadField label="شعار الموقع (Logo)" value={config.logoUrl} onChange={url => setConfig(c => ({ ...c, logoUrl: url }))} storagePath="site/logo" />

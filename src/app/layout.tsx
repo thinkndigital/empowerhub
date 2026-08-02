@@ -49,14 +49,28 @@ function hexToHsl(hex: string): { h: number; s: number; l: number } | null {
 
 async function getBrandColorStyle(): Promise<string> {
   try {
-    const snap = await adminDb.collection('config').doc('site').get();
-    const hex: string = snap.data()?.primaryColor || '';
-    const hsl = hexToHsl(hex);
+    const data = (await adminDb.collection('config').doc('site').get()).data() || {};
+    const hsl = hexToHsl(data.primaryColor || '');
     if (!hsl) return '';
     const { h, s, l } = hsl;
     const sS = Math.min(90, s + 8);
     const sL = Math.max(62, Math.min(76, l + 15));
-    return `:root{--primary:${h} ${s}% ${l}%;--ring:${h} ${s}% ${l}%;--sidebar-primary:${h} ${sS}% ${sL}%;--sidebar-ring:${h} ${sS}% ${sL}%;}`;
+    let vars = `--primary:${h} ${s}% ${l}%;--ring:${h} ${s}% ${l}%;--sidebar-primary:${h} ${sS}% ${sL}%;--sidebar-ring:${h} ${sS}% ${sL}%;`;
+
+    const hoverHsl = hexToHsl(data.hoverColor || '');
+    if (hoverHsl) {
+      vars += `--primary-hover:${hoverHsl.h} ${hoverHsl.s}% ${hoverHsl.l}%;`;
+    } else {
+      vars += `--primary-hover:${h} ${s}% ${Math.max(0, l - 7)}%;`;
+    }
+
+    const secondaryHsl = hexToHsl(data.secondaryColor || '');
+    if (secondaryHsl) {
+      const fg = secondaryHsl.l > 60 ? '224 71% 4%' : '210 40% 95%';
+      vars += `--secondary:${secondaryHsl.h} ${secondaryHsl.s}% ${secondaryHsl.l}%;--secondary-foreground:${fg};`;
+    }
+
+    return `:root{${vars}}`;
   } catch {
     return '';
   }

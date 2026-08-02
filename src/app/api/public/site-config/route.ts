@@ -8,6 +8,8 @@ const defaultConfig = {
   siteName: 'EmpowerHub',
   tagline: 'منصة التمكين الرقمي',
   primaryColor: '#3b82f6',
+  secondaryColor: '',
+  hoverColor: '',
   logoUrl: '',
   faviconUrl: '',
   hero: {

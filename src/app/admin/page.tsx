@@ -98,7 +98,7 @@ export default function AdminLoginPage() {
 
             <Button
               type="submit"
-              className="w-full h-11 bg-primary hover:bg-primary/90 text-white font-semibold text-base mt-2"
+              className="w-full h-11 bg-primary hover:bg-primary-hover text-white font-semibold text-base mt-2"
               disabled={loading}
             >
               {loading ? "جاري الدخول..." : "دخول"}

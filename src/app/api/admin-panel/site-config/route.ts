@@ -9,6 +9,9 @@ function checkAuth() {
 const defaultConfig = {
   siteName: 'EmpowerHub',
   tagline: 'منصة التمكين الرقمي',
+  primaryColor: '',
+  secondaryColor: '',
+  hoverColor: '',
   logoUrl: '',
   faviconUrl: '',
   hero: {

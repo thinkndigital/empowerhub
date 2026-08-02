@@ -458,7 +458,7 @@ export default function OrganizationsPage() {
           <h1 className="text-2xl font-bold text-foreground">المنظمات</h1>
           <p className="text-muted-foreground text-sm">إدارة جميع المنظمات المسجلة — {orgs.length} منظمة</p>
         </div>
-        <Button onClick={() => setAddOpen(true)} className="bg-primary hover:bg-primary/90 gap-2 w-full sm:w-auto">
+        <Button onClick={() => setAddOpen(true)} className="bg-primary hover:bg-primary-hover gap-2 w-full sm:w-auto">
           <Plus className="h-4 w-4" />إضافة منظمة
         </Button>
       </div>
