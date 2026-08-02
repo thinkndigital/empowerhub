@@ -35,7 +35,7 @@ interface SiteConfig {
   sections: {
     showStats: boolean; showFeatures: boolean; showOpportunities: boolean; showHowItWorks: boolean;
     showRoles: boolean; showMentors: boolean; showCoaches: boolean; showBlog: boolean;
-    showTestimonials: boolean; showProducts: boolean; showStores: boolean; showContact: boolean; showCTA: boolean;
+    showTestimonials: boolean; showProducts: boolean; showStores: boolean; showPricing: boolean; showContact: boolean; showCTA: boolean;
   };
   footer: { description: string; email: string; phone: string; twitter: string; linkedin: string; instagram: string; copyright: string };
 }
@@ -52,7 +52,7 @@ const defaultConfig: SiteConfig = {
   sections: {
     showStats: true, showFeatures: true, showOpportunities: true, showHowItWorks: true,
     showRoles: true, showMentors: true, showCoaches: true, showBlog: true,
-    showTestimonials: true, showProducts: true, showStores: true, showContact: true, showCTA: true,
+    showTestimonials: true, showProducts: true, showStores: true, showPricing: true, showContact: true, showCTA: true,
   },
   footer: { description: '', email: '', phone: '', twitter: '', linkedin: '', instagram: '', copyright: '' },
 };
@@ -723,6 +723,7 @@ export default function SiteEditorPage() {
                   { key: 'showTestimonials' as const, label: 'قسم الآراء', desc: 'شهادات وتقييمات المستخدمين' },
                   { key: 'showProducts' as const, label: 'قسم المنتجات', desc: 'عرض منتجات المستفيدين' },
                   { key: 'showStores' as const, label: 'قسم المتاجر', desc: 'عرض متاجر رواد الأعمال' },
+                  { key: 'showPricing' as const, label: 'قسم خطط الأسعار', desc: 'يعرض الخطط المُدارة من صفحة "خطط التسعير" — لن يظهر القسم إن لم توجد خطط' },
                   { key: 'showContact' as const, label: 'قسم التواصل', desc: 'نموذج ومعلومات التواصل' },
                   { key: 'showCTA' as const, label: 'قسم الدعوة للعمل', desc: 'بانر التسجيل في نهاية الصفحة' },
                 ].map(item => (

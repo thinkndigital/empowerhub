@@ -12,6 +12,7 @@ import {
   ArrowLeft, BookOpen, Store, GraduationCap, CheckCircle,
   Star, MessageSquare, Phone, Mail, Globe, Calendar, Clock,
   Tag, MapPin, FileText, Briefcase, Video, Building2, Users, BarChart3,
+  Zap, Crown, Check,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useCurrency } from '@/hooks/use-currency';
@@ -82,6 +83,21 @@ interface Product {
   store?: { phone?: string };
 }
 
+interface Plan {
+  id: string;
+  name: string;
+  nameEn?: string;
+  key: string;
+  description?: string;
+  priceMonthly: number;
+  priceAnnual: number;
+  currency: string;
+  color: string;
+  icon: string;
+  highlighted: boolean;
+  features: string[];
+}
+
 interface SiteConfig {
   siteName: string;
   tagline: string;
@@ -100,7 +116,7 @@ interface SiteConfig {
   sections: {
     showStats: boolean; showFeatures: boolean; showOpportunities: boolean; showHowItWorks: boolean;
     showRoles: boolean; showMentors: boolean; showCoaches: boolean; showCourses: boolean; showBlog: boolean;
-    showTestimonials: boolean; showProducts: boolean; showStores: boolean; showContact: boolean; showCTA: boolean;
+    showTestimonials: boolean; showProducts: boolean; showStores: boolean; showPricing: boolean; showContact: boolean; showCTA: boolean;
   };
   footer: { description: string; email: string; phone: string; twitter: string; linkedin: string; instagram: string; copyright: string };
 }
@@ -442,6 +458,7 @@ export default function LandingPage() {
   const [latestArticles, setLatestArticles] = useState<{ id: string; title: string; excerpt: string; coverImageUrl: string; authorName: string; authorRole: string; readTime: number; tags: string[] }[]>([]);
   const [latestProjects, setLatestProjects] = useState<{ id: string; title: string; description: string; coverImageUrl: string; organizationName: string; type: string; location: string; deadline: string }[]>([]);
   const [successStories, setSuccessStories] = useState<{ id: string; beneficiaryName: string; beneficiaryRole: string; content: string; avatarUrl: string; stars: number; orgName: string }[]>([]);
+  const [plans, setPlans] = useState<Plan[]>([]);
   const [loadingMentors, setLoadingMentors] = useState(true);
   const [loadingCoaches, setLoadingCoaches] = useState(true);
   const [loadingProducts, setLoadingProducts] = useState(true);
@@ -533,6 +550,12 @@ export default function LandingPage() {
     }).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    fetch('/api/public/plans').then(r => r.json()).then(d => {
+      setPlans(d.plans || []);
+    }).catch(() => {});
+  }, []);
+
   const handleContactSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     toast({ title: 'شكراً لتواصلك! سنرد عليك قريباً.' });
@@ -545,7 +568,7 @@ export default function LandingPage() {
   const sections = {
     showStats: true, showFeatures: true, showOpportunities: true, showHowItWorks: true,
     showRoles: true, showMentors: true, showCoaches: true, showCourses: true, showBlog: true,
-    showTestimonials: true, showProducts: true, showStores: true, showContact: true, showCTA: true,
+    showTestimonials: true, showProducts: true, showStores: true, showPricing: true, showContact: true, showCTA: true,
     ...(cfg?.sections ?? {}),
   };
 
@@ -856,6 +879,26 @@ export default function LandingPage() {
                   <div className="text-xs sm:text-sm text-muted-foreground">{s.label}</div>
                 </div>
               ))}
+            </div>
+          </section>
+        )}
+
+        {/* ── Features ─────────────────────────────────────────────────────────── */}
+        {sections.showFeatures && featuresData.length > 0 && (
+          <section className="py-16 sm:py-20 md:py-28">
+            <div className="container">
+              <div className="text-center mb-12 sm:mb-16">
+                <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">لماذا EmpowerHub</p>
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground">مميزات تصنع فرقاً حقيقياً</h2>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {featuresData.map((f, i) => (
+                  <div key={i} className="p-6 rounded-2xl border border-border bg-card">
+                    <h3 className="text-base font-bold text-foreground mb-2">{f.title}</h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{f.description}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </section>
         )}
@@ -1224,6 +1267,76 @@ export default function LandingPage() {
           </section>
         )}
 
+        {/* ── Pricing ──────────────────────────────────────────────────────────── */}
+        {sections.showPricing && plans.length > 0 && (
+          <section id="pricing" className="py-16 sm:py-20 md:py-28 bg-muted/30">
+            <div className="container">
+              <div className="text-center mb-10 sm:mb-12">
+                <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">خطط الأسعار</p>
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground">اختر الخطة المناسبة لك</h2>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+                {plans.map(plan => {
+                  const PlanIcon = { Star, Zap, Building2, Crown }[plan.icon] || Star;
+                  const savings = plan.priceAnnual > 0 && plan.priceMonthly > 0
+                    ? Math.round((1 - plan.priceAnnual / (plan.priceMonthly * 12)) * 100)
+                    : 0;
+                  return (
+                    <div
+                      key={plan.id}
+                      className={`relative rounded-2xl border bg-card p-6 sm:p-8 flex flex-col ${
+                        plan.highlighted ? 'border-primary shadow-lg shadow-primary/10 md:-translate-y-2' : 'border-border'
+                      }`}
+                    >
+                      {plan.highlighted && (
+                        <span className="absolute -top-3 right-1/2 translate-x-1/2 bg-primary text-primary-foreground text-xs px-3 py-1 rounded-full font-medium">
+                          الأكثر شعبية
+                        </span>
+                      )}
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="h-10 w-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${plan.color}20` }}>
+                          <PlanIcon className="h-5 w-5" style={{ color: plan.color }} />
+                        </div>
+                        <h3 className="font-bold text-lg text-foreground">{plan.name}</h3>
+                      </div>
+                      <div className="mb-4">
+                        {plan.priceMonthly === 0 ? (
+                          <p className="text-2xl font-bold text-emerald-600">مجاني</p>
+                        ) : (
+                          <>
+                            <div className="flex items-baseline gap-1">
+                              <span className="text-3xl font-bold text-foreground">{plan.priceMonthly.toLocaleString()}</span>
+                              <span className="text-muted-foreground text-sm">{plan.currency}/شهر</span>
+                            </div>
+                            {savings > 0 && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                أو {plan.priceAnnual.toLocaleString()} {plan.currency}/سنة
+                                {' '}<span className="text-emerald-600">(وفر {savings}%)</span>
+                              </p>
+                            )}
+                          </>
+                        )}
+                      </div>
+                      {plan.description && <p className="text-sm text-muted-foreground mb-5">{plan.description}</p>}
+                      <ul className="space-y-2.5 mb-6 flex-1">
+                        {(plan.features || []).map((f, i) => (
+                          <li key={i} className="flex items-start gap-2 text-sm text-foreground">
+                            <Check className="h-4 w-4 flex-shrink-0 mt-0.5" style={{ color: plan.color }} />
+                            {f}
+                          </li>
+                        ))}
+                      </ul>
+                      <Button asChild variant={plan.highlighted ? 'default' : 'outline'} className="w-full">
+                        <Link href="/register">ابدأ الآن</Link>
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* ── Testimonials ────────────────────────────────────────────────────── */}
         {sections.showTestimonials && testimonialsData.length > 0 && (
           <section className="py-16 sm:py-20 md:py-28 bg-muted/30">
@@ -1260,7 +1373,7 @@ export default function LandingPage() {
         )}
 
         {/* ── Latest Articles ─────────────────────────────────────────────────── */}
-        {latestArticles.length > 0 && (
+        {sections.showBlog && latestArticles.length > 0 && (
           <section id="articles" className="py-16 sm:py-20 md:py-28 bg-muted/30">
             <div className="container">
               <div className="text-center mb-10 sm:mb-12">
@@ -1324,7 +1437,7 @@ export default function LandingPage() {
         )}
 
         {/* ── Latest Projects / Opportunities ─────────────────────────────────── */}
-        {latestProjects.length > 0 && (
+        {sections.showOpportunities && latestProjects.length > 0 && (
           <section id="opportunities-live" className="py-16 sm:py-20 md:py-28">
             <div className="container">
               <div className="text-center mb-10 sm:mb-12">

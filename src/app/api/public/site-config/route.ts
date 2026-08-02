@@ -81,6 +81,7 @@ const defaultConfig = {
     showTestimonials: true,
     showProducts: true,
     showStores: true,
+    showPricing: true,
     showContact: true,
     showCTA: true,
   },

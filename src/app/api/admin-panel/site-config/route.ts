@@ -71,7 +71,7 @@ const defaultConfig = {
   sections: {
     showStats: true, showFeatures: true, showOpportunities: true, showHowItWorks: true,
     showRoles: true, showMentors: true, showCoaches: true, showBlog: true,
-    showTestimonials: true, showProducts: true, showStores: true, showContact: true, showCTA: true,
+    showTestimonials: true, showProducts: true, showStores: true, showPricing: true, showContact: true, showCTA: true,
   },
   footer: {
     description: 'منصة EmpowerHub للتمكين الرقمي',

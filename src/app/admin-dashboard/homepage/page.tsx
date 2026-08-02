@@ -28,7 +28,7 @@ interface SiteConfig {
   sections?: {
     showStats?: boolean; showFeatures?: boolean; showOpportunities?: boolean; showHowItWorks?: boolean;
     showRoles?: boolean; showMentors?: boolean; showCoaches?: boolean; showCourses?: boolean; showBlog?: boolean;
-    showTestimonials?: boolean; showProducts?: boolean; showStores?: boolean; showContact?: boolean; showCTA?: boolean;
+    showTestimonials?: boolean; showProducts?: boolean; showStores?: boolean; showPricing?: boolean; showContact?: boolean; showCTA?: boolean;
   };
 }
 
@@ -37,7 +37,7 @@ const sectionLabels: Record<string, string> = {
   showHowItWorks: 'كيف تعمل', showRoles: 'الأدوار', showMentors: 'المرشدون',
   showCoaches: 'المدربون', showCourses: 'الدورات', showBlog: 'المقالات',
   showTestimonials: 'الشهادات', showProducts: 'المنتجات', showStores: 'المتاجر',
-  showContact: 'التواصل', showCTA: 'دعوة للتسجيل',
+  showPricing: 'خطط الأسعار', showContact: 'التواصل', showCTA: 'دعوة للتسجيل',
 };
 
 export default function AdminHomepagePage() {
