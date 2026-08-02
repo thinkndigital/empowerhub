@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
-import { checkOrgLimit } from '@/lib/plan-limits';
+import { checkOrgLimit, checkOrgLocked } from '@/lib/plan-limits';
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,6 +12,10 @@ export async function POST(req: NextRequest) {
     }
 
     if (organizationId) {
+      const lockCheck = await checkOrgLocked(organizationId);
+      if (!lockCheck.allowed) {
+        return NextResponse.json({ error: lockCheck.message }, { status: 403 });
+      }
       const limitKey = role === 'beneficiary' ? 'maxUsers' : role === 'mentor' || role === 'coach' ? 'maxMentors' : null;
       if (limitKey) {
         const limitCheck = await checkOrgLimit(organizationId, limitKey);

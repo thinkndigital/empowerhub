@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
-import { checkOrgLimit } from '@/lib/plan-limits';
+import { checkOrgLimit, checkOrgLocked } from '@/lib/plan-limits';
 
 export async function POST(req: NextRequest) {
   try {
@@ -74,6 +74,11 @@ export async function POST(req: NextRequest) {
 
       if (!orgsSnapshot.empty) {
         const candidateOrgId = orgsSnapshot.docs[0].id;
+        const lockCheck = await checkOrgLocked(candidateOrgId);
+        if (!lockCheck.allowed) {
+          await adminAuth.deleteUser(uid);
+          return NextResponse.json({ error: lockCheck.message }, { status: 403 });
+        }
         const limitCheck = await checkOrgLimit(candidateOrgId, 'maxMentors');
         if (!limitCheck.allowed) {
           await adminAuth.deleteUser(uid);

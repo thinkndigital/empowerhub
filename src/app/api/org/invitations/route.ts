@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
-import { checkOrgLimit } from '@/lib/plan-limits';
+import { checkOrgLimit, checkOrgLocked } from '@/lib/plan-limits';
 
 // GET: fetch invitations for the current user
 export async function GET(req: NextRequest) {
@@ -35,6 +35,10 @@ export async function POST(req: NextRequest) {
     if (invite.targetUid !== decoded.uid) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     if (action === 'accept') {
+      const lockCheck = await checkOrgLocked(invite.orgId);
+      if (!lockCheck.allowed) {
+        return NextResponse.json({ error: lockCheck.message }, { status: 403 });
+      }
       const limitKey = invite.targetRole === 'beneficiary' ? 'maxUsers' : invite.targetRole === 'mentor' || invite.targetRole === 'coach' ? 'maxMentors' : null;
       if (limitKey) {
         const limitCheck = await checkOrgLimit(invite.orgId, limitKey);

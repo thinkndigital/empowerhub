@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
-import { checkOrgLimit } from '@/lib/plan-limits';
+import { checkOrgLimit, checkOrgLocked } from '@/lib/plan-limits';
 
 export async function POST(req: NextRequest) {
   try {
@@ -22,6 +22,11 @@ export async function POST(req: NextRequest) {
 
     const orgDoc = orgsSnapshot.docs[0];
     const organizationId = orgDoc.id;
+
+    const lockCheck = await checkOrgLocked(organizationId);
+    if (!lockCheck.allowed) {
+      return NextResponse.json({ error: lockCheck.message }, { status: 403 });
+    }
 
     const userSnap = await adminDb.collection('users').doc(uid).get();
     const role = userSnap.data()?.role;

@@ -72,3 +72,23 @@ export async function checkOrgLimit(orgId: string | undefined | null, limitKey: 
   }
   return { allowed: true };
 }
+
+// Checks whether an organization's subscription is currently locked (expired, unpaid).
+// This is the server-side counterpart to the dashboard lock screen — the UI hides the
+// content-creation pages for a locked org, but every route that writes org-owned content
+// must also refuse the write directly, since the UI check alone can be bypassed by calling
+// the API directly.
+export async function checkOrgLocked(orgId: string | undefined | null): Promise<LimitCheckResult> {
+  if (!orgId) return { allowed: true };
+
+  const subSnap = await adminDb.collection('subscriptions').doc(orgId).get();
+  if (!subSnap.exists) return { allowed: true };
+
+  if (subSnap.data()?.status === 'locked') {
+    return {
+      allowed: false,
+      message: 'اشتراك منظمتك منتهٍ. يرجى إتمام الدفع لإعادة تفعيل المنصة.',
+    };
+  }
+  return { allowed: true };
+}

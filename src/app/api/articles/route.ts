@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
+import { checkOrgLocked } from '@/lib/plan-limits';
 
 function normalizeDate(d: any): string | null {
   if (!d) return null;
@@ -49,6 +50,13 @@ export async function POST(req: NextRequest) {
       : (Array.isArray(tags) ? tags : []);
 
     const orgId = userData.organizationId || (decoded as any).organizationId || '';
+
+    if (orgId) {
+      const lockCheck = await checkOrgLocked(orgId);
+      if (!lockCheck.allowed) {
+        return NextResponse.json({ error: lockCheck.message }, { status: 403 });
+      }
+    }
 
     const docRef = await adminDb.collection('articles').add({
       title,
