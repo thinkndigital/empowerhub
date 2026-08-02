@@ -30,7 +30,6 @@ import { NotificationBell } from "@/components/notification-bell";
 import { MessageBell } from "@/components/message-bell";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { applyPlatformColor } from "@/lib/platform-color";
-import { SubscriptionLockedScreen } from "@/components/subscription-locked-screen";
 
 const allCoachMenuItems = [
   { href: "/coach-dashboard",              label: "لوحة التحكم",        icon: LayoutGrid,        sectionKey: null },
@@ -54,17 +53,6 @@ export default function CoachDashboardLayout({ children }: { children: React.Rea
   const [avatarUrl, setAvatarUrl] = useState('');
   const [menuItems, setMenuItems] = useState(allCoachMenuItems);
   const [platformLogo, setPlatformLogo] = useState('');
-  const [subStatus, setSubStatus] = useState<{ locked: boolean; orgId?: string; planKey?: string; isAdmin?: boolean } | null>(null);
-
-  useEffect(() => {
-    if (!authUser) return;
-    authUser.getIdToken().then(token => {
-      fetch('/api/org/subscription-status', { headers: { authorization: `Bearer ${token}` } })
-        .then(r => r.json())
-        .then(d => setSubStatus(d))
-        .catch(() => setSubStatus({ locked: false }));
-    });
-  }, [authUser]);
 
   useEffect(() => {
     if (!authUser) return;
@@ -125,10 +113,6 @@ export default function CoachDashboardLayout({ children }: { children: React.Rea
     href === '/coach-dashboard'
       ? pathname === href
       : pathname === href || pathname.startsWith(href + '/');
-
-  if (subStatus?.locked) {
-    return <SubscriptionLockedScreen isAdmin={!!subStatus.isAdmin} orgId={subStatus.orgId || ''} planKey={subStatus.planKey || ''} />;
-  }
 
   return (
     <SidebarProvider dir="rtl">

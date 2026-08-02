@@ -26,7 +26,6 @@ import { NotificationBell } from "@/components/notification-bell";
 import { MessageBell } from "@/components/message-bell";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { applyPlatformColor } from "@/lib/platform-color";
-import { SubscriptionLockedScreen } from "@/components/subscription-locked-screen";
 
 const allMenuItems = [
   { href: "/beneficiary-dashboard",              label: "لوحة التحكم",    icon: LayoutGrid,    sectionKey: null },
@@ -53,17 +52,6 @@ export default function BeneficiaryDashboardLayout({ children }: { children: Rea
   const [avatarUrl, setAvatarUrl] = useState('');
   const [menuItems, setMenuItems] = useState(allMenuItems);
   const [platformLogo, setPlatformLogo] = useState('');
-  const [subStatus, setSubStatus] = useState<{ locked: boolean; orgId?: string; planKey?: string; isAdmin?: boolean } | null>(null);
-
-  useEffect(() => {
-    if (!authUser) return;
-    authUser.getIdToken().then(token => {
-      fetch('/api/org/subscription-status', { headers: { authorization: `Bearer ${token}` } })
-        .then(r => r.json())
-        .then(d => setSubStatus(d))
-        .catch(() => setSubStatus({ locked: false }));
-    });
-  }, [authUser]);
 
   const fetchData = useCallback(async () => {
     if (!authUser) return;
@@ -96,10 +84,6 @@ export default function BeneficiaryDashboardLayout({ children }: { children: Rea
     href === '/beneficiary-dashboard'
       ? pathname === href
       : pathname === href || pathname.startsWith(href + '/');
-
-  if (subStatus?.locked) {
-    return <SubscriptionLockedScreen isAdmin={!!subStatus.isAdmin} orgId={subStatus.orgId || ''} planKey={subStatus.planKey || ''} />;
-  }
 
   return (
     <SidebarProvider dir="rtl">

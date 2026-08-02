@@ -28,7 +28,6 @@ import { MessageBell } from "@/components/message-bell";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { applyOrgColor } from "@/lib/apply-org-color";
 import { applyPlatformColor } from "@/lib/platform-color";
-import { SubscriptionLockedScreen } from "@/components/subscription-locked-screen";
 
 const allMenuItems = [
   { href: "/organization-dashboard",                 label: "لوحة التحكم",        icon: LayoutGrid,    sectionKey: null },
@@ -57,7 +56,6 @@ export default function OrganizationDashboardLayout({ children }: { children: Re
   const [avatarUrl, setAvatarUrl] = useState('');
   const [menuItems, setMenuItems] = useState(allMenuItems);
   const [platformLogo, setPlatformLogo] = useState('');
-  const [subStatus, setSubStatus] = useState<{ locked: boolean; orgId?: string; planKey?: string; isAdmin?: boolean } | null>(null);
 
   const fetchOrg = useCallback(async () => {
     if (!authUser) return;
@@ -87,16 +85,6 @@ export default function OrganizationDashboardLayout({ children }: { children: Re
   useEffect(() => { fetchOrg(); }, [fetchOrg]);
 
   useEffect(() => {
-    if (!authUser) return;
-    authUser.getIdToken().then(token => {
-      fetch('/api/org/subscription-status', { headers: { authorization: `Bearer ${token}` } })
-        .then(r => r.json())
-        .then(d => setSubStatus(d))
-        .catch(() => setSubStatus({ locked: false }));
-    });
-  }, [authUser]);
-
-  useEffect(() => {
     window.addEventListener('org-settings-change', fetchOrg);
     return () => window.removeEventListener('org-settings-change', fetchOrg);
   }, [fetchOrg]);
@@ -114,10 +102,6 @@ export default function OrganizationDashboardLayout({ children }: { children: Re
     href === '/organization-dashboard'
       ? pathname === href
       : pathname === href || pathname.startsWith(href + '/');
-
-  if (subStatus?.locked) {
-    return <SubscriptionLockedScreen isAdmin={!!subStatus.isAdmin} orgId={subStatus.orgId || ''} planKey={subStatus.planKey || ''} />;
-  }
 
   return (
     <SidebarProvider dir="rtl">

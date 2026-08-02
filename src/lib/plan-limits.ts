@@ -1,17 +1,17 @@
 import { adminDb } from '@/lib/firebase-admin';
 
-type LimitKey = 'maxUsers' | 'maxMentors' | 'maxCourses' | 'maxProducts';
+type LimitKey = 'maxUsers' | 'maxMentors';
 
 const LIMIT_LABELS: Record<LimitKey, string> = {
   maxUsers: 'المستفيدين',
   maxMentors: 'المرشدين والمدربين',
-  maxCourses: 'الدورات',
-  maxProducts: 'المنتجات',
 };
 
 export type LimitCheckResult = { allowed: true } | { allowed: false; message: string };
 
-// Checks whether an organization can add one more item of the given kind under its current plan.
+// Checks whether an organization can add one more beneficiary/mentor/coach under its current
+// plan. Coaches, mentors, and beneficiaries are otherwise unaffected by the plan — this only
+// gates the org's "add member" actions, never their own content (courses, sessions, products).
 // Orgs with no plan set, or a plan/limit that can't be resolved, are treated as unrestricted
 // (keeps legacy organizations working exactly as before this feature existed).
 export async function checkOrgLimit(orgId: string | undefined | null, limitKey: LimitKey): Promise<LimitCheckResult> {
@@ -28,40 +28,18 @@ export async function checkOrgLimit(orgId: string | undefined | null, limitKey: 
   if (max == null || max === -1) return { allowed: true };
 
   let current = 0;
-  switch (limitKey) {
-    case 'maxUsers': {
-      const snap = await adminDb.collection('users')
-        .where('organizationId', '==', orgId)
-        .where('role', '==', 'beneficiary')
-        .get();
-      current = snap.size;
-      break;
-    }
-    case 'maxMentors': {
-      const [mentors, coaches] = await Promise.all([
-        adminDb.collection('users').where('organizationId', '==', orgId).where('role', '==', 'mentor').get(),
-        adminDb.collection('users').where('organizationId', '==', orgId).where('role', '==', 'coach').get(),
-      ]);
-      current = mentors.size + coaches.size;
-      break;
-    }
-    case 'maxCourses': {
-      const snap = await adminDb.collection('courses').where('organizationId', '==', orgId).get();
-      current = snap.size;
-      break;
-    }
-    case 'maxProducts': {
-      // Products are created via two paths with different org-id field names
-      // (`orgId` from the org store route, `organizationId` from the beneficiary store route).
-      const [byOrgId, byOrganizationId] = await Promise.all([
-        adminDb.collection('products').where('orgId', '==', orgId).get(),
-        adminDb.collection('products').where('organizationId', '==', orgId).get(),
-      ]);
-      const seen = new Set<string>();
-      for (const d of [...byOrgId.docs, ...byOrganizationId.docs]) seen.add(d.id);
-      current = seen.size;
-      break;
-    }
+  if (limitKey === 'maxUsers') {
+    const snap = await adminDb.collection('users')
+      .where('organizationId', '==', orgId)
+      .where('role', '==', 'beneficiary')
+      .get();
+    current = snap.size;
+  } else {
+    const [mentors, coaches] = await Promise.all([
+      adminDb.collection('users').where('organizationId', '==', orgId).where('role', '==', 'mentor').get(),
+      adminDb.collection('users').where('organizationId', '==', orgId).where('role', '==', 'coach').get(),
+    ]);
+    current = mentors.size + coaches.size;
   }
 
   if (current >= max) {
@@ -74,10 +52,9 @@ export async function checkOrgLimit(orgId: string | undefined | null, limitKey: 
 }
 
 // Checks whether an organization's subscription is currently locked (expired, unpaid).
-// This is the server-side counterpart to the dashboard lock screen — the UI hides the
-// content-creation pages for a locked org, but every route that writes org-owned content
-// must also refuse the write directly, since the UI check alone can be bypassed by calling
-// the API directly.
+// Locking only blocks the org from adding new beneficiaries/mentors/coaches — everyone
+// already in the org keeps full access to their dashboard and can keep publishing
+// courses, sessions, and products as normal.
 export async function checkOrgLocked(orgId: string | undefined | null): Promise<LimitCheckResult> {
   if (!orgId) return { allowed: true };
 
@@ -87,7 +64,7 @@ export async function checkOrgLocked(orgId: string | undefined | null): Promise<
   if (subSnap.data()?.status === 'locked') {
     return {
       allowed: false,
-      message: 'اشتراك منظمتك منتهٍ. يرجى إتمام الدفع لإعادة تفعيل المنصة.',
+      message: 'اشتراك منظمتك منتهٍ. يرجى إتمام الدفع لإضافة أعضاء جدد للمنظمة.',
     };
   }
   return { allowed: true };

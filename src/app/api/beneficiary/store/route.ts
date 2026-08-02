@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
-import { checkOrgLimit, checkOrgLocked } from '@/lib/plan-limits';
 
 export async function GET(req: NextRequest) {
   try {
@@ -34,17 +33,6 @@ export async function POST(req: NextRequest) {
 
     const userDoc = await adminDb.collection('users').doc(uid).get();
     const userData = userDoc.data() || {};
-
-    if (userData.organizationId) {
-      const lockCheck = await checkOrgLocked(userData.organizationId);
-      if (!lockCheck.allowed) {
-        return NextResponse.json({ error: lockCheck.message }, { status: 403 });
-      }
-      const limitCheck = await checkOrgLimit(userData.organizationId, 'maxProducts');
-      if (!limitCheck.allowed) {
-        return NextResponse.json({ error: limitCheck.message }, { status: 403 });
-      }
-    }
 
     const productData = {
       ...body,

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
-import { checkOrgLimit, checkOrgLocked } from '@/lib/plan-limits';
 
 export async function GET(req: NextRequest) {
   try {
@@ -52,17 +51,6 @@ export async function POST(req: NextRequest) {
     const userDoc = await adminDb.collection('users').doc(decoded.uid).get();
     if (!orgId) orgId = userDoc.data()?.organizationId;
     const coachName = userDoc.data()?.name || '';
-
-    if (orgId) {
-      const lockCheck = await checkOrgLocked(orgId);
-      if (!lockCheck.allowed) {
-        return NextResponse.json({ error: lockCheck.message }, { status: 403 });
-      }
-      const limitCheck = await checkOrgLimit(orgId, 'maxCourses');
-      if (!limitCheck.allowed) {
-        return NextResponse.json({ error: limitCheck.message }, { status: 403 });
-      }
-    }
 
     const ref = await adminDb.collection('courses').add({
       ...body,
