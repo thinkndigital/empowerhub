@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   Save, Plus, Trash2, Upload, Globe, Image as ImageIcon, BarChart3, Sparkles,
-  Layout, Link2, Eye, EyeOff, MessageSquare, Phone, Star, Users, UserCheck,
+  Layout, Link2, Eye, EyeOff, MessageSquare, Phone, Star, Users, UserCheck, LogIn,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,7 @@ interface SiteConfig {
   blogPosts: { title: string; excerpt: string; category: string; imageUrl: string; link: string }[];
   contact: { phone: string; whatsapp: string; whatsappLink: string; email: string };
   ctaBanner: { title: string; subtitle: string; primaryText: string; secondaryText: string };
+  authBranding: { imageUrl: string; title: string; subtitle: string };
   roles: { title: string; description: string; icon: string; badge: string; link: string }[];
   sections: {
     showStats: boolean; showFeatures: boolean; showOpportunities: boolean; showHowItWorks: boolean;
@@ -48,6 +49,7 @@ const defaultConfig: SiteConfig = {
   stats: [], features: [], opportunities: [], howItWorks: [], testimonials: [], blogPosts: [],
   contact: { phone: '', whatsapp: '', whatsappLink: '', email: '' },
   ctaBanner: { title: '', subtitle: '', primaryText: 'ابدأ مجاناً الآن', secondaryText: 'تجربة المنصة أولاً' },
+  authBranding: { imageUrl: '', title: '', subtitle: '' },
   roles: [],
   sections: {
     showStats: true, showFeatures: true, showOpportunities: true, showHowItWorks: true,
@@ -129,6 +131,7 @@ export default function SiteEditorPage() {
           footer: { ...defaultConfig.footer, ...d.config.footer },
           contact: { ...defaultConfig.contact, ...d.config.contact },
           ctaBanner: { ...defaultConfig.ctaBanner, ...d.config.ctaBanner },
+          authBranding: { ...defaultConfig.authBranding, ...d.config.authBranding },
           howItWorks: d.config.howItWorks ?? defaultConfig.howItWorks,
           testimonials: d.config.testimonials ?? defaultConfig.testimonials,
           blogPosts: d.config.blogPosts ?? defaultConfig.blogPosts,
@@ -164,6 +167,8 @@ export default function SiteEditorPage() {
     setConfig(c => ({ ...c, contact: { ...c.contact, [k]: v } }));
   const setBanner = (k: keyof SiteConfig['ctaBanner'], v: string) =>
     setConfig(c => ({ ...c, ctaBanner: { ...c.ctaBanner, [k]: v } }));
+  const setAuthBranding = (k: keyof SiteConfig['authBranding'], v: string) =>
+    setConfig(c => ({ ...c, authBranding: { ...c.authBranding, [k]: v } }));
 
   // Stats
   const addStat = () => setConfig(c => ({ ...c, stats: [...c.stats, { label: '', value: '', icon: 'Users' }] }));
@@ -231,6 +236,7 @@ export default function SiteEditorPage() {
             {[
               { value: 'identity', label: 'الهوية', icon: Globe },
               { value: 'hero', label: 'الترحيب', icon: ImageIcon },
+              { value: 'auth', label: 'صفحات الدخول', icon: LogIn },
               { value: 'stats', label: 'الإحصائيات', icon: BarChart3 },
               { value: 'features', label: 'المميزات', icon: Sparkles },
               { value: 'opportunities', label: 'الفرص', icon: UserCheck },
@@ -326,6 +332,37 @@ export default function SiteEditorPage() {
                     </div>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* AUTH BRANDING */}
+          <TabsContent value="auth" className="mt-4">
+            <Card className="border-0 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-foreground text-base">صفحات تسجيل الدخول والتسجيل</CardTitle>
+                <p className="text-muted-foreground text-xs">الصورة والنص الجانبي المعروض في اللوحة اليمنى لصفحتي تسجيل الدخول وإنشاء حساب</p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <ImageUploadField label="الصورة" value={config.authBranding.imageUrl} onChange={url => setAuthBranding('imageUrl', url)} storagePath="site/auth" />
+                <div className="space-y-2">
+                  <Label>العنوان</Label>
+                  <Input value={config.authBranding.title} onChange={e => setAuthBranding('title', e.target.value)} placeholder="منصة التمكين الرقمي" />
+                </div>
+                <div className="space-y-2">
+                  <Label>الوصف</Label>
+                  <Textarea value={config.authBranding.subtitle} onChange={e => setAuthBranding('subtitle', e.target.value)} rows={3} className="resize-none" placeholder="وصف مختصر..." />
+                </div>
+                {config.authBranding.imageUrl && (
+                  <div className="rounded-xl overflow-hidden border border-border relative h-40">
+                    <img src={config.authBranding.imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                    <div className="absolute bottom-3 right-3 left-3">
+                      <p className="text-white font-bold text-sm">{config.authBranding.title || 'العنوان'}</p>
+                      <p className="text-white/80 text-xs mt-0.5 line-clamp-2">{config.authBranding.subtitle || 'الوصف...'}</p>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

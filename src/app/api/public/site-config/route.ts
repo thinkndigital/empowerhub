@@ -53,6 +53,11 @@ const defaultConfig = {
     primaryText: 'ابدأ مجاناً الآن',
     secondaryText: 'تجربة المنصة أولاً',
   },
+  authBranding: {
+    imageUrl: '',
+    title: 'منصة التمكين الرقمي',
+    subtitle: 'نربط المستفيدين بالمرشدين والمدربين المتخصصين لدعم نموهم المهني والشخصي',
+  },
   roles: [
     { title: 'كمستفيد', description: 'طور مهاراتك، ابنِ مشروعك، وحقق استقلاليتك المالية من خلال برامج تمكين متكاملة.', icon: 'UserCheck', badge: 'الأكثر شعبية', link: '/register?role=beneficiary' },
     { title: 'كمدرب', description: 'شارك خبراتك ومعرفتك من خلال إنشاء وتقديم دورات تدريبية متخصصة.', icon: 'GraduationCap', badge: '', link: '/register?role=coach' },
@@ -108,6 +113,7 @@ export async function GET() {
       footer: { ...defaultConfig.footer, ...data?.footer },
       contact: { ...defaultConfig.contact, ...data?.contact },
       ctaBanner: { ...defaultConfig.ctaBanner, ...data?.ctaBanner },
+      authBranding: { ...defaultConfig.authBranding, ...data?.authBranding },
       stats: data?.stats ?? defaultConfig.stats,
       features: data?.features ?? defaultConfig.features,
       opportunities: data?.opportunities ?? defaultConfig.opportunities,

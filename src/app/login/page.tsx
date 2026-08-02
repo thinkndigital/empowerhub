@@ -31,6 +31,17 @@ export default function LoginPage() {
   const auth = useAuth();
   const firestore = useFirestore();
   const [isLoading, setIsLoading] = useState(false);
+  const [authBranding, setAuthBranding] = useState({ imageUrl: '', title: '', subtitle: '' });
+
+  useEffect(() => {
+    fetch('/api/public/site-config', { cache: 'no-store' }).then(r => r.json()).then(d => {
+      if (d.config?.authBranding) setAuthBranding(d.config.authBranding);
+    }).catch(() => {});
+  }, []);
+
+  const brandingImageUrl = authBranding.imageUrl || loginImage?.imageUrl;
+  const brandingTitle = authBranding.title || 'منصة التمكين الرقمي';
+  const brandingSubtitle = authBranding.subtitle || 'نربط المستفيدين بالمرشدين والمدربين المتخصصين لدعم نموهم المهني والشخصي';
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -231,13 +242,13 @@ export default function LoginPage() {
 
       {/* Branding panel — hidden on mobile */}
       <div className="hidden lg:relative lg:flex lg:w-[480px] lg:flex-col lg:shrink-0 overflow-hidden">
-        {loginImage && (
+        {brandingImageUrl && (
           <Image
-            src={loginImage.imageUrl}
-            alt={loginImage.description}
+            src={brandingImageUrl}
+            alt={brandingTitle}
             fill
             className="object-cover"
-            data-ai-hint={loginImage.imageHint}
+            data-ai-hint={loginImage?.imageHint}
           />
         )}
         <div className="absolute inset-0 bg-gradient-to-br from-slate-900/95 via-blue-950/85 to-slate-900/90" />
@@ -248,10 +259,10 @@ export default function LoginPage() {
           </div>
           <div>
             <h2 className="text-3xl font-bold text-white mb-3 leading-snug">
-              منصة التمكين الرقمي
+              {brandingTitle}
             </h2>
             <p className="text-white/65 text-sm leading-relaxed mb-8">
-              نربط المستفيدين بالمرشدين والمدربين المتخصصين لدعم نموهم المهني والشخصي
+              {brandingSubtitle}
             </p>
             <div className="space-y-3">
               {[

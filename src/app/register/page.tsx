@@ -94,6 +94,17 @@ function RegisterForm() {
   const [step, setStep] = useState<Step>("form");
   const [selectedPlan, setSelectedPlan] = useState("basic");
   const [pendingValues, setPendingValues] = useState<z.infer<typeof formSchema> | null>(null);
+  const [authBranding, setAuthBranding] = useState({ imageUrl: '', title: '', subtitle: '' });
+
+  useEffect(() => {
+    fetch('/api/public/site-config', { cache: 'no-store' }).then(r => r.json()).then(d => {
+      if (d.config?.authBranding) setAuthBranding(d.config.authBranding);
+    }).catch(() => {});
+  }, []);
+
+  const brandingImageUrl = authBranding.imageUrl || registerImage?.imageUrl;
+  const brandingTitle = authBranding.title || 'ابدأ رحلتك نحو النجاح';
+  const brandingSubtitle = authBranding.subtitle || 'انضم إلى منصة EmpowerHub وابدأ التغيير اليوم';
 
   const roleFromQuery = searchParams.get("role");
   const orgInviteParam = searchParams.get("orgInvite");
@@ -468,20 +479,20 @@ function RegisterForm() {
       </div>
 
       <div className="hidden bg-muted lg:block relative overflow-hidden">
-        {registerImage && (
+        {brandingImageUrl && (
           <Image
-            src={registerImage.imageUrl}
-            alt={registerImage.description}
+            src={brandingImageUrl}
+            alt={brandingTitle}
             fill
             className="object-cover"
-            data-ai-hint={registerImage.imageHint}
+            data-ai-hint={registerImage?.imageHint}
           />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
         <div className="absolute bottom-10 right-10 text-white max-w-xs">
-          <h2 className="text-2xl font-bold mb-2">ابدأ رحلتك نحو النجاح</h2>
+          <h2 className="text-2xl font-bold mb-2">{brandingTitle}</h2>
           <p className="text-white/80 text-sm leading-relaxed">
-            انضم إلى منصة EmpowerHub وابدأ التغيير اليوم
+            {brandingSubtitle}
           </p>
         </div>
       </div>
