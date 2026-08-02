@@ -214,7 +214,7 @@ export default function OrgSettingsPage() {
                 )}
                 {(subscription.status === "expired" || subscription.status === "pending") && !subscription.permanentFree && (
                   <Button asChild size="sm" className="mr-auto">
-                    <Link href={`/payment?plan=${subscription.currentPlan?.key || ""}&orgId=${subscription.orgId}`}>
+                    <Link href={`/payment?plan=${subscription.currentPlan?.key || ""}&orgId=${subscription.orgId}&cycle=${subscription.billingCycle}`}>
                       {subscription.status === "pending" ? "إتمام الدفع الآن" : "تجديد الاشتراك الآن"}
                     </Link>
                   </Button>

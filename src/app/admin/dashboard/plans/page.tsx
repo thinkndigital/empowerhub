@@ -10,6 +10,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import {
@@ -69,6 +72,8 @@ export default function PlansPage() {
   const [deletePlan, setDeletePlan] = useState<Plan | null>(null);
   const [form, setForm] = useState<PlanForm>(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [trialDays, setTrialDays] = useState('30');
+  const [savingTrial, setSavingTrial] = useState(false);
 
   const load = () => {
     setLoading(true);
@@ -78,7 +83,23 @@ export default function PlansPage() {
     });
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    fetch('/api/admin-panel/trial-config').then(r => r.json()).then(d => {
+      if (d.days) setTrialDays(String(d.days));
+    });
+  }, []);
+
+  const handleSaveTrial = async (value: string) => {
+    setTrialDays(value);
+    setSavingTrial(true);
+    await fetch('/api/admin-panel/trial-config', {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ days: Number(value) }),
+    });
+    setSavingTrial(false);
+  };
 
   const openAdd = () => {
     setEditPlan(null);
@@ -144,6 +165,23 @@ export default function PlansPage() {
           إضافة خطة جديدة
         </Button>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">الفترة التجريبية المجانية</CardTitle>
+        </CardHeader>
+        <CardContent className="flex items-center gap-3">
+          <Label className="shrink-0">مدة التجربة لكل منظمة جديدة تختار خطة مجانية</Label>
+          <Select value={trialDays} onValueChange={handleSaveTrial} disabled={savingTrial}>
+            <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7">7 أيام</SelectItem>
+              <SelectItem value="14">14 يوماً</SelectItem>
+              <SelectItem value="30">30 يوماً (شهر)</SelectItem>
+            </SelectContent>
+          </Select>
+        </CardContent>
+      </Card>
 
       {loading ? (
         <p className="text-muted-foreground text-center py-16">جاري التحميل...</p>

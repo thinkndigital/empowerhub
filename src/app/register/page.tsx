@@ -29,32 +29,18 @@ import { useAuth, useFirestore } from "@/firebase/provider";
 
 import { ORG_TYPES } from "@/lib/org-types";
 
-const PLANS = [
-  {
-    id: "basic",
-    label: "الخطة الأساسية",
-    price: "مجاني",
-    priceNum: 0,
-    features: ["حتى 20 مستفيداً", "الدورات التدريبية", "دعم عبر البريد الإلكتروني"],
-    badge: "",
-  },
-  {
-    id: "pro",
-    label: "الخطة الاحترافية",
-    price: "299 د.أ / شهر",
-    priceNum: 299,
-    features: ["حتى 100 مستفيد", "الدورات + الإرشاد", "متجر إلكتروني", "دعم أولوية"],
-    badge: "الأكثر شيوعاً",
-  },
-  {
-    id: "enterprise",
-    label: "الخطة المؤسسية",
-    price: "999 د.أ / شهر",
-    priceNum: 999,
-    features: ["مستفيدون غير محدودين", "جميع الميزات", "تخصيص كامل", "مدير حساب مخصص"],
-    badge: "الأفضل للمؤسسات",
-  },
-];
+interface RegisterPlan {
+  id: string;
+  key: string;
+  name: string;
+  priceMonthly: number;
+  priceAnnual: number;
+  currency: string;
+  features: string[];
+  highlighted: boolean;
+}
+
+type BillingCycle = "monthly" | "annual";
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
@@ -92,7 +78,10 @@ function RegisterForm() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [step, setStep] = useState<Step>("form");
-  const [selectedPlan, setSelectedPlan] = useState("basic");
+  const [plans, setPlans] = useState<RegisterPlan[]>([]);
+  const [plansLoading, setPlansLoading] = useState(true);
+  const [selectedPlan, setSelectedPlan] = useState("");
+  const [billingCycle, setBillingCycle] = useState<BillingCycle>("monthly");
   const [pendingValues, setPendingValues] = useState<z.infer<typeof formSchema> | null>(null);
   const [authBranding, setAuthBranding] = useState({ imageUrl: '', title: '', subtitle: '' });
 
@@ -100,6 +89,15 @@ function RegisterForm() {
     fetch('/api/public/site-config', { cache: 'no-store' }).then(r => r.json()).then(d => {
       if (d.config?.authBranding) setAuthBranding(d.config.authBranding);
     }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetch('/api/public/plans').then(r => r.json()).then(d => {
+      const list: RegisterPlan[] = d.plans || [];
+      setPlans(list);
+      if (list.length > 0) setSelectedPlan(list[0].key);
+      setPlansLoading(false);
+    }).catch(() => setPlansLoading(false));
   }, []);
 
   const brandingImageUrl = authBranding.imageUrl || registerImage?.imageUrl;
@@ -181,6 +179,7 @@ function RegisterForm() {
             orgType: values.orgType,
             orgInviteCode: values.orgInviteCode,
             plan: plan || undefined,
+            billingCycle,
           }),
           signal: controller.signal,
         });
@@ -248,7 +247,7 @@ function RegisterForm() {
           title: "تم إنشاء الحساب!",
           description: "يرجى إتمام الدفع لتفعيل منصتك.",
         });
-        router.push(`/payment?plan=${plan}&orgId=${data.organizationId || ""}`);
+        router.push(`/payment?plan=${plan}&orgId=${data.organizationId || ""}&cycle=${billingCycle}`);
         return;
       }
 
@@ -390,48 +389,83 @@ function RegisterForm() {
           {/* ── Step 2: Plan Selection ── */}
           {step === "plan" && (
             <div className="space-y-4">
-              <div className="grid gap-3">
-                {PLANS.map((plan) => (
-                  <button
-                    key={plan.id}
-                    type="button"
-                    onClick={() => setSelectedPlan(plan.id)}
-                    className={`text-right w-full rounded-xl border-2 p-4 transition-all ${
-                      selectedPlan === plan.id
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-primary/40"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-semibold text-sm">{plan.label}</span>
-                          {plan.badge && (
-                            <Badge variant="secondary" className="text-xs">
-                              {plan.badge}
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-primary font-bold mt-0.5">{plan.price}</p>
-                        <ul className="mt-2 space-y-0.5">
-                          {plan.features.map((f) => (
-                            <li key={f} className="text-xs text-muted-foreground flex items-center gap-1">
-                              <span className="text-primary">✓</span> {f}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                      <div
-                        className={`mt-1 h-4 w-4 rounded-full border-2 flex-shrink-0 ${
-                          selectedPlan === plan.id
-                            ? "border-primary bg-primary"
-                            : "border-muted-foreground"
-                        }`}
-                      />
-                    </div>
-                  </button>
-                ))}
-              </div>
+              {plansLoading ? (
+                <p className="text-center text-sm text-muted-foreground py-8">جاري تحميل الخطط...</p>
+              ) : plans.length === 0 ? (
+                <p className="text-center text-sm text-muted-foreground py-8">لا توجد خطط متاحة حالياً — سيتم إنشاء حسابك بدون خطة محددة.</p>
+              ) : (
+                <>
+                  <div className="flex items-center justify-center gap-1 rounded-lg bg-muted p-1 w-fit mx-auto">
+                    <button
+                      type="button"
+                      onClick={() => setBillingCycle("monthly")}
+                      className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                        billingCycle === "monthly" ? "bg-background shadow-sm" : "text-muted-foreground"
+                      }`}
+                    >
+                      شهري
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBillingCycle("annual")}
+                      className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                        billingCycle === "annual" ? "bg-background shadow-sm" : "text-muted-foreground"
+                      }`}
+                    >
+                      سنوي
+                    </button>
+                  </div>
+
+                  <div className="grid gap-3">
+                    {plans.map((plan) => {
+                      const isFree = plan.priceMonthly === 0;
+                      const price = billingCycle === "annual" ? plan.priceAnnual : plan.priceMonthly;
+                      return (
+                        <button
+                          key={plan.id}
+                          type="button"
+                          onClick={() => setSelectedPlan(plan.key)}
+                          className={`text-right w-full rounded-xl border-2 p-4 transition-all ${
+                            selectedPlan === plan.key
+                              ? "border-primary bg-primary/5"
+                              : "border-border hover:border-primary/40"
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-semibold text-sm">{plan.name}</span>
+                                {plan.highlighted && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    الأكثر شيوعاً
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-primary font-bold mt-0.5">
+                                {isFree ? "مجاني" : `${price.toLocaleString()} ${plan.currency} / ${billingCycle === "annual" ? "سنة" : "شهر"}`}
+                              </p>
+                              <ul className="mt-2 space-y-0.5">
+                                {plan.features.map((f) => (
+                                  <li key={f} className="text-xs text-muted-foreground flex items-center gap-1">
+                                    <span className="text-primary">✓</span> {f}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                            <div
+                              className={`mt-1 h-4 w-4 rounded-full border-2 flex-shrink-0 ${
+                                selectedPlan === plan.key
+                                  ? "border-primary bg-primary"
+                                  : "border-muted-foreground"
+                              }`}
+                            />
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
 
               <div className="flex gap-2">
                 <Button
@@ -445,18 +479,18 @@ function RegisterForm() {
                 <Button
                   className="flex-1"
                   onClick={onPlanConfirm}
-                  disabled={isLoading}
+                  disabled={isLoading || plansLoading}
                 >
                   {isLoading
                     ? "جاري الإنشاء..."
-                    : PLANS.find((p) => p.id === selectedPlan)?.priceNum === 0
+                    : plans.find((p) => p.key === selectedPlan)?.priceMonthly === 0 || plans.length === 0
                     ? "إنشاء الحساب مجاناً"
                     : "إنشاء الحساب والانتقال للدفع"}
                 </Button>
               </div>
 
               <p className="text-xs text-center text-muted-foreground">
-                الخطة الأساسية مجانية تماماً. الخطط المدفوعة تُفعَّل بعد إتمام الدفع.
+                الخطط المجانية تبدأ بفترة تجريبية محدودة. الخطط المدفوعة تُفعَّل بعد إتمام الدفع.
               </p>
             </div>
           )}

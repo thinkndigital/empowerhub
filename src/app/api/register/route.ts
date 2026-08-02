@@ -5,7 +5,8 @@ import { checkOrgLimit, checkOrgLocked } from '@/lib/plan-limits';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { name, email, password, role, organizationName, orgInviteCode, plan } = body;
+    const { name, email, password, role, organizationName, orgInviteCode, plan, billingCycle } = body;
+    const cycle = billingCycle === 'annual' ? 'annual' : 'monthly';
 
     if (!name || !email || !password || !role) {
       return NextResponse.json(
@@ -43,11 +44,12 @@ export async function POST(req: NextRequest) {
 
       // Every new org gets a tracked subscription: a real paid plan starts out
       // "pending" (awaiting payment before it activates), while a free/unmatched
-      // plan gets a 30-day free trial that the daily cron expires automatically
-      // unless an admin grants the org permanentFree status.
+      // plan gets a free trial (length set by the admin) that the daily cron
+      // expires automatically unless an admin grants the org permanentFree status.
       let planDocId: string | undefined;
       let planName = plan || '';
       let priceMonthly = 0;
+      let priceForCycle = 0;
       if (plan) {
         const planSnap = await adminDb.collection('plans').where('key', '==', plan).limit(1).get();
         if (!planSnap.empty) {
@@ -56,25 +58,28 @@ export async function POST(req: NextRequest) {
           planDocId = planDoc.id;
           planName = planData.name || plan;
           priceMonthly = planData.priceMonthly || 0;
+          priceForCycle = cycle === 'annual' ? (planData.priceAnnual || 0) : priceMonthly;
         }
       }
 
       if (priceMonthly > 0) {
         pendingPlanId = planDocId;
-        pendingPlanPrice = priceMonthly;
+        pendingPlanPrice = priceForCycle || priceMonthly;
         await adminDb.collection('subscriptions').doc(organizationId).set({
           orgId: organizationId,
           planId: planDocId,
           planKey: plan,
           planName,
-          billingCycle: 'monthly',
+          billingCycle: cycle,
           status: 'pending',
           createdAt: new Date(),
         });
       } else {
+        const trialConfigSnap = await adminDb.collection('config').doc('trial').get();
+        const trialDays = trialConfigSnap.exists ? (trialConfigSnap.data()?.days || 30) : 30;
         const now = new Date();
         const trialEnd = new Date(now);
-        trialEnd.setDate(trialEnd.getDate() + 30);
+        trialEnd.setDate(trialEnd.getDate() + trialDays);
         await adminDb.collection('subscriptions').doc(organizationId).set({
           orgId: organizationId,
           planId: planDocId || null,

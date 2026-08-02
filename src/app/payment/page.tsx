@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Logo } from "@/components/logo";
 
@@ -16,6 +17,7 @@ interface PlanInfo {
   name: string;
   key: string;
   priceMonthly: number;
+  priceAnnual: number;
   currency: string;
   features: string[];
 }
@@ -33,6 +35,7 @@ function PaymentPageInner() {
 
   const planKey = searchParams.get("plan") || "";
   const orgId = searchParams.get("orgId") || "";
+  const cycle = searchParams.get("cycle") === "annual" ? "annual" : "monthly";
 
   const [loading, setLoading] = useState(true);
   const [plan, setPlan] = useState<PlanInfo | null>(null);
@@ -88,7 +91,7 @@ function PaymentPageInner() {
       const checkoutRes = await fetch("/api/public/subscriptions/checkout", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ orgId, planId: plan.id, billingCycle: "monthly" }),
+        body: JSON.stringify({ orgId, planId: plan.id, billingCycle: cycle }),
       });
       const checkoutData = await checkoutRes.json();
       if (!checkoutData.ok) throw new Error(checkoutData.error || "فشل إنشاء طلب الدفع");
@@ -148,9 +151,12 @@ function PaymentPageInner() {
             <CardContent className="space-y-6">
               <div className="rounded-xl border p-4 bg-card">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="font-semibold">{plan.name}</span>
+                  <div>
+                    <span className="font-semibold">{plan.name}</span>
+                    <Badge variant="outline" className="mr-2 text-xs">{cycle === "annual" ? "سنوي" : "شهري"}</Badge>
+                  </div>
                   <span className="text-lg font-bold text-primary">
-                    {plan.priceMonthly.toLocaleString()} {plan.currency} / شهر
+                    {(cycle === "annual" ? plan.priceAnnual : plan.priceMonthly).toLocaleString()} {plan.currency} / {cycle === "annual" ? "سنة" : "شهر"}
                   </span>
                 </div>
                 <ul className="space-y-1.5">
