@@ -48,11 +48,20 @@ interface LogoEl {
   size: number; // نسبة من عرض الصورة 0-1
 }
 
+interface SizedMedia {
+  id: string;
+  label: string;
+  w: number;
+  h: number;
+  url: string;
+}
+
 interface LibraryItem {
   id: string;
   title: string;
   type: 'image' | 'video';
   mediaUrl: string;
+  mediaUrls?: SizedMedia[];
   createdAt?: string;
 }
 
@@ -66,6 +75,38 @@ const newTextEl = (): TextEl => ({
   color: '#ffffff',
   bold: true,
 });
+
+// ─── رسم طبقة الشعار والنصوص فقط (تُستخدم للصور والفيديو) ─────
+function drawOverlay(
+  ctx: CanvasRenderingContext2D,
+  cw: number, ch: number,
+  logo: HTMLImageElement | null,
+  logoEl: LogoEl,
+  textEls: TextEl[],
+) {
+  // شعار
+  if (logo) {
+    const lw = cw * logoEl.size;
+    const lh = lw * (logo.height / logo.width);
+    const lx = cw * logoEl.pos.x - lw / 2;
+    const ly = ch * logoEl.pos.y - lh / 2;
+    ctx.drawImage(logo, lx, ly, lw, lh);
+  }
+
+  // نصوص (طبقة فوق طبقة)
+  for (const textEl of textEls) {
+    if (!textEl.text) continue;
+    const fs = cw * textEl.fontSize;
+    ctx.font = `${textEl.bold ? 'bold' : 'normal'} ${fs}px Cairo, Arial`;
+    ctx.fillStyle = textEl.color;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = 'rgba(0,0,0,0.6)';
+    ctx.shadowBlur = fs * 0.15;
+    ctx.fillText(textEl.text, cw * textEl.pos.x, ch * textEl.pos.y);
+    ctx.shadowBlur = 0;
+  }
+}
 
 // ─── رسم اللوحة ────────────────────────────────────────────────
 function drawCanvas(
@@ -90,28 +131,84 @@ function drawCanvas(
     ctx.fillRect(0, 0, cw, ch);
   }
 
-  // شعار
-  if (logo) {
-    const lw = cw * logoEl.size;
-    const lh = lw * (logo.height / logo.width);
-    const lx = cw * logoEl.pos.x - lw / 2;
-    const ly = ch * logoEl.pos.y - lh / 2;
-    ctx.drawImage(logo, lx, ly, lw, lh);
+  drawOverlay(ctx, cw, ch, logo, logoEl, textEls);
+}
+
+// ─── دمج نص وشعار داخل الفيديو (تسجيل حي عبر Canvas) ──────────
+async function bakeVideoOverlay(
+  file: File,
+  logoImg: HTMLImageElement | null,
+  logoEl: LogoEl,
+  textEls: TextEl[],
+): Promise<Blob> {
+  if (typeof MediaRecorder === 'undefined') {
+    throw new Error('المتصفح لا يدعم تحرير الفيديو');
   }
 
-  // نصوص (طبقة فوق طبقة)
-  for (const textEl of textEls) {
-    if (!textEl.text) continue;
-    const fs = cw * textEl.fontSize;
-    ctx.font = `${textEl.bold ? 'bold' : 'normal'} ${fs}px Cairo, Arial`;
-    ctx.fillStyle = textEl.color;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.shadowColor = 'rgba(0,0,0,0.6)';
-    ctx.shadowBlur = fs * 0.15;
-    ctx.fillText(textEl.text, cw * textEl.pos.x, ch * textEl.pos.y);
-    ctx.shadowBlur = 0;
+  const video = document.createElement('video');
+  video.src = URL.createObjectURL(file);
+  video.playsInline = true;
+
+  await new Promise<void>((resolve, reject) => {
+    video.onloadedmetadata = () => resolve();
+    video.onerror = () => reject(new Error('تعذر تحميل الفيديو'));
+  });
+
+  const cw = video.videoWidth;
+  const ch = video.videoHeight;
+  const canvas = document.createElement('canvas');
+  canvas.width = cw;
+  canvas.height = ch;
+  const ctx = canvas.getContext('2d');
+  if (!ctx || typeof (canvas as any).captureStream !== 'function') {
+    URL.revokeObjectURL(video.src);
+    throw new Error('المتصفح لا يدعم تحرير الفيديو');
   }
+
+  const canvasStream: MediaStream = (canvas as any).captureStream(30);
+
+  let audioTracks: MediaStreamTrack[] = [];
+  try {
+    if (typeof (video as any).captureStream === 'function') {
+      const videoStream: MediaStream = (video as any).captureStream();
+      audioTracks = videoStream.getAudioTracks();
+    }
+  } catch {
+    audioTracks = [];
+  }
+
+  const outStream = new MediaStream([...canvasStream.getVideoTracks(), ...audioTracks]);
+  const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')
+    ? 'video/webm;codecs=vp9,opus'
+    : 'video/webm';
+  const recorder = new MediaRecorder(outStream, { mimeType });
+  const chunks: Blob[] = [];
+  recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+
+  const recordingDone = new Promise<Blob>((resolve) => {
+    recorder.onstop = () => resolve(new Blob(chunks, { type: 'video/webm' }));
+  });
+
+  let raf = 0;
+  const drawFrame = () => {
+    ctx.drawImage(video, 0, 0, cw, ch);
+    drawOverlay(ctx, cw, ch, logoImg, logoEl, textEls);
+    raf = requestAnimationFrame(drawFrame);
+  };
+
+  const ended = new Promise<void>((resolve) => { video.onended = () => resolve(); });
+
+  recorder.start();
+  await video.play();
+  drawFrame();
+  await ended;
+
+  cancelAnimationFrame(raf);
+  recorder.stop();
+  video.pause();
+  URL.revokeObjectURL(video.src);
+
+  return recordingDone;
 }
 
 // ─── الصفحة ────────────────────────────────────────────────────
@@ -341,37 +438,48 @@ export default function ContentPage() {
     }, 'image/png');
   };
 
-  // ─── حفظ الصورة الحالية بالمكتبة ─────────────────────────────
+  // ─── حفظ الصورة الحالية بالمكتبة (كل الأحجام) ─────────────────
   const saveImageToLibrary = async () => {
     if (!user) return;
     if (!hasContent()) {
       toast({ variant: 'destructive', title: 'لا يوجد محتوى', description: 'أضف صورة أو شعار أو نص أولاً.' });
       return;
     }
+    if (!contentTitle.trim()) {
+      toast({ variant: 'destructive', title: 'اسم المنشور مطلوب', description: 'الرجاء كتابة اسم المنشور قبل الحفظ.' });
+      return;
+    }
     setSavingImage(true);
     try {
-      const canvas = document.createElement('canvas');
-      canvas.width = LIBRARY_SIZE.w;
-      canvas.height = LIBRARY_SIZE.h;
-      const ctx = canvas.getContext('2d')!;
-      drawCanvas(ctx, LIBRARY_SIZE.w, LIBRARY_SIZE.h, bgImg, logoImg, logoEl, textEls, bgColor);
-
-      const blob: Blob = await new Promise((resolve, reject) => {
-        canvas.toBlob(b => (b ? resolve(b) : reject(new Error('فشل إنشاء الصورة'))), 'image/png');
-      });
-      const file = new File([blob], `content-${Date.now()}.png`, { type: 'image/png' });
-
       const token = await user.getIdToken();
-      const mediaUrl = await uploadFile(file, 'social-content', token);
+      toast({ title: 'جاري الحفظ...', description: `يتم إنشاء ${SIZES.length} مقاسات` });
+
+      const mediaUrls: SizedMedia[] = [];
+      for (const s of SIZES) {
+        const canvas = document.createElement('canvas');
+        canvas.width = s.w;
+        canvas.height = s.h;
+        const ctx = canvas.getContext('2d')!;
+        drawCanvas(ctx, s.w, s.h, bgImg, logoImg, logoEl, textEls, bgColor);
+
+        const blob: Blob = await new Promise((resolve, reject) => {
+          canvas.toBlob(b => (b ? resolve(b) : reject(new Error('فشل إنشاء الصورة'))), 'image/png');
+        });
+        const file = new File([blob], `content-${s.id}-${Date.now()}.png`, { type: 'image/png' });
+        const url = await uploadFile(file, 'social-content', token);
+        mediaUrls.push({ id: s.id, label: s.label, w: s.w, h: s.h, url });
+      }
+
+      const mediaUrl = mediaUrls.find(m => m.id === LIBRARY_SIZE.id)?.url || mediaUrls[0].url;
 
       const res = await fetch('/api/beneficiary/social-content', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
-        body: JSON.stringify({ title: contentTitle || 'منشور بدون عنوان', type: 'image', mediaUrl }),
+        body: JSON.stringify({ title: contentTitle, type: 'image', mediaUrl, mediaUrls }),
       });
       if (!res.ok) throw new Error((await res.json()).error || 'فشل الحفظ');
 
-      toast({ title: 'تم الحفظ بالمكتبة' });
+      toast({ title: 'تم الحفظ بالمكتبة', description: `تم حفظ ${SIZES.length} مقاسات.` });
       setContentTitle('');
       fetchLibrary();
     } catch (e: any) {
@@ -381,18 +489,39 @@ export default function ContentPage() {
     }
   };
 
-  // ─── حفظ الفيديو بالمكتبة ────────────────────────────────────
+  // ─── حفظ الفيديو بالمكتبة (مع دمج النص والشعار إن وُجدا) ──────
   const saveVideoToLibrary = async () => {
     if (!user || !videoFile) return;
+    if (!videoCaption.trim()) {
+      toast({ variant: 'destructive', title: 'اسم المنشور مطلوب', description: 'الرجاء كتابة اسم المنشور قبل الحفظ.' });
+      return;
+    }
     setSavingVideo(true);
     try {
       const token = await user.getIdToken();
-      const mediaUrl = await uploadFile(videoFile, 'social-content', token);
+      const hasOverlay = !!logoImg || textEls.some(t => t.text.trim());
+      let fileToUpload: File = videoFile;
+
+      if (hasOverlay) {
+        try {
+          toast({ title: 'جاري دمج النص والشعار مع الفيديو...' });
+          const blob = await bakeVideoOverlay(videoFile, logoImg, logoEl, textEls);
+          fileToUpload = new File([blob], `content-video-${Date.now()}.webm`, { type: 'video/webm' });
+        } catch {
+          toast({
+            variant: 'destructive',
+            title: 'تعذّر دمج العناصر مع الفيديو',
+            description: 'سيتم حفظ الفيديو الأصلي بدون تعديل.',
+          });
+        }
+      }
+
+      const mediaUrl = await uploadFile(fileToUpload, 'social-content', token);
 
       const res = await fetch('/api/beneficiary/social-content', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
-        body: JSON.stringify({ title: videoCaption || 'فيديو بدون عنوان', type: 'video', mediaUrl }),
+        body: JSON.stringify({ title: videoCaption, type: 'video', mediaUrl }),
       });
       if (!res.ok) throw new Error((await res.json()).error || 'فشل الحفظ');
 
@@ -594,19 +723,22 @@ export default function ContentPage() {
           {/* حفظ وتصدير */}
           <Card>
             <CardContent className="pt-4 space-y-2">
-              <Input
-                value={contentTitle}
-                onChange={e => setContentTitle(e.target.value)}
-                placeholder="عنوان المنشور (اختياري)"
-                className="text-right"
-              />
+              <div>
+                <Label className="text-xs mb-1 block">اسم المنشور *</Label>
+                <Input
+                  value={contentTitle}
+                  onChange={e => setContentTitle(e.target.value)}
+                  placeholder="مثال: عرض نهاية الأسبوع"
+                  className="text-right"
+                />
+              </div>
               <Button className="w-full gap-2 shadow-md" onClick={exportAll} size="lg">
                 <Download className="h-5 w-5" />
                 تصدير كل الأحجام ({SIZES.length} صورة)
               </Button>
               <Button variant="outline" className="w-full gap-2" onClick={saveImageToLibrary} disabled={savingImage}>
                 {savingImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Library className="h-4 w-4" />}
-                حفظ في المكتبة
+                حفظ في المكتبة (كل الأحجام)
               </Button>
             </CardContent>
           </Card>
@@ -633,12 +765,20 @@ export default function ContentPage() {
               )}
               {videoFile && (
                 <>
-                  <Input
-                    value={videoCaption}
-                    onChange={e => setVideoCaption(e.target.value)}
-                    placeholder="وصف الفيديو (اختياري)"
-                    className="text-right"
-                  />
+                  <div>
+                    <Label className="text-xs mb-1 block">اسم المنشور *</Label>
+                    <Input
+                      value={videoCaption}
+                      onChange={e => setVideoCaption(e.target.value)}
+                      placeholder="مثال: فيديو ترويجي"
+                      className="text-right"
+                    />
+                  </div>
+                  {(logoImg || textEls.some(t => t.text.trim())) && (
+                    <p className="text-xs text-primary flex items-center gap-1">
+                      <Layers className="h-3 w-3" /> سيتم دمج النص والشعار الحاليين مع الفيديو تلقائياً عند الحفظ
+                    </p>
+                  )}
                   <Button className="w-full gap-2" onClick={saveVideoToLibrary} disabled={savingVideo}>
                     {savingVideo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Library className="h-4 w-4" />}
                     حفظ الفيديو بالمكتبة
@@ -713,35 +853,67 @@ export default function ContentPage() {
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {libraryItems.map(item => (
-                  <div key={item.id} className="group relative border border-border rounded-lg overflow-hidden bg-card">
-                    {item.type === 'image' ? (
-                      <img src={item.mediaUrl} alt={item.title} className="w-full aspect-square object-cover" />
-                    ) : (
-                      <video src={item.mediaUrl} className="w-full aspect-square object-cover" muted />
-                    )}
-                    <div className="p-2">
-                      <p className="text-xs font-medium truncate">{item.title || 'بدون عنوان'}</p>
-                    </div>
-                    <div className="absolute inset-x-0 top-0 flex justify-between p-1.5 opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-b from-black/50 to-transparent">
-                      <a
-                        href={item.mediaUrl} download target="_blank" rel="noopener noreferrer"
-                        className="h-7 w-7 flex items-center justify-center rounded-md bg-white/90 text-foreground hover:bg-white"
-                      >
-                        <Download className="h-3.5 w-3.5" />
-                      </a>
-                      <button
-                        onClick={() => deleteLibraryItem(item.id)}
-                        className="h-7 w-7 flex items-center justify-center rounded-md bg-white/90 text-destructive hover:bg-white"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  </div>
+                  <LibraryItemCard key={item.id} item={item} onDelete={deleteLibraryItem} />
                 ))}
               </div>
             )}
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ── بطاقة عنصر بالمكتبة (مع أحجام قابلة للتوسيع للصور) ─────────
+function LibraryItemCard({ item, onDelete }: { item: LibraryItem; onDelete: (id: string) => void }) {
+  const [expanded, setExpanded] = useState(false);
+  const hasSizes = item.type === 'image' && !!item.mediaUrls && item.mediaUrls.length > 0;
+
+  return (
+    <div className="group relative border border-border rounded-lg overflow-hidden bg-card">
+      {item.type === 'image' ? (
+        <img src={item.mediaUrl} alt={item.title} className="w-full aspect-square object-cover" />
+      ) : (
+        <video src={item.mediaUrl} className="w-full aspect-square object-cover" muted />
+      )}
+      <div className="p-2">
+        <p className="text-xs font-medium truncate">{item.title || 'بدون عنوان'}</p>
+        {hasSizes && (
+          <button
+            onClick={() => setExpanded(v => !v)}
+            className="text-[10px] text-primary hover:underline mt-0.5"
+          >
+            {expanded ? 'إخفاء الأحجام' : `كل الأحجام (${item.mediaUrls!.length})`}
+          </button>
+        )}
+      </div>
+      {hasSizes && expanded && (
+        <div className="border-t border-border p-2 space-y-1 max-h-40 overflow-y-auto">
+          {item.mediaUrls!.map(m => (
+            <a
+              key={m.id}
+              href={m.url} download target="_blank" rel="noopener noreferrer"
+              className="flex items-center justify-between text-[10px] text-muted-foreground hover:text-primary"
+            >
+              <span>{m.label} ({m.w}×{m.h})</span>
+              <Download className="h-3 w-3" />
+            </a>
+          ))}
+        </div>
+      )}
+      <div className="absolute inset-x-0 top-0 flex justify-between p-1.5 opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-b from-black/50 to-transparent">
+        <a
+          href={item.mediaUrl} download target="_blank" rel="noopener noreferrer"
+          className="h-7 w-7 flex items-center justify-center rounded-md bg-white/90 text-foreground hover:bg-white"
+        >
+          <Download className="h-3.5 w-3.5" />
+        </a>
+        <button
+          onClick={() => onDelete(item.id)}
+          className="h-7 w-7 flex items-center justify-center rounded-md bg-white/90 text-destructive hover:bg-white"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
       </div>
     </div>
   );

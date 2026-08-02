@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
     const decoded = await adminAuth.verifyIdToken(token);
     const body = await req.json();
 
-    const { title, type, mediaUrl } = body;
+    const { title, type, mediaUrl, mediaUrls } = body;
     if (!mediaUrl || (type !== 'image' && type !== 'video')) {
       return NextResponse.json({ error: 'بيانات المحتوى غير مكتملة' }, { status: 400 });
     }
@@ -44,6 +44,7 @@ export async function POST(req: NextRequest) {
       title: title || '',
       type,
       mediaUrl,
+      ...(Array.isArray(mediaUrls) && mediaUrls.length ? { mediaUrls } : {}),
       createdAt: new Date().toISOString(),
     });
 
