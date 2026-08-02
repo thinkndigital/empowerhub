@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   BookOpen, LayoutGrid, Search, Settings, Store,
-  Users, BarChart3, MessageSquare, HelpCircle, LogOut, Layers,
+  Users, BarChart3, MessageSquare, HelpCircle, LogOut, Layers, Contact,
 } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { doc } from "firebase/firestore";
@@ -36,6 +36,7 @@ const menuItems = [
   { href: "/dashboard/training", label: "التدريب", icon: BookOpen },
   { href: "/dashboard/mentorship", label: "الإرشاد", icon: Users },
   { href: "/dashboard/my-store", label: "متجري", icon: Store },
+  { href: "/dashboard/customers", label: "العملاء", icon: Contact },
   { href: "/dashboard/reports", label: "التقارير", icon: BarChart3 },
   { href: "/dashboard/messages", label: "الرسائل", icon: MessageSquare },
   { href: "/dashboard/contact", label: "التواصل مع المنظمة", icon: HelpCircle },
