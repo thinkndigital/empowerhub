@@ -36,6 +36,7 @@ interface SiteConfig {
   contact: { phone: string; whatsapp: string; whatsappLink: string; email: string };
   ctaBanner: { title: string; subtitle: string; primaryText: string; secondaryText: string; backgroundColor: string; buttons: CtaButton[] };
   authBranding: { imageUrl: string; title: string; subtitle: string };
+  registerBranding: { imageUrl: string; title: string; subtitle: string };
   roles: { title: string; description: string; icon: string; badge: string; link: string }[];
   sectionStyles: Record<string, { bg?: string; iconColor?: string }>;
   sections: {
@@ -69,6 +70,7 @@ const defaultConfig: SiteConfig = {
     ],
   },
   authBranding: { imageUrl: '', title: '', subtitle: '' },
+  registerBranding: { imageUrl: '', title: '', subtitle: '' },
   roles: [],
   sectionStyles: {
     hero: {}, stats: {}, features: {}, opportunities: {}, howItWorks: {}, roles: {},
@@ -240,6 +242,7 @@ export default function SiteEditorPage() {
           contact: { ...defaultConfig.contact, ...d.config.contact },
           ctaBanner: { ...defaultConfig.ctaBanner, ...d.config.ctaBanner },
           authBranding: { ...defaultConfig.authBranding, ...d.config.authBranding },
+          registerBranding: { ...defaultConfig.registerBranding, ...d.config.registerBranding },
           sectionStyles: Object.fromEntries(
             Object.keys(defaultConfig.sectionStyles).map(k => [
               k,
@@ -285,6 +288,8 @@ export default function SiteEditorPage() {
     setConfig(c => ({ ...c, ctaBanner: { ...c.ctaBanner, [k]: v } }));
   const setAuthBranding = (k: keyof SiteConfig['authBranding'], v: string) =>
     setConfig(c => ({ ...c, authBranding: { ...c.authBranding, [k]: v } }));
+  const setRegisterBranding = (k: keyof SiteConfig['registerBranding'], v: string) =>
+    setConfig(c => ({ ...c, registerBranding: { ...c.registerBranding, [k]: v } }));
 
   // Generic add/update/remove for a CtaButton[] living at config[group].buttons
   const addButton = (group: 'hero' | 'ctaBanner') =>
@@ -508,11 +513,11 @@ export default function SiteEditorPage() {
           </TabsContent>
 
           {/* AUTH BRANDING */}
-          <TabsContent value="auth" className="mt-4">
+          <TabsContent value="auth" className="mt-4 space-y-4">
             <Card className="border-0 shadow-sm">
               <CardHeader>
-                <CardTitle className="text-foreground text-base">صفحات تسجيل الدخول والتسجيل</CardTitle>
-                <p className="text-muted-foreground text-xs">الصورة والنص الجانبي المعروض في اللوحة اليمنى لصفحتي تسجيل الدخول وإنشاء حساب</p>
+                <CardTitle className="text-foreground text-base">صفحة تسجيل الدخول</CardTitle>
+                <p className="text-muted-foreground text-xs">الصورة والنص الجانبي المعروض في صفحة تسجيل الدخول</p>
               </CardHeader>
               <CardContent className="space-y-4">
                 <ImageUploadField label="الصورة" value={config.authBranding.imageUrl} onChange={url => setAuthBranding('imageUrl', url)} storagePath="site/auth" />
@@ -531,6 +536,34 @@ export default function SiteEditorPage() {
                     <div className="absolute bottom-3 right-3 left-3">
                       <p className="text-white font-bold text-sm">{config.authBranding.title || 'العنوان'}</p>
                       <p className="text-white/80 text-xs mt-0.5 line-clamp-2">{config.authBranding.subtitle || 'الوصف...'}</p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-foreground text-base">صفحة إنشاء حساب</CardTitle>
+                <p className="text-muted-foreground text-xs">الصورة والنص الجانبي المعروض في صفحة إنشاء حساب جديد — مستقلة عن صفحة تسجيل الدخول</p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <ImageUploadField label="الصورة" value={config.registerBranding.imageUrl} onChange={url => setRegisterBranding('imageUrl', url)} storagePath="site/register" />
+                <div className="space-y-2">
+                  <Label>العنوان</Label>
+                  <Input value={config.registerBranding.title} onChange={e => setRegisterBranding('title', e.target.value)} placeholder="ابدأ رحلتك نحو النجاح" />
+                </div>
+                <div className="space-y-2">
+                  <Label>الوصف</Label>
+                  <Textarea value={config.registerBranding.subtitle} onChange={e => setRegisterBranding('subtitle', e.target.value)} rows={3} className="resize-none" placeholder="وصف مختصر..." />
+                </div>
+                {config.registerBranding.imageUrl && (
+                  <div className="rounded-xl overflow-hidden border border-border relative h-40">
+                    <img src={config.registerBranding.imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                    <div className="absolute bottom-3 right-3 left-3">
+                      <p className="text-white font-bold text-sm">{config.registerBranding.title || 'العنوان'}</p>
+                      <p className="text-white/80 text-xs mt-0.5 line-clamp-2">{config.registerBranding.subtitle || 'الوصف...'}</p>
                     </div>
                   </div>
                 )}

@@ -69,6 +69,11 @@ const defaultConfig = {
     title: 'منصة التمكين الرقمي',
     subtitle: 'نربط المستفيدين بالمرشدين والمدربين المتخصصين لدعم نموهم المهني والشخصي',
   },
+  registerBranding: {
+    imageUrl: '',
+    title: 'ابدأ رحلتك نحو النجاح',
+    subtitle: 'انضم إلى منصة EmpowerHub وابدأ التغيير اليوم',
+  },
   roles: [
     { title: 'كمستفيد', description: 'طور مهاراتك، ابنِ مشروعك، وحقق استقلاليتك المالية من خلال برامج تمكين متكاملة.', icon: 'UserCheck', badge: 'الأكثر شعبية', link: '/register?role=beneficiary' },
     { title: 'كمدرب', description: 'شارك خبراتك ومعرفتك من خلال إنشاء وتقديم دورات تدريبية متخصصة.', icon: 'GraduationCap', badge: '', link: '/register?role=coach' },
@@ -125,6 +130,7 @@ export async function GET() {
       contact: { ...defaultConfig.contact, ...data?.contact },
       ctaBanner: { ...defaultConfig.ctaBanner, ...data?.ctaBanner },
       authBranding: { ...defaultConfig.authBranding, ...data?.authBranding },
+      registerBranding: { ...defaultConfig.registerBranding, ...data?.registerBranding },
       sectionStyles: Object.fromEntries(
         Object.keys(defaultConfig.sectionStyles).map(k => [
           k,

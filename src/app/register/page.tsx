@@ -87,7 +87,10 @@ function RegisterForm() {
 
   useEffect(() => {
     fetch('/api/public/site-config', { cache: 'no-store' }).then(r => r.json()).then(d => {
-      if (d.config?.authBranding) setAuthBranding(d.config.authBranding);
+      // registerBranding is the register page's own image/text; fall back to the
+      // shared authBranding (used by /login) for sites configured before it existed.
+      const branding = d.config?.registerBranding?.imageUrl ? d.config.registerBranding : d.config?.authBranding;
+      if (branding) setAuthBranding(branding);
     }).catch(() => {});
   }, []);
 
@@ -265,8 +268,8 @@ function RegisterForm() {
   }
 
   return (
-    <div className="w-full lg:grid lg:min-h-screen lg:grid-cols-2" dir="rtl">
-      <div className="flex items-center justify-center py-12 px-4">
+    <div className="flex min-h-screen" dir="rtl">
+      <div className="flex flex-1 items-center justify-center py-12 px-4">
         <div className="mx-auto grid w-full max-w-[420px] gap-6">
           <div className="grid gap-2 text-center">
             <Link href="/" className="flex justify-center items-center gap-2 mb-2">
@@ -511,7 +514,7 @@ function RegisterForm() {
         </div>
       </div>
 
-      <div className="hidden bg-muted lg:block relative overflow-hidden">
+      <div className="hidden lg:relative lg:flex lg:w-[480px] lg:flex-col lg:shrink-0 overflow-hidden">
         {brandingImageUrl && (
           <Image
             src={brandingImageUrl}
