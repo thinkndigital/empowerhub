@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { checkOrgLocked } from '@/lib/plan-limits';
 
 export async function GET(req: NextRequest) {
   try {
@@ -11,6 +12,11 @@ export async function GET(req: NextRequest) {
       orgId = userDoc.data()?.organizationId;
     }
     if (!orgId) return NextResponse.json({ error: 'Not an org' }, { status: 403 });
+
+    const lockCheck = await checkOrgLocked(orgId);
+    if (!lockCheck.allowed) {
+      return NextResponse.json({ error: 'التقارير ميزة مدفوعة — يرجى الاشتراك أو التجديد لعرضها.' }, { status: 403 });
+    }
 
     const [benefSnap, mentorSnap, sessionSnap] = await Promise.all([
       adminDb.collection('users').where('organizationId', '==', orgId).where('role', '==', 'beneficiary').get(),

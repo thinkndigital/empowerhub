@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { checkOrgLocked } from '@/lib/plan-limits';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,6 +37,11 @@ export async function POST(req: NextRequest) {
     const decoded = await adminAuth.verifyIdToken(token);
     const orgId = await getOrgId(decoded);
     if (!orgId) return NextResponse.json({ error: 'غير مصرح' }, { status: 403 });
+
+    const lockCheck = await checkOrgLocked(orgId);
+    if (!lockCheck.allowed) {
+      return NextResponse.json({ error: 'إنشاء نماذج التقييم ميزة مدفوعة — يرجى الاشتراك أو التجديد للمتابعة.' }, { status: 403 });
+    }
 
     const body = await req.json();
     const { title, description, type, questions, status } = body;

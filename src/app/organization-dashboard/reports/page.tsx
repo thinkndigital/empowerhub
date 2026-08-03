@@ -18,6 +18,8 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useUser } from "@/firebase/auth/use-user"
 import { format, subMonths, startOfMonth } from "date-fns"
 import { ar } from "date-fns/locale"
+import Link from "next/link"
+import { Lock } from "lucide-react"
 
 const engagementConfig = { active: { label: "المستفيدون النشطون", color: "hsl(var(--chart-1))" } }
 const completionConfig = { "معدل الإكمال": { label: "معدل الإكمال", color: "hsl(var(--chart-2))" } }
@@ -40,6 +42,7 @@ export default function OrgReportsPage() {
   const [exportOptions, setExportOptions] = useState({ summary: true, progress: true, engagement: true });
   const [data, setData] = useState<ReportsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [lockedMessage, setLockedMessage] = useState('');
   const [mentoringBeneficiaries, setMentoringBeneficiaries] = useState<MentoringBeneficiary[]>([]);
   const [mentoringSessionsData, setMentoringSessionsData] = useState<Session[]>([]);
 
@@ -52,7 +55,12 @@ export default function OrgReportsPage() {
         fetch('/api/sessions?scope=all', { headers: { Authorization: `Bearer ${token}` } }),
         fetch('/api/org/users?role=beneficiary', { headers: { Authorization: `Bearer ${token}` } }),
       ]);
-      if (reportsRes.ok) setData(await reportsRes.json());
+      if (reportsRes.status === 403) {
+        const err = await reportsRes.json().catch(() => ({}));
+        setLockedMessage(err.error || 'هذه الميزة غير متاحة بخطتك الحالية.');
+      } else if (reportsRes.ok) {
+        setData(await reportsRes.json());
+      }
       if (sessionsRes.ok) {
         const s = await sessionsRes.json();
         setMentoringSessionsData(s.sessions || []);
@@ -137,6 +145,27 @@ export default function OrgReportsPage() {
     toast({ title: "تم التصدير بنجاح" });
     setIsExportDialogOpen(false);
   };
+
+  if (!loading && lockedMessage) {
+    return (
+      <div className="flex items-center justify-center py-24" dir="rtl">
+        <Card className="max-w-md w-full text-center">
+          <CardContent className="pt-8 pb-6 space-y-4">
+            <div className="h-14 w-14 rounded-full bg-muted flex items-center justify-center mx-auto">
+              <Lock className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <div>
+              <h2 className="font-bold text-lg mb-1">التقارير غير متاحة حالياً</h2>
+              <p className="text-sm text-muted-foreground">{lockedMessage}</p>
+            </div>
+            <Button asChild>
+              <Link href="/organization-dashboard/settings">الذهاب لصفحة الاشتراك</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in-up" dir="rtl">
