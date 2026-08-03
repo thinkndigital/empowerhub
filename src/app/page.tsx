@@ -744,58 +744,55 @@ export default function LandingPage() {
           <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-sky-500/4 rounded-full blur-3xl pointer-events-none" />
 
           <div className="relative z-10 container py-16 sm:py-20 lg:py-28">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+            <div className="flex flex-col items-center max-w-3xl mx-auto text-center">
 
-              {/* ── Text Column ── */}
-              <div className="text-center lg:text-right">
-                {/* Tagline pill */}
-                <div className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground border border-border/80 rounded-full px-3.5 py-1.5 mb-6 sm:mb-8 bg-card/60 backdrop-blur-sm">
-                  <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse shrink-0" />
-                  <span className="truncate">{cfg?.tagline || 'منصة التمكين الرقمي الشاملة'}</span>
-                </div>
-
-                {/* Headline */}
-                <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-foreground leading-[1.1] mb-5 sm:mb-6">
-                  {heroTitle}
-                </h1>
-
-                {/* Subtitle */}
-                <p className="text-base sm:text-lg text-muted-foreground max-w-xl mx-auto lg:mx-0 leading-relaxed mb-8 sm:mb-10">
-                  {heroSubtitle}
-                </p>
-
-                {/* CTAs */}
-                <div className="flex flex-col sm:flex-row justify-center lg:justify-start gap-3 mb-8 sm:mb-10">
-                  {heroButtons.map((btn, i) => (
-                    <Button
-                      key={i}
-                      size="lg"
-                      variant={btn.style === 'outline' ? 'outline' : 'default'}
-                      asChild
-                      className="h-12 px-7 text-base font-semibold shadow-sm w-full sm:w-auto"
-                    >
-                      <Link href={btn.link || '/register'}>
-                        {btn.text}
-                        {btn.style !== 'outline' && <ArrowLeft className="mr-2 h-4 w-4" />}
-                      </Link>
-                    </Button>
-                  ))}
-                </div>
-
-                {/* Trust strip */}
-                <div className="flex flex-wrap justify-center lg:justify-start gap-x-5 gap-y-2 text-xs sm:text-sm text-muted-foreground">
-                  {['مجاني تماماً للبدء', 'لا يتطلب بطاقة ائتمان', 'دعم باللغة العربية'].map((t, i) => (
-                    <div key={i} className="flex items-center gap-1.5">
-                      <CheckCircle className="h-3.5 w-3.5 text-primary shrink-0" />
-                      <span>{t}</span>
-                    </div>
-                  ))}
-                </div>
+              {/* Tagline pill */}
+              <div className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground border border-border/80 rounded-full px-3.5 py-1.5 mb-6 sm:mb-8 bg-card/60 backdrop-blur-sm">
+                <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse shrink-0" />
+                <span className="truncate">{cfg?.tagline || 'منصة التمكين الرقمي الشاملة'}</span>
               </div>
 
-              {/* ── Visual Column — Dashboard mockup ── */}
-              <div className="hidden lg:flex items-center justify-center">
-                <div className="relative w-full max-w-sm xl:max-w-md">
+              {/* Headline */}
+              <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-foreground leading-[1.1] mb-5 sm:mb-6">
+                {heroTitle}
+              </h1>
+
+              {/* Subtitle */}
+              <p className="text-base sm:text-lg text-muted-foreground max-w-xl leading-relaxed mb-8 sm:mb-10">
+                {heroSubtitle}
+              </p>
+
+              {/* CTAs */}
+              <div className="flex flex-col sm:flex-row justify-center gap-3 mb-8 sm:mb-10">
+                {heroButtons.map((btn, i) => (
+                  <Button
+                    key={i}
+                    size="lg"
+                    variant={btn.style === 'outline' ? 'outline' : 'default'}
+                    asChild
+                    className={`h-12 px-7 text-base font-semibold shadow-sm w-full sm:w-auto ${btn.style !== 'outline' ? 'bg-gradient-to-t from-primary to-primary/80 hover:to-primary hover:shadow-lg hover:shadow-primary/20' : ''}`}
+                  >
+                    <Link href={btn.link || '/register'}>
+                      {btn.text}
+                      {btn.style !== 'outline' && <ArrowLeft className="mr-2 h-4 w-4" />}
+                    </Link>
+                  </Button>
+                ))}
+              </div>
+
+              {/* Trust strip */}
+              <div className="flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs sm:text-sm text-muted-foreground mb-14 sm:mb-16">
+                {['مجاني تماماً للبدء', 'لا يتطلب بطاقة ائتمان', 'دعم باللغة العربية'].map((t, i) => (
+                  <div key={i} className="flex items-center gap-1.5">
+                    <CheckCircle className="h-3.5 w-3.5 text-primary shrink-0" />
+                    <span>{t}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* ── Visual — Dashboard mockup, full-width panel below ── */}
+              <div className="w-full flex items-center justify-center">
+                <div className="relative w-full max-w-lg">
                   {/* Glow behind card */}
                   <div className="absolute inset-6 bg-primary/10 rounded-3xl blur-2xl pointer-events-none" />
 
