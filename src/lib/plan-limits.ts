@@ -18,21 +18,28 @@ export async function checkOrgLimit(orgId: string | undefined | null, limitKey: 
   if (!orgId) return { allowed: true };
 
   const orgSnap = await adminDb.collection('organizations').doc(orgId).get();
-  const planKey = orgSnap.data()?.plan;
-  if (!planKey) return { allowed: true };
 
-  // Plans without an explicit `key` field are exposed elsewhere using their document
-  // ID as a fallback key — mirror that here since the query only matches the real
-  // stored `key` field, not the ID.
-  const planSnap = await adminDb.collection('plans').where('key', '==', planKey).limit(1).get();
-  let planDoc = !planSnap.empty ? planSnap.docs[0] : null;
-  if (!planDoc) {
-    const byId = await adminDb.collection('plans').doc(planKey).get();
-    if (byId.exists) planDoc = byId as any;
+  // An admin can override a specific org's limit (e.g. to grant it more capacity
+  // than its plan normally allows) independent of which plan it's on.
+  const override = orgSnap.data()?.limitOverrides?.[limitKey];
+
+  let max: number | undefined = override;
+  if (max == null) {
+    const planKey = orgSnap.data()?.plan;
+    if (!planKey) return { allowed: true };
+
+    // Plans without an explicit `key` field are exposed elsewhere using their document
+    // ID as a fallback key — mirror that here since the query only matches the real
+    // stored `key` field, not the ID.
+    const planSnap = await adminDb.collection('plans').where('key', '==', planKey).limit(1).get();
+    let planDoc = !planSnap.empty ? planSnap.docs[0] : null;
+    if (!planDoc) {
+      const byId = await adminDb.collection('plans').doc(planKey).get();
+      if (byId.exists) planDoc = byId as any;
+    }
+    if (!planDoc) return { allowed: true };
+    max = planDoc.data()?.limits?.[limitKey];
   }
-  if (!planDoc) return { allowed: true };
-
-  const max = planDoc.data()?.limits?.[limitKey];
   if (max == null || max === -1) return { allowed: true };
 
   let current = 0;

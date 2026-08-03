@@ -36,8 +36,13 @@ interface Org {
   id: string; name: string; plan: string; primaryColor: string;
   logoUrl?: string; inviteCode?: string;
   dashboardSections?: OrgSections;
+  limitOverrides?: { maxUsers?: number; maxMentors?: number };
 }
-interface OrgForm { name: string; plan: string; primaryColor: string; logoUrl: string; }
+interface OrgForm {
+  name: string; plan: string; primaryColor: string; logoUrl: string;
+  limitOverrides: { maxUsers?: number; maxMentors?: number };
+}
+interface PlanOption { id: string; key: string; name: string; limits?: { maxUsers?: number; maxMentors?: number } }
 interface Person { id: string; name: string; email: string; role: string; status?: string; avatarUrl?: string; }
 interface OrgStore { id: string; name: string; beneficiaryId: string; hidden: boolean; }
 interface OrgOverview { beneficiaries: Person[]; mentors: Person[]; coaches: Person[]; team: Person[]; stores: OrgStore[]; }
@@ -51,12 +56,7 @@ interface OrgSections {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const planColors: Record<string, string> = {
-  free: "bg-muted-foreground/20 text-foreground/90 border-muted-foreground/30",
-  pro: "bg-blue-500/20 text-blue-300 border-blue-500/30",
-  enterprise: "bg-purple-500/20 text-purple-300 border-purple-500/30",
-};
-const planLabels: Record<string, string> = { free: "مجاني", pro: "احترافي", enterprise: "مؤسسي" };
+const fallbackPlanColor = "bg-muted-foreground/20 text-foreground/90 border-muted-foreground/30";
 const statusBadge: Record<string, string> = { active: "bg-emerald-500/20 text-emerald-400", suspended: "bg-red-500/20 text-red-400", pending: "bg-yellow-500/20 text-yellow-400" };
 const statusLabel: Record<string, string> = { active: "نشط", suspended: "موقوف", pending: "معلق" };
 
@@ -94,7 +94,7 @@ const defaultSections: OrgSections = {
   coach: { courses: true, sessions: true, analytics: true, messages: true, invitations: true },
 };
 
-const emptyForm: OrgForm = { name: "", plan: "free", primaryColor: "#6366f1", logoUrl: "" };
+const emptyForm: OrgForm = { name: "", plan: "", primaryColor: "#6366f1", logoUrl: "", limitOverrides: {} };
 
 // ─── Logo Upload ──────────────────────────────────────────────────────────────
 
@@ -146,7 +146,8 @@ function LogoUploadField({ value, onChange }: { value: string; onChange: (v: str
 
 // ─── Org Form Fields ──────────────────────────────────────────────────────────
 
-function OrgFormFields({ form, onChange }: { form: OrgForm; onChange: (f: OrgForm) => void }) {
+function OrgFormFields({ form, onChange, plans }: { form: OrgForm; onChange: (f: OrgForm) => void; plans: PlanOption[] }) {
+  const currentPlan = plans.find(p => p.key === form.plan);
   return (
     <div className="space-y-4">
       <div className="space-y-2">
@@ -156,13 +157,39 @@ function OrgFormFields({ form, onChange }: { form: OrgForm; onChange: (f: OrgFor
       <div className="space-y-2">
         <Label>الخطة</Label>
         <Select value={form.plan} onValueChange={v => onChange({ ...form, plan: v })}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectTrigger><SelectValue placeholder="اختر خطة..." /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="free">مجاني</SelectItem>
-            <SelectItem value="pro">احترافي</SelectItem>
-            <SelectItem value="enterprise">مؤسسي</SelectItem>
+            {plans.length === 0
+              ? <div className="px-3 py-2 text-xs text-muted-foreground">لا توجد خطط — أضفها من صفحة "خطط الاشتراك"</div>
+              : plans.map(p => <SelectItem key={p.id} value={p.key}>{p.name}</SelectItem>)}
           </SelectContent>
         </Select>
+      </div>
+      <div className="space-y-2 rounded-lg border border-border p-3">
+        <Label className="text-sm">تجاوز حدود الخطة لهذه المنظمة (اختياري)</Label>
+        <p className="text-xs text-muted-foreground">
+          اترك الحقل فارغاً لاستخدام حد الخطة الافتراضي{currentPlan?.limits ? ` (المستفيدون: ${currentPlan.limits.maxUsers ?? '—'}، المرشدون/المدربون: ${currentPlan.limits.maxMentors ?? '—'})` : ''}.
+        </p>
+        <div className="grid grid-cols-2 gap-3 mt-2">
+          <div className="space-y-1">
+            <Label className="text-xs">أقصى عدد مستفيدين</Label>
+            <Input
+              type="number" min={0}
+              value={form.limitOverrides.maxUsers ?? ''}
+              onChange={e => onChange({ ...form, limitOverrides: { ...form.limitOverrides, maxUsers: e.target.value === '' ? undefined : Number(e.target.value) } })}
+              placeholder="افتراضي الخطة"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">أقصى عدد مرشدين/مدربين</Label>
+            <Input
+              type="number" min={0}
+              value={form.limitOverrides.maxMentors ?? ''}
+              onChange={e => onChange({ ...form, limitOverrides: { ...form.limitOverrides, maxMentors: e.target.value === '' ? undefined : Number(e.target.value) } })}
+              placeholder="افتراضي الخطة"
+            />
+          </div>
+        </div>
       </div>
       <div className="space-y-2">
         <Label>اللون الرئيسي</Label>
@@ -199,7 +226,7 @@ function PersonRow({ person }: { person: Person }) {
 
 // ─── Overview Modal ───────────────────────────────────────────────────────────
 
-function OrgOverviewModal({ org, onClose }: { org: Org; onClose: () => void }) {
+function OrgOverviewModal({ org, onClose, planName }: { org: Org; onClose: () => void; planName: (key: string) => string }) {
   const [overview, setOverview] = useState<OrgOverview | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -227,7 +254,7 @@ function OrgOverviewModal({ org, onClose }: { org: Org; onClose: () => void }) {
             </div>
             <div className="flex-1 min-w-0">
               <DialogTitle className="truncate">{org.name}</DialogTitle>
-              <p className="text-muted-foreground text-sm">{planLabels[org.plan] || 'مجاني'}</p>
+              <p className="text-muted-foreground text-sm">{planName(org.plan)}</p>
             </div>
             <Button variant="ghost" size="icon" onClick={load} disabled={loading}>
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
@@ -398,6 +425,7 @@ function OrgSectionsModal({ org, onClose }: { org: Org; onClose: () => void }) {
 
 export default function OrganizationsPage() {
   const [orgs, setOrgs] = useState<Org[]>([]);
+  const [plans, setPlans] = useState<PlanOption[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
@@ -416,11 +444,23 @@ export default function OrganizationsPage() {
       .then(d => { setOrgs(d.orgs || []); setLoading(false); });
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    fetch("/api/admin-panel/plans")
+      .then(r => r.json())
+      // Plans without an explicit `key` field fall back to their document ID
+      // elsewhere in the app (register page, /api/register) — mirror that here.
+      .then(d => setPlans((d.plans || []).map((p: any) => ({ ...p, key: p.key || p.id }))));
+  }, []);
+
+  const planName = (key: string) => plans.find(p => p.key === key)?.name || key || "بدون خطة";
 
   const openEdit = (org: Org) => {
     setEditOrg(org);
-    setEditForm({ name: org.name || "", plan: org.plan || "free", primaryColor: org.primaryColor || "#6366f1", logoUrl: org.logoUrl || "" });
+    setEditForm({
+      name: org.name || "", plan: org.plan || "", primaryColor: org.primaryColor || "#6366f1", logoUrl: org.logoUrl || "",
+      limitOverrides: { ...org.limitOverrides },
+    });
   };
 
   const handleAdd = async () => {
@@ -490,8 +530,8 @@ export default function OrganizationsPage() {
                     <div className="flex-1 min-w-0 overflow-hidden">
                       <h3 className="text-foreground font-semibold truncate text-sm">{org.name || "—"}</h3>
                       <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                        <span className={`text-xs px-1.5 py-0.5 rounded-full border ${planColors[org.plan] || planColors.free}`}>
-                          {planLabels[org.plan] || "مجاني"}
+                        <span className={`text-xs px-1.5 py-0.5 rounded-full border ${fallbackPlanColor}`}>
+                          {planName(org.plan)}
                         </span>
                         <span className="flex items-center gap-1 text-xs text-muted-foreground min-w-0">
                           <span className="h-2.5 w-2.5 rounded-full flex-shrink-0 border border-border" style={{ backgroundColor: color }} />
@@ -548,14 +588,14 @@ export default function OrganizationsPage() {
       )}
 
       {/* Modals */}
-      {overviewOrg && <OrgOverviewModal org={overviewOrg} onClose={() => setOverviewOrg(null)} />}
+      {overviewOrg && <OrgOverviewModal org={overviewOrg} onClose={() => setOverviewOrg(null)} planName={planName} />}
       {sectionsOrg && <OrgSectionsModal org={sectionsOrg} onClose={() => { setSectionsOrg(null); load(); }} />}
 
       {/* Add Dialog */}
       <Dialog open={addOpen} onOpenChange={open => { if (!open) { setAddOpen(false); setAddForm(emptyForm); } }}>
         <DialogContent dir="rtl" className="sm:max-w-md">
           <DialogHeader><DialogTitle>إضافة منظمة جديدة</DialogTitle></DialogHeader>
-          <OrgFormFields form={addForm} onChange={setAddForm} />
+          <OrgFormFields form={addForm} onChange={setAddForm} plans={plans} />
           <DialogFooter>
             <Button variant="outline" onClick={() => { setAddOpen(false); setAddForm(emptyForm); }}>إلغاء</Button>
             <Button onClick={handleAdd} disabled={!addForm.name.trim() || saving}>{saving ? "جاري الحفظ..." : "إضافة"}</Button>
@@ -567,7 +607,7 @@ export default function OrganizationsPage() {
       <Dialog open={!!editOrg} onOpenChange={open => { if (!open) setEditOrg(null); }}>
         <DialogContent dir="rtl" className="sm:max-w-md">
           <DialogHeader><DialogTitle>تعديل: {editOrg?.name}</DialogTitle></DialogHeader>
-          <OrgFormFields form={editForm} onChange={setEditForm} />
+          <OrgFormFields form={editForm} onChange={setEditForm} plans={plans} />
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditOrg(null)}>إلغاء</Button>
             <Button onClick={handleEdit} disabled={saving}>{saving ? "جاري الحفظ..." : "حفظ التغييرات"}</Button>
