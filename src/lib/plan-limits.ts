@@ -21,10 +21,18 @@ export async function checkOrgLimit(orgId: string | undefined | null, limitKey: 
   const planKey = orgSnap.data()?.plan;
   if (!planKey) return { allowed: true };
 
+  // Plans without an explicit `key` field are exposed elsewhere using their document
+  // ID as a fallback key — mirror that here since the query only matches the real
+  // stored `key` field, not the ID.
   const planSnap = await adminDb.collection('plans').where('key', '==', planKey).limit(1).get();
-  if (planSnap.empty) return { allowed: true };
+  let planDoc = !planSnap.empty ? planSnap.docs[0] : null;
+  if (!planDoc) {
+    const byId = await adminDb.collection('plans').doc(planKey).get();
+    if (byId.exists) planDoc = byId as any;
+  }
+  if (!planDoc) return { allowed: true };
 
-  const max = planSnap.docs[0].data()?.limits?.[limitKey];
+  const max = planDoc.data()?.limits?.[limitKey];
   if (max == null || max === -1) return { allowed: true };
 
   let current = 0;

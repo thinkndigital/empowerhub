@@ -51,9 +51,16 @@ export async function POST(req: NextRequest) {
       let priceMonthly = 0;
       let priceForCycle = 0;
       if (plan) {
+        // Plans without an explicit `key` field are exposed by /api/public/plans
+        // using their document ID as a fallback key — mirror that here, since a
+        // Firestore query only matches the real stored `key` field, not the ID.
         const planSnap = await adminDb.collection('plans').where('key', '==', plan).limit(1).get();
-        if (!planSnap.empty) {
-          const planDoc = planSnap.docs[0];
+        let planDoc = !planSnap.empty ? planSnap.docs[0] : null;
+        if (!planDoc) {
+          const byId = await adminDb.collection('plans').doc(plan).get();
+          if (byId.exists) planDoc = byId as any;
+        }
+        if (planDoc) {
           const planData = planDoc.data() as any;
           planDocId = planDoc.id;
           planName = planData.name || plan;
