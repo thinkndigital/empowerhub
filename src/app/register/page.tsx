@@ -95,13 +95,19 @@ function RegisterForm() {
   }, []);
 
   useEffect(() => {
+    // Pricing cards on the landing page link here with ?plan=<key> to preselect
+    // the plan the visitor clicked "ابدأ الآن" on.
+    const planFromQuery = searchParams.get("plan");
     fetch('/api/public/plans').then(r => r.json()).then(d => {
       const list: RegisterPlan[] = d.plans || [];
       setPlans(list);
-      if (list.length > 0) setSelectedPlan(list[0].key);
+      if (list.length > 0) {
+        const match = planFromQuery ? list.find(p => p.key === planFromQuery) : null;
+        setSelectedPlan(match ? match.key : list[0].key);
+      }
       setPlansLoading(false);
     }).catch(() => setPlansLoading(false));
-  }, []);
+  }, [searchParams]);
 
   const brandingImageUrl = authBranding.imageUrl || registerImage?.imageUrl;
   const brandingTitle = authBranding.title || 'ابدأ رحلتك نحو النجاح';

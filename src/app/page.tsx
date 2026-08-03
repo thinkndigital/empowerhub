@@ -1382,7 +1382,7 @@ export default function LandingPage() {
                         ))}
                       </ul>
                       <Button asChild variant={plan.highlighted ? 'default' : 'outline'} className="w-full">
-                        <Link href="/register">ابدأ الآن</Link>
+                        <Link href={`/register?role=organization&plan=${plan.key}`}>ابدأ الآن</Link>
                       </Button>
                     </div>
                   );
