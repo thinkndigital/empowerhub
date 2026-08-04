@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { SiteHeader } from "@/components/site-header";
 import { Logo } from "@/components/logo";
 import { OrderDialog } from "@/components/order-dialog";
+import { ProductDetailDialog } from "@/components/product-detail-dialog";
 import { ShoppingCart, Search, Store, MessageCircle, ArrowLeft, MapPin } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import type { Product as LibProduct } from "@/lib/products-data";
@@ -28,6 +29,7 @@ interface Product {
 
 export default function MarketPage() {
   const [selectedProduct, setSelectedProduct] = useState<LibProduct | null>(null);
+  const [viewProduct, setViewProduct] = useState<Product | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -164,7 +166,11 @@ export default function MarketPage() {
                   className="group rounded-xl overflow-hidden border border-border bg-card hover:border-primary/30 hover:shadow-sm transition-all flex flex-col"
                 >
                   {/* Image */}
-                  <div className="relative h-40 sm:h-48 bg-muted overflow-hidden shrink-0">
+                  <button
+                    onClick={() => setViewProduct(product)}
+                    aria-label={`عرض تفاصيل ${product.name}`}
+                    className="relative h-40 sm:h-48 bg-muted overflow-hidden shrink-0 block w-full text-right"
+                  >
                     {product.imageUrl ? (
                       <Image
                         src={product.imageUrl}
@@ -182,10 +188,10 @@ export default function MarketPage() {
                         {translateCategory(product.category)}
                       </div>
                     )}
-                  </div>
+                  </button>
 
                   {/* Body */}
-                  <div className="p-3 sm:p-4 flex flex-col gap-1 flex-grow">
+                  <button onClick={() => setViewProduct(product)} className="p-3 sm:p-4 flex flex-col gap-1 flex-grow text-right">
                     <h3 className="font-semibold text-sm line-clamp-1 text-foreground">{product.name}</h3>
                     {product.description && (
                       <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{product.description}</p>
@@ -203,7 +209,7 @@ export default function MarketPage() {
                         </p>
                       )}
                     </div>
-                  </div>
+                  </button>
 
                   {/* Footer */}
                   <div className="px-3 sm:px-4 pb-3 sm:pb-4 pt-3 border-t border-border flex items-center justify-between gap-2">
@@ -282,6 +288,13 @@ export default function MarketPage() {
           </div>
         </div>
       </footer>
+
+      <ProductDetailDialog
+        product={viewProduct}
+        isOpen={!!viewProduct}
+        onOpenChange={open => { if (!open) setViewProduct(null); }}
+        onOrder={p => { setViewProduct(null); setSelectedProduct(p as unknown as LibProduct); }}
+      />
 
       <OrderDialog
         product={selectedProduct}

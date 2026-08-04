@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { OrderDialog } from "@/components/order-dialog";
+import { ProductDetailDialog } from "@/components/product-detail-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ShoppingCart, MapPin, ArrowRight, MessageCircle, Store, Phone, Facebook, Instagram, Twitter, LayoutGrid, ArrowUpDown, PackageX, Eye } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -44,6 +45,7 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<LibProduct | null>(null);
+  const [viewProduct, setViewProduct] = useState<Product | null>(null);
   const [activeCategory, setActiveCategory] = useState('الكل');
   const [sortOrder, setSortOrder] = useState<'default' | 'price-asc' | 'price-desc'>('default');
 
@@ -263,7 +265,11 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
                     <div key={product.id}
                       className="group rounded-2xl border border-border bg-card hover:border-primary/30 hover:shadow-lg transition-all duration-300 flex flex-col overflow-hidden">
                       {/* Image */}
-                      <div className="relative aspect-square bg-muted overflow-hidden shrink-0">
+                      <button
+                        onClick={() => setViewProduct(product)}
+                        aria-label={`عرض تفاصيل ${product.name}`}
+                        className="relative aspect-square bg-muted overflow-hidden shrink-0 block w-full text-right"
+                      >
                         {product.imageUrl ? (
                           <img src={product.imageUrl} alt={product.name}
                             className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ${outOfStock ? 'opacity-50 grayscale' : ''}`}
@@ -285,20 +291,17 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
                             </span>
                           </div>
                         )}
-                        {/* Hover quick-order button */}
-                        {!outOfStock && (
-                          <button
-                            onClick={() => setSelectedProduct(product as unknown as LibProduct)}
-                            aria-label="اطلب الآن"
-                            className="absolute bottom-2 left-2 h-9 w-9 rounded-full bg-background text-foreground shadow-md flex items-center justify-center opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 transition-all duration-200 hover:bg-primary hover:text-primary-foreground"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </button>
-                        )}
-                      </div>
+                        {/* Hover quick-view */}
+                        <span
+                          aria-hidden="true"
+                          className="absolute bottom-2 left-2 h-9 w-9 rounded-full bg-background text-foreground shadow-md flex items-center justify-center opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 transition-all duration-200"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </span>
+                      </button>
 
                       {/* Body */}
-                      <div className="p-3 flex flex-col gap-1 flex-1">
+                      <button onClick={() => setViewProduct(product)} className="p-3 flex flex-col gap-1 flex-1 text-right">
                         <h3 className="font-semibold text-sm text-foreground line-clamp-1">{product.name}</h3>
                         {product.description && (
                           <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{product.description}</p>
@@ -306,7 +309,7 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
                         {!outOfStock && product.stock !== null && product.stock !== undefined && (
                           <p className="text-xs text-muted-foreground mt-auto">المخزون: {product.stock}</p>
                         )}
-                      </div>
+                      </button>
 
                       {/* Footer */}
                       <div className="px-3 pb-3 pt-2 border-t border-border flex items-center justify-between gap-2">
@@ -338,6 +341,14 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
           </div>
         </div>
       </div>
+
+      <ProductDetailDialog
+        product={viewProduct}
+        isOpen={!!viewProduct}
+        onOpenChange={open => { if (!open) setViewProduct(null); }}
+        currencySymbol={currencySymbol}
+        onOrder={p => { setViewProduct(null); setSelectedProduct(p as unknown as LibProduct); }}
+      />
 
       <OrderDialog
         product={selectedProduct}

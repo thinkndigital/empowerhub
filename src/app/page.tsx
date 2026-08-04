@@ -22,6 +22,7 @@ import { applyOrgColor } from '@/lib/apply-org-color';
 import { getDynamicIcon } from '@/lib/dynamic-icons';
 import { translateCategory } from '@/lib/product-category';
 import { OrderDialog } from '@/components/order-dialog';
+import { ProductDetailDialog } from '@/components/product-detail-dialog';
 import { SessionBookingDialog } from '@/components/session-booking-dialog';
 import { CourseEnrollDialog } from '@/components/course-enroll-dialog';
 
@@ -76,6 +77,7 @@ interface CourseItem {
 interface Product {
   id: string;
   name?: string;
+  description?: string;
   price?: number;
   category?: string;
   imageUrl?: string;
@@ -85,6 +87,8 @@ interface Product {
   storeName?: string;
   organizationId?: string;
   store?: { phone?: string };
+  stock?: number | null;
+  location?: string;
 }
 
 interface Plan {
@@ -366,12 +370,12 @@ const CourseCard = ({ course, onEnroll, currencySymbol }: { course: CourseItem; 
   </div>
 );
 
-const ProductCard = ({ product, onOrder, currencySymbol }: { product: Product; onOrder: (p: Product) => void; currencySymbol: string }) => {
+const ProductCard = ({ product, onOrder, onView, currencySymbol }: { product: Product; onOrder: (p: Product) => void; onView: (p: Product) => void; currencySymbol: string }) => {
   const name = product.name || 'منتج';
   const imageUrl = product.imageUrl || product.image || '';
   return (
     <div className="group rounded-xl border border-border bg-card overflow-hidden hover:border-primary/30 hover:shadow-sm transition-all flex flex-col">
-      <div className="relative h-40 bg-muted overflow-hidden">
+      <button onClick={() => onView(product)} aria-label={`عرض تفاصيل ${name}`} className="relative h-40 bg-muted overflow-hidden block w-full text-right">
         {imageUrl ? (
           <Image src={imageUrl} alt={name} fill className="object-cover group-hover:scale-105 transition-transform duration-300" />
         ) : (
@@ -384,13 +388,13 @@ const ProductCard = ({ product, onOrder, currencySymbol }: { product: Product; o
             {translateCategory(product.category)}
           </div>
         )}
-      </div>
-      <div className="p-4 flex flex-col gap-1 flex-grow">
+      </button>
+      <button onClick={() => onView(product)} className="p-4 flex flex-col gap-1 flex-grow text-right">
         <h3 className="font-semibold text-sm line-clamp-2 text-foreground">{name}</h3>
         {product.price != null && (
           <p className="text-primary font-bold text-sm">{product.price} {currencySymbol}</p>
         )}
-      </div>
+      </button>
       <div className="px-4 pb-4">
         <Button className="w-full h-9 text-sm" onClick={() => onOrder(product)}>اطلب الآن</Button>
       </div>
@@ -472,6 +476,7 @@ export default function LandingPage() {
   const [loadingStores, setLoadingStores] = useState(true);
   const [loadingCourses, setLoadingCourses] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [viewProduct, setViewProduct] = useState<Product | null>(null);
   const [selectedCourse, setSelectedCourse] = useState<CourseItem | null>(null);
   const [selectedSession, setSelectedSession] = useState<PublicSession | null>(null);
   const [bookingHost, setBookingHost] = useState<MentorUser | null>(null);
@@ -1390,7 +1395,7 @@ export default function LandingPage() {
                 <div className="flex gap-4 overflow-x-auto pb-3 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {products.map(p => (
                     <div key={p.id} className="w-[46vw] sm:w-64 shrink-0 snap-start">
-                      <ProductCard product={p} currencySymbol={currencySymbol} onOrder={setSelectedProduct} />
+                      <ProductCard product={p} currencySymbol={currencySymbol} onOrder={setSelectedProduct} onView={setViewProduct} />
                     </div>
                   ))}
                 </div>
@@ -1975,6 +1980,14 @@ export default function LandingPage() {
       </main>
 
       {/* ── Dialogs ─────────────────────────────────────────────────────────── */}
+      <ProductDetailDialog
+        product={viewProduct}
+        isOpen={!!viewProduct}
+        onOpenChange={open => { if (!open) setViewProduct(null); }}
+        currencySymbol={currencySymbol}
+        onOrder={p => { setViewProduct(null); setSelectedProduct(p as unknown as Product); }}
+      />
+
       <OrderDialog
         product={selectedProduct ? {
           id: selectedProduct.id,
