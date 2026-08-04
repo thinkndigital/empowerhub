@@ -12,7 +12,7 @@ import {
   ArrowLeft, BookOpen, Store, GraduationCap, CheckCircle,
   Star, MessageSquare, Phone, Mail, Globe, Calendar, Clock,
   Tag, MapPin, FileText, Briefcase, Video, Building2, Users, BarChart3,
-  Zap, Crown, Check,
+  Zap, Crown, Check, ClipboardCheck, TrendingUp, ShoppingBag, CreditCard,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useCurrency } from '@/hooks/use-currency';
@@ -475,6 +475,7 @@ export default function LandingPage() {
   const [bookingRole, setBookingRole] = useState<'mentor' | 'coach'>('mentor');
   const [courseFilter, setCourseFilter] = useState<'all' | 'free' | 'paid'>('all');
   const [sessionFilter, setSessionFilter] = useState<'all' | 'free' | 'paid'>('all');
+  const [activeTour, setActiveTour] = useState(0);
 
   const [contactName, setContactName] = useState('');
   const [contactEmail, setContactEmail] = useState('');
@@ -610,11 +611,72 @@ export default function LandingPage() {
     { name: 'منظمة بناء المستقبل', role: 'منظمة غير ربحية', text: 'ساعدتنا المنصة في إدارة 200 مستفيد بكل احترافية. التقارير التفصيلية مكّنتنا من قياس أثر برامجنا بشكل دقيق.', stars: 5 },
   ];
 
-  const rolesData = cfg?.roles?.length ? cfg.roles : [
-    { title: 'كمستفيد', description: 'طور مهاراتك، ابنِ مشروعك، وحقق استقلاليتك المالية من خلال برامج تمكين متكاملة.', icon: 'UserCheck', badge: 'الأكثر شعبية', link: '/register?role=beneficiary' },
-    { title: 'كمدرب', description: 'شارك خبراتك ومعرفتك من خلال إنشاء وتقديم دورات تدريبية متخصصة.', icon: 'GraduationCap', badge: '', link: '/register?role=coach' },
-    { title: 'كمرشد', description: 'ساهم في نجاح الآخرين من خلال تقديم الإرشاد والتوجيه الشخصي.', icon: 'Users', badge: '', link: '/register?role=mentor' },
-    { title: 'كمنظمة', description: 'أدر برامج التمكين الخاصة بك، وتابع تقدم المستفيدين بفعالية.', icon: 'Building', badge: '', link: '/register?role=organization' },
+
+  const tourRoles = [
+    {
+      key: 'organization', label: 'المنظمة', icon: Building2, path: 'organization-dashboard', link: '/register?role=organization',
+      headline: 'أدر برامج التمكين بالكامل من مكان واحد',
+      benefits: [
+        'إضافة وإدارة المستفيدين والمرشدين والمدربين بسهولة',
+        'تتبع تقدم كل مستفيد بتقارير وتحليلات تفصيلية',
+        'نماذج تقييم مخصصة ترسلها وتحلل نتائجها',
+        'تخصيص هوية منصتك الخاصة بشعارك وألوانك',
+      ],
+      stats: [{ label: 'مستفيدون', value: '٢٥٠' }, { label: 'مرشدون', value: '١٢' }, { label: 'دورات', value: '٣٠' }],
+      items: [
+        { icon: Users, title: 'المستفيدون', subtitle: '٢٥٠ عضو نشط هذا الشهر' },
+        { icon: BarChart3, title: 'تقرير الأثر', subtitle: 'معدل إكمال ٧٨٪' },
+        { icon: ClipboardCheck, title: 'نموذج تقييم جديد', subtitle: 'أُرسل لـ ٤٠ مستفيداً' },
+      ],
+    },
+    {
+      key: 'mentor', label: 'المرشد', icon: Users, path: 'mentor-dashboard', link: '/register?role=mentor',
+      headline: 'قدّم إرشادك وشاهد أثره ينعكس مباشرة',
+      benefits: [
+        'جدولة جلسات إرشاد فردية مع من تختار مرافقتهم',
+        'متابعة تقدم كل مستفيد تشرف عليه في مكان واحد',
+        'شارك مقالاتك وخبراتك مع مجتمع المنصة',
+        'انضم لأي منظمة عبر كود دعوة بسيط',
+      ],
+      stats: [{ label: 'مستفيدون', value: '١٨' }, { label: 'جلسات', value: '٦' }, { label: 'تقييم', value: '٤.٩' }],
+      items: [
+        { icon: Calendar, title: 'جلسة اليوم', subtitle: '٣:٠٠ مساءً — مع نور' },
+        { icon: Users, title: 'مستفيديّ', subtitle: '١٨ شخصاً تحت إرشادك' },
+        { icon: FileText, title: 'مقال جديد', subtitle: '١٢٠ مشاهدة هذا الأسبوع' },
+      ],
+    },
+    {
+      key: 'coach', label: 'المدرب', icon: GraduationCap, path: 'coach-dashboard', link: '/register?role=coach',
+      headline: 'حوّل خبرتك إلى دورات ودخل مستمر',
+      benefits: [
+        'أنشئ دوراتك التدريبية وانشرها لآلاف المستفيدين',
+        'قدّم جلسات مباشرة وتابع التسجيل والحضور',
+        'تحليلات أداء تفصيلية لكل دورة ومحتوى',
+        'متجرك الخاص لبيع دوراتك مباشرة',
+      ],
+      stats: [{ label: 'دورات', value: '٥' }, { label: 'مشتركون', value: '٣٤٠' }, { label: 'دخل', value: '١٫٢k' }],
+      items: [
+        { icon: BookOpen, title: 'دورة التسويق الرقمي', subtitle: '٣٤٠ مشترك — ٧٥٪ إكمال' },
+        { icon: Video, title: 'جلسة مباشرة قادمة', subtitle: 'غداً — ٥٠ مسجّل' },
+        { icon: TrendingUp, title: 'الأداء هذا الشهر', subtitle: '+١٨٪ عن الشهر الماضي' },
+      ],
+    },
+    {
+      key: 'beneficiary', label: 'المستفيد', icon: BookOpen, path: 'beneficiary-dashboard', link: '/register?role=beneficiary',
+      headline: 'تعلّم، تدرّب، وابنِ مشروعك الخاص',
+      benefits: [
+        'دورات تدريبية متخصصة تناسب مسارك المهني',
+        'جلسات إرشاد فردية مع خبراء في مجالك',
+        'متجرك الإلكتروني الخاص لبيع منتجاتك أو خدماتك',
+        'تتبع تقدمك الشخصي خطوة بخطوة',
+      ],
+      stats: [{ label: 'دورات', value: '٣' }, { label: 'تقدمي', value: '٦٥٪' }, { label: 'الطلبات', value: '١٢' }],
+      items: [
+        { icon: BookOpen, title: 'دورتي الحالية', subtitle: 'التسويق الرقمي — ٦٥٪ مكتمل' },
+        { icon: ShoppingBag, title: 'متجري', subtitle: '١٢ طلباً هذا الشهر' },
+        { icon: Calendar, title: 'جلستي القادمة', subtitle: 'مع المرشدة سارة — غداً' },
+      ],
+    },
   ];
 
   const ctaBanner = cfg?.ctaBanner ?? {
@@ -928,8 +990,10 @@ export default function LandingPage() {
                   const FeatureIcon = getDynamicIcon(f.icon);
                   const iconColor = sectionStyle('features').iconColor;
                   return (
-                    <div key={i} className="p-6 rounded-2xl border border-border bg-card">
-                      <FeatureIcon className="h-6 w-6 mb-3 text-primary" style={iconColor ? { color: iconColor } : undefined} />
+                    <div key={i} className="p-6 rounded-2xl border border-border bg-card hover:border-primary/30 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+                      <div className="h-11 w-11 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
+                        <FeatureIcon className="h-5 w-5 text-primary" style={iconColor ? { color: iconColor } : undefined} />
+                      </div>
                       <h3 className="text-base font-bold text-foreground mb-2">{f.title}</h3>
                       <p className="text-sm text-muted-foreground leading-relaxed">{f.description}</p>
                     </div>
@@ -1023,47 +1087,101 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ── Roles / Join ────────────────────────────────────────────────────── */}
-        {sections.showRoles && rolesData.length > 0 && (
-          <section
-            id="roles"
-            className="py-16 sm:py-20 md:py-28"
-            style={sectionStyle('roles').bg ? { backgroundColor: sectionStyle('roles').bg } : undefined}
-          >
+        {/* ── Product Tour by Role ────────────────────────────────────────────── */}
+        {sections.showRoles && (
+          <section id="roles" className="py-16 sm:py-20 md:py-28 bg-muted/30">
             <div className="container">
-              <div className="text-center mb-10 sm:mb-14">
-                <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">انضم إلينا</p>
+              <div className="text-center mb-10 sm:mb-12">
+                <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">جولة داخل المنصة</p>
                 <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground">
-                  ما دورك في منظومة التمكين؟
+                  منصة واحدة، تجربة مصمّمة لكل دور
                 </h2>
                 <p className="mt-3 text-muted-foreground text-sm sm:text-base leading-relaxed max-w-xl mx-auto">
-                  سواء كنت تسعى للتعلم، أو تملك خبرة تشاركها، أو تقود منظمة — هناك مكان لك هنا.
+                  اختر دورك وشاهد كيف تبدو تجربتك داخل EmpowerHub.
                 </p>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {rolesData.map((role, i) => {
-                  const RoleIcon = getDynamicIcon(role.icon);
-                  const iconColor = sectionStyle('roles').iconColor;
-                  return (
-                    <Link
-                      key={i}
-                      href={role.link || '/register'}
-                      className="group p-5 rounded-2xl border border-border hover:border-primary/40 bg-card transition-all flex flex-col gap-3"
-                    >
-                      <RoleIcon className="h-6 w-6 text-primary" style={iconColor ? { color: iconColor } : undefined} />
-                      <div>
-                        <h3 className="text-base font-bold text-foreground group-hover:text-primary transition-colors mb-1.5">
-                          {role.title}
-                        </h3>
-                        <p className="text-sm text-muted-foreground leading-relaxed">{role.description}</p>
-                      </div>
-                      <div className="flex items-center gap-1 text-xs font-semibold text-primary mt-auto">
-                        ابدأ الآن <ArrowLeft className="h-3 w-3" />
-                      </div>
-                    </Link>
-                  );
-                })}
+
+              {/* Role tabs */}
+              <div className="flex flex-wrap justify-center gap-2 mb-10 sm:mb-14">
+                {tourRoles.map((r, i) => (
+                  <button
+                    key={r.key}
+                    onClick={() => setActiveTour(i)}
+                    className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-all ${
+                      activeTour === i
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'bg-card border border-border text-muted-foreground hover:text-foreground hover:border-primary/30'
+                    }`}
+                  >
+                    <r.icon className="h-4 w-4" />
+                    {r.label}
+                  </button>
+                ))}
               </div>
+
+              {/* Active tour content */}
+              {tourRoles.map((tour, i) => activeTour === i && (
+                <div key={tour.key} className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-14 items-center max-w-5xl mx-auto animate-fade-in-up">
+                  {/* Benefits */}
+                  <div className="order-2 lg:order-1 text-center lg:text-right">
+                    <h3 className="text-xl sm:text-2xl font-bold text-foreground mb-4 sm:mb-5">{tour.headline}</h3>
+                    <ul className="space-y-3 mb-6 sm:mb-8">
+                      {tour.benefits.map((b, bi) => (
+                        <li key={bi} className="flex items-start gap-3 text-sm sm:text-base text-muted-foreground">
+                          <CheckCircle className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                          <span className="leading-relaxed">{b}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <Button asChild size="lg" className="h-12 px-7 text-base font-semibold bg-gradient-to-t from-primary to-primary/80 hover:to-primary hover:shadow-lg hover:shadow-primary/20 w-full sm:w-auto">
+                      <Link href={tour.link}>
+                        ابدأ كـ{tour.label}
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                      </Link>
+                    </Button>
+                  </div>
+
+                  {/* Dashboard preview mockup */}
+                  <div className="order-1 lg:order-2">
+                    <div className="relative rounded-2xl border border-border bg-card shadow-2xl overflow-hidden">
+                      {/* Browser chrome */}
+                      <div className="flex items-center gap-1.5 px-4 py-3 border-b border-border bg-muted/40">
+                        <span className="h-2.5 w-2.5 rounded-full bg-red-400" />
+                        <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
+                        <span className="h-2.5 w-2.5 rounded-full bg-green-400" />
+                        <span className="mr-3 text-[11px] text-muted-foreground font-mono truncate">
+                          empowerhub.thinkndigital.com/{tour.path}
+                        </span>
+                      </div>
+                      <div className="p-5 space-y-4">
+                        {/* Stats row */}
+                        <div className="grid grid-cols-3 gap-2">
+                          {tour.stats.map((s, si) => (
+                            <div key={si} className="bg-muted/50 rounded-xl p-2.5 text-center">
+                              <div className="text-lg font-extrabold text-primary tabular-nums leading-none mb-0.5">{s.value}</div>
+                              <div className="text-[10px] text-muted-foreground">{s.label}</div>
+                            </div>
+                          ))}
+                        </div>
+                        {/* Item rows */}
+                        <div className="space-y-2">
+                          {tour.items.map((it, ii) => (
+                            <div key={ii} className="flex items-center gap-3 p-2.5 rounded-xl bg-muted/30">
+                              <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                                <it.icon className="h-4 w-4 text-primary" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-semibold text-foreground truncate">{it.title}</p>
+                                <p className="text-[10px] text-muted-foreground truncate">{it.subtitle}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </section>
         )}
