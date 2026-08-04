@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useUser } from "@/firebase/auth/use-user";
 import { uploadFile as uploadToStorage } from "@/lib/upload-file";
 import { applyOrgColor } from "@/lib/apply-org-color";
+import { useToast } from "@/hooks/use-toast";
 
 interface CtaButton { text: string; link: string; style: 'primary' | 'outline' }
 
@@ -99,16 +100,24 @@ function ImageUploadField({ label, value, onChange, storagePath }: {
   label: string; value: string; onChange: (url: string) => void; storagePath: string;
 }) {
   const { user } = useUser();
+  const { toast } = useToast();
   const [uploading, setUploading] = useState(false);
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !user) return;
+    e.target.value = '';
+    if (!file) return;
+    if (!user) {
+      toast({ variant: 'destructive', title: 'خطأ', description: 'لم يتم التعرف على حسابك، أعد تحميل الصفحة وحاول مجدداً.' });
+      return;
+    }
     setUploading(true);
     try {
       const token = await user.getIdToken();
       onChange(await uploadToStorage(file, storagePath, token));
-    } catch {}
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: 'فشل رفع الصورة', description: err?.message || 'حدث خطأ غير متوقع' });
+    }
     setUploading(false);
   };
 

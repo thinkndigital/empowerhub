@@ -51,13 +51,20 @@ export default function AdminHomepagePage() {
 
   const handleLogoFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !user) return;
+    e.target.value = '';
+    if (!file) return;
+    if (!user) {
+      toast({ variant: 'destructive', title: 'خطأ', description: 'لم يتم التعرف على حسابك، أعد تحميل الصفحة وحاول مجدداً.' });
+      return;
+    }
     setUploadingLogo(true);
     try {
       const token = await user.getIdToken();
       const url = await uploadToStorage(file, 'site/logo', token);
       setConfig(c => ({ ...c, logoUrl: url }));
-    } catch {}
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: 'فشل رفع الصورة', description: err?.message || 'حدث خطأ غير متوقع' });
+    }
     setUploadingLogo(false);
   };
 

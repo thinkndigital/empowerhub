@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useUser } from "@/firebase/auth/use-user";
 import { uploadFile as uploadToStorage } from "@/lib/upload-file";
+import { useToast } from "@/hooks/use-toast";
 
 interface DashSections {
   organization: Record<string, boolean>;
@@ -69,16 +70,24 @@ const defaultConfig: PlatformConfig = {
 
 function ImageUploadField({ label, value, onChange, hint }: { label: string; value: string; onChange: (v: string) => void; hint?: string }) {
   const { user } = useUser();
+  const { toast } = useToast();
   const [uploading, setUploading] = useState(false);
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !user) return;
+    e.target.value = '';
+    if (!file) return;
+    if (!user) {
+      toast({ variant: 'destructive', title: 'خطأ', description: 'لم يتم التعرف على حسابك، أعد تحميل الصفحة وحاول مجدداً.' });
+      return;
+    }
     setUploading(true);
     try {
       const token = await user.getIdToken();
       onChange(await uploadToStorage(file, 'platform', token));
-    } catch {}
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: 'فشل رفع الصورة', description: err?.message || 'حدث خطأ غير متوقع' });
+    }
     setUploading(false);
   };
 
