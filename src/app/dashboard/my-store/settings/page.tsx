@@ -160,7 +160,7 @@ export default function StoreSettingsPage() {
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="space-y-6">
         <Skeleton className="h-8 w-1/3" />
         <Card className="border-0 shadow-sm"><CardContent className="p-6 space-y-4"><Skeleton className="h-10 w-full" /><Skeleton className="h-20 w-full" /></CardContent></Card>
       </div>
@@ -181,7 +181,7 @@ export default function StoreSettingsPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div>
       <h1 className="text-2xl font-bold tracking-tight">إعدادات المتجر</h1>
       <p className="text-muted-foreground mb-6">إدارة الهوية المرئية ومعلومات التواصل لمتجرك.</p>
 

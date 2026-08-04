@@ -164,7 +164,7 @@ export default function CourseDetailsPage({ params }: { params: { courseId: stri
 
   if (loading) {
     return (
-      <div className="space-y-8 max-w-4xl mx-auto" dir="rtl">
+      <div className="space-y-8" dir="rtl">
         <Skeleton className="h-10 w-3/4" />
         <Skeleton className="h-6 w-full" />
         <Card className="border-0 shadow-sm"><CardHeader><Skeleton className="h-6 w-1/4" /></CardHeader><CardContent><Skeleton className="aspect-video w-full" /></CardContent></Card>
@@ -187,7 +187,7 @@ export default function CourseDetailsPage({ params }: { params: { courseId: stri
   const selectedLessonVideoUrl = getVideoEmbedUrl(selectedLesson?.videoUrl);
 
   return (
-    <div className="max-w-5xl mx-auto" dir="rtl">
+    <div dir="rtl">
       <div className="space-y-6">
         {/* Header */}
         <div>
