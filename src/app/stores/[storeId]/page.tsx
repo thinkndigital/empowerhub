@@ -5,19 +5,23 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { OrderDialog } from "@/components/order-dialog";
-import { ShoppingCart, MapPin, ArrowRight, MessageCircle, Store } from "lucide-react";
+import { ShoppingCart, MapPin, ArrowRight, MessageCircle, Store, Phone, Facebook, Instagram, Twitter } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrency } from "@/hooks/use-currency";
 import type { Product as LibProduct } from "@/lib/products-data";
 
 interface StoreData {
   id: string;
+  slug?: string;
   name: string;
   logoUrl: string;
+  coverUrl?: string;
   beneficiaryName: string;
   location: string;
   description: string;
+  phone?: string;
   whatsapp: string;
+  socials?: { facebook?: string; instagram?: string; twitter?: string };
 }
 
 interface Product {
@@ -91,10 +95,21 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
+      {/* Cover banner */}
+      <div className="relative h-36 sm:h-48 md:h-56 w-full bg-muted overflow-hidden">
+        {store.coverUrl ? (
+          <img src={store.coverUrl} alt="" className="w-full h-full object-cover"
+            onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-primary/15 via-primary/5 to-transparent" />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/10 to-transparent" />
+      </div>
+
       {/* Store header */}
       <div className="border-b border-border bg-muted/30">
-        <div className="max-w-5xl mx-auto px-4 py-6 sm:py-8">
-          <nav className="flex items-center gap-1.5 text-xs text-muted-foreground mb-4" aria-label="breadcrumb">
+        <div className="max-w-5xl mx-auto px-4 pb-6 sm:pb-8">
+          <nav className="flex items-center gap-1.5 text-xs text-muted-foreground py-4" aria-label="breadcrumb">
             <Link href="/" className="hover:text-primary transition-colors">الرئيسية</Link>
             <span className="text-border/80 select-none">/</span>
             <Link href="/market" className="hover:text-primary transition-colors">المتجر</Link>
@@ -104,7 +119,7 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
 
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
             {/* Logo / Avatar */}
-            <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center font-bold text-2xl text-primary shrink-0 overflow-hidden border-2 border-primary/20">
+            <div className="h-20 w-20 sm:h-16 sm:w-16 -mt-10 sm:mt-0 rounded-full bg-primary/10 flex items-center justify-center font-bold text-2xl text-primary shrink-0 overflow-hidden border-4 border-background shadow-md">
               {store.logoUrl ? (
                 <img src={store.logoUrl} alt={store.name} className="h-full w-full object-cover"
                   onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
@@ -120,8 +135,36 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
                     <MapPin className="h-3.5 w-3.5" />{store.location}
                   </span>
                 )}
+                {store.phone && (
+                  <a href={`tel:${store.phone.replace(/\s/g, '')}`} className="flex items-center gap-1 hover:text-primary transition-colors" dir="ltr">
+                    <Phone className="h-3.5 w-3.5" />{store.phone}
+                  </a>
+                )}
               </div>
-              {store.description && <p className="text-sm text-muted-foreground mt-2 max-w-lg">{store.description}</p>}
+              {store.description && <p className="text-sm text-muted-foreground mt-2 max-w-lg leading-relaxed">{store.description}</p>}
+
+              {(store.socials?.facebook || store.socials?.instagram || store.socials?.twitter) && (
+                <div className="flex items-center gap-2 mt-3">
+                  {store.socials?.facebook && (
+                    <a href={store.socials.facebook} target="_blank" rel="noopener noreferrer" aria-label="فيسبوك"
+                      className="h-8 w-8 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors">
+                      <Facebook className="h-3.5 w-3.5" />
+                    </a>
+                  )}
+                  {store.socials?.instagram && (
+                    <a href={store.socials.instagram} target="_blank" rel="noopener noreferrer" aria-label="انستغرام"
+                      className="h-8 w-8 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors">
+                      <Instagram className="h-3.5 w-3.5" />
+                    </a>
+                  )}
+                  {store.socials?.twitter && (
+                    <a href={store.socials.twitter} target="_blank" rel="noopener noreferrer" aria-label="إكس"
+                      className="h-8 w-8 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors">
+                      <Twitter className="h-3.5 w-3.5" />
+                    </a>
+                  )}
+                </div>
+              )}
             </div>
 
             {store.whatsapp && (

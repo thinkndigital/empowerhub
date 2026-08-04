@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { uniqueStoreSlug } from '@/lib/store-slug';
 
 export async function GET(req: NextRequest) {
   try {
@@ -22,14 +23,16 @@ export async function POST(req: NextRequest) {
     if (!body.name) return NextResponse.json({ error: 'اسم المتجر مطلوب' }, { status: 400 });
     const userSnap = await adminDb.collection('users').doc(decoded.uid).get();
     const userData = userSnap.data() || {};
+    const slug = await uniqueStoreSlug(body.name);
     const ref = await adminDb.collection('stores').add({
       ...body,
+      slug,
       beneficiaryId: decoded.uid,
       beneficiaryName: userData.name || '',
       organizationId: userData.organizationId || '',
       createdAt: new Date().toISOString(),
     });
-    return NextResponse.json({ id: ref.id });
+    return NextResponse.json({ id: ref.id, slug });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
@@ -44,8 +47,16 @@ export async function PUT(req: NextRequest) {
     const doc = await adminDb.collection('stores').doc(id).get();
     if (!doc.exists || doc.data()?.beneficiaryId !== decoded.uid)
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    await adminDb.collection('stores').doc(id).update({ ...fields, updatedAt: new Date().toISOString() });
-    return NextResponse.json({ success: true });
+    const existingName = doc.data()?.name || '';
+    const slug = fields.name && fields.name !== existingName
+      ? await uniqueStoreSlug(fields.name, id)
+      : (doc.data()?.slug || (fields.name ? await uniqueStoreSlug(fields.name, id) : undefined));
+    await adminDb.collection('stores').doc(id).update({
+      ...fields,
+      ...(slug !== undefined ? { slug } : {}),
+      updatedAt: new Date().toISOString(),
+    });
+    return NextResponse.json({ success: true, slug });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }

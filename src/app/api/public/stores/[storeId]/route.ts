@@ -5,7 +5,9 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(_req: NextRequest, { params }: { params: { storeId: string } }) {
   try {
-    const storeDoc = await adminDb.collection('stores').doc(params.storeId).get();
+    // القيمة قد تكون الرابط المخصص (slug) أو معرّف المستند — نجرب الرابط المخصص أولاً
+    const bySlug = await adminDb.collection('stores').where('slug', '==', params.storeId).limit(1).get();
+    const storeDoc = !bySlug.empty ? bySlug.docs[0] : await adminDb.collection('stores').doc(params.storeId).get();
     if (!storeDoc.exists) {
       return NextResponse.json({ error: 'المتجر غير موجود' }, { status: 404 });
     }
@@ -48,12 +50,16 @@ export async function GET(_req: NextRequest, { params }: { params: { storeId: st
     return NextResponse.json({
       store: {
         id: storeDoc.id,
+        slug: storeData.slug || '',
         name: storeData.name || '',
         logoUrl: storeData.logoUrl || '',
+        coverUrl: storeData.coverUrl || '',
         beneficiaryName: storeData.beneficiaryName || '',
         location: storeData.location || '',
         description: storeData.description || '',
+        phone: storeData.phone || '',
         whatsapp: storeData.whatsapp || '',
+        socials: storeData.socials || {},
       },
       products,
     });

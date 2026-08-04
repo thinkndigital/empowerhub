@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/firebase/auth/use-user";
 import { uploadFile as uploadToStorage } from "@/lib/upload-file";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Save, Building, Facebook, Instagram, Twitter, MessageCircle } from "lucide-react";
+import { Save, Building, Facebook, Instagram, Twitter, MessageCircle, Link2, Copy, Check } from "lucide-react";
 
 const storeSettingsSchema = z.object({
   name: z.string().min(2, { message: "يجب أن يكون اسم المتجر حرفين على الأقل." }),
@@ -37,12 +37,14 @@ export default function StoreSettingsPage() {
   const { toast } = useToast();
   const { user: authUser, loading: authLoading } = useUser();
   const [storeId, setStoreId] = useState<string | null>(null);
+  const [storeSlug, setStoreSlug] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const form = useForm<StoreSettingsFormValues>({
     resolver: zodResolver(storeSettingsSchema),
@@ -67,6 +69,7 @@ export default function StoreSettingsPage() {
       const json = await res.json();
       if (json.store) {
         setStoreId(json.store.id);
+        setStoreSlug(json.store.slug || "");
         form.reset({
           name: json.store.name || "",
           description: json.store.description || "",
@@ -145,6 +148,7 @@ export default function StoreSettingsPage() {
 
       const json = await res.json();
       if (!storeId && json.id) setStoreId(json.id);
+      if (json.slug) setStoreSlug(json.slug);
 
       toast({ title: storeId ? "تم الحفظ بنجاح" : "تم إنشاء متجرك!", description: "تم حفظ إعدادات متجرك." });
     } catch (e: any) {
@@ -163,10 +167,45 @@ export default function StoreSettingsPage() {
     );
   }
 
+  const publicPath = `/stores/${storeSlug || storeId || ''}`;
+  const publicUrl = typeof window !== 'undefined' ? `${window.location.origin}${publicPath}` : publicPath;
+
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(publicUrl);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch {
+      toast({ variant: "destructive", title: "تعذر النسخ", description: "انسخ الرابط يدوياً." });
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold tracking-tight">إعدادات المتجر</h1>
       <p className="text-muted-foreground mb-6">إدارة الهوية المرئية ومعلومات التواصل لمتجرك.</p>
+
+      {storeId && (
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between p-4 rounded-xl border border-primary/20 bg-primary/5 mb-6">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+              <Link2 className="h-4 w-4 text-primary" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground mb-0.5">رابط متجرك الخاص</p>
+              <a href={publicPath} target="_blank" rel="noopener noreferrer" dir="ltr"
+                className="text-sm font-semibold text-foreground hover:text-primary transition-colors truncate block">
+                {publicUrl}
+              </a>
+            </div>
+          </div>
+          <Button type="button" variant="outline" size="sm" onClick={copyLink} className="shrink-0 gap-1.5">
+            {linkCopied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
+            {linkCopied ? 'تم النسخ' : 'نسخ الرابط'}
+          </Button>
+        </div>
+      )}
+
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
           <Card className="border-0 shadow-sm">

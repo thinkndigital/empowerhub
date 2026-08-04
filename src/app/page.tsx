@@ -458,7 +458,7 @@ export default function LandingPage() {
   const [mentors, setMentors] = useState<MentorUser[]>([]);
   const [coaches, setCoaches] = useState<MentorUser[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [publicStores, setPublicStores] = useState<{ id: string; name: string; logoUrl?: string; location?: string; beneficiaryName?: string }[]>([]);
+  const [publicStores, setPublicStores] = useState<{ id: string; slug?: string; name: string; logoUrl?: string; location?: string; beneficiaryName?: string }[]>([]);
   const [courses, setCourses] = useState<CourseItem[]>([]);
   const [publicSessions, setPublicSessions] = useState<PublicSession[]>([]);
   const [latestArticles, setLatestArticles] = useState<{ id: string; title: string; excerpt: string; coverImageUrl: string; authorName: string; authorRole: string; readTime: number; tags: string[] }[]>([]);
@@ -1415,7 +1415,7 @@ export default function LandingPage() {
                   {publicStores.map(store => (
                     <Link
                       key={store.id}
-                      href={`/stores/${store.id}`}
+                      href={`/stores/${store.slug || store.id}`}
                       className="group w-[82vw] sm:w-72 shrink-0 snap-start p-4 sm:p-5 rounded-xl border border-border bg-card hover:border-primary/30 hover:shadow-sm transition-all flex items-center justify-between gap-3"
                     >
                       <div className="flex items-center gap-3 min-w-0">

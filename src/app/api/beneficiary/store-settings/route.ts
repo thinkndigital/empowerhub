@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { uniqueStoreSlug as uniqueSlug } from '@/lib/store-slug';
 
 // إنشاء متجر جديد
 export async function POST(req: NextRequest) {
@@ -14,8 +15,11 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { id: _id, ...data } = body;
 
+    const slug = data.name ? await uniqueSlug(data.name) : '';
+
     const storeData = {
       ...data,
+      slug,
       beneficiaryId: uid,
       beneficiaryName: userData.name || '',
       organizationId: userData.organizationId || '',
@@ -24,7 +28,7 @@ export async function POST(req: NextRequest) {
     };
 
     const ref = await adminDb.collection('stores').add(storeData);
-    return NextResponse.json({ id: ref.id });
+    return NextResponse.json({ id: ref.id, slug });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
@@ -48,12 +52,19 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: 'غير مصرح' }, { status: 403 });
     }
 
+    // أعد توليد الرابط المخصص فقط إذا تغيّر اسم المتجر
+    const existingName = storeDoc.data()?.name || '';
+    const slug = data.name && data.name !== existingName
+      ? await uniqueSlug(data.name, id)
+      : (storeDoc.data()?.slug || (data.name ? await uniqueSlug(data.name, id) : ''));
+
     await adminDb.collection('stores').doc(id).update({
       ...data,
+      slug,
       updatedAt: new Date().toISOString(),
     });
 
-    return NextResponse.json({ id });
+    return NextResponse.json({ id, slug });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
