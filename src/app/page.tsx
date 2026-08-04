@@ -459,7 +459,7 @@ export default function LandingPage() {
   const [mentors, setMentors] = useState<MentorUser[]>([]);
   const [coaches, setCoaches] = useState<MentorUser[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [publicStores, setPublicStores] = useState<{ id: string; slug?: string; name: string; logoUrl?: string; location?: string; beneficiaryName?: string }[]>([]);
+  const [publicStores, setPublicStores] = useState<{ id: string; slug?: string; name: string; logoUrl?: string; coverUrl?: string; location?: string; beneficiaryName?: string }[]>([]);
   const [courses, setCourses] = useState<CourseItem[]>([]);
   const [publicSessions, setPublicSessions] = useState<PublicSession[]>([]);
   const [latestArticles, setLatestArticles] = useState<{ id: string; title: string; excerpt: string; coverImageUrl: string; authorName: string; authorRole: string; readTime: number; tags: string[] }[]>([]);
@@ -1409,7 +1409,7 @@ export default function LandingPage() {
               </div>
               {loadingStores ? (
                 <div className="flex gap-4 overflow-x-auto pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                  {[...Array(4)].map((_, i) => <div key={i} className="w-[82vw] sm:w-72 shrink-0 h-20 rounded-xl bg-muted animate-pulse" />)}
+                  {[...Array(4)].map((_, i) => <div key={i} className="w-[82vw] sm:w-72 shrink-0 h-48 rounded-2xl bg-muted animate-pulse" />)}
                 </div>
               ) : (
                 <div className="flex gap-4 overflow-x-auto pb-3 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -1417,10 +1417,21 @@ export default function LandingPage() {
                     <Link
                       key={store.id}
                       href={`/stores/${store.slug || store.id}`}
-                      className="group w-[82vw] sm:w-72 shrink-0 snap-start p-4 sm:p-5 rounded-xl border border-border bg-card hover:border-primary/30 hover:shadow-sm transition-all flex items-center justify-between gap-3"
+                      className="group w-[82vw] sm:w-72 shrink-0 snap-start rounded-2xl border border-border bg-card overflow-hidden hover:border-primary/30 hover:shadow-lg transition-all duration-300"
                     >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="h-11 w-11 rounded-xl overflow-hidden shrink-0 border border-border/50 bg-primary/10 flex items-center justify-center">
+                      {/* Cover */}
+                      <div className="relative h-24 bg-muted overflow-hidden">
+                        {store.coverUrl ? (
+                          <img src={store.coverUrl} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-primary/15 via-primary/5 to-transparent" />
+                        )}
+                      </div>
+
+                      <div className="p-4 pt-0">
+                        {/* Logo overlapping cover */}
+                        <div className="h-14 w-14 -mt-7 rounded-xl overflow-hidden shrink-0 border-4 border-card bg-primary/10 flex items-center justify-center shadow-sm">
                           {store.logoUrl ? (
                             <img
                               src={store.logoUrl}
@@ -1429,17 +1440,27 @@ export default function LandingPage() {
                               onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
                             />
                           ) : (
-                            <Store className="h-4 w-4 text-primary" />
+                            <Store className="h-5 w-5 text-primary" />
                           )}
                         </div>
-                        <div className="min-w-0">
-                          <p className="font-semibold text-sm text-foreground truncate">{store.name}</p>
+
+                        <div className="mt-2.5 min-w-0">
+                          <p className="font-bold text-sm text-foreground truncate group-hover:text-primary transition-colors">{store.name}</p>
                           {store.beneficiaryName && (
-                            <p className="text-xs text-muted-foreground truncate">{store.beneficiaryName}</p>
+                            <p className="text-xs text-muted-foreground truncate mt-0.5">بإدارة {store.beneficiaryName}</p>
                           )}
+                          {store.location && (
+                            <p className="text-xs text-muted-foreground truncate mt-1 flex items-center gap-1">
+                              <MapPin className="h-3 w-3 shrink-0" />{store.location}
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-1 text-xs font-semibold text-primary mt-3 pt-3 border-t border-border">
+                          تسوّق الآن
+                          <ArrowLeft className="h-3.5 w-3.5 group-hover:-translate-x-0.5 transition-transform" />
                         </div>
                       </div>
-                      <ArrowLeft className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary shrink-0 transition-colors" />
                     </Link>
                   ))}
                 </div>

@@ -11,7 +11,7 @@ export async function GET() {
       .filter(d => !d.data().hidden)
       .map(d => {
         const data = d.data();
-        return { id: d.id, slug: data.slug || '', name: data.name, logoUrl: data.logoUrl, location: data.location, beneficiaryName: data.beneficiaryName };
+        return { id: d.id, slug: data.slug || '', name: data.name, logoUrl: data.logoUrl, coverUrl: data.coverUrl || '', location: data.location, beneficiaryName: data.beneficiaryName };
       });
 
     const productsSnap = await adminDb.collection('products').get();
