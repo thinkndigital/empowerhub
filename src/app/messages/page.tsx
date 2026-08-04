@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/firebase/auth/use-user";
 import { Logo } from "@/components/logo";
+import { usePlatformBrand } from "@/components/platform-brand-provider";
 
 const ROLE_PATHS: Record<string, string> = {
   admin: "/admin-dashboard/messages",
@@ -16,13 +17,7 @@ const ROLE_PATHS: Record<string, string> = {
 export default function MessagesRedirectPage() {
   const { user, userProfile, loading } = useUser();
   const router = useRouter();
-  const [platformLogo, setPlatformLogo] = useState('');
-
-  useEffect(() => {
-    fetch('/api/public/platform-config').then(r => r.json()).then(d => {
-      if (d.config?.logoUrl) setPlatformLogo(d.config.logoUrl);
-    }).catch(() => {});
-  }, []);
+  const { logoUrl: platformLogo } = usePlatformBrand();
 
   useEffect(() => {
     if (loading) return;

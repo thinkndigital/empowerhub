@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Logo } from "@/components/logo";
+import { usePlatformBrand } from "@/components/platform-brand-provider";
 import { useUser } from "@/firebase/auth/use-user";
 import { useAuth } from "@/firebase/provider";
 import { NotificationBell } from "@/components/notification-bell";
@@ -55,7 +56,7 @@ export default function OrganizationDashboardLayout({ children }: { children: Re
   const [orgLogo, setOrgLogo] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [menuItems, setMenuItems] = useState(allMenuItems);
-  const [platformLogo, setPlatformLogo] = useState('');
+  const { logoUrl: platformLogo } = usePlatformBrand();
 
   const fetchOrg = useCallback(async () => {
     if (!authUser) return;
@@ -74,7 +75,6 @@ export default function OrganizationDashboardLayout({ children }: { children: Re
       const profileData = await profileRes.json();
       if (profileData.profile?.avatarUrl) setAvatarUrl(profileData.profile.avatarUrl);
       const platformData = await platformRes.json();
-      if (platformData.config?.logoUrl) setPlatformLogo(platformData.config.logoUrl);
       if (platformData.config?.dashboardSections?.organization) {
         const sections = platformData.config.dashboardSections.organization;
         setMenuItems(allMenuItems.filter(item => item.sectionKey === null || sections[item.sectionKey] !== false));

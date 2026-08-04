@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Logo } from '@/components/logo';
+import { usePlatformBrand } from '@/components/platform-brand-provider';
 import { SiteHeader } from '@/components/site-header';
 import {
   ArrowLeft, BookOpen, Store, GraduationCap, CheckCircle,
@@ -459,6 +460,7 @@ const PublicSessionCard = ({ session, currencySymbol, onBook }: { session: Publi
 export default function LandingPage() {
   const { toast } = useToast();
   const { symbol: currencySymbol } = useCurrency();
+  const { logoUrl: platformLogoFallback } = usePlatformBrand();
   const [siteConfig, setSiteConfig] = useState<SiteConfig | null>(null);
   const [mentors, setMentors] = useState<MentorUser[]>([]);
   const [coaches, setCoaches] = useState<MentorUser[]>([]);
@@ -788,7 +790,7 @@ export default function LandingPage() {
     },
   ];
 
-  const logoSrc = cfg?.logoUrl || '';
+  const logoSrc = cfg?.logoUrl || platformLogoFallback;
 
   return (
     <div className="bg-background text-foreground" dir="rtl">

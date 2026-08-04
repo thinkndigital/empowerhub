@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Logo } from "@/components/logo";
+import { usePlatformBrand } from "@/components/platform-brand-provider";
 import { useUser } from "@/firebase/auth/use-user";
 import { useAuth } from "@/firebase/provider";
 import { NotificationBell } from "@/components/notification-bell";
@@ -51,7 +52,7 @@ export default function BeneficiaryDashboardLayout({ children }: { children: Rea
 
   const [avatarUrl, setAvatarUrl] = useState('');
   const [menuItems, setMenuItems] = useState(allMenuItems);
-  const [platformLogo, setPlatformLogo] = useState('');
+  const { logoUrl: platformLogo } = usePlatformBrand();
 
   const fetchData = useCallback(async () => {
     if (!authUser) return;
@@ -64,7 +65,6 @@ export default function BeneficiaryDashboardLayout({ children }: { children: Rea
       const j = await profileRes.json();
       if (j.profile?.avatarUrl) setAvatarUrl(j.profile.avatarUrl);
       const platformData = await platformRes.json();
-      if (platformData.config?.logoUrl) setPlatformLogo(platformData.config.logoUrl);
       if (platformData.config?.dashboardSections?.beneficiary) {
         const sections = platformData.config.dashboardSections.beneficiary;
         setMenuItems(allMenuItems.filter(item => item.sectionKey === null || sections[item.sectionKey] !== false));

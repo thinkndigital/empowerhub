@@ -3,6 +3,7 @@ import { Toaster } from '@/components/ui/toaster';
 import './globals.css';
 import { FirebaseProviderDynamic } from '@/components/firebase-provider-dynamic';
 import { ThemeProvider } from '@/components/theme-provider';
+import { PlatformBrandProvider } from '@/components/platform-brand-provider';
 import { adminDb } from '@/lib/firebase-admin';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -47,6 +48,23 @@ function hexToHsl(hex: string): { h: number; s: number; l: number } | null {
   return { h: Math.round(H), s: Math.round(S * 100), l: Math.round(L * 100) };
 }
 
+async function getPlatformBrand(): Promise<{ logoUrl: string; platformName: string }> {
+  try {
+    const [platformSnap, siteSnap] = await Promise.all([
+      adminDb.collection('config').doc('platform').get(),
+      adminDb.collection('config').doc('site').get(),
+    ]);
+    const platformData = platformSnap.data();
+    const siteData = siteSnap.data();
+    return {
+      logoUrl: platformData?.logoUrl || '',
+      platformName: platformData?.platformName || siteData?.siteName || 'EmpowerHub',
+    };
+  } catch {
+    return { logoUrl: '', platformName: 'EmpowerHub' };
+  }
+}
+
 async function getBrandColorStyle(): Promise<string> {
   try {
     const data = (await adminDb.collection('config').doc('site').get()).data() || {};
@@ -82,6 +100,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const brandStyle = await getBrandColorStyle();
+  const platformBrand = await getPlatformBrand();
 
   return (
     <html lang="ar" dir="rtl" suppressHydrationWarning>
@@ -102,10 +121,12 @@ export default async function RootLayout({
       </head>
       <body className="font-body antialiased">
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} storageKey="empowerhub-theme">
-          <FirebaseProviderDynamic>
-            {children}
-            <Toaster />
-          </FirebaseProviderDynamic>
+          <PlatformBrandProvider logoUrl={platformBrand.logoUrl} platformName={platformBrand.platformName}>
+            <FirebaseProviderDynamic>
+              {children}
+              <Toaster />
+            </FirebaseProviderDynamic>
+          </PlatformBrandProvider>
         </ThemeProvider>
       </body>
     </html>

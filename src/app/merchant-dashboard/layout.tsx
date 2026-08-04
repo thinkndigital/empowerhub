@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Logo } from "@/components/logo";
+import { usePlatformBrand } from "@/components/platform-brand-provider";
 import { useUser } from "@/firebase/auth/use-user";
 import { NotificationBell } from "@/components/notification-bell";
 import { MessageBell } from "@/components/message-bell";
@@ -45,7 +46,7 @@ export default function MerchantDashboardLayout({ children }: { children: React.
   const auth = useAuth();
 
   const [avatarUrl, setAvatarUrl] = useState('');
-  const [platformLogo, setPlatformLogo] = useState('');
+  const { logoUrl: platformLogo } = usePlatformBrand();
 
   useEffect(() => {
     if (!authUser) return;
@@ -55,12 +56,6 @@ export default function MerchantDashboardLayout({ children }: { children: React.
         .catch(() => {})
     );
   }, [authUser]);
-
-  useEffect(() => {
-    fetch('/api/public/platform-config').then(r => r.json()).then(d => {
-      if (d.config?.logoUrl) setPlatformLogo(d.config.logoUrl);
-    }).catch(() => {});
-  }, []);
 
   const handleLogout = async () => {
     if (auth) await signOut(auth);

@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Logo } from '@/components/logo';
+import { usePlatformBrand } from '@/components/platform-brand-provider';
 import { useToast } from "@/hooks/use-toast";
 
 import { GoogleAuthProvider, signInWithPopup, getRedirectResult, signInWithRedirect, signInWithEmailAndPassword } from "firebase/auth";
@@ -32,16 +33,11 @@ export default function LoginPage() {
   const firestore = useFirestore();
   const [isLoading, setIsLoading] = useState(false);
   const [authBranding, setAuthBranding] = useState({ imageUrl: '', title: '', subtitle: '' });
-  const [platformLogo, setPlatformLogo] = useState('');
-  const [platformName, setPlatformName] = useState('EmpowerHub');
+  const { logoUrl: platformLogo, platformName } = usePlatformBrand();
 
   useEffect(() => {
     fetch('/api/public/site-config', { cache: 'no-store' }).then(r => r.json()).then(d => {
       if (d.config?.authBranding) setAuthBranding(d.config.authBranding);
-    }).catch(() => {});
-    fetch('/api/public/platform-config').then(r => r.json()).then(d => {
-      if (d.config?.logoUrl) setPlatformLogo(d.config.logoUrl);
-      if (d.config?.platformName) setPlatformName(d.config.platformName);
     }).catch(() => {});
   }, []);
 

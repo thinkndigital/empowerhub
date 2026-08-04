@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Logo } from "@/components/logo";
+import { usePlatformBrand } from "@/components/platform-brand-provider";
 import { Menu, X, ChevronDown, Users, GraduationCap } from "lucide-react";
 
 const navLinks = [
@@ -28,16 +29,8 @@ const teamLinks = [
 
 export function SiteHeader() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [logoSrc, setLogoSrc] = useState('');
-  const [siteName, setSiteName] = useState('EmpowerHub');
+  const { logoUrl: logoSrc, platformName: siteName } = usePlatformBrand();
   const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    fetch('/api/public/platform-config').then(r => r.json()).then(d => {
-      if (d.config?.logoUrl) setLogoSrc(d.config.logoUrl);
-      if (d.config?.platformName) setSiteName(d.config.platformName);
-    }).catch(() => {});
-  }, []);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);

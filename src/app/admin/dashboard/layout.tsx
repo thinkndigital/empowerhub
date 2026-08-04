@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { usePlatformBrand } from "@/components/platform-brand-provider";
 
 const navGroups = [
   {
@@ -52,7 +53,7 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [checking, setChecking] = useState(true);
-  const [platformLogo, setPlatformLogo] = useState('');
+  const { logoUrl: platformLogo } = usePlatformBrand();
 
   useEffect(() => {
     fetch("/api/admin-panel/stats").then(r => {
@@ -60,12 +61,6 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
       else setChecking(false);
     }).catch(() => router.replace("/admin"));
   }, [router]);
-
-  useEffect(() => {
-    fetch('/api/public/platform-config').then(r => r.json()).then(d => {
-      if (d.config?.logoUrl) setPlatformLogo(d.config.logoUrl);
-    }).catch(() => {});
-  }, []);
 
   const handleLogout = async () => {
     await fetch("/api/admin-panel/auth", { method: "DELETE" });

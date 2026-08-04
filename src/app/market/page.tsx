@@ -6,6 +6,7 @@ import { useMemo, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { SiteHeader } from "@/components/site-header";
 import { Logo } from "@/components/logo";
+import { usePlatformBrand } from "@/components/platform-brand-provider";
 import { OrderDialog } from "@/components/order-dialog";
 import { ProductDetailDialog } from "@/components/product-detail-dialog";
 import { ShoppingCart, Search, Store, MessageCircle, ArrowLeft, MapPin } from "lucide-react";
@@ -34,8 +35,7 @@ export default function MarketPage() {
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState("الكل");
-  const [platformLogo, setPlatformLogo] = useState('');
-  const [platformName, setPlatformName] = useState('EmpowerHub');
+  const { logoUrl: platformLogo, platformName } = usePlatformBrand();
 
   useEffect(() => {
     (async () => {
@@ -51,13 +51,6 @@ export default function MarketPage() {
         setLoading(false);
       }
     })();
-  }, []);
-
-  useEffect(() => {
-    fetch('/api/public/platform-config').then(r => r.json()).then(d => {
-      if (d.config?.logoUrl) setPlatformLogo(d.config.logoUrl);
-      if (d.config?.platformName) setPlatformName(d.config.platformName);
-    }).catch(() => {});
   }, []);
 
   const categories = useMemo(() => {

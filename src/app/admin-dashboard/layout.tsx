@@ -8,7 +8,6 @@ import {
   Video, GraduationCap, FileText, Briefcase, Store, Quote, Layout,
 } from "lucide-react";
 import { signOut } from "firebase/auth";
-import { useMemo, useState, useEffect } from "react";
 import { useAuth } from "@/firebase/provider";
 
 import {
@@ -24,6 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Logo } from "@/components/logo";
+import { usePlatformBrand } from "@/components/platform-brand-provider";
 import { useUser, type UserProfile } from "@/firebase/auth/use-user";
 import { NotificationBell } from "@/components/notification-bell";
 import { MessageBell } from "@/components/message-bell";
@@ -51,13 +51,7 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
   const router = useRouter();
   const { user: authUser, userProfile: realUserProfile, loading } = useUser();
   const auth = useAuth();
-  const [platformLogo, setPlatformLogo] = useState('');
-
-  useEffect(() => {
-    fetch('/api/public/platform-config').then(r => r.json()).then(d => {
-      if (d.config?.logoUrl) setPlatformLogo(d.config.logoUrl);
-    }).catch(() => {});
-  }, []);
+  const { logoUrl: platformLogo } = usePlatformBrand();
 
   const handleLogout = async () => {
     if (auth) await signOut(auth);

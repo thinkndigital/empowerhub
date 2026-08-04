@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Logo } from "@/components/logo";
+import { usePlatformBrand } from "@/components/platform-brand-provider";
 
 interface PlanInfo {
   id: string;
@@ -43,13 +44,7 @@ function PaymentPageInner() {
   const [selectedGateway, setSelectedGateway] = useState<GatewayKey | "">("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [platformLogo, setPlatformLogo] = useState("");
-
-  useEffect(() => {
-    fetch('/api/public/platform-config').then(r => r.json()).then(d => {
-      if (d.config?.logoUrl) setPlatformLogo(d.config.logoUrl);
-    }).catch(() => {});
-  }, []);
+  const { logoUrl: platformLogo } = usePlatformBrand();
 
   useEffect(() => {
     async function load() {

@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Logo } from "@/components/logo";
+import { usePlatformBrand } from "@/components/platform-brand-provider";
 import { useUser } from "@/firebase/auth/use-user";
 import { NotificationBell } from "@/components/notification-bell";
 import { MessageBell } from "@/components/message-bell";
@@ -51,7 +52,7 @@ export default function MentorDashboardLayout({ children }: { children: React.Re
 
   const [avatarUrl, setAvatarUrl] = useState('');
   const [menuItems, setMenuItems] = useState(allMentorMenuItems);
-  const [platformLogo, setPlatformLogo] = useState('');
+  const { logoUrl: platformLogo } = usePlatformBrand();
 
   useEffect(() => {
     if (!authUser) return;
@@ -61,7 +62,6 @@ export default function MentorDashboardLayout({ children }: { children: React.Re
         fetch('/api/public/platform-config').then(r => r.json()),
       ]).then(([j, platformData]) => {
         if (j.profile?.avatarUrl) setAvatarUrl(j.profile.avatarUrl);
-        if (platformData.config?.logoUrl) setPlatformLogo(platformData.config.logoUrl);
         if (platformData.config?.dashboardSections?.mentor) {
           const sections = platformData.config.dashboardSections.mentor;
           setMenuItems(allMentorMenuItems.filter(item => item.sectionKey === null || sections[item.sectionKey] !== false));
