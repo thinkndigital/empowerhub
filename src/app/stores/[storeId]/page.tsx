@@ -9,6 +9,7 @@ import { ShoppingCart, MapPin, ArrowRight, MessageCircle, Store, Phone, Facebook
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrency } from "@/hooks/use-currency";
 import type { Product as LibProduct } from "@/lib/products-data";
+import { translateCategory } from "@/lib/product-category";
 
 interface StoreData {
   id: string;
@@ -56,8 +57,8 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
       .finally(() => setLoading(false));
   }, [params.storeId]);
 
-  const categories = ['الكل', ...Array.from(new Set(products.map(p => p.category).filter(Boolean)))];
-  const filtered = activeCategory === 'الكل' ? products : products.filter(p => p.category === activeCategory);
+  const categories = ['الكل', ...Array.from(new Set(products.map(p => translateCategory(p.category)).filter(Boolean)))];
+  const filtered = activeCategory === 'الكل' ? products : products.filter(p => translateCategory(p.category) === activeCategory);
 
   if (loading) {
     return (
@@ -218,7 +219,7 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
                   )}
                   {product.category && (
                     <div className="absolute top-2 right-2 bg-background/90 backdrop-blur-sm text-foreground text-[10px] font-semibold rounded-full px-2 py-0.5 border border-border/50">
-                      {product.category}
+                      {translateCategory(product.category)}
                     </div>
                   )}
                 </div>

@@ -18,6 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/firebase/auth/use-user";
 import { Plus, Package, Store, Save, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { translateCategory } from "@/lib/product-category";
 
 type Product = { id: string; name: string; description: string; price: number; category: string; status: string };
 
@@ -273,7 +274,7 @@ export default function BeneficiaryStorePage() {
                         <CardTitle className="text-base">{p.name}</CardTitle>
                         <Badge variant={cfg.variant} className="text-xs shrink-0">{cfg.label}</Badge>
                       </div>
-                      <CardDescription className="text-xs">{p.category}</CardDescription>
+                      <CardDescription className="text-xs">{translateCategory(p.category)}</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-1">
                       <p className="text-sm text-muted-foreground line-clamp-2">{p.description}</p>

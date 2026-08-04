@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Store, Package } from "lucide-react";
 import { useCurrency } from "@/hooks/use-currency";
+import { translateCategory } from "@/lib/product-category";
 
 interface StoreItem { id: string; name: string; logoUrl?: string; location?: string; beneficiaryName?: string; }
 interface Product { id: string; name?: string; price?: number; category?: string; imageUrl?: string; image?: string; storeName?: string; }
@@ -106,7 +107,7 @@ export default function AdminStoresPage() {
                         <span className="font-medium text-sm">{p.name || '—'}</span>
                       </div>
                     </TableCell>
-                    <TableCell><Badge variant="outline" className="text-xs">{p.category || '—'}</Badge></TableCell>
+                    <TableCell><Badge variant="outline" className="text-xs">{p.category ? translateCategory(p.category) : '—'}</Badge></TableCell>
                     <TableCell className="text-sm text-muted-foreground">{p.storeName || '—'}</TableCell>
                     <TableCell className="font-medium text-sm">{p.price != null ? `${p.price} ${symbol}` : '—'}</TableCell>
                   </TableRow>

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { translateCategory } from "@/lib/product-category";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
@@ -282,7 +283,7 @@ function ProductsTab() {
     setEditProduct(p);
     setEditName(p.name);
     setEditPrice(String(p.price ?? ''));
-    setEditCategory(p.category ?? '');
+    setEditCategory(translateCategory(p.category));
   };
 
   const saveEdit = async () => {
@@ -302,7 +303,7 @@ function ProductsTab() {
 
   const filtered = products.filter(p =>
     p.name?.toLowerCase().includes(search.toLowerCase()) ||
-    p.category?.toLowerCase().includes(search.toLowerCase())
+    translateCategory(p.category).toLowerCase().includes(search.toLowerCase())
   );
 
   const statusColor: Record<string, string> = {
@@ -352,7 +353,7 @@ function ProductsTab() {
                       <span className="text-primary text-sm font-semibold">{product.price} د.أ</span>
                     )}
                     {product.category && (
-                      <Badge className="bg-primary/10 text-primary border-0 text-xs">{product.category}</Badge>
+                      <Badge className="bg-primary/10 text-primary border-0 text-xs">{translateCategory(product.category)}</Badge>
                     )}
                     {product.status && (
                       <Badge className={`border-0 text-xs ${statusColor[product.status] || 'bg-muted text-muted-foreground'}`}>

@@ -25,6 +25,7 @@ import { uploadFile as uploadToStorage } from "@/lib/upload-file";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { PRODUCT_CATEGORIES, translateCategory } from "@/lib/product-category";
 
 const formSchema = z.object({
   id: z.string().optional(),
@@ -116,7 +117,7 @@ export default function MyStorePage() {
 
   const openDialogForEdit = (product: Product) => {
     setEditProduct(product);
-    form.reset(product);
+    form.reset({ ...product, category: translateCategory(product.category) });
     setImagePreview(product.imageUrl || null);
     setImageFile(null);
     setIsDialogOpen(true);
@@ -380,14 +381,9 @@ export default function MyStorePage() {
                 <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl><SelectTrigger><SelectValue placeholder="اختر تصنيف..." /></SelectTrigger></FormControl>
                   <SelectContent>
-                    <SelectItem value="handmade">مصنوعات يدوية</SelectItem>
-                    <SelectItem value="food">طعام ومشروبات</SelectItem>
-                    <SelectItem value="clothing">ملابس وأزياء</SelectItem>
-                    <SelectItem value="crafts">حرف يدوية</SelectItem>
-                    <SelectItem value="services">خدمات</SelectItem>
-                    <SelectItem value="agriculture">منتجات زراعية</SelectItem>
-                    <SelectItem value="home">منزل وديكور</SelectItem>
-                    <SelectItem value="other">أخرى</SelectItem>
+                    {PRODUCT_CATEGORIES.map(cat => (
+                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <FormMessage />

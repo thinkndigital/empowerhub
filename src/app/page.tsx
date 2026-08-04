@@ -20,6 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useCurrency } from '@/hooks/use-currency';
 import { applyOrgColor } from '@/lib/apply-org-color';
 import { getDynamicIcon } from '@/lib/dynamic-icons';
+import { translateCategory } from '@/lib/product-category';
 import { OrderDialog } from '@/components/order-dialog';
 import { SessionBookingDialog } from '@/components/session-booking-dialog';
 import { CourseEnrollDialog } from '@/components/course-enroll-dialog';
@@ -380,7 +381,7 @@ const ProductCard = ({ product, onOrder, currencySymbol }: { product: Product; o
         )}
         {product.category && (
           <div className="absolute top-2 right-2 bg-background/90 backdrop-blur-sm text-foreground text-xs font-medium rounded-full px-2.5 py-0.5 border border-border/50">
-            {product.category}
+            {translateCategory(product.category)}
           </div>
         )}
       </div>

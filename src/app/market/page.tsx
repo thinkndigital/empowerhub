@@ -10,6 +10,7 @@ import { OrderDialog } from "@/components/order-dialog";
 import { ShoppingCart, Search, Store, MessageCircle, ArrowLeft, MapPin } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import type { Product as LibProduct } from "@/lib/products-data";
+import { translateCategory } from "@/lib/product-category";
 
 interface Product {
   id: string;
@@ -49,14 +50,14 @@ export default function MarketPage() {
   }, []);
 
   const categories = useMemo(() => {
-    const cats = Array.from(new Set(allProducts.map(p => p.category).filter(Boolean))) as string[];
+    const cats = Array.from(new Set(allProducts.map(p => translateCategory(p.category)).filter(Boolean)));
     return ["الكل", ...cats];
   }, [allProducts]);
 
   const filteredProducts = useMemo(() => {
     let result = allProducts;
     if (activeCategory !== "الكل") {
-      result = result.filter(p => p.category === activeCategory);
+      result = result.filter(p => translateCategory(p.category) === activeCategory);
     }
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
@@ -178,7 +179,7 @@ export default function MarketPage() {
                     )}
                     {product.category && (
                       <div className="absolute top-2 right-2 bg-background/90 backdrop-blur-sm text-foreground text-[10px] sm:text-xs font-semibold rounded-full px-2 py-0.5 border border-border/50">
-                        {product.category}
+                        {translateCategory(product.category)}
                       </div>
                     )}
                   </div>

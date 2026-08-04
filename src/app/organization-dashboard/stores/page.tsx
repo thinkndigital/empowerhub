@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/firebase/auth/use-user";
 import { CheckCircle, XCircle, Package, Store, ShoppingCart, TrendingUp, MapPin, User } from "lucide-react";
+import { translateCategory } from "@/lib/product-category";
 import {
   Dialog,
   DialogContent,
@@ -313,7 +314,7 @@ export default function OrgStoresPage() {
                       <div key={product.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50 gap-3">
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-sm truncate">{product.name}</p>
-                          <p className="text-xs text-muted-foreground">{product.category} — {product.price?.toFixed(2)} د.أ</p>
+                          <p className="text-xs text-muted-foreground">{translateCategory(product.category)} — {product.price?.toFixed(2)} د.أ</p>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           <Badge variant={cfg.variant} className="text-xs">{cfg.label}</Badge>
