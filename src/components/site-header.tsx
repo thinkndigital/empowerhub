@@ -30,6 +30,7 @@ export function SiteHeader() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [logoSrc, setLogoSrc] = useState('');
   const [siteName, setSiteName] = useState('EmpowerHub');
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
     fetch('/api/public/platform-config').then(r => r.json()).then(d => {
@@ -38,8 +39,18 @@ export function SiteHeader() {
     }).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
   return (
-    <header className="sticky top-0 z-50 w-full bg-background/80 backdrop-blur-md border-b border-border/60 relative" dir="rtl">
+    <header
+      className={`sticky top-0 z-50 w-full bg-background/80 backdrop-blur-md border-b relative transition-shadow duration-200 ${scrolled ? 'border-border/60 shadow-sm' : 'border-transparent'}`}
+      dir="rtl"
+    >
       <div className="container flex h-14 items-center gap-4">
         <Link href="/" className="flex items-center gap-2 font-bold text-sm shrink-0">
           {logoSrc

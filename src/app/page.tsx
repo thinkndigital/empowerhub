@@ -6,13 +6,15 @@ import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Logo } from '@/components/logo';
 import { SiteHeader } from '@/components/site-header';
 import {
   ArrowLeft, BookOpen, Store, GraduationCap, CheckCircle,
   Star, MessageSquare, Phone, Mail, Globe, Calendar, Clock,
   Tag, MapPin, FileText, Briefcase, Video, Building2, Users, BarChart3,
-  Zap, Crown, Check, ClipboardCheck, TrendingUp, ShoppingBag, CreditCard,
+  Zap, Crown, Check, ClipboardCheck, TrendingUp, ShoppingBag, HelpCircle,
+  Sparkles,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useCurrency } from '@/hooks/use-currency';
@@ -476,6 +478,7 @@ export default function LandingPage() {
   const [courseFilter, setCourseFilter] = useState<'all' | 'free' | 'paid'>('all');
   const [sessionFilter, setSessionFilter] = useState<'all' | 'free' | 'paid'>('all');
   const [activeTour, setActiveTour] = useState(0);
+  const [pricingCycle, setPricingCycle] = useState<'monthly' | 'annual'>('monthly');
 
   const [contactName, setContactName] = useState('');
   const [contactEmail, setContactEmail] = useState('');
@@ -793,39 +796,42 @@ export default function LandingPage() {
           className="relative min-h-[85vh] lg:min-h-screen flex items-center overflow-hidden bg-background"
           style={sectionStyle('hero').bg ? { backgroundColor: sectionStyle('hero').bg } : undefined}
         >
-          {/* Subtle grid pattern */}
+          {/* Mesh gradient backdrop */}
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            <div className="absolute -top-24 right-1/4 w-[600px] h-[600px] bg-primary/10 rounded-full blur-[120px]" />
+            <div className="absolute top-1/3 -left-24 w-[500px] h-[500px] bg-violet-500/8 rounded-full blur-[120px]" />
+            <div className="absolute bottom-0 right-0 w-[450px] h-[450px] bg-sky-500/8 rounded-full blur-[120px]" />
+          </div>
+          {/* Faint grid, fades toward the edges */}
           <div
-            className="absolute inset-0 opacity-[0.025] pointer-events-none"
+            className="absolute inset-0 opacity-[0.03] pointer-events-none [mask-image:radial-gradient(ellipse_60%_50%_at_50%_40%,black,transparent)]"
             style={{
               backgroundImage: 'linear-gradient(hsl(var(--border)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--border)) 1px, transparent 1px)',
               backgroundSize: '64px 64px',
             }}
           />
-          {/* Gradient blob */}
-          <div className="absolute top-1/3 left-1/4 w-[700px] h-[500px] bg-primary/5 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-sky-500/4 rounded-full blur-3xl pointer-events-none" />
 
           <div className="relative z-10 container py-16 sm:py-20 lg:py-28">
             <div className="flex flex-col items-center max-w-3xl mx-auto text-center">
 
               {/* Tagline pill */}
-              <div className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground border border-border/80 rounded-full px-3.5 py-1.5 mb-6 sm:mb-8 bg-card/60 backdrop-blur-sm">
-                <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse shrink-0" />
+              <div className="animate-fade-in-up inline-flex items-center gap-2 text-xs font-medium text-muted-foreground border border-border/80 rounded-full px-3.5 py-1.5 mb-6 sm:mb-8 bg-card/60 backdrop-blur-sm">
+                <Sparkles className="h-3 w-3 text-primary shrink-0" />
                 <span className="truncate">{cfg?.tagline || 'منصة التمكين الرقمي الشاملة'}</span>
               </div>
 
               {/* Headline */}
-              <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-foreground leading-[1.1] mb-5 sm:mb-6">
+              <h1 className="animate-fade-in-up delay-100 text-4xl sm:text-5xl md:text-6xl lg:text-[4.25rem] font-extrabold tracking-tight text-foreground leading-[1.08] mb-5 sm:mb-6 text-balance">
                 {heroTitle}
               </h1>
 
               {/* Subtitle */}
-              <p className="text-base sm:text-lg text-muted-foreground max-w-xl leading-relaxed mb-8 sm:mb-10">
+              <p className="animate-fade-in-up delay-200 text-base sm:text-lg text-muted-foreground max-w-xl leading-relaxed mb-8 sm:mb-10 text-balance">
                 {heroSubtitle}
               </p>
 
               {/* CTAs */}
-              <div className="flex flex-col sm:flex-row justify-center gap-3 mb-8 sm:mb-10">
+              <div className="animate-fade-in-up delay-300 flex flex-col sm:flex-row justify-center gap-3 mb-8 sm:mb-10">
                 {heroButtons.map((btn, i) => (
                   <Button
                     key={i}
@@ -843,7 +849,7 @@ export default function LandingPage() {
               </div>
 
               {/* Trust strip */}
-              <div className="flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs sm:text-sm text-muted-foreground mb-14 sm:mb-16">
+              <div className="animate-fade-in-up delay-400 flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs sm:text-sm text-muted-foreground mb-14 sm:mb-16">
                 {['مجاني تماماً للبدء', 'لا يتطلب بطاقة ائتمان', 'دعم باللغة العربية'].map((t, i) => (
                   <div key={i} className="flex items-center gap-1.5">
                     <CheckCircle className="h-3.5 w-3.5 text-primary shrink-0" />
@@ -853,7 +859,7 @@ export default function LandingPage() {
               </div>
 
               {/* ── Visual — Dashboard mockup, full-width panel below ── */}
-              <div className="w-full flex items-center justify-center">
+              <div className="animate-fade-in-up delay-500 w-full flex items-center justify-center">
                 <div className="relative w-full max-w-lg">
                   {/* Glow behind card */}
                   <div className="absolute inset-6 bg-primary/10 rounded-3xl blur-2xl pointer-events-none" />
@@ -990,12 +996,16 @@ export default function LandingPage() {
                   const FeatureIcon = getDynamicIcon(f.icon);
                   const iconColor = sectionStyle('features').iconColor;
                   return (
-                    <div key={i} className="p-6 rounded-2xl border border-border bg-card hover:border-primary/30 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
-                      <div className="h-11 w-11 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
+                    <div
+                      key={i}
+                      className={`animate-fade-in-up delay-${Math.min((i + 1) * 100, 500)} group relative p-6 rounded-2xl border border-border bg-card overflow-hidden hover:border-primary/30 hover:shadow-lg hover:-translate-y-1 transition-all duration-300`}
+                    >
+                      <div className="absolute -top-10 -left-10 h-24 w-24 rounded-full bg-primary/5 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      <div className="relative h-11 w-11 rounded-xl bg-primary/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
                         <FeatureIcon className="h-5 w-5 text-primary" style={iconColor ? { color: iconColor } : undefined} />
                       </div>
-                      <h3 className="text-base font-bold text-foreground mb-2">{f.title}</h3>
-                      <p className="text-sm text-muted-foreground leading-relaxed">{f.description}</p>
+                      <h3 className="relative text-base font-bold text-foreground mb-2">{f.title}</h3>
+                      <p className="relative text-sm text-muted-foreground leading-relaxed">{f.description}</p>
                     </div>
                   );
                 })}
@@ -1441,25 +1451,51 @@ export default function LandingPage() {
         {sections.showPricing && plans.length > 0 && (
           <section id="pricing" className="py-16 sm:py-20 md:py-28 bg-muted/30">
             <div className="container">
-              <div className="text-center mb-10 sm:mb-12">
+              <div className="text-center mb-8 sm:mb-10">
                 <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">خطط الأسعار</p>
                 <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground">اختر الخطة المناسبة لك</h2>
               </div>
+
+              {/* Billing cycle toggle */}
+              {plans.some(p => p.priceAnnual > 0 && p.priceMonthly > 0) && (
+                <div className="flex justify-center mb-10 sm:mb-12">
+                  <div className="inline-flex items-center gap-0.5 bg-card rounded-full p-1 border border-border shadow-sm">
+                    <button
+                      onClick={() => setPricingCycle('monthly')}
+                      className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${pricingCycle === 'monthly' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                    >
+                      شهري
+                    </button>
+                    <button
+                      onClick={() => setPricingCycle('annual')}
+                      className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${pricingCycle === 'annual' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                    >
+                      سنوي
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${pricingCycle === 'annual' ? 'bg-primary-foreground/20' : 'bg-emerald-500/10 text-emerald-600'}`}>
+                        وفّر
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
                 {plans.map(plan => {
                   const PlanIcon = { Star, Zap, Building2, Crown }[plan.icon] || Star;
                   const savings = plan.priceAnnual > 0 && plan.priceMonthly > 0
                     ? Math.round((1 - plan.priceAnnual / (plan.priceMonthly * 12)) * 100)
                     : 0;
+                  const showAnnual = pricingCycle === 'annual' && plan.priceAnnual > 0;
+                  const displayPrice = showAnnual ? Math.round(plan.priceAnnual / 12) : plan.priceMonthly;
                   return (
                     <div
                       key={plan.id}
-                      className={`relative rounded-2xl border bg-card p-6 sm:p-8 flex flex-col ${
-                        plan.highlighted ? 'border-primary shadow-lg shadow-primary/10 md:-translate-y-2' : 'border-border'
+                      className={`relative rounded-2xl border bg-card p-6 sm:p-8 flex flex-col transition-all duration-300 ${
+                        plan.highlighted ? 'border-primary shadow-lg shadow-primary/10 md:-translate-y-2' : 'border-border hover:border-primary/20 hover:shadow-md'
                       }`}
                     >
                       {plan.highlighted && (
-                        <span className="absolute -top-3 right-1/2 translate-x-1/2 bg-primary text-primary-foreground text-xs px-3 py-1 rounded-full font-medium">
+                        <span className="absolute -top-3 right-1/2 translate-x-1/2 bg-primary text-primary-foreground text-xs px-3 py-1 rounded-full font-medium whitespace-nowrap">
                           الأكثر شعبية
                         </span>
                       )}
@@ -1475,13 +1511,14 @@ export default function LandingPage() {
                         ) : (
                           <>
                             <div className="flex items-baseline gap-1">
-                              <span className="text-3xl font-bold text-foreground">{plan.priceMonthly.toLocaleString()}</span>
+                              <span className="text-3xl font-bold text-foreground tabular-nums">{displayPrice.toLocaleString()}</span>
                               <span className="text-muted-foreground text-sm">{plan.currency}/شهر</span>
                             </div>
                             {savings > 0 && (
                               <p className="text-xs text-muted-foreground mt-1">
-                                أو {plan.priceAnnual.toLocaleString()} {plan.currency}/سنة
-                                {' '}<span className="text-emerald-600">(وفر {savings}%)</span>
+                                {showAnnual
+                                  ? <>يُحتسب {plan.priceAnnual.toLocaleString()} {plan.currency} سنوياً {' '}<span className="text-emerald-600 font-medium">(وفّرت {savings}%)</span></>
+                                  : <>أو {plan.priceAnnual.toLocaleString()} {plan.currency}/سنة {' '}<span className="text-emerald-600">(وفر {savings}%)</span></>}
                               </p>
                             )}
                           </>
@@ -1517,13 +1554,14 @@ export default function LandingPage() {
               </div>
               <div className="flex gap-5 overflow-x-auto pb-3 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {testimonialsData.map((t, i) => (
-                  <div key={i} className="w-[82vw] sm:w-80 lg:w-96 shrink-0 snap-start flex flex-col gap-4 sm:gap-5 p-6 rounded-2xl border border-border bg-card">
+                  <div key={i} className="group relative w-[82vw] sm:w-80 lg:w-96 shrink-0 snap-start flex flex-col gap-4 sm:gap-5 p-6 sm:p-7 rounded-2xl border border-border bg-card hover:border-primary/25 hover:shadow-lg transition-all duration-300">
+                    <span className="absolute top-5 left-6 text-6xl font-serif leading-none text-primary/10 select-none pointer-events-none" aria-hidden="true">&rdquo;</span>
                     <div className="flex gap-0.5">
                       {Array.from({ length: Math.min(5, Math.max(1, t.stars)) }).map((_, j) => (
                         <Star key={j} className="h-3.5 w-3.5 text-amber-400 fill-amber-400" />
                       ))}
                     </div>
-                    <blockquote className="text-base text-foreground leading-relaxed font-medium flex-grow">
+                    <blockquote className="relative text-base text-foreground leading-relaxed font-medium flex-grow">
                       &ldquo;{t.text}&rdquo;
                     </blockquote>
                     <div className="flex items-center gap-3 pt-4 border-t border-border">
@@ -1737,6 +1775,56 @@ export default function LandingPage() {
           </section>
         )}
 
+        {/* ── FAQ ──────────────────────────────────────────────────────────────── */}
+        <section id="faq" className="py-16 sm:py-20 md:py-28">
+          <div className="container max-w-3xl">
+            <div className="text-center mb-10 sm:mb-14">
+              <div className="h-11 w-11 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                <HelpCircle className="h-5 w-5 text-primary" />
+              </div>
+              <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">الأسئلة الشائعة</p>
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground">كل ما تحتاج معرفته</h2>
+            </div>
+            <Accordion type="single" collapsible defaultValue="faq-0" className="rounded-2xl border border-border bg-card px-5 sm:px-7">
+              {[
+                {
+                  q: 'هل يمكنني تجربة المنصة مجاناً؟',
+                  a: 'نعم، يمكنك إنشاء حساب والبدء فوراً بدون بطاقة ائتمان. المنظمات التي تختار خطة مدفوعة تحصل على فترة تجريبية كاملة المزايا قبل تفعيل الاشتراك.',
+                },
+                {
+                  q: 'من يمكنه استخدام EmpowerHub؟',
+                  a: 'المنصة مصممة لأربعة أدوار: المنظمات وغير الربحية لإدارة برامج التمكين، المرشدون لتقديم الإرشاد الفردي، المدربون لنشر الدورات والجلسات، والمستفيدون للتعلم وبناء مشاريعهم الخاصة.',
+                },
+                {
+                  q: 'هل يمكنني إطلاق متجري الإلكتروني الخاص؟',
+                  a: 'نعم، كل مستفيد ومدرب يمكنه فتح متجره الخاص من لوحة التحكم وعرض منتجاته أو خدماته مباشرة لمجتمع المنصة.',
+                },
+                {
+                  q: 'هل بياناتي وحسابي آمنان؟',
+                  a: 'تعتمد المنصة على بنية تحتية آمنة لإدارة الحسابات والبيانات، مع صلاحيات دقيقة لكل دور بحيث لا يرى أحد إلا ما يخصه.',
+                },
+                {
+                  q: 'هل يمكن للمنظمة تغيير خطتها أو ترقيتها لاحقاً؟',
+                  a: 'نعم، يمكن لمدير المنظمة متابعة تفاصيل الاشتراك والترقية إلى خطة أعلى في أي وقت من إعدادات لوحة تحكم المنظمة.',
+                },
+                {
+                  q: 'هل المنصة تدعم اللغة العربية بالكامل؟',
+                  a: 'المنصة مصممة أساساً باللغة العربية بواجهة من اليمين لليسار (RTL)، من التسجيل وحتى كل تفاصيل لوحات التحكم.',
+                },
+              ].map((item, i) => (
+                <AccordionItem key={i} value={`faq-${i}`} className={i === 5 ? 'border-b-0' : ''}>
+                  <AccordionTrigger className="text-right text-sm sm:text-base hover:no-underline [&>svg]:text-primary">
+                    {item.q}
+                  </AccordionTrigger>
+                  <AccordionContent className="text-sm text-muted-foreground leading-relaxed">
+                    {item.a}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </div>
+        </section>
+
         {/* ── Contact ─────────────────────────────────────────────────────────── */}
         {sections.showContact && (
           <section id="contact" className="py-16 sm:py-20 md:py-28 bg-muted/30">
@@ -1824,11 +1912,16 @@ export default function LandingPage() {
         {/* ── CTA Block ───────────────────────────────────────────────────────── */}
         {sections.showCTA && (
           <section
-            className={`py-16 sm:py-20 md:py-28 ${cfg?.ctaBanner?.backgroundColor ? 'text-white' : 'bg-foreground text-background'}`}
+            className={`relative overflow-hidden py-16 sm:py-20 md:py-28 ${cfg?.ctaBanner?.backgroundColor ? 'text-white' : 'bg-foreground text-background'}`}
             style={cfg?.ctaBanner?.backgroundColor ? { backgroundColor: cfg.ctaBanner.backgroundColor } : undefined}
           >
-            <div className="container text-center">
-              <h2 className="text-2xl sm:text-3xl md:text-5xl font-extrabold tracking-tight mb-4 sm:mb-5 leading-tight">
+            {!cfg?.ctaBanner?.backgroundColor && (
+              <div className="absolute inset-0 pointer-events-none">
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-primary/20 rounded-full blur-[140px]" />
+              </div>
+            )}
+            <div className="relative container text-center">
+              <h2 className="text-2xl sm:text-3xl md:text-5xl font-extrabold tracking-tight mb-4 sm:mb-5 leading-tight text-balance">
                 {ctaBanner.title}
               </h2>
               <p className={`text-sm sm:text-base md:text-lg mb-7 sm:mb-9 max-w-xl mx-auto leading-relaxed ${cfg?.ctaBanner?.backgroundColor ? 'text-white/70' : 'text-background/60'}`}>
