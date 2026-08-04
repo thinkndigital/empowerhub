@@ -67,9 +67,14 @@ export async function GET(req: NextRequest) {
     const data = d.data();
     const productsSnap = await adminDb.collection('products').where('storeId', '==', d.id).count().get();
     let beneficiaryName = data.beneficiaryName || '';
-    if (!beneficiaryName && data.beneficiaryId) {
+    let ownerRole = '';
+    if (data.beneficiaryId) {
       const userSnap = await adminDb.collection('users').doc(data.beneficiaryId).get();
-      if (userSnap.exists) beneficiaryName = (userSnap.data() as any)?.name || '';
+      if (userSnap.exists) {
+        const u = userSnap.data() as any;
+        if (!beneficiaryName) beneficiaryName = u?.name || '';
+        ownerRole = u?.role || '';
+      }
     }
     return {
       id: d.id,
@@ -79,6 +84,7 @@ export async function GET(req: NextRequest) {
       beneficiaryName,
       beneficiaryId: data.beneficiaryId || '',
       organizationId: data.organizationId || '',
+      ownerRole,
       hidden: data.hidden ?? false,
       productsCount: productsSnap.data().count,
       createdAt: normalizeDate(data.createdAt),

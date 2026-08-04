@@ -28,6 +28,7 @@ interface StoreItem {
   beneficiaryName: string;
   beneficiaryId: string;
   organizationId: string;
+  ownerRole: string;
   hidden: boolean;
   productsCount: number;
   createdAt?: string;
@@ -87,6 +88,7 @@ function StoresTab() {
   const [editName, setEditName] = useState('');
   const [editLocation, setEditLocation] = useState('');
   const [saving, setSaving] = useState(false);
+  const [ownerFilter, setOwnerFilter] = useState<'all' | 'merchant'>('all');
 
   const load = async () => {
     setLoading(true);
@@ -131,18 +133,29 @@ function StoresTab() {
     setSaving(false);
   };
 
-  const filtered = stores.filter(s =>
-    s.name?.toLowerCase().includes(search.toLowerCase()) ||
-    s.beneficiaryName?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = stores
+    .filter(s => ownerFilter === 'all' || s.ownerRole === 'merchant')
+    .filter(s =>
+      s.name?.toLowerCase().includes(search.toLowerCase()) ||
+      s.beneficiaryName?.toLowerCase().includes(search.toLowerCase())
+    );
+  const merchantStoresCount = stores.filter(s => s.ownerRole === 'merchant').length;
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-3 items-center">
+      <div className="flex gap-3 items-center flex-wrap">
         <span className="text-muted-foreground text-sm shrink-0">{stores.length} متجر</span>
         <div className="relative flex-1 max-w-xs">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="بحث عن متجر..." className="pr-9" />
+        </div>
+        <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
+          <button onClick={() => setOwnerFilter('all')} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${ownerFilter === 'all' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'}`}>
+            الكل
+          </button>
+          <button onClick={() => setOwnerFilter('merchant')} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${ownerFilter === 'merchant' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'}`}>
+            متاجر التجار ({merchantStoresCount})
+          </button>
         </div>
         <Button variant="outline" size="icon" onClick={load} disabled={loading}>
           <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
@@ -170,7 +183,12 @@ function StoresTab() {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-foreground font-semibold text-sm truncate">{store.name}</p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-foreground font-semibold text-sm truncate">{store.name}</p>
+                      {store.ownerRole === 'merchant' && (
+                        <Badge className="bg-amber-500/20 text-amber-500 text-[10px] border-0 shrink-0 px-1.5">تاجر</Badge>
+                      )}
+                    </div>
                     <p className="text-muted-foreground text-xs truncate">{store.beneficiaryName || 'بدون صاحب'}</p>
                     {store.location && <p className="text-muted-foreground text-xs truncate">{store.location}</p>}
                   </div>
@@ -432,10 +450,13 @@ function ProductsTab() {
   );
 }
 
+const SETTLED_STATUSES = ['completed', 'delivered', 'confirmed'];
+
 function OrdersTab() {
   const [orders, setOrders] = useState<OrderItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [commissionRate, setCommissionRate] = useState(0);
 
   const load = async () => {
     setLoading(true);
@@ -445,7 +466,15 @@ function OrdersTab() {
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    fetch('/api/admin-panel/payment-config').then(r => r.json()).then(d => {
+      setCommissionRate(d.config?.commissionRate || 0);
+    }).catch(() => {});
+  }, []);
+
+  const settledSales = orders.filter(o => SETTLED_STATUSES.includes(o.status)).reduce((s, o) => s + o.totalAmount, 0);
+  const commissionAmount = settledSales * (commissionRate / 100);
 
   const filtered = orders.filter(o =>
     o.buyerName?.toLowerCase().includes(search.toLowerCase()) ||
@@ -467,6 +496,29 @@ function OrdersTab() {
 
   return (
     <div className="space-y-4">
+      {commissionRate > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-4">
+              <p className="text-muted-foreground text-xs mb-1">إجمالي المبيعات المكتملة</p>
+              <p className="text-foreground text-xl font-bold">{settledSales.toFixed(2)} د.أ</p>
+            </CardContent>
+          </Card>
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-4">
+              <p className="text-muted-foreground text-xs mb-1">نسبة عمولة المنصة</p>
+              <p className="text-foreground text-xl font-bold">{commissionRate}%</p>
+            </CardContent>
+          </Card>
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-4">
+              <p className="text-muted-foreground text-xs mb-1">عمولة المنصة المقدّرة</p>
+              <p className="text-primary text-xl font-bold">{commissionAmount.toFixed(2)} د.أ</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       <div className="flex gap-3 items-center flex-wrap">
         <span className="text-muted-foreground text-sm shrink-0">{orders.length} طلب</span>
         <div className="relative flex-1 max-w-xs">

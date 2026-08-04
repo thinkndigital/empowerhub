@@ -19,6 +19,7 @@ interface PaymentConfig {
   allowCOD: boolean;
   codLabel: string;
   currency: string;
+  commissionRate: number;
   moyasar: GwConfig;
   stripe: GwConfig;
   paypal: GwConfig;
@@ -32,6 +33,7 @@ const defaultConfig: PaymentConfig = {
   allowCOD: true,
   codLabel: 'الدفع عند الاستلام',
   currency: 'JOD',
+  commissionRate: 0,
   moyasar: { enabled: false, publishableKey: '', secretKey: '', label: 'موياسر (Mada / Visa / STC Pay)' },
   stripe: { enabled: false, publishableKey: '', secretKey: '', label: 'Stripe (بطاقة بنكية دولية)' },
   paypal: { enabled: false, clientId: '', clientSecret: '', mode: 'sandbox', label: 'PayPal' },
@@ -207,6 +209,7 @@ export default function PaymentConfigPage() {
           allowCOD: d.config.allowCOD ?? defaultConfig.allowCOD,
           codLabel: d.config.codLabel ?? defaultConfig.codLabel,
           currency: d.config.currency ?? defaultConfig.currency,
+          commissionRate: d.config.commissionRate ?? defaultConfig.commissionRate,
           moyasar: { ...defaultConfig.moyasar, ...(d.config.moyasar || {}) },
           stripe: { ...defaultConfig.stripe, ...(d.config.stripe || {}) },
           paypal: { ...defaultConfig.paypal, ...(d.config.paypal || {}) },
@@ -254,6 +257,33 @@ export default function PaymentConfigPage() {
         </div>
         <Badge className="bg-primary/20 text-primary border-0">{enabledCount}</Badge>
       </div>
+
+      {/* Platform commission */}
+      <Card className="border-0 shadow-sm">
+        <CardContent className="p-4">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">📊</span>
+            <div className="flex-1">
+              <p className="text-foreground font-semibold text-sm">عمولة المنصة من مبيعات المتاجر</p>
+              <p className="text-muted-foreground text-xs">نسبة مئوية تُحتسب على مبيعات متاجر التجار والمستفيدين لأغراض التقارير</p>
+            </div>
+          </div>
+          <div className="mt-3 pt-3 border-t border-border">
+            <div className="space-y-1.5 max-w-[160px]">
+              <Label>النسبة (%)</Label>
+              <div className="relative">
+                <Input
+                  type="number" min={0} max={100} step={0.5}
+                  value={config.commissionRate}
+                  onChange={e => setConfig(c => ({ ...c, commissionRate: Math.max(0, Math.min(100, Number(e.target.value) || 0)) }))}
+                  className="pl-8"
+                />
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* COD */}
       <Card className="border-0 shadow-sm">
