@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { adminAuth } from '@/lib/firebase-admin';
 import { getStorageBucket, buildDownloadUrl } from '@/lib/storage-bucket';
+
+// The super-admin panel (/admin/dashboard/*) authenticates via this cookie
+// session instead of Firebase Auth, so it never has a Firebase ID token to send.
+const ADMIN_PANEL_SESSION = 'empowerhub-admin-2026-secret';
 
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml', 'image/x-icon', 'image/vnd.microsoft.icon'];
 const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime'];
@@ -11,7 +16,12 @@ const MAX_VIDEO_SIZE = 20 * 1024 * 1024;  // 20 MB
 export async function POST(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    await adminAuth.verifyIdToken(token);
+    let authorized = false;
+    if (token) {
+      try { await adminAuth.verifyIdToken(token); authorized = true; } catch {}
+    }
+    if (!authorized && cookies().get('ap_session')?.value === ADMIN_PANEL_SESSION) authorized = true;
+    if (!authorized) return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
 
     const formData = await req.formData();
     const file = formData.get('file') as File | null;

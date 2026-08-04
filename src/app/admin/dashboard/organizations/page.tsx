@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { useUser } from "@/firebase/auth/use-user";
 import { uploadFile as uploadToStorage } from "@/lib/upload-file";
+import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -100,18 +101,24 @@ const emptyForm: OrgForm = { name: "", plan: "", primaryColor: "#6366f1", logoUr
 
 function LogoUploadField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const { user } = useUser();
+  const { toast } = useToast();
   const [uploading, setUploading] = useState(false);
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !user) return;
+    e.target.value = '';
+    if (!file) return;
     setUploading(true);
     try {
-      const token = await user.getIdToken();
+      // The super-admin panel uses its own cookie session, not Firebase Auth,
+      // so there may be no Firebase user/token here — the upload endpoint
+      // also accepts that cookie session directly.
+      const token = user ? await user.getIdToken() : undefined;
       onChange(await uploadToStorage(file, 'organizations', token));
-    } catch {}
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: 'فشل رفع الصورة', description: err?.message || 'حدث خطأ غير متوقع' });
+    }
     setUploading(false);
-    e.target.value = '';
   };
 
   return (

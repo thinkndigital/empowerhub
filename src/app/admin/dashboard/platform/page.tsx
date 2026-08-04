@@ -77,13 +77,12 @@ function ImageUploadField({ label, value, onChange, hint }: { label: string; val
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
-    if (!user) {
-      toast({ variant: 'destructive', title: 'خطأ', description: 'لم يتم التعرف على حسابك، أعد تحميل الصفحة وحاول مجدداً.' });
-      return;
-    }
     setUploading(true);
     try {
-      const token = await user.getIdToken();
+      // The super-admin panel uses its own cookie session, not Firebase Auth,
+      // so there may be no Firebase user/token here — the upload endpoint
+      // also accepts that cookie session directly.
+      const token = user ? await user.getIdToken() : undefined;
       onChange(await uploadToStorage(file, 'platform', token));
     } catch (err: any) {
       toast({ variant: 'destructive', title: 'فشل رفع الصورة', description: err?.message || 'حدث خطأ غير متوقع' });
