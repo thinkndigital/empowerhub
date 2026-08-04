@@ -29,9 +29,10 @@ const roleBadge: Record<string, string> = {
   mentor: "bg-purple-500/20 text-purple-300 border-purple-500/30",
   coach: "bg-orange-500/20 text-orange-300 border-orange-500/30",
   beneficiary: "bg-blue-500/20 text-blue-300 border-blue-500/30",
+  merchant: "bg-amber-500/20 text-amber-300 border-amber-500/30",
 };
 const roleLabel: Record<string, string> = {
-  admin: "مشرف", organization: "منظمة", mentor: "مرشد", coach: "مدرب", beneficiary: "مستفيد",
+  admin: "مشرف", organization: "منظمة", mentor: "مرشد", coach: "مدرب", beneficiary: "مستفيد", merchant: "تاجر",
 };
 const statusBadge: Record<string, string> = {
   active: "text-emerald-400", suspended: "text-red-400", pending: "text-yellow-400",
@@ -108,6 +109,7 @@ export default function UsersPage() {
           <SelectContent>
             <SelectItem value="all">كل الأدوار</SelectItem>
             <SelectItem value="beneficiary">المستفيدون</SelectItem>
+            <SelectItem value="merchant">التجار</SelectItem>
             <SelectItem value="mentor">المرشدون</SelectItem>
             <SelectItem value="coach">المدربون</SelectItem>
             <SelectItem value="organization">المنظمات</SelectItem>
@@ -192,6 +194,7 @@ export default function UsersPage() {
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="beneficiary">مستفيد</SelectItem>
+                  <SelectItem value="merchant">تاجر</SelectItem>
                   <SelectItem value="mentor">مرشد</SelectItem>
                   <SelectItem value="coach">مدرب</SelectItem>
                   <SelectItem value="organization">منظمة</SelectItem>

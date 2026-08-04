@@ -56,6 +56,7 @@ const roleMap: { [key: string]: string } = {
     mentor: "مرشد",
     beneficiary: "مستفيد",
     coach: "مدرب",
+    merchant: "تاجر",
     team_member: "عضو فريق"
 };
 
@@ -100,7 +101,7 @@ export default function UsersPage() {
   const loading = usersLoading || orgsLoading;
 
 
-  const roleAr: Record<string, string> = { admin: 'مدير', organization: 'منظمة', mentor: 'مرشد', coach: 'مدرب', beneficiary: 'مستفيد' };
+  const roleAr: Record<string, string> = { admin: 'مدير', organization: 'منظمة', mentor: 'مرشد', coach: 'مدرب', beneficiary: 'مستفيد', merchant: 'تاجر' };
 
   const handleToggleStatus = async (user: UserProfile) => {
     if (!firestore) return;

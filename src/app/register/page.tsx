@@ -124,7 +124,7 @@ function RegisterForm() {
       email: emailFromQuery || "",
       password: "",
       role:
-        roleFromQuery && ["beneficiary", "organization", "mentor", "coach"].includes(roleFromQuery)
+        roleFromQuery && ["beneficiary", "organization", "mentor", "coach", "merchant"].includes(roleFromQuery)
           ? roleFromQuery
           : "beneficiary",
       organizationName: "",
@@ -137,7 +137,7 @@ function RegisterForm() {
 
   useEffect(() => {
     const role = searchParams.get("role");
-    if (role && ["beneficiary", "organization", "mentor", "coach"].includes(role)) {
+    if (role && ["beneficiary", "organization", "mentor", "coach", "merchant"].includes(role)) {
       form.setValue("role", role);
     }
   }, [searchParams, form]);
@@ -148,6 +148,7 @@ function RegisterForm() {
       case "admin": return "/admin-dashboard";
       case "mentor": return "/mentor-dashboard";
       case "coach": return "/coach-dashboard";
+      case "merchant": return "/merchant-dashboard";
       default: return "/dashboard";
     }
   };
@@ -332,6 +333,7 @@ function RegisterForm() {
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="beneficiary">مستفيد</SelectItem>
+                        <SelectItem value="merchant">تاجر</SelectItem>
                         <SelectItem value="organization">مدير منظمة / جهة</SelectItem>
                         <SelectItem value="mentor">مرشد</SelectItem>
                         <SelectItem value="coach">مدرب / مدربة</SelectItem>

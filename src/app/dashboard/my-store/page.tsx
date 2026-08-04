@@ -7,6 +7,7 @@ import * as z from "zod";
 import { Package, DollarSign, Users, ShoppingCart, PlusCircle, MoreVertical, MoreHorizontal, MapPin, Trash2, Edit, Settings, Truck, CheckCircle, XCircle, Tag } from "lucide-react";
 import { useState, useMemo, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 
@@ -58,6 +59,7 @@ const statusMap: { [key in Order['status']]: { text: string; variant: 'default' 
 
 export default function MyStorePage() {
   const { toast } = useToast();
+  const pathname = usePathname();
   const { user: authUser, userProfile, loading: authLoading } = useUser();
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -237,7 +239,7 @@ export default function MyStorePage() {
           </div>
           <div className="flex items-center gap-2">
             <Button asChild variant="outline">
-              <Link href="/dashboard/my-store/settings"><Settings className="ml-2 h-4 w-4" />إعدادات المتجر</Link>
+              <Link href={`${pathname}/settings`}><Settings className="ml-2 h-4 w-4" />إعدادات المتجر</Link>
             </Button>
             <Button onClick={openDialogForAdd}><PlusCircle className="ml-2 h-4 w-4" />إضافة منتج جديد</Button>
           </div>

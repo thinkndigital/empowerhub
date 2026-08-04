@@ -7,6 +7,7 @@ const ROLE_LABELS: Record<string, string> = {
   coach: 'مدرب',
   organization: 'مدير جهة',
   admin: 'مشرف',
+  merchant: 'تاجر',
 };
 
 export async function GET(req: NextRequest) {
@@ -28,6 +29,13 @@ export async function GET(req: NextRequest) {
     if (role === 'admin') {
       // Admin can message everyone
       const snap = await adminDb.collection('users').limit(100).get();
+      contacts = snap.docs.filter(d => d.id !== uid).map(d => {
+        const u = d.data();
+        return { id: d.id, name: u.name || 'مستخدم', role: u.role || '', roleLabel: ROLE_LABELS[u.role] || u.role };
+      });
+    } else if (role === 'merchant') {
+      // Merchant has no organization — can message platform admins for support
+      const snap = await adminDb.collection('users').where('role', '==', 'admin').get();
       contacts = snap.docs.filter(d => d.id !== uid).map(d => {
         const u = d.data();
         return { id: d.id, name: u.name || 'مستخدم', role: u.role || '', roleLabel: ROLE_LABELS[u.role] || u.role };
@@ -59,7 +67,7 @@ export async function GET(req: NextRequest) {
     contacts = contacts.filter(c => !blockedUsers.includes(c.id));
 
     // Sort by role priority then name
-    const rolePriority: Record<string, number> = { organization: 0, admin: 1, mentor: 2, coach: 3, beneficiary: 4 };
+    const rolePriority: Record<string, number> = { organization: 0, admin: 1, mentor: 2, coach: 3, beneficiary: 4, merchant: 5 };
     contacts.sort((a, b) => (rolePriority[a.role] ?? 5) - (rolePriority[b.role] ?? 5) || (a.name || '').localeCompare(b.name || '', 'ar'));
 
     return NextResponse.json({ contacts });

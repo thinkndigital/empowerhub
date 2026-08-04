@@ -27,6 +27,7 @@ const ROLE_LABELS: Record<string, string> = {
   coach: 'مدرب',
   organization: 'مدير جهة',
   admin: 'مشرف',
+  merchant: 'تاجر',
 };
 
 interface Contact { id: string; name: string; role: string; roleLabel: string; }

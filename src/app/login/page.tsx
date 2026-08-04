@@ -54,6 +54,7 @@ export default function LoginPage() {
       case 'admin': return '/admin-dashboard';
       case 'mentor': return '/mentor-dashboard';
       case 'coach': return '/coach-dashboard';
+      case 'merchant': return '/merchant-dashboard';
       default: return '/dashboard';
     }
   };
