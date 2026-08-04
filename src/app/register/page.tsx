@@ -84,6 +84,8 @@ function RegisterForm() {
   const [billingCycle, setBillingCycle] = useState<BillingCycle>("monthly");
   const [pendingValues, setPendingValues] = useState<z.infer<typeof formSchema> | null>(null);
   const [authBranding, setAuthBranding] = useState({ imageUrl: '', title: '', subtitle: '' });
+  const [platformLogo, setPlatformLogo] = useState('');
+  const [platformName, setPlatformName] = useState('EmpowerHub');
 
   useEffect(() => {
     fetch('/api/public/site-config', { cache: 'no-store' }).then(r => r.json()).then(d => {
@@ -91,6 +93,10 @@ function RegisterForm() {
       // shared authBranding (used by /login) for sites configured before it existed.
       const branding = d.config?.registerBranding?.imageUrl ? d.config.registerBranding : d.config?.authBranding;
       if (branding) setAuthBranding(branding);
+    }).catch(() => {});
+    fetch('/api/public/platform-config').then(r => r.json()).then(d => {
+      if (d.config?.logoUrl) setPlatformLogo(d.config.logoUrl);
+      if (d.config?.platformName) setPlatformName(d.config.platformName);
     }).catch(() => {});
   }, []);
 
@@ -280,7 +286,9 @@ function RegisterForm() {
         <div className="mx-auto grid w-full max-w-[420px] gap-6">
           <div className="grid gap-2 text-center">
             <Link href="/" className="flex justify-center items-center gap-2 mb-2">
-              <Logo className="w-12 h-12 mx-auto" />
+              {platformLogo
+                ? <img src={platformLogo} alt={platformName} className="w-12 h-12 mx-auto object-contain" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                : <Logo className="w-12 h-12 mx-auto" />}
             </Link>
             <h1 className="text-3xl font-bold">
               {step === "plan" ? "اختر خطتك" : "إنشاء حساب جديد"}

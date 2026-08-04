@@ -43,6 +43,13 @@ function PaymentPageInner() {
   const [selectedGateway, setSelectedGateway] = useState<GatewayKey | "">("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [platformLogo, setPlatformLogo] = useState("");
+
+  useEffect(() => {
+    fetch('/api/public/platform-config').then(r => r.json()).then(d => {
+      if (d.config?.logoUrl) setPlatformLogo(d.config.logoUrl);
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     async function load() {
@@ -122,7 +129,9 @@ function PaymentPageInner() {
     <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4" dir="rtl">
       <div className="w-full max-w-md">
         <div className="flex justify-center mb-6">
-          <Logo className="h-10 w-10" />
+          {platformLogo
+            ? <img src={platformLogo} alt="logo" className="h-10 w-10 object-contain" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+            : <Logo className="h-10 w-10" />}
         </div>
 
         {loading && (

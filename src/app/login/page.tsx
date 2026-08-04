@@ -32,10 +32,16 @@ export default function LoginPage() {
   const firestore = useFirestore();
   const [isLoading, setIsLoading] = useState(false);
   const [authBranding, setAuthBranding] = useState({ imageUrl: '', title: '', subtitle: '' });
+  const [platformLogo, setPlatformLogo] = useState('');
+  const [platformName, setPlatformName] = useState('EmpowerHub');
 
   useEffect(() => {
     fetch('/api/public/site-config', { cache: 'no-store' }).then(r => r.json()).then(d => {
       if (d.config?.authBranding) setAuthBranding(d.config.authBranding);
+    }).catch(() => {});
+    fetch('/api/public/platform-config').then(r => r.json()).then(d => {
+      if (d.config?.logoUrl) setPlatformLogo(d.config.logoUrl);
+      if (d.config?.platformName) setPlatformName(d.config.platformName);
     }).catch(() => {});
   }, []);
 
@@ -150,7 +156,9 @@ export default function LoginPage() {
           <div className="flex flex-col items-center gap-4 text-center">
             <Link href="/" className="flex items-center justify-center">
               <div className="flex h-14 w-14 items-center justify-center rounded-2xl shadow-lg shadow-primary/20">
-                <Logo className="h-14 w-14" />
+                {platformLogo
+                  ? <img src={platformLogo} alt={platformName} className="h-14 w-14 object-contain" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                  : <Logo className="h-14 w-14" />}
               </div>
             </Link>
             <div>
@@ -255,8 +263,10 @@ export default function LoginPage() {
         <div className="absolute inset-0 bg-gradient-to-br from-slate-900/95 via-blue-950/85 to-slate-900/90" />
         <div className="relative z-10 flex flex-col justify-between h-full p-10">
           <div className="flex items-center gap-3">
-            <Logo className="h-8 w-8" />
-            <span className="text-xl font-bold text-white">EmpowerHub</span>
+            {platformLogo
+              ? <img src={platformLogo} alt={platformName} className="h-8 w-8 object-contain" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+              : <Logo className="h-8 w-8" />}
+            <span className="text-xl font-bold text-white">{platformName}</span>
           </div>
           <div>
             <h2 className="text-3xl font-bold text-white mb-3 leading-snug">

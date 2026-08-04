@@ -34,6 +34,8 @@ export default function MarketPage() {
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState("الكل");
+  const [platformLogo, setPlatformLogo] = useState('');
+  const [platformName, setPlatformName] = useState('EmpowerHub');
 
   useEffect(() => {
     (async () => {
@@ -49,6 +51,13 @@ export default function MarketPage() {
         setLoading(false);
       }
     })();
+  }, []);
+
+  useEffect(() => {
+    fetch('/api/public/platform-config').then(r => r.json()).then(d => {
+      if (d.config?.logoUrl) setPlatformLogo(d.config.logoUrl);
+      if (d.config?.platformName) setPlatformName(d.config.platformName);
+    }).catch(() => {});
   }, []);
 
   const categories = useMemo(() => {
@@ -273,8 +282,10 @@ export default function MarketPage() {
       <footer className="border-t py-10 bg-card mt-4">
         <div className="container flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <Logo className="h-6 w-6" />
-            <span className="font-bold text-sm text-foreground">EmpowerHub</span>
+            {platformLogo
+              ? <img src={platformLogo} alt={platformName} className="h-6 w-6 object-contain" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+              : <Logo className="h-6 w-6" />}
+            <span className="font-bold text-sm text-foreground">{platformName}</span>
           </div>
           <p className="text-xs text-muted-foreground text-center">
             جميع المنتجات من مستفيدي برنامج التمكين © 2024

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/firebase/auth/use-user";
 import { Logo } from "@/components/logo";
@@ -16,6 +16,13 @@ const ROLE_PATHS: Record<string, string> = {
 export default function MessagesRedirectPage() {
   const { user, userProfile, loading } = useUser();
   const router = useRouter();
+  const [platformLogo, setPlatformLogo] = useState('');
+
+  useEffect(() => {
+    fetch('/api/public/platform-config').then(r => r.json()).then(d => {
+      if (d.config?.logoUrl) setPlatformLogo(d.config.logoUrl);
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (loading) return;
@@ -26,7 +33,9 @@ export default function MessagesRedirectPage() {
 
   return (
     <div className="flex h-screen w-full items-center justify-center">
-      <Logo className="h-16 w-16 animate-pulse" />
+      {platformLogo
+        ? <img src={platformLogo} alt="logo" className="h-16 w-16 object-contain animate-pulse" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+        : <Logo className="h-16 w-16 animate-pulse" />}
     </div>
   );
 }
