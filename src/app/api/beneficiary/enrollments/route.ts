@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
         }
         return {
           courseId: courseDoc.id,
-          courseTitle: courseDoc.data()?.title || '',
+          title: courseDoc.data()?.title || '',
           progress: data.progress ?? 0,
           enrolledAt: enrolledAt || null,
         };
