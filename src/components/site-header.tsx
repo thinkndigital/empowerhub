@@ -14,7 +14,7 @@ import { usePlatformBrand } from "@/components/platform-brand-provider";
 import { Menu, X, ChevronDown, Users, GraduationCap } from "lucide-react";
 
 const navLinks = [
-  { href: '/#how-it-works', label: 'كيف تعمل' },
+  { href: '/#roles', label: 'كيف تعمل' },
   { href: '/#services', label: 'الخدمات' },
   { href: '/live-sessions', label: 'جلسات مباشرة' },
   { href: '/articles', label: 'المقالات' },

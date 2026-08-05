@@ -173,7 +173,7 @@ const ExpertCard = ({
   const hasSocial = !!(expert.linkedin || expert.instagram || expert.twitter || whatsappHref);
 
   return (
-    <div dir="rtl" className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
+    <div dir="rtl" className="rounded-3xl bg-card overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
       {/* Photo with social icons overlay */}
       <div className="relative aspect-square bg-muted overflow-hidden">
         <Link href={profileLink} className="block w-full h-full">
@@ -299,7 +299,7 @@ const LEVEL_LABELS: Record<string, string> = { beginner: 'مبتدئ', intermedi
 const LEVEL_COLORS: Record<string, string> = { beginner: 'bg-green-500/10 text-green-700', intermediate: 'bg-amber-500/10 text-amber-700', advanced: 'bg-red-500/10 text-red-700' };
 
 const CourseCard = ({ course, onEnroll, currencySymbol }: { course: CourseItem; onEnroll?: (c: CourseItem) => void; currencySymbol: string }) => (
-  <div className="group rounded-xl border border-border bg-card overflow-hidden hover:border-primary/30 hover:shadow-md transition-all duration-200 flex flex-col">
+  <div className="group rounded-3xl bg-card overflow-hidden hover:shadow-lg transition-shadow duration-200 flex flex-col">
     {/* Cover */}
     <div className="relative h-40 bg-muted overflow-hidden shrink-0">
       {course.coverImageUrl ? (
@@ -375,7 +375,7 @@ const ProductCard = ({ product, onOrder, onView, currencySymbol }: { product: Pr
   const name = product.name || 'منتج';
   const imageUrl = product.imageUrl || product.image || '';
   return (
-    <div className="group rounded-xl border border-border bg-card overflow-hidden hover:border-primary/30 hover:shadow-sm transition-all flex flex-col">
+    <div className="group rounded-3xl bg-card overflow-hidden hover:shadow-lg transition-shadow flex flex-col">
       <button onClick={() => onView(product)} aria-label={`عرض تفاصيل ${name}`} className="relative h-40 bg-muted overflow-hidden block w-full text-right">
         {imageUrl ? (
           <Image src={imageUrl} alt={name} fill className="object-cover group-hover:scale-105 transition-transform duration-300" />
@@ -409,7 +409,7 @@ const PublicSessionCard = ({ session, currencySymbol, onBook }: { session: Publi
   const timeStr = date.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
   const isFree = session.price === 0 || session.price == null;
   return (
-    <div className="group rounded-2xl border border-border bg-card hover:border-primary/30 hover:shadow-md transition-all flex flex-col overflow-hidden">
+    <div className="group rounded-3xl bg-card hover:shadow-lg transition-shadow flex flex-col overflow-hidden">
       {/* Banner */}
       <div className="relative h-36 overflow-hidden bg-muted shrink-0">
         {session.bannerUrl ? (
@@ -594,7 +594,7 @@ export default function LandingPage() {
   const heroSubtitle = cfg?.hero?.subtitle || 'منصة متكاملة تجمع بين التدريب المتخصص، الإرشاد الشخصي، والتجارة الإلكترونية لمساعدتك على بناء مستقبلك.';
   const heroButtons: CtaButton[] = cfg?.hero?.buttons !== undefined ? cfg.hero.buttons : [
     { text: cfg?.hero?.ctaText || 'ابدأ رحلتك مجاناً', link: '/register', style: 'primary' },
-    { text: cfg?.hero?.ctaSecondaryText || 'كيف تعمل المنصة', link: '#how-it-works', style: 'outline' },
+    { text: cfg?.hero?.ctaSecondaryText || 'كيف تعمل المنصة', link: '#roles', style: 'outline' },
   ];
 
   const statsData = cfg?.stats?.length ? cfg.stats : [
@@ -602,12 +602,6 @@ export default function LandingPage() {
     { label: 'دورة تدريبية', value: '150+', icon: 'BookOpen' },
     { label: 'مرشد ومدرب', value: '80+', icon: 'GraduationCap' },
     { label: 'نسبة الرضا', value: '95%', icon: 'Award' },
-  ];
-
-  const howItWorksData = cfg?.howItWorks?.length ? cfg.howItWorks : [
-    { step: '١', title: 'أنشئ حسابك', desc: 'سجّل مجاناً واختر دورك على المنصة سواء كمستفيد أو مرشد أو منظمة.', icon: 'UserCheck' },
-    { step: '٢', title: 'استكشف المحتوى', desc: 'تصفح الدورات التدريبية، تواصل مع المرشدين، وابنِ مهاراتك.', icon: 'Globe' },
-    { step: '٣', title: 'حقق أهدافك', desc: 'أطلق متجرك، احصل على شهاداتك، وابنِ مستقبلاً أفضل.', icon: 'TrendingUp' },
   ];
 
   const testimonialsData = cfg?.testimonials?.length ? cfg.testimonials : [
@@ -680,6 +674,22 @@ export default function LandingPage() {
         { icon: BookOpen, title: 'دورتي الحالية', subtitle: 'التسويق الرقمي — ٦٥٪ مكتمل' },
         { icon: ShoppingBag, title: 'متجري', subtitle: '١٢ طلباً هذا الشهر' },
         { icon: Calendar, title: 'جلستي القادمة', subtitle: 'مع المرشدة سارة — غداً' },
+      ],
+    },
+    {
+      key: 'market', label: 'المتجر', icon: Store, path: 'market', link: '/market', cta: 'تصفح المتجر',
+      headline: 'تسوّق وبِع داخل مجتمع واحد',
+      benefits: [
+        'تصفح منتجات وخدمات حقيقية من رواد أعمال في مجتمعنا',
+        'افتح متجرك الخاص وابدأ البيع مباشرة من لوحة تحكمك',
+        'تواصل مع البائعين مباشرة عبر واتساب لإتمام الطلب',
+        'كل الفئات — من المنتجات اليدوية إلى الخدمات الرقمية',
+      ],
+      stats: [{ label: 'منتج', value: '٣٢٠' }, { label: 'متجر', value: '٤٥' }, { label: 'طلب هذا الشهر', value: '١١٠' }],
+      items: [
+        { icon: ShoppingBag, title: 'طلب جديد', subtitle: 'منتج يدوي — قبل ٥ دقائق' },
+        { icon: Store, title: 'متجر جديد', subtitle: 'انضم اليوم' },
+        { icon: TrendingUp, title: 'الأكثر مبيعاً', subtitle: 'شمعة معطرة يدوية' },
       ],
     },
   ];
@@ -1026,7 +1036,7 @@ export default function LandingPage() {
                     </ul>
                     <Button asChild size="lg" className="h-12 px-7 text-base font-semibold rounded-full bg-gradient-to-t from-primary to-primary/80 hover:to-primary hover:shadow-lg hover:shadow-primary/20 w-full sm:w-auto">
                       <Link href={tour.link}>
-                        ابدأ كـ{tour.label}
+                        {(tour as { cta?: string }).cta || `ابدأ كـ${tour.label}`}
                         <ArrowLeft className="mr-2 h-4 w-4" />
                       </Link>
                     </Button>
@@ -1114,78 +1124,37 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ── How It Works ────────────────────────────────────────────────────── */}
-        {sections.showHowItWorks && howItWorksData.length > 0 && (
-          <section
-            id="how-it-works"
-            className="py-16 sm:py-20 md:py-28"
-            style={sectionStyle('howItWorks').bg ? { backgroundColor: sectionStyle('howItWorks').bg } : undefined}
-          >
-            <div className="container">
-              {/* Centered header */}
-              <div className="text-center mb-14 sm:mb-20">
-                <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">كيف تعمل المنصة</p>
-                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground">
-                  من الفكرة إلى النجاح في خطوات واضحة
-                </h2>
-              </div>
-
-              {/* 3-column horizontal grid */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-10 md:gap-8 lg:gap-14">
-                {howItWorksData.map((item, i) => {
-                  const StepIcon = getDynamicIcon(item.icon);
-                  const iconColor = sectionStyle('howItWorks').iconColor;
-                  return (
-                    <div key={i} className="flex flex-col">
-                      {/* Giant ghost number */}
-                      <span className="text-8xl sm:text-9xl md:text-[8rem] lg:text-[9rem] font-extrabold text-foreground/[0.06] leading-none select-none tabular-nums mb-4">
-                        {String(i + 1).padStart(2, '0')}
-                      </span>
-                      {/* Step content — overlaps the number slightly */}
-                      <div className="-mt-4 sm:-mt-6">
-                        <StepIcon className="h-6 w-6 mb-2 text-primary" style={iconColor ? { color: iconColor } : undefined} />
-                        <h3 className="text-xl sm:text-2xl font-bold text-foreground mb-2 sm:mb-3">
-                          {item.title}
-                        </h3>
-                        <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
-                          {item.desc}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </section>
-        )}
 
         {/* ── All Platform Services ────────────────────────────────────────────── */}
         <section id="services" className="py-16 sm:py-20 md:py-28 bg-muted/30">
           <div className="container">
-            <div className="text-center mb-12 sm:mb-16">
-              <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">ما تقدمه المنصة</p>
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-3">
+            <div className="mb-10 sm:mb-14">
+              <p className="inline-flex items-center gap-2 text-xs font-semibold text-muted-foreground mb-3">
+                <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                ما تقدمه المنصة
+              </p>
+              <h2 className="text-3xl sm:text-4xl md:text-[2.75rem] font-extrabold tracking-tight text-foreground leading-[1.1] mb-3 text-balance">
                 كل ما تحتاجه لبناء مستقبلك في مكان واحد
               </h2>
-              <p className="text-muted-foreground text-sm sm:text-base max-w-xl mx-auto leading-relaxed">
+              <p className="text-muted-foreground text-sm sm:text-base max-w-xl leading-relaxed">
                 منصة متكاملة تجمع التدريب، الإرشاد، المشاريع، والتجارة — كل شيء تحتاجه في رحلة تمكينك الرقمي.
               </p>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="flex gap-4 overflow-x-auto pb-3 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {platformServices.map((svc, i) => (
                 <Link
                   key={i}
                   href={svc.link}
-                  className="group p-5 rounded-2xl bg-card hover:bg-card/70 transition-colors duration-200 flex flex-col gap-4"
+                  className="group w-[78vw] sm:w-64 shrink-0 snap-start p-6 rounded-3xl bg-card hover:shadow-lg transition-shadow duration-200 flex flex-col gap-4"
                 >
-                  <div className={`h-10 w-10 rounded-xl ${svc.color} flex items-center justify-center shrink-0`}>
+                  <div className={`h-11 w-11 rounded-2xl ${svc.color} flex items-center justify-center shrink-0`}>
                     <svc.icon className="h-5 w-5" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-sm font-bold text-foreground mb-1.5 group-hover:text-primary transition-colors">
+                    <h3 className="text-base font-bold text-foreground mb-1.5 group-hover:text-primary transition-colors">
                       {svc.title}
                     </h3>
-                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">{svc.description}</p>
+                    <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3">{svc.description}</p>
                   </div>
                   <div className="flex items-center gap-1 text-xs font-semibold text-primary mt-auto">
                     {svc.linkLabel}
@@ -1203,8 +1172,11 @@ export default function LandingPage() {
             <div className="container">
               {/* Section header */}
               <div className="text-center mb-10 sm:mb-14">
-                <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">فريق الخبراء</p>
-                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-4">تعلم من الأفضل</h2>
+                <p className="inline-flex items-center justify-center gap-2 text-xs font-semibold text-muted-foreground mb-3">
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                  فريق الخبراء
+                </p>
+                <h2 className="text-3xl sm:text-4xl md:text-[2.75rem] font-extrabold tracking-tight text-foreground mb-4 text-balance">تعلم من الأفضل</h2>
                 <div className="flex flex-wrap justify-center gap-2">
                   {sections.showMentors && (
                     <Button variant="outline" size="sm" asChild>
@@ -1271,8 +1243,11 @@ export default function LandingPage() {
           <section id="courses" className="py-16 sm:py-20 md:py-28">
             <div className="container">
               <div className="text-center mb-10 sm:mb-12">
-                <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">الدورات التدريبية</p>
-                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-4">
+                <p className="inline-flex items-center justify-center gap-2 text-xs font-semibold text-muted-foreground mb-3">
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                  الدورات التدريبية
+                </p>
+                <h2 className="text-3xl sm:text-4xl md:text-[2.75rem] font-extrabold tracking-tight text-foreground mb-4 text-balance">
                   طور مهاراتك مع دوراتنا
                 </h2>
                 {!loadingCourses && courses.length > 0 && (
@@ -1325,8 +1300,11 @@ export default function LandingPage() {
           <section id="sessions" className="py-16 sm:py-20 md:py-28 bg-muted/30">
             <div className="container">
               <div className="text-center mb-8 sm:mb-10">
-                <p className="text-[10px] sm:text-xs font-semibold text-primary uppercase tracking-widest mb-2">جلسات إرشادية</p>
-                <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-4">الجلسات المتاحة</h2>
+                <p className="inline-flex items-center justify-center gap-2 text-xs font-semibold text-muted-foreground mb-3">
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                  جلسات إرشادية
+                </p>
+                <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground mb-4 text-balance">الجلسات المتاحة</h2>
                 <div className="inline-flex items-center gap-0.5 bg-background rounded-lg p-0.5 border border-border/50">
                   {(['all', 'free', 'paid'] as const).map(f => (
                     <button key={f} onClick={() => setSessionFilter(f)}
@@ -1366,8 +1344,11 @@ export default function LandingPage() {
           <section id="marketplace" className="py-16 sm:py-20 md:py-28 bg-muted/30">
             <div className="container">
               <div className="text-center mb-10 sm:mb-12">
-                <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">متجر المجتمع</p>
-                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-4">منتجات من مجتمعنا</h2>
+                <p className="inline-flex items-center justify-center gap-2 text-xs font-semibold text-muted-foreground mb-3">
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                  متجر المجتمع
+                </p>
+                <h2 className="text-3xl sm:text-4xl md:text-[2.75rem] font-extrabold tracking-tight text-foreground mb-4 text-balance">منتجات من مجتمعنا</h2>
                 <Button asChild variant="outline" size="sm">
                   <Link href="/market">
                     تصفح جميع المنتجات
@@ -1404,12 +1385,15 @@ export default function LandingPage() {
           <section id="stores" className="py-16 sm:py-20 md:py-28">
             <div className="container">
               <div className="text-center mb-10 sm:mb-12">
-                <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">رواد الأعمال</p>
-                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground">متاجر مجتمعنا</h2>
+                <p className="inline-flex items-center justify-center gap-2 text-xs font-semibold text-muted-foreground mb-3">
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                  رواد الأعمال
+                </p>
+                <h2 className="text-3xl sm:text-4xl md:text-[2.75rem] font-extrabold tracking-tight text-foreground text-balance">متاجر مجتمعنا</h2>
               </div>
               {loadingStores ? (
                 <div className="flex gap-4 overflow-x-auto pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                  {[...Array(4)].map((_, i) => <div key={i} className="w-[82vw] sm:w-72 shrink-0 h-48 rounded-2xl bg-muted animate-pulse" />)}
+                  {[...Array(4)].map((_, i) => <div key={i} className="w-[82vw] sm:w-72 shrink-0 h-48 rounded-3xl bg-muted animate-pulse" />)}
                 </div>
               ) : (
                 <div className="flex gap-4 overflow-x-auto pb-3 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -1417,7 +1401,7 @@ export default function LandingPage() {
                     <Link
                       key={store.id}
                       href={`/stores/${store.slug || store.id}`}
-                      className="group w-[82vw] sm:w-72 shrink-0 snap-start rounded-2xl border border-border bg-card overflow-hidden hover:border-primary/30 hover:shadow-lg transition-all duration-300"
+                      className="group w-[82vw] sm:w-72 shrink-0 snap-start rounded-3xl bg-card overflow-hidden hover:shadow-lg transition-shadow duration-300"
                     >
                       {/* Cover */}
                       <div className="relative h-24 bg-muted overflow-hidden">
@@ -1474,8 +1458,11 @@ export default function LandingPage() {
           <section id="pricing" className="py-16 sm:py-20 md:py-28 bg-muted/30">
             <div className="container">
               <div className="text-center mb-8 sm:mb-10">
-                <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">خطط الأسعار</p>
-                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground">اختر الخطة المناسبة لك</h2>
+                <p className="inline-flex items-center justify-center gap-2 text-xs font-semibold text-muted-foreground mb-3">
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                  خطط الأسعار
+                </p>
+                <h2 className="text-3xl sm:text-4xl md:text-[2.75rem] font-extrabold tracking-tight text-foreground text-balance">اختر الخطة المناسبة لك</h2>
               </div>
 
               {/* Billing cycle toggle */}
@@ -1501,7 +1488,7 @@ export default function LandingPage() {
                 </div>
               )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+              <div className="flex gap-5 overflow-x-auto pb-3 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {plans.map(plan => {
                   const PlanIcon = { Star, Zap, Building2, Crown }[plan.icon] || Star;
                   const savings = plan.priceAnnual > 0 && plan.priceMonthly > 0
@@ -1512,8 +1499,8 @@ export default function LandingPage() {
                   return (
                     <div
                       key={plan.id}
-                      className={`relative rounded-2xl border bg-card p-6 sm:p-8 flex flex-col transition-all duration-300 ${
-                        plan.highlighted ? 'border-primary shadow-lg shadow-primary/10 md:-translate-y-2' : 'border-border hover:border-primary/20 hover:shadow-md'
+                      className={`relative w-[82vw] sm:w-80 shrink-0 snap-start rounded-3xl bg-card p-6 sm:p-8 flex flex-col transition-all duration-300 ${
+                        plan.highlighted ? 'shadow-xl shadow-primary/10 sm:-translate-y-2' : 'hover:shadow-lg'
                       }`}
                     >
                       {plan.highlighted && (
@@ -1571,8 +1558,11 @@ export default function LandingPage() {
           <section className="py-16 sm:py-20 md:py-28 bg-muted/30">
             <div className="container">
               <div className="text-center mb-12 sm:mb-16">
-                <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">قصص النجاح</p>
-                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground">ماذا يقول مجتمعنا</h2>
+                <p className="inline-flex items-center justify-center gap-2 text-xs font-semibold text-muted-foreground mb-3">
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                  قصص النجاح
+                </p>
+                <h2 className="text-3xl sm:text-4xl md:text-[2.75rem] font-extrabold tracking-tight text-foreground text-balance">ماذا يقول مجتمعنا</h2>
               </div>
               <div className="flex gap-5 overflow-x-auto pb-3 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {testimonialsData.map((t, i) => (
@@ -1607,8 +1597,11 @@ export default function LandingPage() {
           <section id="articles" className="py-16 sm:py-20 md:py-28 bg-muted/30">
             <div className="container">
               <div className="text-center mb-10 sm:mb-12">
-                <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">رؤى ومعرفة</p>
-                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-4">
+                <p className="inline-flex items-center justify-center gap-2 text-xs font-semibold text-muted-foreground mb-3">
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                  رؤى ومعرفة
+                </p>
+                <h2 className="text-3xl sm:text-4xl md:text-[2.75rem] font-extrabold tracking-tight text-foreground mb-4 text-balance">
                   أحدث المقالات
                 </h2>
                 <Link href="/articles" className="inline-flex items-center gap-1 text-sm font-semibold text-primary">
@@ -1620,7 +1613,7 @@ export default function LandingPage() {
                   <Link
                     key={article.id}
                     href={`/articles/${article.id}`}
-                    className="group w-[82vw] sm:w-72 shrink-0 snap-start rounded-2xl border border-border bg-card overflow-hidden hover:border-primary/30 hover:shadow-md transition-all flex flex-col"
+                    className="group w-[82vw] sm:w-72 shrink-0 snap-start rounded-3xl bg-card overflow-hidden hover:shadow-lg transition-shadow flex flex-col"
                   >
                     <div className="aspect-video bg-muted overflow-hidden">
                       {article.coverImageUrl ? (
@@ -1675,8 +1668,11 @@ export default function LandingPage() {
           >
             <div className="container">
               <div className="text-center mb-10 sm:mb-12">
-                <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">فرص حقيقية</p>
-                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-4">
+                <p className="inline-flex items-center justify-center gap-2 text-xs font-semibold text-muted-foreground mb-3">
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                  فرص حقيقية
+                </p>
+                <h2 className="text-3xl sm:text-4xl md:text-[2.75rem] font-extrabold tracking-tight text-foreground mb-4 text-balance">
                   أحدث الفرص والمشاريع
                 </h2>
                 <Link href="/projects" className="inline-flex items-center gap-1 text-sm font-semibold text-primary">
@@ -1688,7 +1684,7 @@ export default function LandingPage() {
                   <Link
                     key={project.id}
                     href={`/projects/${project.id}`}
-                    className="group w-[82vw] sm:w-72 shrink-0 snap-start rounded-2xl border border-border bg-card overflow-hidden hover:border-primary/30 hover:shadow-md transition-all flex flex-col"
+                    className="group w-[82vw] sm:w-72 shrink-0 snap-start rounded-3xl bg-card overflow-hidden hover:shadow-lg transition-shadow flex flex-col"
                   >
                     <div className="aspect-video bg-muted overflow-hidden">
                       {project.coverImageUrl ? (
@@ -1740,8 +1736,11 @@ export default function LandingPage() {
           <section id="success-stories" className="py-16 sm:py-20 md:py-28">
             <div className="container">
               <div className="text-center mb-12 sm:mb-16">
-                <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">إلهام حقيقي</p>
-                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-3">
+                <p className="inline-flex items-center justify-center gap-2 text-xs font-semibold text-muted-foreground mb-3">
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                  إلهام حقيقي
+                </p>
+                <h2 className="text-3xl sm:text-4xl md:text-[2.75rem] font-extrabold tracking-tight text-foreground mb-3 text-balance">
                   قصص نجاح من مجتمعنا
                 </h2>
                 <p className="text-muted-foreground text-sm max-w-md mx-auto leading-relaxed">
@@ -1752,7 +1751,7 @@ export default function LandingPage() {
                 {successStories.map(story => (
                   <div
                     key={story.id}
-                    className="group w-[82vw] sm:w-80 shrink-0 snap-start rounded-2xl border border-border bg-card p-6 flex flex-col gap-4 hover:border-primary/30 hover:shadow-md transition-all"
+                    className="group w-[82vw] sm:w-80 shrink-0 snap-start rounded-3xl bg-card p-6 flex flex-col gap-4 hover:shadow-lg transition-shadow"
                   >
                     {/* Stars */}
                     <div className="flex gap-0.5">
@@ -1804,10 +1803,13 @@ export default function LandingPage() {
               <div className="h-11 w-11 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
                 <HelpCircle className="h-5 w-5 text-primary" />
               </div>
-              <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">الأسئلة الشائعة</p>
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground">كل ما تحتاج معرفته</h2>
+              <p className="inline-flex items-center justify-center gap-2 text-xs font-semibold text-muted-foreground mb-3">
+                <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                الأسئلة الشائعة
+              </p>
+              <h2 className="text-3xl sm:text-4xl md:text-[2.75rem] font-extrabold tracking-tight text-foreground text-balance">كل ما تحتاج معرفته</h2>
             </div>
-            <Accordion type="single" collapsible defaultValue="faq-0" className="rounded-2xl border border-border bg-card px-5 sm:px-7">
+            <Accordion type="single" collapsible defaultValue="faq-0" className="rounded-3xl bg-muted/40 px-5 sm:px-7">
               {[
                 {
                   q: 'هل يمكنني تجربة المنصة مجاناً؟',
@@ -1853,8 +1855,11 @@ export default function LandingPage() {
             <div className="container">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 sm:gap-12 lg:gap-16 items-start">
                 <div>
-                  <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">تواصل معنا</p>
-                  <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-3 sm:mb-4">
+                  <p className="inline-flex items-center gap-2 text-xs font-semibold text-muted-foreground mb-3">
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                    تواصل معنا
+                  </p>
+                  <h2 className="text-3xl sm:text-4xl md:text-[2.75rem] font-extrabold tracking-tight text-foreground mb-3 sm:mb-4 text-balance">
                     كيف يمكننا مساعدتك؟
                   </h2>
                   <p className="text-muted-foreground mb-8 sm:mb-10 leading-relaxed text-sm sm:text-base">
@@ -1863,7 +1868,7 @@ export default function LandingPage() {
                   <div className="space-y-4 sm:space-y-5">
                     {contactInfo.phone && (
                       <div className="flex items-center gap-4">
-                        <div className="h-10 w-10 rounded-xl bg-card border border-border flex items-center justify-center shrink-0">
+                        <div className="h-10 w-10 rounded-xl bg-muted flex items-center justify-center shrink-0">
                           <Phone className="h-4 w-4 text-muted-foreground" />
                         </div>
                         <div>
@@ -1874,7 +1879,7 @@ export default function LandingPage() {
                     )}
                     {contactInfo.email && (
                       <div className="flex items-center gap-4">
-                        <div className="h-10 w-10 rounded-xl bg-card border border-border flex items-center justify-center shrink-0">
+                        <div className="h-10 w-10 rounded-xl bg-muted flex items-center justify-center shrink-0">
                           <Mail className="h-4 w-4 text-muted-foreground" />
                         </div>
                         <div>
@@ -1905,7 +1910,7 @@ export default function LandingPage() {
                   </div>
                 </div>
 
-                <div className="p-5 sm:p-6 rounded-2xl border border-border bg-card">
+                <div className="p-5 sm:p-6 rounded-3xl bg-card">
                   <h3 className="text-base sm:text-lg font-bold text-foreground mb-4 sm:mb-5">أرسل لنا رسالة</h3>
                   <form onSubmit={handleContactSubmit} className="flex flex-col gap-3 sm:gap-4">
                     <div>
