@@ -14,7 +14,7 @@ import {
   ArrowLeft, BookOpen, Store, GraduationCap, CheckCircle,
   Star, MessageSquare, Phone, Mail, Calendar, Clock,
   Tag, MapPin, FileText, Briefcase, Video, Building2, Users, BarChart3,
-  Zap, Crown, Check, ClipboardCheck, TrendingUp, ShoppingBag, HelpCircle,
+  Zap, Crown, Check, ClipboardCheck, TrendingUp, ShoppingBag, ShoppingCart, HelpCircle,
   Sparkles,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -226,8 +226,8 @@ const ExpertCard = ({
       </div>
 
       {/* Name + specialty */}
-      <div className="px-3 py-3 flex flex-col items-center gap-1">
-        <Link href={profileLink} className="font-bold text-sm text-foreground text-center leading-snug hover:text-primary transition-colors">
+      <div className="px-4 py-4 flex flex-col items-center gap-1.5">
+        <Link href={profileLink} className="font-bold text-base text-foreground text-center leading-snug hover:text-primary transition-colors">
           {name}
         </Link>
         {(() => {
@@ -237,7 +237,7 @@ const ExpertCard = ({
             ? [expert.specializations]
             : [];
           return specs.length > 0 ? (
-            <p className="text-xs text-muted-foreground text-center line-clamp-1">
+            <p className={`text-xs font-medium text-center line-clamp-1 px-2.5 py-0.5 rounded-full ${isMentor ? 'text-violet-600 bg-violet-500/10' : 'text-sky-600 bg-sky-500/10'}`}>
               {specs.slice(0, 2).join(' · ')}
             </p>
           ) : null;
@@ -375,30 +375,43 @@ const ProductCard = ({ product, onOrder, onView, currencySymbol }: { product: Pr
   const name = product.name || 'منتج';
   const imageUrl = product.imageUrl || product.image || '';
   return (
-    <div className="group rounded-3xl bg-card overflow-hidden hover:shadow-lg transition-shadow flex flex-col">
-      <button onClick={() => onView(product)} aria-label={`عرض تفاصيل ${name}`} className="relative h-40 bg-muted overflow-hidden block w-full text-right">
-        {imageUrl ? (
-          <Image src={imageUrl} alt={name} fill className="object-cover group-hover:scale-105 transition-transform duration-300" />
-        ) : (
-          <div className="h-full flex items-center justify-center">
-            <Store className="h-8 w-8 text-muted-foreground/20" />
-          </div>
-        )}
+    <div className="group flex flex-col">
+      <button
+        onClick={() => onView(product)}
+        aria-label={`عرض تفاصيل ${name}`}
+        className="relative block w-full aspect-square rounded-3xl bg-muted/60 p-2.5 shadow-sm group-hover:shadow-md transition-shadow duration-200 text-right"
+      >
+        <div className="relative w-full h-full rounded-2xl overflow-hidden bg-background">
+          {imageUrl ? (
+            <Image src={imageUrl} alt={name} fill className="object-cover group-hover:scale-105 transition-transform duration-300" />
+          ) : (
+            <div className="h-full flex items-center justify-center">
+              <Store className="h-8 w-8 text-muted-foreground/20" />
+            </div>
+          )}
+        </div>
         {product.category && (
-          <div className="absolute top-2 right-2 bg-background/90 backdrop-blur-sm text-foreground text-xs font-medium rounded-full px-2.5 py-0.5 border border-border/50">
+          <div className="absolute top-4 right-4 bg-background/90 backdrop-blur-sm text-foreground text-xs font-medium rounded-full px-2.5 py-0.5">
             {translateCategory(product.category)}
           </div>
         )}
+        {/* Quick order — hidden until hover */}
+        <span
+          role="button"
+          tabIndex={-1}
+          onClick={e => { e.stopPropagation(); onOrder(product); }}
+          aria-label={`اطلب ${name}`}
+          className="absolute bottom-4 left-4 h-9 w-9 rounded-full bg-background text-foreground shadow-md flex items-center justify-center opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 transition-all duration-200"
+        >
+          <ShoppingCart className="h-4 w-4" />
+        </span>
       </button>
-      <button onClick={() => onView(product)} className="p-4 flex flex-col gap-1 flex-grow text-right">
-        <h3 className="font-semibold text-sm line-clamp-2 text-foreground">{name}</h3>
+      <button onClick={() => onView(product)} className="mt-3 flex items-baseline justify-between gap-2 text-right">
+        <span className="text-sm text-muted-foreground line-clamp-1">{name}</span>
         {product.price != null && (
-          <p className="text-primary font-bold text-sm">{product.price} {currencySymbol}</p>
+          <span className="text-sm font-semibold text-foreground tabular-nums shrink-0">{product.price?.toLocaleString('ar')} {currencySymbol}</span>
         )}
       </button>
-      <div className="px-4 pb-4">
-        <Button className="w-full h-9 text-sm" onClick={() => onOrder(product)}>اطلب الآن</Button>
-      </div>
     </div>
   );
 };
@@ -1140,12 +1153,12 @@ export default function LandingPage() {
                 منصة متكاملة تجمع التدريب، الإرشاد، المشاريع، والتجارة — كل شيء تحتاجه في رحلة تمكينك الرقمي.
               </p>
             </div>
-            <div className="flex gap-4 overflow-x-auto pb-3 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {platformServices.map((svc, i) => (
                 <Link
                   key={i}
                   href={svc.link}
-                  className="group w-[78vw] sm:w-64 shrink-0 snap-start p-6 rounded-3xl bg-card hover:shadow-lg transition-shadow duration-200 flex flex-col gap-4"
+                  className="group p-6 rounded-3xl bg-card hover:shadow-lg transition-shadow duration-200 flex flex-col gap-4"
                 >
                   <div className={`h-11 w-11 rounded-2xl ${svc.color} flex items-center justify-center shrink-0`}>
                     <svc.icon className="h-5 w-5" />
@@ -1404,18 +1417,18 @@ export default function LandingPage() {
                       className="group w-[82vw] sm:w-72 shrink-0 snap-start rounded-3xl bg-card overflow-hidden hover:shadow-lg transition-shadow duration-300"
                     >
                       {/* Cover */}
-                      <div className="relative h-24 bg-muted overflow-hidden">
+                      <div className="relative h-28 bg-muted overflow-hidden">
                         {store.coverUrl ? (
                           <img src={store.coverUrl} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                             onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                         ) : (
-                          <div className="w-full h-full bg-gradient-to-br from-primary/15 via-primary/5 to-transparent" />
+                          <div className="w-full h-full bg-gradient-to-br from-primary/20 via-primary/5 to-transparent" />
                         )}
                       </div>
 
                       <div className="p-4 pt-0">
                         {/* Logo overlapping cover */}
-                        <div className="h-14 w-14 -mt-7 rounded-xl overflow-hidden shrink-0 border-4 border-card bg-primary/10 flex items-center justify-center shadow-sm">
+                        <div className="h-16 w-16 -mt-8 rounded-2xl overflow-hidden shrink-0 border-4 border-card bg-primary/10 flex items-center justify-center shadow-md">
                           {store.logoUrl ? (
                             <img
                               src={store.logoUrl}
@@ -1424,12 +1437,12 @@ export default function LandingPage() {
                               onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
                             />
                           ) : (
-                            <Store className="h-5 w-5 text-primary" />
+                            <Store className="h-6 w-6 text-primary" />
                           )}
                         </div>
 
-                        <div className="mt-2.5 min-w-0">
-                          <p className="font-bold text-sm text-foreground truncate group-hover:text-primary transition-colors">{store.name}</p>
+                        <div className="mt-3 min-w-0">
+                          <p className="font-bold text-base text-foreground truncate group-hover:text-primary transition-colors">{store.name}</p>
                           {store.beneficiaryName && (
                             <p className="text-xs text-muted-foreground truncate mt-0.5">بإدارة {store.beneficiaryName}</p>
                           )}
@@ -1440,7 +1453,7 @@ export default function LandingPage() {
                           )}
                         </div>
 
-                        <div className="flex items-center gap-1 text-xs font-semibold text-primary mt-3 pt-3 border-t border-border">
+                        <div className="flex items-center gap-1 text-xs font-semibold text-primary mt-3 pt-3 border-t border-border/60">
                           تسوّق الآن
                           <ArrowLeft className="h-3.5 w-3.5 group-hover:-translate-x-0.5 transition-transform" />
                         </div>
