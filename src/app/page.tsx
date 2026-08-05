@@ -604,12 +604,6 @@ export default function LandingPage() {
     { label: 'نسبة الرضا', value: '95%', icon: 'Award' },
   ];
 
-  const featuresData = cfg?.features?.length ? cfg.features : [
-    { title: 'تتبع التقدم والنمو', description: 'تابع إنجازاتك خطوة بخطوة بتقارير مرئية واضحة تساعدك على معرفة ما حققته وما التالي.', icon: 'BarChart3' },
-    { title: 'توصيات ذكية بالذكاء الاصطناعي', description: 'احصل على توصيات مخصصة تناسب أهدافك وظروفك لتحقيق أقصى استفادة من المنصة.', icon: 'Zap' },
-    { title: 'أمان وخصوصية تامة', description: 'بياناتك ومعلوماتك الشخصية محمية بأحدث تقنيات التشفير. تجربة آمنة وموثوقة دائماً.', icon: 'Shield' },
-  ];
-
   const howItWorksData = cfg?.howItWorks?.length ? cfg.howItWorks : [
     { step: '١', title: 'أنشئ حسابك', desc: 'سجّل مجاناً واختر دورك على المنصة سواء كمستفيد أو مرشد أو منظمة.', icon: 'UserCheck' },
     { step: '٢', title: 'استكشف المحتوى', desc: 'تصفح الدورات التدريبية، تواصل مع المرشدين، وابنِ مهاراتك.', icon: 'Globe' },
@@ -981,71 +975,104 @@ export default function LandingPage() {
           </section>
         )}
 
-        {/* ── Features ─────────────────────────────────────────────────────────── */}
-        {sections.showFeatures && featuresData.length > 0 && (
-          <section
-            className="py-16 sm:py-20 md:py-28"
-            style={sectionStyle('features').bg ? { backgroundColor: sectionStyle('features').bg } : undefined}
-          >
+        {/* ── Product Tour by Role ────────────────────────────────────────────── */}
+        {sections.showRoles && (
+          <section id="roles" className="py-16 sm:py-20 md:py-28">
             <div className="container">
-              <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5 mb-10 sm:mb-14">
-                <div>
-                  <p className="inline-flex items-center gap-2 text-xs font-semibold text-muted-foreground mb-3">
-                    <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                    لماذا EmpowerHub
-                  </p>
-                  <h2 className="text-3xl sm:text-4xl md:text-[2.75rem] font-extrabold tracking-tight text-foreground leading-[1.1] max-w-xl text-balance">
-                    مميزات تصنع فرقاً حقيقياً في رحلتك
-                  </h2>
-                </div>
-                <p className="text-muted-foreground text-sm sm:text-base leading-relaxed max-w-sm">
-                  كل أداة في المنصة مصممة لتساعدك تتقدم فعلياً — لا مجرد استخدام تطبيق آخر.
+              <div className="text-center mb-10 sm:mb-14">
+                <p className="inline-flex items-center justify-center gap-2 text-xs font-semibold text-muted-foreground mb-3">
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                  جولة داخل المنصة
+                </p>
+                <h2 className="text-3xl sm:text-4xl md:text-[2.75rem] font-extrabold tracking-tight text-foreground leading-[1.1] text-balance">
+                  منصة واحدة، تجربة مصمّمة لكل دور
+                </h2>
+                <p className="mt-3 text-muted-foreground text-sm sm:text-base leading-relaxed max-w-xl mx-auto">
+                  اختر دورك وشاهد كيف تبدو تجربتك داخل EmpowerHub.
                 </p>
               </div>
 
-              {/* Row 1 — proof card (gradient) + flat card */}
-              {featuresData.length >= 2 && (() => {
-                const iconColor = sectionStyle('features').iconColor;
-                const Icon0 = getDynamicIcon(featuresData[0].icon);
-                const Icon1 = getDynamicIcon(featuresData[1].icon);
-                return (
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
-                    <div className="grain-overlay relative rounded-3xl p-8 sm:p-10 min-h-[280px] flex flex-col justify-end overflow-hidden bg-gradient-to-br from-primary via-primary to-violet-600">
-                      <div className="relative z-10 h-12 w-12 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center mb-5">
-                        <Icon0 className="h-6 w-6 text-white" style={iconColor ? { color: iconColor } : undefined} />
+              {/* Role tabs */}
+              <div className="flex flex-wrap justify-center gap-2 mb-10 sm:mb-14">
+                {tourRoles.map((r, i) => (
+                  <button
+                    key={r.key}
+                    onClick={() => setActiveTour(i)}
+                    className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-all ${
+                      activeTour === i
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'bg-muted/60 text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <r.icon className="h-4 w-4" />
+                    {r.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Active tour content */}
+              {tourRoles.map((tour, i) => activeTour === i && (
+                <div key={tour.key} className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-14 items-center max-w-5xl mx-auto animate-fade-in-up">
+                  {/* Benefits */}
+                  <div className="order-2 lg:order-1 text-center lg:text-right">
+                    <h3 className="text-xl sm:text-2xl font-bold text-foreground mb-4 sm:mb-5">{tour.headline}</h3>
+                    <ul className="space-y-3 mb-6 sm:mb-8">
+                      {tour.benefits.map((b, bi) => (
+                        <li key={bi} className="flex items-start gap-3 text-sm sm:text-base text-muted-foreground">
+                          <CheckCircle className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                          <span className="leading-relaxed">{b}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <Button asChild size="lg" className="h-12 px-7 text-base font-semibold rounded-full bg-gradient-to-t from-primary to-primary/80 hover:to-primary hover:shadow-lg hover:shadow-primary/20 w-full sm:w-auto">
+                      <Link href={tour.link}>
+                        ابدأ كـ{tour.label}
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                      </Link>
+                    </Button>
+                  </div>
+
+                  {/* Dashboard preview mockup */}
+                  <div className="order-1 lg:order-2">
+                    <div className="relative rounded-2xl bg-card shadow-2xl overflow-hidden">
+                      {/* Browser chrome */}
+                      <div className="flex items-center gap-1.5 px-4 py-3 border-b border-border bg-muted/40">
+                        <span className="h-2.5 w-2.5 rounded-full bg-red-400" />
+                        <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
+                        <span className="h-2.5 w-2.5 rounded-full bg-green-400" />
+                        <span className="mr-3 text-[11px] text-muted-foreground font-mono truncate">
+                          empowerhub.thinkndigital.com/{tour.path}
+                        </span>
                       </div>
-                      <h3 className="relative z-10 text-xl sm:text-2xl font-bold text-white mb-2">{featuresData[0].title}</h3>
-                      <p className="relative z-10 text-sm sm:text-base text-white/75 leading-relaxed max-w-sm">{featuresData[0].description}</p>
-                    </div>
-                    <div className="relative rounded-3xl p-8 sm:p-10 min-h-[280px] flex flex-col justify-end bg-muted/50">
-                      <div className="h-12 w-12 rounded-2xl bg-background flex items-center justify-center mb-5">
-                        <Icon1 className="h-6 w-6 text-primary" style={iconColor ? { color: iconColor } : undefined} />
+                      <div className="p-5 space-y-4">
+                        {/* Stats row */}
+                        <div className="grid grid-cols-3 gap-2">
+                          {tour.stats.map((s, si) => (
+                            <div key={si} className="bg-muted/50 rounded-xl p-2.5 text-center">
+                              <div className="text-lg font-extrabold text-primary tabular-nums leading-none mb-0.5">{s.value}</div>
+                              <div className="text-[10px] text-muted-foreground">{s.label}</div>
+                            </div>
+                          ))}
+                        </div>
+                        {/* Item rows */}
+                        <div className="space-y-2">
+                          {tour.items.map((it, ii) => (
+                            <div key={ii} className="flex items-center gap-3 p-2.5 rounded-xl bg-muted/30">
+                              <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                                <it.icon className="h-4 w-4 text-primary" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-semibold text-foreground truncate">{it.title}</p>
+                                <p className="text-[10px] text-muted-foreground truncate">{it.subtitle}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                      <h3 className="text-xl sm:text-2xl font-bold text-foreground mb-2">{featuresData[1].title}</h3>
-                      <p className="text-sm sm:text-base text-muted-foreground leading-relaxed max-w-sm">{featuresData[1].description}</p>
                     </div>
                   </div>
-                );
-              })()}
-
-              {/* Row 2 — remaining features, flat 3-col */}
-              {featuresData.length > 2 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                  {featuresData.slice(2).map((f, i) => {
-                    const FeatureIcon = getDynamicIcon(f.icon);
-                    const iconColor = sectionStyle('features').iconColor;
-                    return (
-                      <div key={i} className="p-6 rounded-2xl bg-muted/40">
-                        <div className="h-11 w-11 rounded-xl bg-background flex items-center justify-center mb-4">
-                          <FeatureIcon className="h-5 w-5 text-primary" style={iconColor ? { color: iconColor } : undefined} />
-                        </div>
-                        <h3 className="text-base font-bold text-foreground mb-2">{f.title}</h3>
-                        <p className="text-sm text-muted-foreground leading-relaxed">{f.description}</p>
-                      </div>
-                    );
-                  })}
                 </div>
-              )}
+              ))}
             </div>
           </section>
         )}
@@ -1169,105 +1196,6 @@ export default function LandingPage() {
             </div>
           </div>
         </section>
-
-        {/* ── Product Tour by Role ────────────────────────────────────────────── */}
-        {sections.showRoles && (
-          <section id="roles" className="py-16 sm:py-20 md:py-28 bg-muted/30">
-            <div className="container">
-              <div className="text-center mb-10 sm:mb-12">
-                <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">جولة داخل المنصة</p>
-                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground">
-                  منصة واحدة، تجربة مصمّمة لكل دور
-                </h2>
-                <p className="mt-3 text-muted-foreground text-sm sm:text-base leading-relaxed max-w-xl mx-auto">
-                  اختر دورك وشاهد كيف تبدو تجربتك داخل EmpowerHub.
-                </p>
-              </div>
-
-              {/* Role tabs */}
-              <div className="flex flex-wrap justify-center gap-2 mb-10 sm:mb-14">
-                {tourRoles.map((r, i) => (
-                  <button
-                    key={r.key}
-                    onClick={() => setActiveTour(i)}
-                    className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-all ${
-                      activeTour === i
-                        ? 'bg-primary text-primary-foreground shadow-sm'
-                        : 'bg-card border border-border text-muted-foreground hover:text-foreground hover:border-primary/30'
-                    }`}
-                  >
-                    <r.icon className="h-4 w-4" />
-                    {r.label}
-                  </button>
-                ))}
-              </div>
-
-              {/* Active tour content */}
-              {tourRoles.map((tour, i) => activeTour === i && (
-                <div key={tour.key} className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-14 items-center max-w-5xl mx-auto animate-fade-in-up">
-                  {/* Benefits */}
-                  <div className="order-2 lg:order-1 text-center lg:text-right">
-                    <h3 className="text-xl sm:text-2xl font-bold text-foreground mb-4 sm:mb-5">{tour.headline}</h3>
-                    <ul className="space-y-3 mb-6 sm:mb-8">
-                      {tour.benefits.map((b, bi) => (
-                        <li key={bi} className="flex items-start gap-3 text-sm sm:text-base text-muted-foreground">
-                          <CheckCircle className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                          <span className="leading-relaxed">{b}</span>
-                        </li>
-                      ))}
-                    </ul>
-                    <Button asChild size="lg" className="h-12 px-7 text-base font-semibold bg-gradient-to-t from-primary to-primary/80 hover:to-primary hover:shadow-lg hover:shadow-primary/20 w-full sm:w-auto">
-                      <Link href={tour.link}>
-                        ابدأ كـ{tour.label}
-                        <ArrowLeft className="mr-2 h-4 w-4" />
-                      </Link>
-                    </Button>
-                  </div>
-
-                  {/* Dashboard preview mockup */}
-                  <div className="order-1 lg:order-2">
-                    <div className="relative rounded-2xl border border-border bg-card shadow-2xl overflow-hidden">
-                      {/* Browser chrome */}
-                      <div className="flex items-center gap-1.5 px-4 py-3 border-b border-border bg-muted/40">
-                        <span className="h-2.5 w-2.5 rounded-full bg-red-400" />
-                        <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
-                        <span className="h-2.5 w-2.5 rounded-full bg-green-400" />
-                        <span className="mr-3 text-[11px] text-muted-foreground font-mono truncate">
-                          empowerhub.thinkndigital.com/{tour.path}
-                        </span>
-                      </div>
-                      <div className="p-5 space-y-4">
-                        {/* Stats row */}
-                        <div className="grid grid-cols-3 gap-2">
-                          {tour.stats.map((s, si) => (
-                            <div key={si} className="bg-muted/50 rounded-xl p-2.5 text-center">
-                              <div className="text-lg font-extrabold text-primary tabular-nums leading-none mb-0.5">{s.value}</div>
-                              <div className="text-[10px] text-muted-foreground">{s.label}</div>
-                            </div>
-                          ))}
-                        </div>
-                        {/* Item rows */}
-                        <div className="space-y-2">
-                          {tour.items.map((it, ii) => (
-                            <div key={ii} className="flex items-center gap-3 p-2.5 rounded-xl bg-muted/30">
-                              <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                                <it.icon className="h-4 w-4 text-primary" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-xs font-semibold text-foreground truncate">{it.title}</p>
-                                <p className="text-[10px] text-muted-foreground truncate">{it.subtitle}</p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
 
         {/* ── Expert Preview ──────────────────────────────────────────────────── */}
         {(sections.showMentors || sections.showCoaches) && (
