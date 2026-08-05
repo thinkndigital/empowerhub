@@ -1507,7 +1507,7 @@ export default function LandingPage() {
                 </div>
               )}
 
-              <div className="flex flex-wrap justify-center gap-6 max-w-5xl mx-auto">
+              <div className="flex flex-wrap justify-center items-stretch gap-6 max-w-5xl mx-auto">
                 {plans.map(plan => {
                   const PlanIcon = { Star, Zap, Building2, Crown }[plan.icon] || Star;
                   const savings = plan.priceAnnual > 0 && plan.priceMonthly > 0
@@ -1518,61 +1518,55 @@ export default function LandingPage() {
                   return (
                     <div
                       key={plan.id}
-                      className={`relative w-full sm:w-80 overflow-hidden rounded-3xl bg-card flex flex-col transition-all duration-300 ${
-                        plan.highlighted ? 'shadow-xl sm:-translate-y-2' : 'hover:shadow-lg'
+                      className={`relative w-full sm:w-80 rounded-3xl p-6 sm:p-8 flex flex-col transition-all duration-300 ${
+                        plan.highlighted
+                          ? 'grain-overlay bg-gradient-to-br from-primary via-primary to-violet-600 shadow-xl sm:-translate-y-2'
+                          : 'bg-muted/50 hover:shadow-lg'
                       }`}
-                      style={plan.highlighted ? { boxShadow: `0 24px 48px -16px ${plan.color}40` } : undefined}
                     >
-                      {/* Colored top accent */}
-                      <div className="h-2" style={{ backgroundColor: plan.color }} />
-
-                      <div className="p-6 sm:p-8 flex flex-col flex-1">
-                        {plan.highlighted && (
-                          <span
-                            className="absolute top-5 left-1/2 -translate-x-1/2 text-white text-xs px-3 py-1 rounded-full font-medium whitespace-nowrap"
-                            style={{ backgroundColor: plan.color }}
-                          >
-                            الأكثر شعبية
-                          </span>
-                        )}
-                        <div className="flex items-center gap-3 mb-4">
-                          <div className="h-11 w-11 rounded-2xl flex items-center justify-center shrink-0" style={{ backgroundColor: plan.color }}>
-                            <PlanIcon className="h-5 w-5 text-white" />
-                          </div>
-                          <h3 className="font-bold text-lg text-foreground">{plan.name}</h3>
-                        </div>
-                        <div className="mb-4">
-                          {plan.priceMonthly === 0 ? (
-                            <p className="text-2xl font-bold" style={{ color: plan.color }}>مجاني</p>
-                          ) : (
-                            <>
-                              <div className="flex items-baseline gap-1">
-                                <span className="text-3xl font-bold tabular-nums" style={{ color: plan.color }}>{displayPrice.toLocaleString()}</span>
-                                <span className="text-muted-foreground text-sm">{plan.currency}/شهر</span>
-                              </div>
-                              {savings > 0 && (
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  {showAnnual
-                                    ? <>يُحتسب {plan.priceAnnual.toLocaleString()} {plan.currency} سنوياً {' '}<span className="text-emerald-600 font-medium">(وفّرت {savings}%)</span></>
-                                    : <>أو {plan.priceAnnual.toLocaleString()} {plan.currency}/سنة {' '}<span className="text-emerald-600">(وفر {savings}%)</span></>}
-                                </p>
-                              )}
-                            </>
-                          )}
-                        </div>
-                        {plan.description && <p className="text-sm text-muted-foreground mb-5">{plan.description}</p>}
-                        <ul className="space-y-2.5 mb-6 flex-1">
-                          {(plan.features || []).map((f, i) => (
-                            <li key={i} className="flex items-start gap-2 text-sm text-foreground">
-                              <Check className="h-4 w-4 flex-shrink-0 mt-0.5" style={{ color: plan.color }} />
-                              {f}
-                            </li>
-                          ))}
-                        </ul>
-                        <Button asChild className="w-full text-white hover:opacity-90" style={{ backgroundColor: plan.color }}>
-                          <Link href={`/register?role=organization&plan=${plan.key}`}>ابدأ الآن</Link>
-                        </Button>
+                      {plan.highlighted && (
+                        <span className="relative z-10 self-center -mt-2 mb-3 bg-white text-foreground text-xs px-3 py-1 rounded-full font-semibold whitespace-nowrap">
+                          الأكثر شعبية
+                        </span>
+                      )}
+                      <div className={`relative z-10 h-11 w-11 rounded-2xl flex items-center justify-center mb-4 ${plan.highlighted ? 'bg-white/15' : 'bg-background'}`}>
+                        <PlanIcon className={`h-5 w-5 ${plan.highlighted ? 'text-white' : 'text-primary'}`} />
                       </div>
+                      <h3 className={`relative z-10 font-bold text-lg mb-4 ${plan.highlighted ? 'text-white' : 'text-foreground'}`}>{plan.name}</h3>
+                      <div className="relative z-10 mb-4">
+                        {plan.priceMonthly === 0 ? (
+                          <p className={`text-2xl font-bold ${plan.highlighted ? 'text-white' : 'text-foreground'}`}>مجاني</p>
+                        ) : (
+                          <>
+                            <div className="flex items-baseline gap-1">
+                              <span className={`text-3xl font-bold tabular-nums ${plan.highlighted ? 'text-white' : 'text-foreground'}`}>{displayPrice.toLocaleString()}</span>
+                              <span className={`text-sm ${plan.highlighted ? 'text-white/60' : 'text-muted-foreground'}`}>{plan.currency}/شهر</span>
+                            </div>
+                            {savings > 0 && (
+                              <p className={`text-xs mt-1 ${plan.highlighted ? 'text-white/60' : 'text-muted-foreground'}`}>
+                                {showAnnual
+                                  ? <>يُحتسب {plan.priceAnnual.toLocaleString()} {plan.currency} سنوياً {' '}<span className={`font-medium ${plan.highlighted ? 'text-white' : 'text-emerald-600'}`}>(وفّرت {savings}%)</span></>
+                                  : <>أو {plan.priceAnnual.toLocaleString()} {plan.currency}/سنة {' '}<span className={plan.highlighted ? 'text-white' : 'text-emerald-600'}>(وفر {savings}%)</span></>}
+                              </p>
+                            )}
+                          </>
+                        )}
+                      </div>
+                      {plan.description && <p className={`relative z-10 text-sm mb-5 ${plan.highlighted ? 'text-white/70' : 'text-muted-foreground'}`}>{plan.description}</p>}
+                      <ul className="relative z-10 space-y-2.5 mb-6 flex-1">
+                        {(plan.features || []).map((f, i) => (
+                          <li key={i} className={`flex items-start gap-2 text-sm ${plan.highlighted ? 'text-white/90' : 'text-foreground'}`}>
+                            <Check className={`h-4 w-4 flex-shrink-0 mt-0.5 ${plan.highlighted ? 'text-white' : 'text-primary'}`} />
+                            {f}
+                          </li>
+                        ))}
+                      </ul>
+                      <Button
+                        asChild
+                        className={`relative z-10 w-full rounded-full ${plan.highlighted ? 'bg-white text-foreground hover:bg-white/90' : 'bg-foreground text-background hover:bg-foreground/90'}`}
+                      >
+                        <Link href={`/register?role=organization&plan=${plan.key}`}>ابدأ الآن</Link>
+                      </Button>
                     </div>
                   );
                 })}
