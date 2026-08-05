@@ -8,6 +8,7 @@ import {
   Video, GraduationCap, FileText, Briefcase, Store, Quote, Layout,
 } from "lucide-react";
 import { signOut } from "firebase/auth";
+import { useMemo } from "react";
 import { useAuth } from "@/firebase/provider";
 
 import {

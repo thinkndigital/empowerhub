@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import { unstable_cache } from 'next/cache';
 import { Toaster } from '@/components/ui/toaster';
 import './globals.css';
 import { FirebaseProviderDynamic } from '@/components/firebase-provider-dynamic';
@@ -6,15 +7,35 @@ import { ThemeProvider } from '@/components/theme-provider';
 import { PlatformBrandProvider } from '@/components/platform-brand-provider';
 import { adminDb } from '@/lib/firebase-admin';
 
+// Pages that reference these values may be statically prerendered, so a
+// plain Admin SDK read here would get baked in at build time and only
+// change on the next deploy. unstable_cache gives it ISR-style
+// revalidation instead, so an admin's upload shows up within a minute
+// without needing a redeploy.
+const getCachedPlatformBrand = unstable_cache(
+  async () => {
+    try {
+      const [platformSnap, siteSnap] = await Promise.all([
+        adminDb.collection('config').doc('platform').get(),
+        adminDb.collection('config').doc('site').get(),
+      ]);
+      const platformData = platformSnap.data();
+      const siteData = siteSnap.data();
+      return {
+        logoUrl: platformData?.logoUrl || '',
+        faviconUrl: platformData?.faviconUrl || siteData?.faviconUrl || '',
+        platformName: platformData?.platformName || siteData?.siteName || 'EmpowerHub',
+      };
+    } catch {
+      return { logoUrl: '', faviconUrl: '', platformName: 'EmpowerHub' };
+    }
+  },
+  ['platform-brand'],
+  { revalidate: 60 },
+);
+
 export async function generateMetadata(): Promise<Metadata> {
-  let faviconUrl = '';
-  try {
-    const [platformSnap, siteSnap] = await Promise.all([
-      adminDb.collection('config').doc('platform').get(),
-      adminDb.collection('config').doc('site').get(),
-    ]);
-    faviconUrl = platformSnap.data()?.faviconUrl || siteSnap.data()?.faviconUrl || '';
-  } catch {}
+  const { faviconUrl } = await getCachedPlatformBrand();
 
   return {
     title: 'EmpowerHub | منصة التمكين الرقمي',
@@ -46,23 +67,6 @@ function hexToHsl(hex: string): { h: number; s: number; l: number } | null {
   }
   if (H < 0) H += 360;
   return { h: Math.round(H), s: Math.round(S * 100), l: Math.round(L * 100) };
-}
-
-async function getPlatformBrand(): Promise<{ logoUrl: string; platformName: string }> {
-  try {
-    const [platformSnap, siteSnap] = await Promise.all([
-      adminDb.collection('config').doc('platform').get(),
-      adminDb.collection('config').doc('site').get(),
-    ]);
-    const platformData = platformSnap.data();
-    const siteData = siteSnap.data();
-    return {
-      logoUrl: platformData?.logoUrl || '',
-      platformName: platformData?.platformName || siteData?.siteName || 'EmpowerHub',
-    };
-  } catch {
-    return { logoUrl: '', platformName: 'EmpowerHub' };
-  }
 }
 
 async function getBrandColorStyle(): Promise<string> {
@@ -100,7 +104,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const brandStyle = await getBrandColorStyle();
-  const platformBrand = await getPlatformBrand();
+  const platformBrand = await getCachedPlatformBrand();
 
   return (
     <html lang="ar" dir="rtl" suppressHydrationWarning>
