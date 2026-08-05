@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { getOrgHistory } from '@/lib/org-history';
 
 export async function GET(req: NextRequest) {
   try {
@@ -76,6 +77,8 @@ export async function GET(req: NextRequest) {
       });
     }
 
+    const organizationHistory = await getOrgHistory(userId);
+
     return NextResponse.json({
       profile: {
         id: userId,
@@ -85,6 +88,7 @@ export async function GET(req: NextRequest) {
         sessions,
         enrolledCourses,
         createdCourses,
+        organizationHistory,
       }
     });
   } catch (e: any) {

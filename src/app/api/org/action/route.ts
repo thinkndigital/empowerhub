@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
+import { recordOrgMembershipChange } from '@/lib/org-history';
 
 export async function POST(req: NextRequest) {
   try {
@@ -21,6 +22,7 @@ export async function POST(req: NextRequest) {
 
     if (action === 'addToOrg') {
       await adminDb.collection('users').doc(body.userId).update({ organizationId: orgId });
+      await recordOrgMembershipChange(body.userId, orgId);
       return NextResponse.json({ success: true });
     }
 
@@ -29,6 +31,7 @@ export async function POST(req: NextRequest) {
         organizationId: FieldValue.delete(),
         groupId: FieldValue.delete(),
       });
+      await recordOrgMembershipChange(body.userId, null);
       return NextResponse.json({ success: true });
     }
 

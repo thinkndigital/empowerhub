@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { checkOrgLimit, checkOrgLocked } from '@/lib/plan-limits';
+import { recordOrgMembershipChange } from '@/lib/org-history';
 
 export async function POST(req: NextRequest) {
   try {
@@ -41,6 +42,7 @@ export async function POST(req: NextRequest) {
     await Promise.all([
       adminDb.collection('users').doc(uid).set({ organizationId }, { merge: true }),
       adminAuth.setCustomUserClaims(uid, { organizationId }).catch(() => {}),
+      recordOrgMembershipChange(uid, organizationId),
     ]);
 
     return NextResponse.json({ success: true, organizationId });

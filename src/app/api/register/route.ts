@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import { checkOrgLimit, checkOrgLocked } from '@/lib/plan-limits';
+import { recordOrgMembershipChange } from '@/lib/org-history';
 
 export async function POST(req: NextRequest) {
   try {
@@ -151,6 +152,9 @@ export async function POST(req: NextRequest) {
     if (organizationId) userData.organizationId = organizationId;
 
     try { await adminDb.collection('users').doc(uid).set(userData); } catch {}
+    if (organizationId && (role === 'mentor' || role === 'coach')) {
+      try { await recordOrgMembershipChange(uid, organizationId); } catch {}
+    }
 
     return NextResponse.json({
       success: true,

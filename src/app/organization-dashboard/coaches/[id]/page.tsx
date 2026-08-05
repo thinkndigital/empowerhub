@@ -8,15 +8,17 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ArrowRight, Users, Calendar, BookOpen, CheckCircle, Clock, XCircle } from "lucide-react";
+import { ArrowRight, Users, Calendar, BookOpen, CheckCircle, Clock, XCircle, Building2 } from "lucide-react";
 
 type Enrollment = { userId: string; name: string; progress: number; enrolledAt?: any };
 type CreatedCourse = { id: string; title: string; status?: string; enrollments: Enrollment[] };
 type Session = { id: string; title?: string; date?: any; status?: string };
+type OrgHistoryEntry = { id: string; organizationId: string; organizationName: string; joinedAt: string | null; leftAt: string | null };
 type CoachProfile = {
   id: string; name?: string; email?: string; bio?: string; specializations?: string;
   sessions?: Session[];
   createdCourses?: CreatedCourse[];
+  organizationHistory?: OrgHistoryEntry[];
 };
 
 function formatDate(dateVal?: any): string {
@@ -146,6 +148,29 @@ export default function CoachProfilePage() {
                           <p className="text-xs text-muted-foreground mt-0.5">{formatDate(s.date)}</p>
                         </div>
                         <SessionBadge status={s.status} />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-sm">
+              <CardHeader><CardTitle className="text-base flex items-center gap-2"><Building2 className="h-4 w-4" />سجل الانتساب للمنظمات</CardTitle></CardHeader>
+              <CardContent>
+                {(profile?.organizationHistory ?? []).length === 0 ? (
+                  <p className="text-muted-foreground text-sm">لا يوجد سجل انتساب.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {profile!.organizationHistory!.map(h => (
+                      <div key={h.id} className="flex items-center justify-between p-2.5 border rounded-lg">
+                        <div>
+                          <p className="text-sm font-medium">{h.organizationName || "منظمة"}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {formatDate(h.joinedAt)}{h.leftAt ? ` — ${formatDate(h.leftAt)}` : ""}
+                          </p>
+                        </div>
+                        <Badge variant={h.leftAt ? "secondary" : "default"} className="text-xs">{h.leftAt ? "سابقة" : "حالية"}</Badge>
                       </div>
                     ))}
                   </div>

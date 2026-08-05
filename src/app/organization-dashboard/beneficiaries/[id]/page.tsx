@@ -8,14 +8,16 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ArrowRight, BookOpen, Calendar, UserCheck, TrendingUp } from "lucide-react";
+import { ArrowRight, BookOpen, Calendar, UserCheck, TrendingUp, Building2 } from "lucide-react";
 
+type OrgHistoryEntry = { id: string; organizationId: string; organizationName: string; joinedAt: string | null; leftAt: string | null };
 type Profile = {
   id: string; name?: string; email?: string; progress?: number; status?: string;
   mentorId?: string; mentorName?: string; coachId?: string; coachName?: string;
   groupId?: string; phone?: string;
   sessions?: { id: string; title?: string; date?: any; status: string }[];
   enrolledCourses?: { id: string; title: string; progress: number; enrolledAt?: any }[];
+  organizationHistory?: OrgHistoryEntry[];
 };
 
 function safeFormat(dateVal?: any): string | null {
@@ -158,6 +160,30 @@ export default function BeneficiaryProfilePage() {
                           <Badge variant={s.status === 'completed' ? 'default' : s.status === 'cancelled' ? 'destructive' : 'secondary'} className="text-xs gap-1">
                             {s.status === 'completed' ? 'مكتملة' : s.status === 'cancelled' ? 'ملغاة' : 'مجدولة'}
                           </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Organization History */}
+              <Card className="border-0 shadow-sm">
+                <CardHeader><CardTitle className="text-base flex items-center gap-2"><Building2 className="h-4 w-4" />سجل الانتساب للمنظمات</CardTitle></CardHeader>
+                <CardContent>
+                  {(profile?.organizationHistory ?? []).length === 0 ? (
+                    <p className="text-muted-foreground text-sm">لا يوجد سجل انتساب.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {profile!.organizationHistory!.map(h => (
+                        <div key={h.id} className="flex items-center justify-between p-2.5 rounded border">
+                          <div>
+                            <p className="text-sm font-medium">{h.organizationName || "منظمة"}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {safeFormat(h.joinedAt) || "—"}{h.leftAt ? ` — ${safeFormat(h.leftAt)}` : ""}
+                            </p>
+                          </div>
+                          <Badge variant={h.leftAt ? "secondary" : "default"} className="text-xs">{h.leftAt ? "سابقة" : "حالية"}</Badge>
                         </div>
                       ))}
                     </div>

@@ -15,10 +15,26 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useUser } from "@/firebase/auth/use-user";
 import { uploadFile as uploadToStorage } from "@/lib/upload-file";
-import { User, Bell, Shield, Palette, Globe, Camera, Loader2, Save, BookOpen, Target } from "lucide-react";
+import { User, Bell, Shield, Palette, Globe, Camera, Loader2, Save, BookOpen, Target, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+
+interface OrgHistoryEntry {
+  id: string;
+  organizationId: string;
+  organizationName: string;
+  joinedAt: string | null;
+  leftAt: string | null;
+}
+
+function formatOrgDate(dateVal?: string | null): string {
+  if (!dateVal) return "—";
+  const d = new Date(dateVal);
+  if (isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric' });
+}
 
 const profileSchema = z.object({
   name: z.string().min(2, { message: "يجب أن يكون الاسم حرفين على الأقل." }),
@@ -45,6 +61,8 @@ export default function BeneficiarySettingsPage() {
   const [notifications, setNotifications] = useState({
     email: true, sessions: true, courses: false, store: true,
   });
+  const [orgHistory, setOrgHistory] = useState<OrgHistoryEntry[]>([]);
+  const [orgHistoryLoading, setOrgHistoryLoading] = useState(true);
 
   const name = userProfile?.name || "مستفيد";
   const email = userProfile?.email || "";
@@ -74,6 +92,21 @@ export default function BeneficiarySettingsPage() {
       });
     }
   }, [userProfile, form]);
+
+  useEffect(() => {
+    if (!authUser) return;
+    (async () => {
+      try {
+        const token = await authUser.getIdToken();
+        const res = await fetch(`/api/org/user-profile?userId=${authUser.uid}`, {
+          headers: { authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        setOrgHistory(data.profile?.organizationHistory || []);
+      } catch {}
+      finally { setOrgHistoryLoading(false); }
+    })();
+  }, [authUser]);
 
   async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -224,6 +257,41 @@ export default function BeneficiarySettingsPage() {
                   </FormItem>
                 )} />
               </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Building2 className="h-4 w-4 text-primary" />
+                منظمتي
+              </CardTitle>
+              <CardDescription>المنظمة التي تنتمي إليها حالياً وسجل انضمامك السابق</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {orgHistoryLoading ? (
+                <Skeleton className="h-16 w-full" />
+              ) : orgHistory.length === 0 ? (
+                <p className="text-sm text-muted-foreground">لست منضماً لأي منظمة حالياً.</p>
+              ) : (
+                orgHistory.map(entry => (
+                  <div
+                    key={entry.id}
+                    className={`flex items-center justify-between p-3 rounded-lg ${entry.leftAt ? 'bg-muted/40' : 'bg-primary/5 border border-primary/15'}`}
+                  >
+                    <div>
+                      <p className="text-sm font-semibold">{entry.organizationName || 'منظمة'}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        انضممت في {formatOrgDate(entry.joinedAt)}
+                        {entry.leftAt ? ` — غادرت في ${formatOrgDate(entry.leftAt)}` : ''}
+                      </p>
+                    </div>
+                    <Badge variant={entry.leftAt ? 'secondary' : 'default'} className="text-xs shrink-0">
+                      {entry.leftAt ? 'سابقة' : 'حالية'}
+                    </Badge>
+                  </div>
+                ))
+              )}
             </CardContent>
           </Card>
 
