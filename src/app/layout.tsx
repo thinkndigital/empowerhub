@@ -12,6 +12,12 @@ import { adminDb } from '@/lib/firebase-admin';
 // change on the next deploy. unstable_cache gives it ISR-style
 // revalidation instead, so an admin's upload shows up within a minute
 // without needing a redeploy.
+// Without this, routes with no other dynamic API calls get fully static-
+// prerendered at build time — unstable_cache's revalidate option alone does
+// NOT make Next re-invoke this layout on a schedule, so the logo/brand color
+// baked into the static HTML would never update until the next deploy.
+export const revalidate = 60;
+
 const getCachedPlatformBrand = unstable_cache(
   async () => {
     try {
