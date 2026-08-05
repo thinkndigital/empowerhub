@@ -78,16 +78,16 @@ export function SiteHeader() {
         </nav>
 
         <div className="hidden md:flex items-center gap-2 mr-auto">
-          <Button variant="ghost" size="sm" asChild className="text-sm font-medium">
+          <Button variant="ghost" size="sm" asChild className="text-sm font-medium rounded-full">
             <Link href="/login">تسجيل الدخول</Link>
           </Button>
-          <Button size="sm" asChild>
+          <Button size="sm" asChild className="rounded-full px-5">
             <Link href="/register">ابدأ مجاناً</Link>
           </Button>
         </div>
 
         <div className="flex items-center gap-2 mr-auto md:hidden">
-          <Button size="sm" asChild className="text-xs px-3 h-8">
+          <Button size="sm" asChild className="text-xs px-3.5 h-8 rounded-full">
             <Link href="/register">ابدأ</Link>
           </Button>
           <button

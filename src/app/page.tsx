@@ -7,12 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Logo } from '@/components/logo';
 import { usePlatformBrand } from '@/components/platform-brand-provider';
 import { SiteHeader } from '@/components/site-header';
+import { SiteFooter } from '@/components/site-footer';
 import {
   ArrowLeft, BookOpen, Store, GraduationCap, CheckCircle,
-  Star, MessageSquare, Phone, Mail, Globe, Calendar, Clock,
+  Star, MessageSquare, Phone, Mail, Calendar, Clock,
   Tag, MapPin, FileText, Briefcase, Video, Building2, Users, BarChart3,
   Zap, Crown, Check, ClipboardCheck, TrendingUp, ShoppingBag, HelpCircle,
   Sparkles,
@@ -801,40 +801,40 @@ export default function LandingPage() {
 
         {/* ── Hero ────────────────────────────────────────────────────────────── */}
         <section
-          className="relative min-h-[85vh] lg:min-h-screen flex items-center overflow-hidden bg-background"
+          className="grain-overlay relative flex items-center overflow-hidden bg-gradient-to-b from-foreground via-foreground to-primary"
           style={sectionStyle('hero').bg ? { backgroundColor: sectionStyle('hero').bg } : undefined}
         >
           {/* Mesh gradient backdrop */}
           <div className="absolute inset-0 pointer-events-none overflow-hidden">
-            <div className="absolute -top-24 right-1/4 w-[600px] h-[600px] bg-primary/10 rounded-full blur-[120px]" />
-            <div className="absolute top-1/3 -left-24 w-[500px] h-[500px] bg-violet-500/8 rounded-full blur-[120px]" />
-            <div className="absolute bottom-0 right-0 w-[450px] h-[450px] bg-sky-500/8 rounded-full blur-[120px]" />
+            <div className="absolute -top-24 right-1/4 w-[600px] h-[600px] bg-primary/25 rounded-full blur-[120px]" />
+            <div className="absolute top-1/3 -left-24 w-[500px] h-[500px] bg-white/5 rounded-full blur-[120px]" />
+            <div className="absolute bottom-0 right-0 w-[450px] h-[450px] bg-primary/20 rounded-full blur-[120px]" />
           </div>
           {/* Faint grid, fades toward the edges */}
           <div
-            className="absolute inset-0 opacity-[0.03] pointer-events-none [mask-image:radial-gradient(ellipse_60%_50%_at_50%_40%,black,transparent)]"
+            className="absolute inset-0 opacity-[0.05] pointer-events-none [mask-image:radial-gradient(ellipse_60%_50%_at_50%_40%,black,transparent)]"
             style={{
-              backgroundImage: 'linear-gradient(hsl(var(--border)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--border)) 1px, transparent 1px)',
+              backgroundImage: 'linear-gradient(hsl(0 0% 100% / 0.4) 1px, transparent 1px), linear-gradient(90deg, hsl(0 0% 100% / 0.4) 1px, transparent 1px)',
               backgroundSize: '64px 64px',
             }}
           />
 
-          <div className="relative z-10 container py-16 sm:py-20 lg:py-28">
+          <div className="relative z-10 container py-16 sm:py-20 lg:py-24">
             <div className="flex flex-col items-center max-w-3xl mx-auto text-center">
 
               {/* Tagline pill */}
-              <div className="animate-fade-in-up inline-flex items-center gap-2 text-xs font-medium text-muted-foreground border border-border/80 rounded-full px-3.5 py-1.5 mb-6 sm:mb-8 bg-card/60 backdrop-blur-sm">
-                <Sparkles className="h-3 w-3 text-primary shrink-0" />
+              <div className="animate-fade-in-up inline-flex items-center gap-2 text-xs font-medium text-white/80 border border-white/15 rounded-full px-3.5 py-1.5 mb-6 sm:mb-8 bg-white/10 backdrop-blur-sm">
+                <Sparkles className="h-3 w-3 text-white shrink-0" />
                 <span className="truncate">{cfg?.tagline || 'منصة التمكين الرقمي الشاملة'}</span>
               </div>
 
               {/* Headline */}
-              <h1 className="animate-fade-in-up delay-100 text-4xl sm:text-5xl md:text-6xl lg:text-[4.25rem] font-extrabold tracking-tight text-foreground leading-[1.08] mb-5 sm:mb-6 text-balance">
+              <h1 className="animate-fade-in-up delay-100 text-4xl sm:text-5xl md:text-6xl lg:text-[4.25rem] font-extrabold tracking-tight text-white leading-[1.08] mb-5 sm:mb-6 text-balance">
                 {heroTitle}
               </h1>
 
               {/* Subtitle */}
-              <p className="animate-fade-in-up delay-200 text-base sm:text-lg text-muted-foreground max-w-xl leading-relaxed mb-8 sm:mb-10 text-balance">
+              <p className="animate-fade-in-up delay-200 text-base sm:text-lg text-white/60 max-w-xl leading-relaxed mb-8 sm:mb-10 text-balance">
                 {heroSubtitle}
               </p>
 
@@ -846,7 +846,11 @@ export default function LandingPage() {
                     size="lg"
                     variant={btn.style === 'outline' ? 'outline' : 'default'}
                     asChild
-                    className={`h-12 px-7 text-base font-semibold shadow-sm w-full sm:w-auto ${btn.style !== 'outline' ? 'bg-gradient-to-t from-primary to-primary/80 hover:to-primary hover:shadow-lg hover:shadow-primary/20' : ''}`}
+                    className={`h-12 px-7 text-base font-semibold rounded-full w-full sm:w-auto ${
+                      btn.style === 'outline'
+                        ? 'border-white/25 text-white bg-transparent hover:bg-white/10 hover:text-white'
+                        : 'bg-white text-foreground hover:bg-white/90 shadow-lg shadow-black/10'
+                    }`}
                   >
                     <Link href={btn.link || '/register'}>
                       {btn.text}
@@ -857,88 +861,66 @@ export default function LandingPage() {
               </div>
 
               {/* Trust strip */}
-              <div className="animate-fade-in-up delay-400 flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs sm:text-sm text-muted-foreground mb-14 sm:mb-16">
+              <div className="animate-fade-in-up delay-400 flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs sm:text-sm text-white/60 mb-14 sm:mb-16">
                 {['مجاني تماماً للبدء', 'لا يتطلب بطاقة ائتمان', 'دعم باللغة العربية'].map((t, i) => (
                   <div key={i} className="flex items-center gap-1.5">
-                    <CheckCircle className="h-3.5 w-3.5 text-primary shrink-0" />
+                    <CheckCircle className="h-3.5 w-3.5 text-white shrink-0" />
                     <span>{t}</span>
                   </div>
                 ))}
               </div>
 
-              {/* ── Visual — Dashboard mockup, full-width panel below ── */}
-              <div className="animate-fade-in-up delay-500 w-full flex items-center justify-center">
+              {/* ── Interactive product preview — pick a role, see its dashboard ── */}
+              <div className="animate-fade-in-up delay-500 w-full flex flex-col items-center">
                 <div className="relative w-full max-w-lg">
                   {/* Glow behind card */}
-                  <div className="absolute inset-6 bg-primary/10 rounded-3xl blur-2xl pointer-events-none" />
+                  <div className="absolute inset-6 bg-white/15 rounded-3xl blur-2xl pointer-events-none" />
 
-                  {/* Main dashboard card */}
-                  <div className="relative rounded-2xl border border-border bg-card shadow-2xl p-5 flex flex-col gap-4">
+                  {/* Browser-less screenshot card */}
+                  <div className="relative rounded-2xl bg-card shadow-2xl p-5 flex flex-col gap-4 text-right">
+                    {(() => {
+                      const tour = tourRoles[activeTour];
+                      return (
+                        <>
+                          {/* Top bar */}
+                          <div className="flex items-center justify-between pb-3 border-b border-border">
+                            <span className="text-sm font-bold text-foreground flex items-center gap-1.5">
+                              <tour.icon className="h-4 w-4 text-primary" />
+                              لوحة {tour.label}
+                            </span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="h-2 w-2 rounded-full bg-green-500" />
+                              <span className="text-xs text-muted-foreground">نشط</span>
+                            </div>
+                          </div>
 
-                    {/* Top bar */}
-                    <div className="flex items-center justify-between pb-3 border-b border-border">
-                      <span className="text-sm font-bold text-foreground">لوحة التحكم</span>
-                      <div className="flex items-center gap-1.5">
-                        <span className="h-2 w-2 rounded-full bg-green-500" />
-                        <span className="text-xs text-muted-foreground">نشط</span>
-                      </div>
-                    </div>
+                          {/* Stats row */}
+                          <div className="grid grid-cols-3 gap-2">
+                            {tour.stats.map((s, si) => (
+                              <div key={si} className="bg-muted/50 rounded-xl p-2.5 text-center">
+                                <div className="text-lg font-extrabold text-primary tabular-nums leading-none mb-0.5">{s.value}</div>
+                                <div className="text-[10px] text-muted-foreground">{s.label}</div>
+                              </div>
+                            ))}
+                          </div>
 
-                    {/* Profile row */}
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-primary/15 flex items-center justify-center shrink-0 text-sm font-extrabold text-primary">ن</div>
-                      <div>
-                        <p className="text-sm font-semibold text-foreground">مرحباً، نور! 👋</p>
-                        <p className="text-xs text-muted-foreground">مشروعك المنزلي ينمو</p>
-                      </div>
-                    </div>
-
-                    {/* Stats row */}
-                    <div className="grid grid-cols-3 gap-2">
-                      {[
-                        { label: 'المبيعات', value: '١٢٤٠', color: 'text-primary' },
-                        { label: 'الدورات', value: '٥', color: 'text-sky-500' },
-                        { label: 'الجلسات', value: '١٢', color: 'text-amber-500' },
-                      ].map((s, idx) => (
-                        <div key={idx} className="bg-muted/50 rounded-xl p-2.5 text-center">
-                          <div className={`text-lg font-extrabold ${s.color} tabular-nums leading-none mb-0.5`}>{s.value}</div>
-                          <div className="text-[10px] text-muted-foreground">{s.label}</div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Progress bar */}
-                    <div>
-                      <div className="flex justify-between text-[10px] text-muted-foreground mb-1.5">
-                        <span>تقدم دورة التسويق الرقمي</span>
-                        <span className="font-semibold text-primary">٧٥٪</span>
-                      </div>
-                      <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                        <div className="h-full w-3/4 bg-primary rounded-full" />
-                      </div>
-                    </div>
-
-                    {/* Upcoming session */}
-                    <div className="flex items-center gap-3 p-3 rounded-xl bg-primary/5 border border-primary/15">
-                      <div className="h-8 w-8 rounded-full bg-primary/15 flex items-center justify-center shrink-0 text-xs font-bold text-primary">س</div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-foreground truncate">جلسة مع المرشدة سارة</p>
-                        <p className="text-[10px] text-muted-foreground">اليوم — ٣:٠٠ مساءً</p>
-                      </div>
-                      <span className="text-[10px] font-semibold text-primary bg-primary/10 rounded-full px-2 py-0.5 shrink-0">قريباً</span>
-                    </div>
-
-                    {/* New store order */}
-                    <div className="flex items-center gap-3 p-3 rounded-xl bg-amber-500/5 border border-amber-500/15">
-                      <div className="h-8 w-8 rounded-full bg-amber-500/15 flex items-center justify-center shrink-0">
-                        <Store className="h-3.5 w-3.5 text-amber-600" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-foreground">طلب جديد في متجرك!</p>
-                        <p className="text-[10px] text-muted-foreground">منتج يدوي — ٢٥ د.أ</p>
-                      </div>
-                      <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
-                    </div>
+                          {/* Item rows */}
+                          <div className="space-y-2">
+                            {tour.items.map((it, ii) => (
+                              <div key={ii} className="flex items-center gap-3 p-2.5 rounded-xl bg-muted/30">
+                                <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                                  <it.icon className="h-4 w-4 text-primary" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs font-semibold text-foreground truncate">{it.title}</p>
+                                  <p className="text-[10px] text-muted-foreground truncate">{it.subtitle}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      );
+                    })()}
                   </div>
 
                   {/* Floating badge top */}
@@ -953,6 +935,22 @@ export default function LandingPage() {
                     <span className="text-xs font-semibold text-foreground whitespace-nowrap">٤.٩ تقييم المستفيدين</span>
                   </div>
                 </div>
+
+                {/* Role toggle — switches the screenshot above */}
+                <div className="mt-8 inline-flex items-center gap-1 bg-white/10 border border-white/15 backdrop-blur-sm rounded-full p-1">
+                  {tourRoles.map((r, i) => (
+                    <button
+                      key={r.key}
+                      onClick={() => setActiveTour(i)}
+                      className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs sm:text-sm font-semibold transition-all ${
+                        activeTour === i ? 'bg-white text-foreground shadow-sm' : 'text-white/70 hover:text-white'
+                      }`}
+                    >
+                      <r.icon className="h-3.5 w-3.5" />
+                      {r.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
             </div>
@@ -962,22 +960,17 @@ export default function LandingPage() {
         {/* ── Impact Strip ────────────────────────────────────────────────────── */}
         {sections.showStats && (
           <section
-            className="border-y border-border"
+            className="py-10 sm:py-12 border-b border-border"
             style={sectionStyle('stats').bg ? { backgroundColor: sectionStyle('stats').bg } : undefined}
           >
-            {/* gap-px + bg-border creates 1px dividers in all directions regardless of RTL */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-border">
+            <div className="container grid grid-cols-2 md:grid-cols-4 divide-x divide-x-reverse divide-border">
               {statsData.map((s, i) => {
                 const StatIcon = getDynamicIcon(s.icon);
                 const iconColor = sectionStyle('stats').iconColor;
                 return (
-                  <div
-                    key={i}
-                    className={`text-center py-8 sm:py-10 px-4 sm:px-6 ${sectionStyle('stats').bg ? '' : 'bg-card'}`}
-                    style={sectionStyle('stats').bg ? { backgroundColor: sectionStyle('stats').bg } : undefined}
-                  >
-                    <StatIcon className="h-5 w-5 mx-auto mb-2 text-primary" style={iconColor ? { color: iconColor } : undefined} />
-                    <div className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-foreground tabular-nums tracking-tight mb-1.5">
+                  <div key={i} className="text-center px-3 sm:px-6">
+                    <StatIcon className="h-4 w-4 mx-auto mb-2 text-muted-foreground" style={iconColor ? { color: iconColor } : undefined} />
+                    <div className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-foreground tabular-nums tracking-tighter mb-1.5">
                       {s.value}
                     </div>
                     <div className="text-xs sm:text-sm text-muted-foreground">{s.label}</div>
@@ -995,32 +988,104 @@ export default function LandingPage() {
             style={sectionStyle('features').bg ? { backgroundColor: sectionStyle('features').bg } : undefined}
           >
             <div className="container">
-              <div className="text-center mb-12 sm:mb-16">
-                <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">لماذا EmpowerHub</p>
-                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground">مميزات تصنع فرقاً حقيقياً</h2>
+              <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5 mb-10 sm:mb-14">
+                <div>
+                  <p className="inline-flex items-center gap-2 text-xs font-semibold text-muted-foreground mb-3">
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                    لماذا EmpowerHub
+                  </p>
+                  <h2 className="text-3xl sm:text-4xl md:text-[2.75rem] font-extrabold tracking-tight text-foreground leading-[1.1] max-w-xl text-balance">
+                    مميزات تصنع فرقاً حقيقياً في رحلتك
+                  </h2>
+                </div>
+                <p className="text-muted-foreground text-sm sm:text-base leading-relaxed max-w-sm">
+                  كل أداة في المنصة مصممة لتساعدك تتقدم فعلياً — لا مجرد استخدام تطبيق آخر.
+                </p>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {featuresData.map((f, i) => {
-                  const FeatureIcon = getDynamicIcon(f.icon);
-                  const iconColor = sectionStyle('features').iconColor;
-                  return (
-                    <div
-                      key={i}
-                      className={`animate-fade-in-up delay-${Math.min((i + 1) * 100, 500)} group relative p-6 rounded-2xl border border-border bg-card overflow-hidden hover:border-primary/30 hover:shadow-lg hover:-translate-y-1 transition-all duration-300`}
-                    >
-                      <div className="absolute -top-10 -left-10 h-24 w-24 rounded-full bg-primary/5 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                      <div className="relative h-11 w-11 rounded-xl bg-primary/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
-                        <FeatureIcon className="h-5 w-5 text-primary" style={iconColor ? { color: iconColor } : undefined} />
+
+              {/* Row 1 — proof card (gradient) + flat card */}
+              {featuresData.length >= 2 && (() => {
+                const iconColor = sectionStyle('features').iconColor;
+                const Icon0 = getDynamicIcon(featuresData[0].icon);
+                const Icon1 = getDynamicIcon(featuresData[1].icon);
+                return (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
+                    <div className="grain-overlay relative rounded-3xl p-8 sm:p-10 min-h-[280px] flex flex-col justify-end overflow-hidden bg-gradient-to-br from-primary via-primary to-violet-600">
+                      <div className="relative z-10 h-12 w-12 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center mb-5">
+                        <Icon0 className="h-6 w-6 text-white" style={iconColor ? { color: iconColor } : undefined} />
                       </div>
-                      <h3 className="relative text-base font-bold text-foreground mb-2">{f.title}</h3>
-                      <p className="relative text-sm text-muted-foreground leading-relaxed">{f.description}</p>
+                      <h3 className="relative z-10 text-xl sm:text-2xl font-bold text-white mb-2">{featuresData[0].title}</h3>
+                      <p className="relative z-10 text-sm sm:text-base text-white/75 leading-relaxed max-w-sm">{featuresData[0].description}</p>
                     </div>
-                  );
-                })}
-              </div>
+                    <div className="relative rounded-3xl p-8 sm:p-10 min-h-[280px] flex flex-col justify-end bg-muted/50">
+                      <div className="h-12 w-12 rounded-2xl bg-background flex items-center justify-center mb-5">
+                        <Icon1 className="h-6 w-6 text-primary" style={iconColor ? { color: iconColor } : undefined} />
+                      </div>
+                      <h3 className="text-xl sm:text-2xl font-bold text-foreground mb-2">{featuresData[1].title}</h3>
+                      <p className="text-sm sm:text-base text-muted-foreground leading-relaxed max-w-sm">{featuresData[1].description}</p>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Row 2 — remaining features, flat 3-col */}
+              {featuresData.length > 2 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {featuresData.slice(2).map((f, i) => {
+                    const FeatureIcon = getDynamicIcon(f.icon);
+                    const iconColor = sectionStyle('features').iconColor;
+                    return (
+                      <div key={i} className="p-6 rounded-2xl bg-muted/40">
+                        <div className="h-11 w-11 rounded-xl bg-background flex items-center justify-center mb-4">
+                          <FeatureIcon className="h-5 w-5 text-primary" style={iconColor ? { color: iconColor } : undefined} />
+                        </div>
+                        <h3 className="text-base font-bold text-foreground mb-2">{f.title}</h3>
+                        <p className="text-sm text-muted-foreground leading-relaxed">{f.description}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </section>
         )}
+
+        {/* ── AI Spotlight (dark) ──────────────────────────────────────────────── */}
+        <section className="grain-overlay relative overflow-hidden bg-foreground py-16 sm:py-20 md:py-28">
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-primary/25 rounded-full blur-[140px]" />
+          </div>
+          <div className="relative container">
+            <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-16">
+              <p className="inline-flex items-center gap-2 text-xs font-semibold text-white/50 mb-4">
+                <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                مدعوم بالذكاء الاصطناعي
+              </p>
+              <h2 className="text-3xl sm:text-4xl md:text-[2.75rem] font-extrabold tracking-tight leading-[1.1] mb-4 text-balance">
+                <span className="text-white">توصيات ذكية تسبقك خطوة.</span>
+              </h2>
+              <p className="text-white/60 text-sm sm:text-base leading-relaxed">
+                يحلل EmpowerHub تقدمك وأهدافك ليقترح عليك الدورة، المرشد، أو الفرصة التالية — بدل أن تبحث عنها بنفسك.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-4xl mx-auto">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 sm:p-7">
+                <div className="h-10 w-10 rounded-xl bg-primary/20 flex items-center justify-center mb-4">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                </div>
+                <h3 className="text-base font-bold text-white mb-2">مسار تعلّم مخصص</h3>
+                <p className="text-sm text-white/60 leading-relaxed">يقترح عليك الدورات والجلسات الأنسب لهدفك ومستواك الحالي، ويحدّثها كلما تقدمت.</p>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 sm:p-7">
+                <div className="h-10 w-10 rounded-xl bg-primary/20 flex items-center justify-center mb-4">
+                  <BarChart3 className="h-5 w-5 text-primary" />
+                </div>
+                <h3 className="text-base font-bold text-white mb-2">تحليلات تقدم واضحة</h3>
+                <p className="text-sm text-white/60 leading-relaxed">تقارير مرئية تُظهر ما أنجزته وما تحتاج التركيز عليه بعد ذلك — لا أرقام مبعثرة.</p>
+              </div>
+            </div>
+          </div>
+        </section>
 
         {/* ── How It Works ────────────────────────────────────────────────────── */}
         {sections.showHowItWorks && howItWorksData.length > 0 && (
@@ -1084,7 +1149,7 @@ export default function LandingPage() {
                 <Link
                   key={i}
                   href={svc.link}
-                  className="group p-5 rounded-2xl bg-card border border-border hover:border-primary/30 hover:shadow-md transition-all duration-200 flex flex-col gap-4"
+                  className="group p-5 rounded-2xl bg-card hover:bg-card/70 transition-colors duration-200 flex flex-col gap-4"
                 >
                   <div className={`h-10 w-10 rounded-xl ${svc.color} flex items-center justify-center shrink-0`}>
                     <svc.icon className="h-5 w-5" />
@@ -1583,17 +1648,17 @@ export default function LandingPage() {
               </div>
               <div className="flex gap-5 overflow-x-auto pb-3 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {testimonialsData.map((t, i) => (
-                  <div key={i} className="group relative w-[82vw] sm:w-80 lg:w-96 shrink-0 snap-start flex flex-col gap-4 sm:gap-5 p-6 sm:p-7 rounded-2xl border border-border bg-card hover:border-primary/25 hover:shadow-lg transition-all duration-300">
+                  <div key={i} className="group relative w-[82vw] sm:w-80 lg:w-96 shrink-0 snap-start flex flex-col gap-4 sm:gap-5 p-6 sm:p-7 rounded-2xl bg-card transition-shadow duration-300 hover:shadow-xl">
                     <span className="absolute top-5 left-6 text-6xl font-serif leading-none text-primary/10 select-none pointer-events-none" aria-hidden="true">&rdquo;</span>
                     <div className="flex gap-0.5">
                       {Array.from({ length: Math.min(5, Math.max(1, t.stars)) }).map((_, j) => (
                         <Star key={j} className="h-3.5 w-3.5 text-amber-400 fill-amber-400" />
                       ))}
                     </div>
-                    <blockquote className="relative text-base text-foreground leading-relaxed font-medium flex-grow">
+                    <blockquote className="relative text-lg text-foreground leading-relaxed font-medium flex-grow">
                       &ldquo;{t.text}&rdquo;
                     </blockquote>
-                    <div className="flex items-center gap-3 pt-4 border-t border-border">
+                    <div className="flex items-center gap-3 pt-4 border-t border-border/60">
                       <div className="h-9 w-9 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0">
                         {t.name[0]}
                       </div>
@@ -1963,12 +2028,12 @@ export default function LandingPage() {
                     size="lg"
                     variant="outline"
                     asChild
-                    className={`h-12 px-7 text-base w-full sm:w-auto ${cfg?.ctaBanner?.backgroundColor ? 'border-white/30 text-white hover:bg-white/10' : 'border-background/30 text-background hover:bg-background/10'}`}
+                    className={`h-12 px-7 text-base rounded-full w-full sm:w-auto ${cfg?.ctaBanner?.backgroundColor ? 'border-white/30 text-white hover:bg-white/10' : 'border-background/30 text-background hover:bg-background/10'}`}
                   >
                     <Link href={btn.link || '/try-roles'}>{btn.text}</Link>
                   </Button>
                 ) : (
-                  <Button key={i} size="lg" variant="secondary" asChild className="h-12 px-7 text-base font-semibold text-foreground w-full sm:w-auto">
+                  <Button key={i} size="lg" variant="secondary" asChild className="h-12 px-7 text-base font-semibold text-foreground rounded-full w-full sm:w-auto">
                     <Link href={btn.link || '/register'}>
                       {btn.text}
                       <ArrowLeft className="mr-2 h-4 w-4" />
@@ -2036,62 +2101,7 @@ export default function LandingPage() {
         />
       )}
 
-      {/* ── Footer ──────────────────────────────────────────────────────────── */}
-      <footer className="py-12 sm:py-14 border-t bg-card">
-        <div className="container">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 sm:gap-10 mb-8 sm:mb-10">
-            <div className="sm:col-span-2 md:col-span-1">
-              <div className="flex items-center gap-2 mb-3">
-                {logoSrc
-                  ? <img src={logoSrc} alt="logo" className="h-6 w-6 object-contain" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                  : <Logo className="h-6 w-6" />}
-                <span className="font-bold text-base text-foreground">{cfg?.siteName || 'EmpowerHub'}</span>
-              </div>
-              <p className="text-sm text-muted-foreground leading-relaxed max-w-xs">
-                {footerData.description}
-              </p>
-            </div>
-            <div>
-              <h4 className="text-sm font-semibold text-foreground mb-4">روابط سريعة</h4>
-              <div className="flex flex-col gap-2.5 text-sm text-muted-foreground">
-                <Link href="#how-it-works" className="hover:text-foreground transition-colors">كيف تعمل</Link>
-                <Link href="#modules" className="hover:text-foreground transition-colors">الخدمات</Link>
-                <Link href="/market" className="hover:text-foreground transition-colors">المتجر</Link>
-                <Link href="/try-roles" className="hover:text-foreground transition-colors">تجربة المنصة</Link>
-                <Link href="/login" className="hover:text-foreground transition-colors">تسجيل الدخول</Link>
-              </div>
-            </div>
-            <div>
-              <h4 className="text-sm font-semibold text-foreground mb-4">قانوني</h4>
-              <div className="flex flex-col gap-2.5 text-sm text-muted-foreground">
-                <Link href="#" className="hover:text-foreground transition-colors">سياسة الخصوصية</Link>
-                <Link href="#" className="hover:text-foreground transition-colors">شروط الاستخدام</Link>
-                <Link href="#contact" className="hover:text-foreground transition-colors">تواصل معنا</Link>
-              </div>
-            </div>
-          </div>
-          <div className="border-t pt-5 sm:pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <p className="text-xs text-muted-foreground text-center sm:text-right">
-              {footerData.copyright || '© 2024 EmpowerHub. جميع الحقوق محفوظة.'}
-            </p>
-            <div className="flex items-center gap-4">
-              {footerData.twitter && (
-                <a href={footerData.twitter} target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:text-foreground transition-colors">تويتر</a>
-              )}
-              {footerData.linkedin && (
-                <a href={footerData.linkedin} target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:text-foreground transition-colors">LinkedIn</a>
-              )}
-              {footerData.instagram && (
-                <a href={footerData.instagram} target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:text-foreground transition-colors">Instagram</a>
-              )}
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Globe className="h-3 w-3" />
-                <span>مدعوم بالذكاء الاصطناعي</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter siteName={cfg?.siteName} footerData={footerData} logoUrl={logoSrc} />
     </div>
   );
 }
