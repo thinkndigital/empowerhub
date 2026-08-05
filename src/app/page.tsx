@@ -264,7 +264,13 @@ function AutoCarousel({ children, count }: { children: React.ReactNode; count: n
     const el = containerRef.current;
     if (!el || count === 0) return;
     const child = el.children[active] as HTMLElement;
-    if (child) el.scrollTo({ left: child.offsetLeft, behavior: 'smooth' });
+    if (!child) return;
+    // offsetLeft/scrollLeft disagree on sign conventions across browsers in
+    // RTL, so measure the actual on-screen gap instead — this scrolls only
+    // this container (never the page) and works the same regardless of dir.
+    const elRect = el.getBoundingClientRect();
+    const childRect = child.getBoundingClientRect();
+    el.scrollBy({ left: childRect.right - elRect.right, behavior: 'smooth' });
   }, [active, count]);
 
   const dotCount = Math.min(count, 8);
@@ -272,7 +278,7 @@ function AutoCarousel({ children, count }: { children: React.ReactNode; count: n
     <div>
       <div
         ref={containerRef}
-        dir="ltr"
+        dir="rtl"
         className="flex gap-4 overflow-x-auto pb-3 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {children}
