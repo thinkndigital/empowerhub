@@ -24,6 +24,7 @@ export async function GET(req: NextRequest) {
           price: cd.price ?? null,
           coverImageUrl: cd.coverImageUrl || cd.imageUrl || '',
           duration: cd.duration || '',
+          category: cd.category || '',
           createdBy: cd.createdBy || '',
           coachName: cd.coachName || '',
           enrollmentCount: cd.enrollmentCount || cd.enrolledCount || 0,

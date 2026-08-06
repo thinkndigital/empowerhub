@@ -19,6 +19,7 @@ import Link from "next/link";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { COURSE_CATEGORIES } from "@/lib/course-category";
 import { Separator } from "@/components/ui/separator";
 
 const courseEditSchema = z.object({
@@ -394,7 +395,21 @@ export default function CourseEditPage({ params }: { params: { courseId: string 
                 <FormItem><FormLabel>عنوان الدورة <span className="text-red-500">*</span></FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
               )} />
               <FormField control={form.control} name="category" render={({ field }) => (
-                <FormItem><FormLabel>الفئة <span className="text-red-500">*</span></FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem>
+                  <FormLabel>الفئة <span className="text-red-500">*</span></FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger><SelectValue placeholder="اختر الفئة" /></SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {COURSE_CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                      {field.value && !COURSE_CATEGORIES.includes(field.value) && (
+                        <SelectItem value={field.value}>{field.value}</SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
               )} />
             </div>
             <FormField control={form.control} name="description" render={({ field }) => (

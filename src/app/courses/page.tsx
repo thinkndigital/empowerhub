@@ -7,6 +7,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { BookOpen, Users, Clock } from "lucide-react";
+import { COURSE_CATEGORIES } from "@/lib/course-category";
 
 interface Course {
   id: string;
@@ -21,6 +22,7 @@ interface Course {
   level: string;
   language: string;
   tags: string[];
+  category: string;
 }
 
 const LEVELS = ['الكل', 'مبتدئ', 'متوسط', 'متقدم'];
@@ -29,6 +31,7 @@ export default function CoursesPage() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [levelFilter, setLevelFilter] = useState('الكل');
+  const [categoryFilter, setCategoryFilter] = useState('الكل');
 
   useEffect(() => {
     async function fetchCourses() {
@@ -46,15 +49,20 @@ export default function CoursesPage() {
     fetchCourses();
   }, []);
 
-  const filtered = levelFilter === 'الكل'
-    ? courses
-    : courses.filter(c => c.level === levelFilter);
+  const categoryOptions = ['الكل', ...Array.from(new Set([
+    ...COURSE_CATEGORIES,
+    ...courses.map(c => c.category).filter(Boolean),
+  ]))];
+
+  const filtered = courses
+    .filter(c => levelFilter === 'الكل' || c.level === levelFilter)
+    .filter(c => categoryFilter === 'الكل' || c.category === categoryFilter);
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
       {/* Page header */}
       <div className="border-b border-border bg-muted/30">
-        <div className="max-w-5xl mx-auto px-4 py-10 sm:py-14">
+        <div className="container py-10 sm:py-14">
           <nav className="flex items-center gap-1.5 text-xs text-muted-foreground mb-5" aria-label="breadcrumb">
             <Link href="/" className="hover:text-primary transition-colors">الرئيسية</Link>
             <span className="text-border/80 select-none">/</span>
@@ -68,10 +76,21 @@ export default function CoursesPage() {
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 py-10">
-        {/* Filter */}
-        <div className="flex items-center gap-3 mb-8">
-          <span className="text-sm font-medium text-muted-foreground shrink-0">تصفية حسب المستوى:</span>
+      <div className="container py-10">
+        {/* Filters */}
+        <div className="flex flex-wrap items-center gap-3 mb-8">
+          <span className="text-sm font-medium text-muted-foreground shrink-0">تصفية حسب الفئة:</span>
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="w-56">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {categoryOptions.map(c => (
+                <SelectItem key={c} value={c}>{c}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <span className="text-sm font-medium text-muted-foreground shrink-0">المستوى:</span>
           <Select value={levelFilter} onValueChange={setLevelFilter}>
             <SelectTrigger className="w-40">
               <SelectValue />
@@ -86,7 +105,7 @@ export default function CoursesPage() {
 
         {/* Courses grid */}
         {loading ? (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {[...Array(6)].map((_, i) => (
               <div key={i} className="rounded-2xl border border-border overflow-hidden animate-pulse">
                 <div className="aspect-video bg-muted" />
@@ -102,7 +121,7 @@ export default function CoursesPage() {
             <p className="text-lg">لا توجد دورات في هذه الفئة حالياً</p>
           </div>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filtered.map(course => (
               <Link
                 key={course.id}
@@ -126,11 +145,18 @@ export default function CoursesPage() {
                 </div>
 
                 <div className="p-4 flex flex-col flex-1 gap-2">
-                  {course.level && (
-                    <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-primary/10 text-primary w-fit">
-                      {course.level}
-                    </span>
-                  )}
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {course.category && (
+                      <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-muted text-muted-foreground w-fit">
+                        {course.category}
+                      </span>
+                    )}
+                    {course.level && (
+                      <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-primary/10 text-primary w-fit">
+                        {course.level}
+                      </span>
+                    )}
+                  </div>
 
                   <h3 className="font-bold text-foreground line-clamp-2 group-hover:text-primary transition-colors">
                     {course.title}

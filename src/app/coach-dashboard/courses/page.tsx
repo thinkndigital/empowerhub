@@ -62,6 +62,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useUser } from "@/firebase/auth/use-user";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { COURSE_CATEGORIES } from "@/lib/course-category";
 import { useCurrency } from "@/hooks/use-currency";
 
 type Course = {
@@ -465,7 +466,17 @@ export default function CoachCoursesPage() {
                   <FormField control={addCourseForm.control} name="category" render={({ field }) => (
                     <FormItem>
                       <FormLabel>التخصص / الفئة <span className="text-red-500">*</span></FormLabel>
-                      <FormControl><Input placeholder="مثال: التسويق، البرمجة..." {...field} /></FormControl>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger><SelectValue placeholder="اختر الفئة" /></SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {COURSE_CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                          {field.value && !COURSE_CATEGORIES.includes(field.value) && (
+                            <SelectItem value={field.value}>{field.value}</SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )} />

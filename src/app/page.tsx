@@ -73,6 +73,7 @@ interface CourseItem {
   level?: string;
   language?: string;
   tags?: string[];
+  category?: string;
 }
 
 interface Product {
@@ -343,6 +344,11 @@ const CourseCard = ({ course, onEnroll, currencySymbol }: { course: CourseItem; 
         <span className="text-[11px] text-muted-foreground truncate">{course.coachName || 'مدرب'}</span>
       </div>
 
+      {/* Category */}
+      {course.category && (
+        <span className="text-[10px] font-medium text-primary/80 truncate">{course.category}</span>
+      )}
+
       {/* Title */}
       <h3 className="font-semibold text-sm leading-snug line-clamp-2 text-foreground group-hover:text-primary transition-colors">
         {course.title}
@@ -503,6 +509,7 @@ export default function LandingPage() {
   const [bookingHost, setBookingHost] = useState<MentorUser | null>(null);
   const [bookingRole, setBookingRole] = useState<'mentor' | 'coach'>('mentor');
   const [courseFilter, setCourseFilter] = useState<'all' | 'free' | 'paid'>('all');
+  const [courseCategoryFilter, setCourseCategoryFilter] = useState('الكل');
   const [sessionFilter, setSessionFilter] = useState<'all' | 'free' | 'paid'>('all');
   const [activeTour, setActiveTour] = useState(0);
   const [pricingCycle, setPricingCycle] = useState<'monthly' | 'annual'>('monthly');
@@ -1296,13 +1303,32 @@ export default function LandingPage() {
                   طور مهاراتك مع دوراتنا
                 </h2>
                 {!loadingCourses && courses.length > 0 && (
-                  <div className="inline-flex items-center gap-0.5 bg-muted/70 rounded-lg p-0.5 border border-border/50">
-                    {(['all', 'free', 'paid'] as const).map(f => (
-                      <button key={f} onClick={() => setCourseFilter(f)}
-                        className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${courseFilter === f ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
-                        {f === 'all' ? 'الكل' : f === 'free' ? 'مجاني' : 'مدفوع'}
-                      </button>
-                    ))}
+                  <div className="flex flex-col items-center gap-2.5">
+                    <div className="inline-flex items-center gap-0.5 bg-muted/70 rounded-lg p-0.5 border border-border/50">
+                      {(['all', 'free', 'paid'] as const).map(f => (
+                        <button key={f} onClick={() => setCourseFilter(f)}
+                          className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${courseFilter === f ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
+                          {f === 'all' ? 'الكل' : f === 'free' ? 'مجاني' : 'مدفوع'}
+                        </button>
+                      ))}
+                    </div>
+                    {(() => {
+                      const cats = Array.from(new Set(courses.map(c => c.category).filter(Boolean))) as string[];
+                      return cats.length > 1 ? (
+                        <div className="flex flex-wrap items-center justify-center gap-1.5">
+                          <button onClick={() => setCourseCategoryFilter('الكل')}
+                            className={`px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors ${courseCategoryFilter === 'الكل' ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:text-foreground'}`}>
+                            كل الفئات
+                          </button>
+                          {cats.map(cat => (
+                            <button key={cat} onClick={() => setCourseCategoryFilter(cat)}
+                              className={`px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors ${courseCategoryFilter === cat ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:text-foreground'}`}>
+                              {cat}
+                            </button>
+                          ))}
+                        </div>
+                      ) : null;
+                    })()}
                   </div>
                 )}
               </div>
@@ -1317,6 +1343,7 @@ export default function LandingPage() {
                 </div>
               ) : (() => {
                 const filtered = courses.filter(c => {
+                  if (courseCategoryFilter !== 'الكل' && c.category !== courseCategoryFilter) return false;
                   if (courseFilter === 'free') return c.price === 0 || c.price == null;
                   if (courseFilter === 'paid') return c.price != null && c.price > 0;
                   return true;
@@ -1324,7 +1351,7 @@ export default function LandingPage() {
                 return filtered.length === 0 ? (
                   <div className="py-12 text-center text-muted-foreground">
                     <BookOpen className="h-10 w-10 mx-auto mb-3 opacity-20" />
-                    <p className="text-sm">لا توجد دورات {courseFilter === 'free' ? 'مجانية' : 'مدفوعة'} حالياً.</p>
+                    <p className="text-sm">لا توجد دورات مطابقة حالياً.</p>
                   </div>
                 ) : (
                   <div className="flex gap-4 overflow-x-auto pb-3 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -1336,6 +1363,11 @@ export default function LandingPage() {
                   </div>
                 );
               })()}
+              <div className="text-center mt-8">
+                <Button asChild variant="outline">
+                  <Link href="/courses">عرض جميع الدورات</Link>
+                </Button>
+              </div>
             </div>
           </section>
         )}
