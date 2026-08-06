@@ -318,12 +318,6 @@ html { scroll-behavior: smooth; }
 /* ═══════════════════════════════════════════════════
    PAGE LAYOUT
 ═══════════════════════════════════════════════════ */
-.page-header {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  margin-bottom: 1.5rem;
-}
 
 .page-header .eyebrow {
   font-size: 0.7rem;
@@ -414,7 +408,7 @@ html { scroll-behavior: smooth; }
    PAGE HEADER
 ═══════════════════════════════════════════════════ */
 .page-header {
-  @apply flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-5 mb-6;
+  @apply flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4;
 }
 .page-title   { @apply text-2xl font-bold tracking-tight text-foreground; }
 .page-subtitle{ @apply text-sm text-muted-foreground mt-0.5; }

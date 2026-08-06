@@ -85,7 +85,6 @@ export default function OrgOrdersPage() {
       <PageHeader
         title="طلبات المتاجر"
         description="متابعة طلبات جميع متاجر المستفيدين في المنظمة"
-        breadcrumbs={[{ label: "لوحة التحكم", href: "/organization-dashboard" }, { label: "طلبات المتاجر" }]}
         actions={
           <>
             <ExportButton
