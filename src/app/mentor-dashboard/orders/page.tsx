@@ -240,7 +240,7 @@ export default function MentorOrdersPage() {
   return (
     <div className="space-y-6" dir="rtl">
       <div>
-        <h1 className="text-2xl font-bold">طلبات الدورات</h1>
+        <h1 className="text-2xl font-bold tracking-tight">طلبات الدورات</h1>
         <p className="text-muted-foreground text-sm mt-1">طلبات الاشتراك في دوراتك التدريبية</p>
       </div>
 

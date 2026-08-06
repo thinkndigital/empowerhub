@@ -206,7 +206,7 @@ export default function OrgSettingsPage() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6" dir="rtl">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">الإعدادات</h1>
         <p className="text-sm text-muted-foreground">إدارة التفاصيل والمظهر وإعدادات الحساب.</p>

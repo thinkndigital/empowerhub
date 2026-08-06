@@ -297,7 +297,7 @@ export default function MessagesCenter({ title = 'الرسائل' }: MessagesCen
   return (
     <div className="flex flex-col gap-4 h-[calc(100vh-120px)] min-h-[500px]" dir="rtl">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">{title}</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
         <Button onClick={() => setShowNewChat(true)} size="sm" className="gap-2">
           <PlusCircle className="h-4 w-4" />
           رسالة جديدة

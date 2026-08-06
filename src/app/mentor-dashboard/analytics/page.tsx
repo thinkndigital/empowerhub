@@ -95,7 +95,7 @@ export default function MentorAnalyticsPage() {
   }
 
   return (
-    <>
+    <div className="space-y-6" dir="rtl">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h1 className="text-2xl font-bold tracking-tight">تحليلات الإرشاد</h1>
         <Dialog open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen}>
@@ -192,6 +192,6 @@ export default function MentorAnalyticsPage() {
           </CardContent>
         </Card>
       </div>
-    </>
+    </div>
   );
 }

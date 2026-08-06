@@ -97,7 +97,7 @@ export default function CoachAnalyticsPage() {
   }, [sessions]);
 
   return (
-    <>
+    <div className="space-y-6" dir="rtl">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h1 className="text-2xl font-bold tracking-tight">تحليلات التدريب</h1>
         <Dialog open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen}>
@@ -210,6 +210,6 @@ export default function CoachAnalyticsPage() {
           </CardContent>
         </Card>
       </div>
-    </>
+    </div>
   );
 }

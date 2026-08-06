@@ -75,8 +75,8 @@ export default function MyBeneficiariesPage() {
   };
 
   return (
-    <>
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+    <div className="space-y-6" dir="rtl">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">مستفيدوني</h1>
           <p className="text-sm text-muted-foreground">قائمة المستفيدين الذين تشرف على إرشادهم.</p>
@@ -209,6 +209,6 @@ export default function MyBeneficiariesPage() {
           </div>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }
