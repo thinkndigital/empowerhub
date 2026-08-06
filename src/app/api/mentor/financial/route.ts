@@ -29,7 +29,18 @@ export async function GET(req: NextRequest) {
     if (!coursesSnap.empty) {
       const courseIds = coursesSnap.docs.map(d => d.id);
       const courseNames: Record<string, string> = {};
-      coursesSnap.docs.forEach(d => { courseNames[d.id] = d.data().title || ''; });
+      const courseOrgIds: Record<string, string> = {};
+      coursesSnap.docs.forEach(d => {
+        courseNames[d.id] = d.data().title || '';
+        courseOrgIds[d.id] = d.data().organizationId || '';
+      });
+
+      const orgIds = Array.from(new Set(Object.values(courseOrgIds).filter(Boolean)));
+      const orgNames: Record<string, string> = {};
+      await Promise.all(orgIds.map(async id => {
+        const s = await adminDb.collection('organizations').doc(id).get();
+        orgNames[id] = s.data()?.name || '';
+      }));
 
       const chunkSize = 30;
       for (let i = 0; i < courseIds.length; i += chunkSize) {
@@ -40,6 +51,7 @@ export async function GET(req: NextRequest) {
           const totalAmount = data.totalAmount ?? data.productPrice ?? data.amount ?? 0;
           const commissionAmount = Math.round((totalAmount * commissionRate) / 100 * 100) / 100;
           const netAmount = Math.round((totalAmount - commissionAmount) * 100) / 100;
+          const courseOrgId = courseOrgIds[data.courseId] || '';
           orderDocs.push({
             id: d.id,
             courseId: data.courseId || '',
@@ -56,6 +68,8 @@ export async function GET(req: NextRequest) {
             status: data.status || 'pending',
             type: 'course',
             createdAt: normalizeDate(data.createdAt),
+            organizationId: courseOrgId,
+            organizationName: courseOrgId ? (orgNames[courseOrgId] || '') : '',
           });
         });
       }

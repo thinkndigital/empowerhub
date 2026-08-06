@@ -57,6 +57,7 @@ interface FinancialOrder {
   status: string;
   createdAt: string | null;
   hours?: number;
+  organizationName?: string;
 }
 
 const sessionStatusLabel: Record<string, { label: string; className: string }> = {
@@ -198,11 +199,12 @@ export default function MentorOrdersPage() {
       : o.status === 'confirmed' ? 'مؤكد' : o.status === 'pending' ? 'قيد الانتظار' : o.status === 'rejected' ? 'مرفوض' : o.status;
 
   const handleExportCSV = () => {
-    const headers = ["النوع", "التاريخ", "البند", "المبلغ الإجمالي", "الخصم", "صافي المستحق", "الحالة"];
+    const headers = ["النوع", "التاريخ", "البند", "المنظمة", "المبلغ الإجمالي", "الخصم", "صافي المستحق", "الحالة"];
     const rows = financialOrders.map(o => [
       o.type === 'session' ? 'جلسة' : 'دورة',
       o.createdAt ? new Date(o.createdAt).toLocaleDateString('ar-EG') : '',
       o.courseName || o.productName || '',
+      o.organizationName || '',
       o.totalAmount,
       o.commissionAmount,
       o.netAmount,
@@ -212,11 +214,12 @@ export default function MentorOrdersPage() {
   };
 
   const handleExportPDF = () => {
-    const headers = ["النوع", "التاريخ", "البند", "الإجمالي", "الخصم", "الصافي", "الحالة"];
+    const headers = ["النوع", "التاريخ", "البند", "المنظمة", "الإجمالي", "الخصم", "الصافي", "الحالة"];
     const rows = financialOrders.map(o => [
       o.type === 'session' ? 'جلسة' : 'دورة',
       o.createdAt ? new Date(o.createdAt).toLocaleDateString('ar-EG') : '',
       o.courseName || o.productName || '',
+      o.organizationName || '',
       `${o.totalAmount} ${currencySymbol}`,
       `${o.commissionAmount} ${currencySymbol}`,
       `${o.netAmount} ${currencySymbol}`,
@@ -422,6 +425,7 @@ export default function MentorOrdersPage() {
                         <TableHead className="text-right">النوع</TableHead>
                         <TableHead className="text-right">التاريخ</TableHead>
                         <TableHead className="text-right">البند</TableHead>
+                        <TableHead className="text-right">المنظمة</TableHead>
                         <TableHead className="text-right">المبلغ الإجمالي</TableHead>
                         <TableHead className="text-right">الخصم</TableHead>
                         <TableHead className="text-right">صافي المستحق</TableHead>
@@ -452,6 +456,7 @@ export default function MentorOrdersPage() {
                                 <span className="text-xs text-muted-foreground mr-1">({order.hours} ساعة)</span>
                               )}
                             </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">{order.organizationName || '—'}</TableCell>
                             <TableCell className="text-sm">{order.totalAmount.toFixed(2)} {currencySymbol}</TableCell>
                             <TableCell className="text-sm text-amber-600">{order.commissionAmount.toFixed(2)} {currencySymbol}</TableCell>
                             <TableCell className="text-sm font-bold text-emerald-600">{order.netAmount.toFixed(2)} {currencySymbol}</TableCell>

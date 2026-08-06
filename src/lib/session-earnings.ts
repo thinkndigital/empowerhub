@@ -17,6 +17,8 @@ export interface SessionEarningEntry {
   status: string;
   createdAt: string | null;
   hours: number;
+  organizationId: string;
+  organizationName: string;
 }
 
 export interface SessionEarningsSummary {
@@ -27,6 +29,8 @@ export interface SessionEarningsSummary {
   gross: number;
   orgCut: number;
   net: number;
+  organizationId: string;
+  organizationName: string;
 }
 
 function normalizeDate(d: any): string | null {
@@ -69,7 +73,7 @@ export async function computeSessionEarnings(
 ): Promise<{ entries: SessionEarningEntry[]; summary: SessionEarningsSummary }> {
   const empty = {
     entries: [] as SessionEarningEntry[],
-    summary: { hourlyRate: 0, orgCommissionPercent: 0, billableSessions: 0, totalHours: 0, gross: 0, orgCut: 0, net: 0 },
+    summary: { hourlyRate: 0, orgCommissionPercent: 0, billableSessions: 0, totalHours: 0, gross: 0, orgCut: 0, net: 0, organizationId: '', organizationName: '' },
   };
   if (!organizationId) return empty;
 
@@ -77,6 +81,7 @@ export async function computeSessionEarnings(
   const orgData = orgSnap.data();
   const hourlyRate: number = (role === 'mentor' ? orgData?.mentorshipSessionPrice : orgData?.courseSessionPrice) ?? 0;
   const orgCommissionPercent: number = orgData?.orgCommissionPercent ?? 0;
+  const organizationName: string = orgData?.name || '';
 
   const hostSnap = await adminDb.collection('sessions').where('hostId', '==', uid).get();
   const billable = hostSnap.docs.map(d => ({ id: d.id, ...d.data() } as any)).filter(isBillable);
@@ -103,6 +108,8 @@ export async function computeSessionEarnings(
       status: s.status || 'scheduled',
       createdAt: normalizeDate(s.date),
       hours: Math.round(hours * 100) / 100,
+      organizationId,
+      organizationName,
     };
   });
 
@@ -114,6 +121,8 @@ export async function computeSessionEarnings(
     gross: Math.round(entries.reduce((sum, e) => sum + e.totalAmount, 0) * 100) / 100,
     orgCut: Math.round(entries.reduce((sum, e) => sum + e.commissionAmount, 0) * 100) / 100,
     net: Math.round(entries.reduce((sum, e) => sum + e.netAmount, 0) * 100) / 100,
+    organizationId,
+    organizationName,
   };
 
   return { entries, summary };

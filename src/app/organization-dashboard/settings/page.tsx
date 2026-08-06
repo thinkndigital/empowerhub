@@ -133,6 +133,7 @@ export default function OrgSettingsPage() {
         name: values.name,
         courseSessionPrice: values.courseSessionPrice,
         mentorshipSessionPrice: values.mentorshipSessionPrice,
+        orgCommissionPercent: values.orgCommissionPercent,
       };
 
       if (values.logo && values.logo.length > 0) {
