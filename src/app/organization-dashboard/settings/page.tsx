@@ -8,8 +8,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Palette, Save, BookOpen, Users, Copy, Key, Loader2, CreditCard, CheckCircle2, ArrowUpCircle } from "lucide-react";
+import { Palette, Save, BookOpen, Users, Copy, Key, Loader2, CreditCard, CheckCircle2, ArrowUpCircle, Mail } from "lucide-react";
 import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -57,7 +59,17 @@ const settingsSchema = z.object({
   courseSessionPrice: z.coerce.number().min(0, { message: "يجب أن يكون السعر 0 أو أكثر." }),
   mentorshipSessionPrice: z.coerce.number().min(0, { message: "يجب أن يكون السعر 0 أو أكثر." }),
   orgCommissionPercent: z.coerce.number().min(0, { message: "يجب أن تكون النسبة 0 أو أكثر." }).max(100, { message: "لا يمكن أن تتجاوز النسبة 100%." }),
+  emailReplyTo: z.union([z.string().email({ message: "بريد إلكتروني غير صحيح." }), z.literal("")]),
+  emailSenderName: z.string(),
 });
+
+const NOTIF_CATEGORIES: { key: string; label: string; description: string }[] = [
+  { key: "messages", label: "الرسائل", description: "إشعار بريدي عند استلام رسالة جديدة" },
+  { key: "courses", label: "الدورات", description: "إشعار بريدي عند التسجيل أو تأكيد الاشتراك في دورة" },
+  { key: "sessions", label: "الجلسات", description: "إشعار بريدي عند إنشاء جلسة أو دعوة لحضورها" },
+  { key: "membership", label: "العضوية والدعوات", description: "إشعار بريدي عند دعوات الانضمام وتعيين المرشد/المدرب" },
+  { key: "assessments", label: "نماذج التقييم", description: "إشعار بريدي عند إرسال نموذج تقييم جديد" },
+];
 
 export default function OrgSettingsPage() {
   const { toast } = useToast();
@@ -67,6 +79,9 @@ export default function OrgSettingsPage() {
   const [logoUploading, setLogoUploading] = useState(false);
   const [inviteCode, setInviteCode] = useState<string | null>(null);
   const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
+  const [notifPrefs, setNotifPrefs] = useState<Record<string, boolean>>({
+    messages: true, courses: true, sessions: true, membership: true, assessments: true,
+  });
   const logoFileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<z.infer<typeof settingsSchema>>({
@@ -76,6 +91,8 @@ export default function OrgSettingsPage() {
       courseSessionPrice: 50,
       mentorshipSessionPrice: 30,
       orgCommissionPercent: 0,
+      emailReplyTo: "",
+      emailSenderName: "",
     },
   });
 
@@ -95,6 +112,9 @@ export default function OrgSettingsPage() {
       if (data.courseSessionPrice != null) form.setValue('courseSessionPrice', data.courseSessionPrice);
       if (data.mentorshipSessionPrice != null) form.setValue('mentorshipSessionPrice', data.mentorshipSessionPrice);
       if (data.orgCommissionPercent != null) form.setValue('orgCommissionPercent', data.orgCommissionPercent);
+      if (data.emailReplyTo) form.setValue('emailReplyTo', data.emailReplyTo);
+      if (data.emailSenderName) form.setValue('emailSenderName', data.emailSenderName);
+      if (data.emailNotificationPrefs) setNotifPrefs(prev => ({ ...prev, ...data.emailNotificationPrefs }));
       if (data.inviteCode) setInviteCode(data.inviteCode);
     } catch {
       // Fallback to localStorage
@@ -134,6 +154,9 @@ export default function OrgSettingsPage() {
         courseSessionPrice: values.courseSessionPrice,
         mentorshipSessionPrice: values.mentorshipSessionPrice,
         orgCommissionPercent: values.orgCommissionPercent,
+        emailReplyTo: values.emailReplyTo,
+        emailSenderName: values.emailSenderName,
+        emailNotificationPrefs: notifPrefs,
       };
 
       if (values.logo && values.logo.length > 0) {
@@ -400,6 +423,69 @@ export default function OrgSettingsPage() {
                   </FormItem>
                 )}
               />
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Mail className="h-5 w-5" />
+                البريد الإلكتروني والإشعارات
+              </CardTitle>
+              <CardDescription>
+                عند الرد على إيميلات الإشعارات الصادرة من منظمتك، سيصل الرد إلى بريدك أدناه بدل بريد المنصة. يمكنك أيضاً التحكم بأي نوع إشعارات يصل بريدياً لأعضاء منظمتك.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <FormField
+                control={form.control}
+                name="emailReplyTo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>بريد الرد (Reply-To)</FormLabel>
+                    <FormControl>
+                      <Input type="email" dir="ltr" placeholder="info@yourorg.com" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      عندما يرد أحد على إيميل صادر عن منظمتك، سيصل الرد لهذا البريد مباشرة.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="emailSenderName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>اسم المرسل الظاهر</FormLabel>
+                    <FormControl>
+                      <Input placeholder="اسم منظمتك" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      يظهر كاسم المرسل في الإيميلات الصادرة عن منظمتك بدلاً من الاسم الافتراضي للمنصة (يتطلب أن يكون المشرف العام قد فعّل بريد المنصة).
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">أنواع الإشعارات المرسلة بالبريد لأعضاء منظمتك</Label>
+                <div className="space-y-1 rounded-lg border divide-y">
+                  {NOTIF_CATEGORIES.map(cat => (
+                    <div key={cat.key} className="flex items-center justify-between p-3">
+                      <div>
+                        <p className="text-sm font-medium">{cat.label}</p>
+                        <p className="text-xs text-muted-foreground">{cat.description}</p>
+                      </div>
+                      <Switch
+                        checked={notifPrefs[cat.key] !== false}
+                        onCheckedChange={(checked) => setNotifPrefs(prev => ({ ...prev, [cat.key]: checked }))}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
             </CardContent>
           </Card>
 
