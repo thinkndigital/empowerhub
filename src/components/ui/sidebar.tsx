@@ -549,12 +549,28 @@ const SidebarMenuButton = React.forwardRef<
       size = "default",
       tooltip,
       className,
+      onClick,
       ...props
     },
     ref
   ) => {
     const Comp = asChild ? Slot : "button"
-    const { isMobile, state } = useSidebar()
+    const { isMobile, state, setOpenMobile } = useSidebar()
+
+    // On mobile the menu renders as an overlay (Sheet) that stays open after
+    // navigating — the new page renders underneath it, invisible until the
+    // user manually dismisses the sheet. Close it so selecting a page
+    // actually shows that page. Deferred with setTimeout: closing the sheet
+    // synchronously unmounts this element mid-click, which was found (via a
+    // live repro) to cancel the Link's own click-driven navigation — letting
+    // the current event finish first avoids that race.
+    const handleClick = React.useCallback(
+      (event: React.MouseEvent<HTMLButtonElement>) => {
+        onClick?.(event)
+        if (isMobile) setTimeout(() => setOpenMobile(false), 0)
+      },
+      [onClick, isMobile, setOpenMobile]
+    )
 
     const button = (
       <Comp
@@ -563,6 +579,7 @@ const SidebarMenuButton = React.forwardRef<
         data-size={size}
         data-active={isActive}
         className={cn(sidebarMenuButtonVariants({ variant, size }), className)}
+        onClick={handleClick}
         {...props}
       />
     )
