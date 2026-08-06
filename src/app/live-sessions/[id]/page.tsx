@@ -76,6 +76,7 @@ export default function LiveSessionDetailPage() {
     ? session.maxParticipants - (session.registrationsCount || 0)
     : null;
   const isFull = spotsLeft !== null && spotsLeft <= 0;
+  const isPast = !!session?.date && new Date(session.date).getTime() < Date.now();
 
   if (loading) {
     return (
@@ -159,7 +160,9 @@ export default function LiveSessionDetailPage() {
                 <div className="text-2xl font-bold text-foreground">
                   {session.price > 0 ? `${session.price} د.أ` : 'مجاني'}
                 </div>
-                {spotsLeft !== null && (
+                {isPast ? (
+                  <div className="text-xs mt-1 text-destructive">انتهت هذه الجلسة</div>
+                ) : spotsLeft !== null && (
                   <div className={`text-xs mt-1 ${isFull ? 'text-destructive' : 'text-muted-foreground'}`}>
                     {isFull ? 'اكتملت الأماكن' : `${spotsLeft} مكان متبقي`}
                   </div>
@@ -171,6 +174,11 @@ export default function LiveSessionDetailPage() {
                   <div className="text-4xl">✅</div>
                   <p className="font-semibold text-foreground">تم تسجيلك بنجاح!</p>
                   <p className="text-sm text-muted-foreground">ستصلك تفاصيل الجلسة على بريدك الإلكتروني</p>
+                </div>
+              ) : isPast ? (
+                <div className="text-center space-y-2 py-4">
+                  <p className="font-semibold text-foreground">انتهت هذه الجلسة</p>
+                  <p className="text-sm text-muted-foreground">لم يعد التسجيل متاحاً لأن موعد الجلسة قد مضى.</p>
                 </div>
               ) : (
                 <form onSubmit={handleRegister} className="space-y-3">

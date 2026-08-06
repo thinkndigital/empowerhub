@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 
+function normalizeDate(d: any): Date | null {
+  if (!d) return null;
+  if (typeof d === 'string') return new Date(d);
+  const s = d._seconds ?? d.seconds;
+  return s ? new Date(s * 1000) : null;
+}
+
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const docRef = adminDb.collection('live_sessions').doc(params.id);
@@ -11,6 +18,11 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     }
 
     const data = snap.data()!;
+    const sessionDate = normalizeDate(data.date);
+    if (sessionDate && sessionDate.getTime() < Date.now()) {
+      return NextResponse.json({ error: 'انتهت هذه الجلسة ولم يعد التسجيل فيها متاحاً' }, { status: 400 });
+    }
+
     const regsRef = docRef.collection('registrations');
 
     // Check if max participants reached
