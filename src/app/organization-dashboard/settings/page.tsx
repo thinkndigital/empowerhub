@@ -179,7 +179,7 @@ export default function OrgSettingsPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
+    <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">الإعدادات</h1>
         <p className="text-sm text-muted-foreground">إدارة التفاصيل والمظهر وإعدادات الحساب.</p>
@@ -253,7 +253,7 @@ export default function OrgSettingsPage() {
                   <ArrowUpCircle className="h-4 w-4" />
                   ترقية الخطة لفتح مزايا إضافية
                 </p>
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {subscription.upgradablePlans.map((plan) => (
                     <div key={plan.id} className="rounded-lg border p-4 flex flex-col gap-3">
                       <div className="flex items-center justify-between">

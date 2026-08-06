@@ -8,15 +8,17 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ArrowRight, Users, Calendar, CheckCircle, Clock, XCircle, Building2 } from "lucide-react";
+import { ArrowRight, Users, Calendar, CheckCircle, Clock, XCircle, Building2, Wallet } from "lucide-react";
 
 type Beneficiary = { id: string; name?: string; progress?: number };
 type Session = { id: string; title?: string; date?: any; status?: string };
 type OrgHistoryEntry = { id: string; organizationId: string; organizationName: string; joinedAt: string | null; leftAt: string | null };
+type Earnings = { pricePerAttendee: number; completedSessions: number; totalAttendees: number; total: number };
 type MentorProfile = {
   id: string; name?: string; email?: string; bio?: string; specializations?: string;
   sessions?: Session[];
   organizationHistory?: OrgHistoryEntry[];
+  earnings?: Earnings | null;
 };
 
 function formatDate(dateVal?: any): string {
@@ -97,6 +99,28 @@ export default function MentorProfilePage() {
           </Card>
 
           <div className="md:col-span-2 space-y-4">
+            {profile?.earnings && (
+              <Card className="border-0 shadow-sm">
+                <CardHeader><CardTitle className="text-base flex items-center gap-2"><Wallet className="h-4 w-4" />المحاسبة</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-3 gap-3 text-center">
+                    <div>
+                      <p className="text-xl font-bold">{profile.earnings.total.toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">إجمالي المستحقات (د.أ)</p>
+                    </div>
+                    <div>
+                      <p className="text-xl font-bold">{profile.earnings.completedSessions}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">جلسات مكتملة</p>
+                    </div>
+                    <div>
+                      <p className="text-xl font-bold">{profile.earnings.pricePerAttendee.toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">سعر الجلسة/شخص (د.أ)</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             <Card className="border-0 shadow-sm">
               <CardHeader><CardTitle className="text-base flex items-center gap-2"><Users className="h-4 w-4" />المستفيدون ({beneficiaries.length})</CardTitle></CardHeader>
               <CardContent>
