@@ -41,13 +41,18 @@ const getCachedPlatformBrand = unstable_cache(
 );
 
 export async function generateMetadata(): Promise<Metadata> {
-  const { faviconUrl } = await getCachedPlatformBrand();
+  const { faviconUrl, logoUrl } = await getCachedPlatformBrand();
+  // Always emit an explicit <link rel="icon">, even falling back to the
+  // platform logo, so browsers never fall back to the Next.js file-convention
+  // /favicon.ico route — that file was a stale unrelated placeholder that the
+  // admin's favicon upload never touched, so it could never self-heal.
+  const icon = faviconUrl || logoUrl;
 
   return {
     title: 'EmpowerHub | منصة التمكين الرقمي',
     description: 'منصة متكاملة للتمكين الرقمي تجمع التدريب، الإرشاد، والتجارة الإلكترونية.',
     keywords: 'تمكين, تدريب, إرشاد, تجارة إلكترونية, ريادة أعمال',
-    ...(faviconUrl ? { icons: { icon: faviconUrl } } : {}),
+    ...(icon ? { icons: { icon } } : {}),
   };
 }
 
