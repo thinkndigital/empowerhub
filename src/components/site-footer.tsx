@@ -116,9 +116,22 @@ export function SiteFooter({ siteName, footerData, logoUrl }: { siteName?: strin
               : <Logo className="h-6 w-6 text-background" />}
             <span className="font-bold text-sm text-background">{displayName}</span>
           </div>
-          <p className="text-xs text-background/45 text-center max-w-md leading-relaxed">
-            {footerData.description}
-          </p>
+          <div className="text-center max-w-md">
+            <p className="text-xs text-background/45 leading-relaxed">
+              {footerData.description}
+            </p>
+            {(footerData.email || footerData.phone) && (
+              <div className="flex items-center justify-center gap-3 mt-2 text-xs text-background/55">
+                {footerData.email && (
+                  <a href={`mailto:${footerData.email}`} dir="ltr" className="hover:text-background transition-colors">{footerData.email}</a>
+                )}
+                {footerData.email && footerData.phone && <span className="text-background/30">·</span>}
+                {footerData.phone && (
+                  <a href={`tel:${footerData.phone}`} dir="ltr" className="hover:text-background transition-colors">{footerData.phone}</a>
+                )}
+              </div>
+            )}
+          </div>
           <div className="flex items-center gap-4 shrink-0">
             {footerData.twitter && (
               <a href={footerData.twitter} target="_blank" rel="noopener noreferrer" className="text-xs text-background/55 hover:text-background transition-colors">تويتر</a>

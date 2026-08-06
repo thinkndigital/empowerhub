@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   Save, Plus, Trash2, Upload, Globe, Image as ImageIcon, BarChart3, Sparkles,
-  Layout, Link2, Eye, EyeOff, MessageSquare, Phone, Star, Users, UserCheck, LogIn,
+  Link2, Eye, EyeOff, MessageSquare, Phone, Star, LogIn,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -325,40 +325,12 @@ export default function SiteEditorPage() {
   const removeFeature = (i: number) =>
     setConfig(c => ({ ...c, features: c.features.filter((_, idx) => idx !== i) }));
 
-  // How it works
-  const addStep = () => setConfig(c => ({ ...c, howItWorks: [...c.howItWorks, { step: String(c.howItWorks.length + 1), title: '', desc: '', icon: 'CheckCircle' }] }));
-  const updateStep = (i: number, k: string, v: string) =>
-    setConfig(c => { const h = [...c.howItWorks]; h[i] = { ...h[i], [k]: v }; return { ...c, howItWorks: h }; });
-  const removeStep = (i: number) =>
-    setConfig(c => ({ ...c, howItWorks: c.howItWorks.filter((_, idx) => idx !== i) }));
-
   // Testimonials
   const addTestimonial = () => setConfig(c => ({ ...c, testimonials: [...c.testimonials, { name: '', role: '', text: '', stars: 5 }] }));
   const updateTestimonial = (i: number, k: string, v: string | number) =>
     setConfig(c => { const t = [...c.testimonials]; t[i] = { ...t[i], [k]: v }; return { ...c, testimonials: t }; });
   const removeTestimonial = (i: number) =>
     setConfig(c => ({ ...c, testimonials: c.testimonials.filter((_, idx) => idx !== i) }));
-
-  // Roles
-  const addRole = () => setConfig(c => ({ ...c, roles: [...c.roles, { title: '', description: '', icon: 'UserCheck', badge: '', link: '/register' }] }));
-  const updateRole = (i: number, k: string, v: string) =>
-    setConfig(c => { const r = [...c.roles]; r[i] = { ...r[i], [k]: v }; return { ...c, roles: r }; });
-  const removeRole = (i: number) =>
-    setConfig(c => ({ ...c, roles: c.roles.filter((_, idx) => idx !== i) }));
-
-  // Opportunities
-  const addOpportunity = () => setConfig(c => ({ ...c, opportunities: [...c.opportunities, { title: '', description: '', icon: 'Star', badge: '', color: 'bg-primary', link: '/register' }] }));
-  const updateOpportunity = (i: number, k: string, v: string) =>
-    setConfig(c => { const o = [...c.opportunities]; o[i] = { ...o[i], [k]: v }; return { ...c, opportunities: o }; });
-  const removeOpportunity = (i: number) =>
-    setConfig(c => ({ ...c, opportunities: c.opportunities.filter((_, idx) => idx !== i) }));
-
-  // Blog Posts
-  const addBlogPost = () => setConfig(c => ({ ...c, blogPosts: [...c.blogPosts, { title: '', excerpt: '', category: '', imageUrl: '', link: '' }] }));
-  const updateBlogPost = (i: number, k: string, v: string) =>
-    setConfig(c => { const b = [...c.blogPosts]; b[i] = { ...b[i], [k]: v }; return { ...c, blogPosts: b }; });
-  const removeBlogPost = (i: number) =>
-    setConfig(c => ({ ...c, blogPosts: c.blogPosts.filter((_, idx) => idx !== i) }));
 
   if (loading) return <div className="text-muted-foreground text-center py-16">جاري التحميل...</div>;
 
@@ -380,10 +352,6 @@ export default function SiteEditorPage() {
               { value: 'auth', label: 'صفحات الدخول', icon: LogIn },
               { value: 'stats', label: 'الإحصائيات', icon: BarChart3 },
               { value: 'features', label: 'المميزات', icon: Sparkles },
-              { value: 'opportunities', label: 'الفرص', icon: UserCheck },
-              { value: 'howitworks', label: 'كيف تعمل', icon: Layout },
-              { value: 'roles', label: 'الأدوار', icon: Users },
-              { value: 'blog', label: 'المقالات', icon: MessageSquare },
               { value: 'testimonials', label: 'الآراء', icon: Star },
               { value: 'contact', label: 'التواصل', icon: Phone },
               { value: 'cta', label: 'CTA بانر', icon: MessageSquare },
@@ -667,197 +635,6 @@ export default function SiteEditorPage() {
             </Card>
           </TabsContent>
 
-          {/* OPPORTUNITIES */}
-          <TabsContent value="opportunities" className="mt-4">
-            <Card className="border-0 shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-foreground text-base">قسم الفرص المتاحة</CardTitle>
-                <Button size="sm" onClick={addOpportunity} className="gap-1"><Plus className="h-3.5 w-3.5" />إضافة فرصة</Button>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <p className="text-muted-foreground text-xs">الألوان المتاحة: bg-primary | bg-sky-500 | bg-amber-500 | bg-purple-500 | bg-rose-500 | bg-teal-600</p>
-                {config.opportunities.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-6">لا توجد فرص. أضف واحدة!</p>
-                ) : config.opportunities.map((opp, i) => (
-                  <div key={i} className="p-3 bg-muted/40 rounded-xl border border-border space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground text-xs font-medium">فرصة {i + 1}</span>
-                      <Button size="sm" variant="ghost" onClick={() => removeOpportunity(i)} className="h-7 w-7 p-0 text-muted-foreground hover:text-red-400">
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <Label className="text-xs text-muted-foreground">العنوان</Label>
-                        <input value={opp.title} onChange={e => updateOpportunity(i, 'title', e.target.value)} placeholder="اسم الفرصة" className="mt-1 w-full h-8 text-sm bg-card border border-border rounded-md px-2 text-foreground placeholder-muted-foreground" />
-                      </div>
-                      <div>
-                        <Label className="text-xs text-muted-foreground">الشارة (اختياري)</Label>
-                        <input value={opp.badge} onChange={e => updateOpportunity(i, 'badge', e.target.value)} placeholder="متاح الآن" className="mt-1 w-full h-8 text-sm bg-card border border-border rounded-md px-2 text-foreground placeholder-muted-foreground" />
-                      </div>
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">الوصف</Label>
-                      <input value={opp.description} onChange={e => updateOpportunity(i, 'description', e.target.value)} placeholder="وصف الفرصة..." className="mt-1 w-full h-8 text-sm bg-card border border-border rounded-md px-2 text-foreground placeholder-muted-foreground" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <Label className="text-xs text-muted-foreground">اللون (Tailwind class)</Label>
-                        <input value={opp.color} onChange={e => updateOpportunity(i, 'color', e.target.value)} placeholder="bg-primary" className="mt-1 w-full h-8 text-sm bg-card border border-border rounded-md px-2 text-foreground placeholder-muted-foreground font-mono" dir="ltr" />
-                      </div>
-                      <div>
-                        <Label className="text-xs text-muted-foreground">الرابط (اختياري)</Label>
-                        <input value={opp.link} onChange={e => updateOpportunity(i, 'link', e.target.value)} placeholder="/register" className="mt-1 w-full h-8 text-sm bg-card border border-border rounded-md px-2 text-foreground placeholder-muted-foreground" dir="ltr" />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                <div className="pt-2 space-y-2">
-                  <p className="text-xs text-muted-foreground">تحكم بمظهر القسم الظاهر فعليًا بالموقع ("أحدث الفرص والمشاريع")</p>
-                  <SectionStyleFields config={config} sectionKey="opportunities" setSectionStyle={setSectionStyle} />
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* HOW IT WORKS */}
-          <TabsContent value="howitworks" className="mt-4">
-            <Card className="border-0 shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-foreground text-base">خطوات "كيف تعمل المنصة"</CardTitle>
-                <Button size="sm" onClick={addStep} className="gap-1"><Plus className="h-3.5 w-3.5" />إضافة خطوة</Button>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {config.howItWorks.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-6">لا توجد خطوات.</p>
-                ) : config.howItWorks.map((step, i) => (
-                  <div key={i} className="p-3 bg-muted/40 rounded-xl border border-border space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground text-xs font-medium">خطوة {i + 1}</span>
-                      <Button size="sm" variant="ghost" onClick={() => removeStep(i)} className="h-7 w-7 p-0 text-muted-foreground hover:text-red-400">
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                      <div>
-                        <Label className="text-xs text-muted-foreground">رقم الخطوة</Label>
-                        <Input value={step.step} onChange={e => updateStep(i, 'step', e.target.value)} placeholder="١" className="mt-1 h-8 text-sm" />
-                      </div>
-                      <div>
-                        <Label className="text-xs text-muted-foreground">العنوان</Label>
-                        <Input value={step.title} onChange={e => updateStep(i, 'title', e.target.value)} placeholder="أنشئ حسابك" className="mt-1 h-8 text-sm" />
-                      </div>
-                      <div>
-                        <Label className="text-xs text-muted-foreground">الأيقونة</Label>
-                        <Input value={step.icon} onChange={e => updateStep(i, 'icon', e.target.value)} placeholder="UserCheck" className="mt-1 h-8 text-sm" dir="ltr" />
-                      </div>
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">الوصف</Label>
-                      <Textarea value={step.desc} onChange={e => updateStep(i, 'desc', e.target.value)} placeholder="وصف الخطوة..." rows={2} className="mt-1 text-sm resize-none" />
-                    </div>
-                  </div>
-                ))}
-                <SectionStyleFields config={config} sectionKey="howItWorks" setSectionStyle={setSectionStyle} />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* ROLES */}
-          <TabsContent value="roles" className="mt-4">
-            <Card className="border-0 shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-foreground text-base">بطاقات الأدوار (انضم إلينا)</CardTitle>
-                <Button size="sm" onClick={addRole} className="gap-1"><Plus className="h-3.5 w-3.5" />إضافة دور</Button>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {config.roles.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-6">لا توجد أدوار.</p>
-                ) : config.roles.map((role, i) => (
-                  <div key={i} className="p-3 bg-muted/40 rounded-xl border border-border space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground text-xs font-medium">دور {i + 1}</span>
-                      <Button size="sm" variant="ghost" onClick={() => removeRole(i)} className="h-7 w-7 p-0 text-muted-foreground hover:text-red-400">
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                      <div>
-                        <Label className="text-xs text-muted-foreground">العنوان</Label>
-                        <Input value={role.title} onChange={e => updateRole(i, 'title', e.target.value)} placeholder="كمستفيد" className="mt-1 h-8 text-sm" />
-                      </div>
-                      <div>
-                        <Label className="text-xs text-muted-foreground">الشارة (اختياري)</Label>
-                        <Input value={role.badge} onChange={e => updateRole(i, 'badge', e.target.value)} placeholder="الأكثر شعبية" className="mt-1 h-8 text-sm" />
-                      </div>
-                      <div>
-                        <Label className="text-xs text-muted-foreground">الأيقونة</Label>
-                        <Input value={role.icon} onChange={e => updateRole(i, 'icon', e.target.value)} placeholder="UserCheck" className="mt-1 h-8 text-sm" dir="ltr" />
-                      </div>
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">الوصف</Label>
-                      <Textarea value={role.description} onChange={e => updateRole(i, 'description', e.target.value)} placeholder="وصف الدور..." rows={2} className="mt-1 text-sm resize-none" />
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">رابط التسجيل</Label>
-                      <Input value={role.link} onChange={e => updateRole(i, 'link', e.target.value)} placeholder="/register?role=beneficiary" className="mt-1 h-8 text-sm" dir="ltr" />
-                    </div>
-                  </div>
-                ))}
-                <SectionStyleFields config={config} sectionKey="roles" setSectionStyle={setSectionStyle} />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* BLOG POSTS */}
-          <TabsContent value="blog" className="mt-4">
-            <Card className="border-0 shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-foreground text-base">قسم الموارد والمقالات</CardTitle>
-                <Button size="sm" onClick={addBlogPost} className="gap-1"><Plus className="h-3.5 w-3.5" />إضافة مقال</Button>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {config.blogPosts.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-6">لا توجد مقالات. أضف واحداً!</p>
-                ) : config.blogPosts.map((post, i) => (
-                  <div key={i} className="p-3 bg-muted/40 rounded-xl border border-border space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground text-xs font-medium">مقال {i + 1}</span>
-                      <Button size="sm" variant="ghost" onClick={() => removeBlogPost(i)} className="h-7 w-7 p-0 text-muted-foreground hover:text-red-400">
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <Label className="text-xs text-muted-foreground">العنوان</Label>
-                        <input value={post.title} onChange={e => updateBlogPost(i, 'title', e.target.value)} placeholder="عنوان المقال" className="mt-1 w-full h-8 text-sm bg-card border border-border rounded-md px-2 text-foreground placeholder-muted-foreground" />
-                      </div>
-                      <div>
-                        <Label className="text-xs text-muted-foreground">التصنيف</Label>
-                        <input value={post.category} onChange={e => updateBlogPost(i, 'category', e.target.value)} placeholder="مسار مهني" className="mt-1 w-full h-8 text-sm bg-card border border-border rounded-md px-2 text-foreground placeholder-muted-foreground" />
-                      </div>
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">المقتطف</Label>
-                      <input value={post.excerpt} onChange={e => updateBlogPost(i, 'excerpt', e.target.value)} placeholder="وصف مختصر للمقال..." className="mt-1 w-full h-8 text-sm bg-card border border-border rounded-md px-2 text-foreground placeholder-muted-foreground" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <Label className="text-xs text-muted-foreground">رابط الصورة (اختياري)</Label>
-                        <input value={post.imageUrl} onChange={e => updateBlogPost(i, 'imageUrl', e.target.value)} placeholder="https://..." className="mt-1 w-full h-8 text-sm bg-card border border-border rounded-md px-2 text-foreground placeholder-muted-foreground font-mono" dir="ltr" />
-                      </div>
-                      <div>
-                        <Label className="text-xs text-muted-foreground">رابط المقال (اختياري)</Label>
-                        <input value={post.link} onChange={e => updateBlogPost(i, 'link', e.target.value)} placeholder="https://..." className="mt-1 w-full h-8 text-sm bg-card border border-border rounded-md px-2 text-foreground placeholder-muted-foreground font-mono" dir="ltr" />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
           {/* TESTIMONIALS */}
           <TabsContent value="testimonials" className="mt-4">
             <Card className="border-0 shadow-sm">
@@ -999,12 +776,11 @@ export default function SiteEditorPage() {
                 {[
                   { key: 'showStats' as const, label: 'قسم الإحصائيات', desc: 'أرقام الإنجازات والإحصائيات' },
                   { key: 'showFeatures' as const, label: 'قسم المميزات', desc: 'بطاقات ميزات المنصة' },
-                  { key: 'showOpportunities' as const, label: 'قسم الفرص المتاحة', desc: 'بطاقات الفرص والبرامج (مستوحى من Scholarships)' },
-                  { key: 'showHowItWorks' as const, label: 'قسم كيف تعمل', desc: 'خطوات البدء بالمنصة' },
+                  { key: 'showOpportunities' as const, label: 'قسم الفرص المتاحة', desc: 'يعرض أحدث المشاريع المنشورة من صفحة "إدارة المحتوى" — لن يظهر القسم إن لم توجد مشاريع' },
                   { key: 'showRoles' as const, label: 'قسم الأدوار', desc: 'بطاقات مستفيد / مدرب / مرشد / منظمة' },
                   { key: 'showMentors' as const, label: 'قسم المرشدون', desc: 'عرض المرشدين' },
                   { key: 'showCoaches' as const, label: 'قسم المدربون', desc: 'عرض المدربين' },
-                  { key: 'showBlog' as const, label: 'قسم الموارد والمقالات', desc: 'بطاقات المقالات والموارد التعليمية' },
+                  { key: 'showBlog' as const, label: 'قسم الموارد والمقالات', desc: 'يعرض أحدث المقالات المنشورة من صفحة "إدارة المحتوى" — لن يظهر القسم إن لم توجد مقالات' },
                   { key: 'showTestimonials' as const, label: 'قسم الآراء', desc: 'شهادات وتقييمات المستخدمين' },
                   { key: 'showProducts' as const, label: 'قسم المنتجات', desc: 'عرض منتجات المستفيدين' },
                   { key: 'showStores' as const, label: 'قسم المتاجر', desc: 'عرض متاجر رواد الأعمال' },

@@ -813,6 +813,17 @@ export default function LandingPage() {
     },
   ];
 
+  const featuresData = cfg?.features?.length
+    ? cfg.features.map((f: any) => ({
+        icon: getDynamicIcon(f.icon),
+        color: 'bg-primary/10 text-primary',
+        title: f.title,
+        description: f.description,
+        link: '',
+        linkLabel: '',
+      }))
+    : platformServices;
+
   const logoSrc = cfg?.logoUrl || platformLogoFallback;
 
   return (
@@ -827,6 +838,13 @@ export default function LandingPage() {
           className="grain-overlay relative flex items-center overflow-hidden bg-gradient-to-b from-foreground via-foreground to-primary"
           style={sectionStyle('hero').bg ? { backgroundColor: sectionStyle('hero').bg } : undefined}
         >
+          {/* Admin-uploaded background image, tinted by the gradient above so hero text stays readable */}
+          {cfg?.hero?.backgroundImage && (
+            <div
+              className="absolute inset-0 bg-cover bg-center opacity-30 pointer-events-none"
+              style={{ backgroundImage: `url(${cfg.hero.backgroundImage})` }}
+            />
+          )}
           {/* Mesh gradient backdrop */}
           <div className="absolute inset-0 pointer-events-none overflow-hidden">
             <div className="absolute -top-24 right-1/4 w-[600px] h-[600px] bg-primary/25 rounded-full blur-[120px]" />
@@ -1145,6 +1163,7 @@ export default function LandingPage() {
 
 
         {/* ── All Platform Services ────────────────────────────────────────────── */}
+        {sections.showFeatures && (
         <section id="services" className="py-16 sm:py-20 md:py-28 bg-muted/30">
           <div className="container">
             <div className="mb-10 sm:mb-14">
@@ -1160,30 +1179,37 @@ export default function LandingPage() {
               </p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {platformServices.map((svc, i) => (
-                <Link
-                  key={i}
-                  href={svc.link}
-                  className="group p-6 rounded-3xl bg-card hover:shadow-lg transition-shadow duration-200 flex flex-col gap-4"
-                >
-                  <div className={`h-11 w-11 rounded-2xl ${svc.color} flex items-center justify-center shrink-0`}>
-                    <svc.icon className="h-5 w-5" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-base font-bold text-foreground mb-1.5 group-hover:text-primary transition-colors">
-                      {svc.title}
-                    </h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3">{svc.description}</p>
-                  </div>
-                  <div className="flex items-center gap-1 text-xs font-semibold text-primary mt-auto">
-                    {svc.linkLabel}
-                    <ArrowLeft className="h-3 w-3" />
-                  </div>
-                </Link>
-              ))}
+              {featuresData.map((svc: any, i: number) => {
+                const cardClass = "group p-6 rounded-3xl bg-card hover:shadow-lg transition-shadow duration-200 flex flex-col gap-4";
+                const cardContent = (
+                  <>
+                    <div className={`h-11 w-11 rounded-2xl ${svc.color} flex items-center justify-center shrink-0`}>
+                      <svc.icon className="h-5 w-5" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-base font-bold text-foreground mb-1.5 group-hover:text-primary transition-colors">
+                        {svc.title}
+                      </h3>
+                      <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3">{svc.description}</p>
+                    </div>
+                    {svc.linkLabel && (
+                      <div className="flex items-center gap-1 text-xs font-semibold text-primary mt-auto">
+                        {svc.linkLabel}
+                        <ArrowLeft className="h-3 w-3" />
+                      </div>
+                    )}
+                  </>
+                );
+                return svc.link ? (
+                  <Link key={i} href={svc.link} className={cardClass}>{cardContent}</Link>
+                ) : (
+                  <div key={i} className={cardClass}>{cardContent}</div>
+                );
+              })}
             </div>
           </div>
         </section>
+        )}
 
         {/* ── Expert Preview ──────────────────────────────────────────────────── */}
         {(sections.showMentors || sections.showCoaches) && (
