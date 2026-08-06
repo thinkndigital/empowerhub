@@ -74,7 +74,7 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
     return (
       <div className="min-h-screen bg-background" dir="rtl">
         <div className="border-b border-border bg-muted/30 px-4 py-6">
-          <div className="max-w-6xl mx-auto flex items-center gap-4">
+          <div className="container flex items-center gap-4">
             <Skeleton className="h-16 w-16 rounded-full" />
             <div className="space-y-2">
               <Skeleton className="h-6 w-48" />
@@ -82,7 +82,7 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
             </div>
           </div>
         </div>
-        <div className="max-w-6xl mx-auto px-4 py-8">
+        <div className="container py-8">
           <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
             {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-64 rounded-xl" />)}
           </div>
@@ -118,7 +118,7 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
 
       {/* Store header — minimal, monochrome */}
       <div className="border-b border-border">
-        <div className="max-w-6xl mx-auto px-4 pb-6 sm:pb-8">
+        <div className="container pb-6 sm:pb-8">
           <nav className="flex items-center gap-1.5 text-xs text-muted-foreground py-4" aria-label="breadcrumb">
             <Link href="/" className="hover:text-foreground transition-colors">الرئيسية</Link>
             <span className="text-border select-none">/</span>
@@ -192,7 +192,7 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
       </div>
 
       {/* Products */}
-      <div className="max-w-6xl mx-auto px-4 py-8 sm:py-10">
+      <div className="container py-8 sm:py-10">
         <div className="flex flex-col lg:flex-row lg:items-start gap-10">
 
           {/* Category filter — plain text links, Medusa-style */}
@@ -242,7 +242,7 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
                 <p className="text-lg font-semibold">لا توجد منتجات في هذا المتجر حالياً</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-5 gap-y-8">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-5 gap-y-8">
                 {filtered.map(product => {
                   const outOfStock = product.stock === 0;
                   return (

@@ -68,7 +68,7 @@ export default function ArticlesPage() {
     <div className="min-h-screen bg-background" dir="rtl">
       {/* Page header */}
       <div className="border-b border-border bg-muted/30">
-        <div className="max-w-5xl mx-auto px-4 py-10 sm:py-14">
+        <div className="container py-10 sm:py-14">
           <nav className="flex items-center gap-1.5 text-xs text-muted-foreground mb-5" aria-label="breadcrumb">
             <Link href="/" className="hover:text-primary transition-colors">الرئيسية</Link>
             <span className="text-border/80 select-none">/</span>
@@ -82,7 +82,7 @@ export default function ArticlesPage() {
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 py-10">
+      <div className="container py-10">
         {/* Filter + Search */}
         <div className="flex flex-col sm:flex-row gap-4 mb-8">
           {/* Filter tabs */}
@@ -120,7 +120,7 @@ export default function ArticlesPage() {
 
         {/* Articles grid */}
         {loading ? (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {[...Array(6)].map((_, i) => (
               <div key={i} className="rounded-2xl border border-border overflow-hidden animate-pulse">
                 <div className="aspect-video bg-muted" />
@@ -137,7 +137,7 @@ export default function ArticlesPage() {
             <p className="text-lg">لا توجد مقالات</p>
           </div>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filtered.map(article => (
               <Link
                 key={article.id}

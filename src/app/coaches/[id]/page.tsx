@@ -92,7 +92,7 @@ export default function CoachProfilePage() {
         </div>
       </header>
 
-      <main className="container py-10 px-4 md:px-6 max-w-4xl mx-auto">
+      <main className="container py-10 max-w-4xl mx-auto">
         {/* Profile card */}
         <Card className="border-0 shadow-md overflow-hidden mb-8">
           <div className="h-28 bg-gradient-to-br from-sky-500/20 via-primary/10 to-purple-500/10" />
@@ -190,7 +190,7 @@ export default function CoachProfilePage() {
               <BookOpen className="h-5 w-5 text-primary" />
               دورات {name} التدريبية
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
               {coach.courses.map(course => (
                 <Card key={course.id} className="border-0 shadow-md overflow-hidden flex flex-col hover:shadow-lg transition-shadow">
                   <div className="relative h-40 bg-muted">

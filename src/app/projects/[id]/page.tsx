@@ -257,7 +257,7 @@ export default function ProjectDetailPage() {
         </div>
       )}
 
-      <div className="max-w-3xl mx-auto px-4 py-10">
+      <div className="container max-w-3xl py-10">
         {/* Back button */}
         <Button variant="ghost" onClick={() => router.push('/projects')} className="mb-6 gap-2 text-muted-foreground">
           <ArrowRight className="h-4 w-4" />

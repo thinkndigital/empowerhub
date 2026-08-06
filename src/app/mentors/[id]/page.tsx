@@ -80,7 +80,7 @@ export default function MentorProfilePage() {
         </div>
       </header>
 
-      <main className="container py-10 px-4 md:px-6 max-w-3xl mx-auto">
+      <main className="container py-10 max-w-3xl mx-auto">
         {/* Profile card */}
         <Card className="border-0 shadow-md overflow-hidden mb-8">
           <div className="h-28 bg-gradient-to-br from-primary/20 via-primary/10 to-accent/10" />

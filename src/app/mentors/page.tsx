@@ -46,7 +46,7 @@ export default function MentorsListPage() {
     <div className="min-h-screen bg-background" dir="rtl">
       {/* Header */}
       <div className="border-b border-border bg-muted/30">
-        <div className="max-w-6xl mx-auto px-4 py-10 sm:py-14">
+        <div className="container py-10 sm:py-14">
           <nav className="flex items-center gap-1.5 text-xs text-muted-foreground mb-5" aria-label="breadcrumb">
             <Link href="/" className="hover:text-primary transition-colors">الرئيسية</Link>
             <span className="text-border/80 select-none">/</span>
@@ -69,9 +69,9 @@ export default function MentorsListPage() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 py-10">
+      <div className="container py-10">
         {loading ? (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
             {[...Array(8)].map((_, i) => (
               <div key={i} className="rounded-2xl border border-border bg-card p-6 animate-pulse flex flex-col items-center gap-4">
                 <div className="h-32 w-32 rounded-full bg-muted" />
@@ -92,7 +92,7 @@ export default function MentorsListPage() {
             )}
           </div>
         ) : (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
             {filtered.map(m => {
               const name = m.displayName || m.name || 'بدون اسم';
               const bio = m.bio || m.description || '';

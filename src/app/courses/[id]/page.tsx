@@ -139,7 +139,7 @@ export default function CourseDetailPage() {
         </div>
       </header>
 
-      <main className="container py-10 px-4 md:px-6 max-w-4xl mx-auto">
+      <main className="container py-10">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main content */}
           <div className="lg:col-span-2 space-y-6">

@@ -75,7 +75,7 @@ export default function ProjectsPage() {
     <div className="min-h-screen bg-background" dir="rtl">
       {/* Page header */}
       <div className="border-b border-border bg-muted/30">
-        <div className="max-w-5xl mx-auto px-4 py-10 sm:py-14">
+        <div className="container py-10 sm:py-14">
           <nav className="flex items-center gap-1.5 text-xs text-muted-foreground mb-5" aria-label="breadcrumb">
             <Link href="/" className="hover:text-primary transition-colors">الرئيسية</Link>
             <span className="text-border/80 select-none">/</span>
@@ -89,7 +89,7 @@ export default function ProjectsPage() {
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 py-10">
+      <div className="container py-10">
         {/* Filter */}
         <div className="flex items-center gap-3 mb-8">
           <span className="text-sm font-medium text-muted-foreground shrink-0">تصفية حسب النوع:</span>
@@ -107,7 +107,7 @@ export default function ProjectsPage() {
 
         {/* Projects grid */}
         {loading ? (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {[...Array(6)].map((_, i) => (
               <div key={i} className="rounded-2xl border border-border overflow-hidden animate-pulse">
                 <div className="aspect-video bg-muted" />
@@ -123,7 +123,7 @@ export default function ProjectsPage() {
             <p className="text-lg">لا توجد فرص في هذه الفئة حالياً</p>
           </div>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filtered.map(project => {
               const dl = project.deadline ? deadlineLabel(project.deadline) : null;
               return (

@@ -97,7 +97,7 @@ export default function LiveSessionDetailPage() {
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
-      <div className="max-w-4xl mx-auto px-4 py-10">
+      <div className="container py-10">
         <Link href="/" className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground text-sm mb-6 transition-colors">
           <ArrowRight className="h-4 w-4 rotate-180" />
           العودة
