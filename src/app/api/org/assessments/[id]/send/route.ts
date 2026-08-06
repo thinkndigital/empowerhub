@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { checkOrgLocked } from '@/lib/plan-limits';
+import { notifyUser } from '@/lib/notify';
+import { SITE_URL } from '@/lib/email-templates';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,42 +51,33 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     const totalNew = newBenef.length + newCoaches.length + newMentors.length;
 
-    const batch = adminDb.batch();
-
     const updatePayload: Record<string, any> = { status: 'active' };
     if (newBenef.length)   updatePayload.sentTo         = FieldValue.arrayUnion(...newBenef);
     if (newCoaches.length) updatePayload.sentToCoaches  = FieldValue.arrayUnion(...newCoaches);
     if (newMentors.length) updatePayload.sentToMentors  = FieldValue.arrayUnion(...newMentors);
-    batch.update(docRef, updatePayload);
+    await docRef.update(updatePayload);
 
-    const notifBase = {
-      type: 'assessment',
-      title: 'نموذج تقييم جديد',
-      assessmentId: params.id,
-      read: false,
-      createdAt: new Date(),
-    };
+    const benefBody = `لديك نموذج تقييم "${assessmentData.title}" من ${assessmentData.orgName || 'المنظمة'}`;
+    const staffBody = `طُلب منك ملء نموذج تقييم "${assessmentData.title}" من ${assessmentData.orgName || 'المنظمة'}`;
 
-    for (const uid of newBenef) {
-      batch.set(adminDb.collection('notifications').doc(), {
-        ...notifBase, userId: uid,
-        body: `لديك نموذج تقييم "${assessmentData.title}" من ${assessmentData.orgName || 'المنظمة'}`,
-      });
-    }
-    for (const uid of newCoaches) {
-      batch.set(adminDb.collection('notifications').doc(), {
-        ...notifBase, userId: uid,
-        body: `طُلب منك ملء نموذج تقييم "${assessmentData.title}" من ${assessmentData.orgName || 'المنظمة'}`,
-      });
-    }
-    for (const uid of newMentors) {
-      batch.set(adminDb.collection('notifications').doc(), {
-        ...notifBase, userId: uid,
-        body: `طُلب منك ملء نموذج تقييم "${assessmentData.title}" من ${assessmentData.orgName || 'المنظمة'}`,
-      });
-    }
+    await Promise.all([
+      ...newBenef.map(uid => notifyUser({
+        uid, type: 'assessment', title: 'نموذج تقييم جديد', body: benefBody,
+        link: '/beneficiary-dashboard/assessments',
+        email: { subject: 'نموذج تقييم جديد', bodyHtml: benefBody, ctaText: 'عرض النموذج', ctaLink: `${SITE_URL}/beneficiary-dashboard/assessments` },
+      })),
+      ...newCoaches.map(uid => notifyUser({
+        uid, type: 'assessment', title: 'نموذج تقييم جديد', body: staffBody,
+        link: '/coach-dashboard/assessments',
+        email: { subject: 'نموذج تقييم جديد', bodyHtml: staffBody, ctaText: 'عرض النموذج', ctaLink: `${SITE_URL}/coach-dashboard/assessments` },
+      })),
+      ...newMentors.map(uid => notifyUser({
+        uid, type: 'assessment', title: 'نموذج تقييم جديد', body: staffBody,
+        link: '/mentor-dashboard/assessments',
+        email: { subject: 'نموذج تقييم جديد', bodyHtml: staffBody, ctaText: 'عرض النموذج', ctaLink: `${SITE_URL}/mentor-dashboard/assessments` },
+      })),
+    ]);
 
-    await batch.commit();
     return NextResponse.json({ success: true, sent: totalNew });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });

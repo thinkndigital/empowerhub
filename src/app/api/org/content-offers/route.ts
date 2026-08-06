@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { notifyUser } from '@/lib/notify';
+import { SITE_URL } from '@/lib/email-templates';
 
 export async function GET(req: NextRequest) {
   try {
@@ -75,13 +77,14 @@ export async function POST(req: NextRequest) {
       createdAt: new Date().toISOString(),
     });
 
-    await adminDb.collection('notifications').add({
-      userId: targetUid,
+    const offerBody = `دعتك منظمة ${orgName} بعرض ${typeLabel[offerType] || offerType}${contentTitle ? `: ${contentTitle}` : ''}`;
+    await notifyUser({
+      uid: targetUid,
+      type: 'content_offer',
       title: 'عرض من منظمة',
-      description: `دعتك منظمة ${orgName} بعرض ${typeLabel[offerType] || offerType}${contentTitle ? `: ${contentTitle}` : ''}`,
+      body: offerBody,
       link: `/${targetRole}-dashboard/invitations`,
-      isRead: false,
-      createdAt: new Date().toISOString(),
+      email: { subject: 'عرض جديد من منظمة', bodyHtml: offerBody, ctaText: 'عرض الدعوة', ctaLink: `${SITE_URL}/${targetRole}-dashboard/invitations` },
     });
 
     return NextResponse.json({ success: true });

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
+import { notifyUser } from '@/lib/notify';
+import { SITE_URL } from '@/lib/email-templates';
 
 export async function GET(req: NextRequest) {
   try {
@@ -100,14 +102,18 @@ export async function POST(req: NextRequest) {
       });
 
       // Notify recipient
-      await adminDb.collection('notifications').add({
-        userId: toUserId,
+      await notifyUser({
+        uid: toUserId,
         type: 'message',
         title: `رسالة جديدة من ${senderName}`,
         body: text.slice(0, 100),
         link: '/messages',
-        read: false,
-        createdAt: FieldValue.serverTimestamp(),
+        email: {
+          subject: `رسالة جديدة من ${senderName}`,
+          bodyHtml: text.slice(0, 300),
+          ctaText: 'الرد على الرسالة',
+          ctaLink: `${SITE_URL}/messages`,
+        },
       });
     }
 

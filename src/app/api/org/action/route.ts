@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { recordOrgMembershipChange } from '@/lib/org-history';
+import { notifyUser } from '@/lib/notify';
+import { SITE_URL } from '@/lib/email-templates';
 
 export async function POST(req: NextRequest) {
   try {
@@ -27,11 +29,26 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === 'removeFromOrg') {
+      const removedUserSnap = await adminDb.collection('users').doc(body.userId).get();
+      const removedUser = removedUserSnap.data() || {};
+      const orgSnapForRemoval = await adminDb.collection('organizations').doc(orgId).get();
+      const removalOrgName = orgSnapForRemoval.data()?.name || '';
+
       await adminDb.collection('users').doc(body.userId).update({
         organizationId: FieldValue.delete(),
         groupId: FieldValue.delete(),
       });
       await recordOrgMembershipChange(body.userId, null);
+
+      const removalBody = `تمت إزالتك من منظمة ${removalOrgName}. لم يعد بإمكانك الوصول إلى بيانات ولوحة تحكم هذه المنظمة.`;
+      await notifyUser({
+        uid: body.userId,
+        type: 'org_removal',
+        title: 'تمت إزالتك من المنظمة',
+        body: removalBody,
+        link: `/${removedUser.role || 'dashboard'}-dashboard`,
+        email: { subject: 'تمت إزالتك من المنظمة', bodyHtml: removalBody },
+      });
       return NextResponse.json({ success: true });
     }
 
@@ -62,13 +79,14 @@ export async function POST(req: NextRequest) {
         status: 'pending',
         createdAt: new Date().toISOString(),
       });
-      await adminDb.collection('notifications').add({
-        userId: body.targetUid,
+      const inviteEmailBody = `دعتك منظمة ${orgName} للانضمام إليها`;
+      await notifyUser({
+        uid: body.targetUid,
+        type: 'org_invitation',
         title: 'دعوة من منظمة',
-        description: `دعتك منظمة ${orgName} للانضمام إليها`,
+        body: inviteEmailBody,
         link: `/${body.targetRole}-dashboard/invitations`,
-        isRead: false,
-        createdAt: new Date().toISOString(),
+        email: { subject: 'دعوة انضمام لمنظمة', bodyHtml: inviteEmailBody, ctaText: 'عرض الدعوة', ctaLink: `${SITE_URL}/${body.targetRole}-dashboard/invitations` },
       });
       return NextResponse.json({ success: true });
     }
@@ -79,13 +97,14 @@ export async function POST(req: NextRequest) {
       // Notify mentor
       const benefSnap = await adminDb.collection('users').doc(body.userId).get();
       const benefName = benefSnap.data()?.name || 'مستفيد';
-      await adminDb.collection('notifications').add({
-        userId: body.mentorId,
+      const assignMentorBody = `تم تعيينك مرشداً للمستفيد ${benefName}`;
+      await notifyUser({
+        uid: body.mentorId,
+        type: 'assignment',
         title: 'تم تعيينك مرشداً',
-        description: `تم تعيينك مرشداً للمستفيد ${benefName}`,
+        body: assignMentorBody,
         link: '/mentor-dashboard',
-        isRead: false,
-        createdAt: new Date().toISOString(),
+        email: { subject: 'تم تعيينك مرشداً', bodyHtml: assignMentorBody },
       });
       return NextResponse.json({ success: true });
     }
@@ -95,13 +114,14 @@ export async function POST(req: NextRequest) {
       await adminDb.collection('users').doc(body.userId).update({ coachId: body.coachId });
       const benefSnap2 = await adminDb.collection('users').doc(body.userId).get();
       const benefName2 = benefSnap2.data()?.name || 'مستفيد';
-      await adminDb.collection('notifications').add({
-        userId: body.coachId,
+      const assignCoachBody = `تم تعيينك مدرباً للمستفيد ${benefName2}`;
+      await notifyUser({
+        uid: body.coachId,
+        type: 'assignment',
         title: 'تم تعيينك مدرباً',
-        description: `تم تعيينك مدرباً للمستفيد ${benefName2}`,
+        body: assignCoachBody,
         link: '/coach-dashboard',
-        isRead: false,
-        createdAt: new Date().toISOString(),
+        email: { subject: 'تم تعيينك مدرباً', bodyHtml: assignCoachBody },
       });
       return NextResponse.json({ success: true });
     }

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
+import { notifyUser } from '@/lib/notify';
+import { SITE_URL } from '@/lib/email-templates';
 
 export async function POST(req: NextRequest, { params }: { params: { courseId: string } }) {
   try {
@@ -57,14 +59,18 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
     ]);
 
     // Create notification for beneficiary
-    await adminDb.collection('notifications').add({
-      userId: beneficiaryId,
+    await notifyUser({
+      uid: beneficiaryId,
       type: 'course_enrollment',
       title: 'تسجيل في دورة جديدة',
       body: `تم تسجيلك في دورة ${courseTitle}`,
       link: '/beneficiary-dashboard/courses',
-      read: false,
-      createdAt: FieldValue.serverTimestamp(),
+      email: {
+        subject: 'تم تسجيلك في دورة جديدة',
+        bodyHtml: `تم تسجيلك في دورة <strong>${courseTitle}</strong>.`,
+        ctaText: 'الذهاب إلى الدورة',
+        ctaLink: `${SITE_URL}/beneficiary-dashboard/courses`,
+      },
     });
 
     return NextResponse.json({ success: true });

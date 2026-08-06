@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
+import { notifyUser } from '@/lib/notify';
+import { SITE_URL } from '@/lib/email-templates';
 
 export const dynamic = 'force-dynamic';
 
@@ -46,6 +48,19 @@ export async function POST(req: NextRequest) {
     if (daysLeft <= 0) {
       await doc.ref.update({ status: 'expired', expiredAt: now });
       expired++;
+      const orgSnap = await adminDb.collection('organizations').doc(orgId).get();
+      const adminId = orgSnap.data()?.adminId;
+      if (adminId) {
+        const expiredBody = 'انتهى اشتراك منظمتك وتم قفل الوصول للوحة التحكم لحد ما يتم تجديد الاشتراك.';
+        await notifyUser({
+          uid: adminId,
+          type: 'subscription_expired',
+          title: 'انتهى اشتراك منظمتك',
+          body: expiredBody,
+          link: '/payment',
+          email: { subject: 'انتهى اشتراك منظمتك', bodyHtml: expiredBody, ctaText: 'تجديد الاشتراك', ctaLink: `${SITE_URL}/payment` },
+        });
+      }
       continue;
     }
 
@@ -56,15 +71,17 @@ export async function POST(req: NextRequest) {
       const orgSnap = await adminDb.collection('organizations').doc(orgId).get();
       const adminId = orgSnap.data()?.adminId;
       if (adminId) {
-        await adminDb.collection('notifications').add({
-          userId: adminId,
-          title: isTrial ? 'تذكير بانتهاء الفترة التجريبية المجانية' : 'تذكير بتجديد الاشتراك',
-          body: isTrial
-            ? `باقي ${daysLeft} يوم على انتهاء الفترة التجريبية المجانية لمنظمتك. اشترك بخطة مدفوعة لتفادي إيقاف إضافة أعضاء جدد.`
-            : `باقي ${daysLeft} يوم على انتهاء اشتراك منظمتك. يرجى السداد لتفادي إيقاف إضافة أعضاء جدد.`,
+        const reminderTitle = isTrial ? 'تذكير بانتهاء الفترة التجريبية المجانية' : 'تذكير بتجديد الاشتراك';
+        const reminderBody = isTrial
+          ? `باقي ${daysLeft} يوم على انتهاء الفترة التجريبية المجانية لمنظمتك. اشترك بخطة مدفوعة لتفادي إيقاف إضافة أعضاء جدد.`
+          : `باقي ${daysLeft} يوم على انتهاء اشتراك منظمتك. يرجى السداد لتفادي إيقاف إضافة أعضاء جدد.`;
+        await notifyUser({
+          uid: adminId,
+          type: 'subscription_reminder',
+          title: reminderTitle,
+          body: reminderBody,
           link: '/organization-dashboard/settings',
-          read: false,
-          createdAt: now,
+          email: { subject: reminderTitle, bodyHtml: reminderBody, ctaText: 'الذهاب للاشتراك', ctaLink: `${SITE_URL}/organization-dashboard/settings` },
         });
       }
       await doc.ref.update({ lastReminderAt: now });

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import { checkOrgLimit, checkOrgLocked } from '@/lib/plan-limits';
 import { recordOrgMembershipChange } from '@/lib/org-history';
+import { notifyUser } from '@/lib/notify';
+import { SITE_URL } from '@/lib/email-templates';
 
 export async function POST(req: NextRequest) {
   try {
@@ -155,6 +157,22 @@ export async function POST(req: NextRequest) {
     if (organizationId && (role === 'mentor' || role === 'coach')) {
       try { await recordOrgMembershipChange(uid, organizationId); } catch {}
     }
+
+    try {
+      await notifyUser({
+        uid,
+        type: 'welcome',
+        title: 'مرحباً بك في EmpowerHub',
+        body: `أهلاً ${name}، تم إنشاء حسابك بنجاح.`,
+        link: '/dashboard',
+        email: {
+          subject: 'مرحباً بك في EmpowerHub',
+          bodyHtml: `أهلاً ${name}،<br/>تم إنشاء حسابك بنجاح في منصة EmpowerHub. يمكنك الآن تسجيل الدخول والبدء.`,
+          ctaText: 'تسجيل الدخول',
+          ctaLink: `${SITE_URL}/login`,
+        },
+      });
+    } catch {}
 
     return NextResponse.json({
       success: true,

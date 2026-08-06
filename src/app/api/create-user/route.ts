@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import { checkOrgLimit, checkOrgLocked } from '@/lib/plan-limits';
+import { notifyUser } from '@/lib/notify';
+import { SITE_URL } from '@/lib/email-templates';
 
 export async function POST(req: NextRequest) {
   try {
@@ -48,6 +50,22 @@ export async function POST(req: NextRequest) {
     if (expertise) userData.expertise = expertise;
 
     await adminDb.collection('users').doc(userRecord.uid).set(userData);
+
+    try {
+      await notifyUser({
+        uid: userRecord.uid,
+        type: 'welcome',
+        title: 'تم إنشاء حسابك في EmpowerHub',
+        body: `أهلاً ${name}، تم إنشاء حسابك. بريدك: ${email}`,
+        link: '/login',
+        email: {
+          subject: 'تم إنشاء حسابك في EmpowerHub',
+          bodyHtml: `أهلاً ${name}،<br/>تم إنشاء حساب لك في منصة EmpowerHub.<br/><br/><strong>البريد الإلكتروني:</strong> ${email}<br/><strong>كلمة المرور المؤقتة:</strong> ${password}<br/><br/>ننصحك بتغيير كلمة المرور بعد أول تسجيل دخول.`,
+          ctaText: 'تسجيل الدخول',
+          ctaLink: `${SITE_URL}/login`,
+        },
+      });
+    } catch {}
 
     return NextResponse.json({
       success: true,

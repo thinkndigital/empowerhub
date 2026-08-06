@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { notifyUser } from '@/lib/notify';
 
 export async function GET(req: NextRequest) {
   try {
@@ -49,13 +50,14 @@ export async function POST(req: NextRequest) {
       .limit(1).get();
     const orgAdminUid = orgAdminSnap.docs[0]?.id;
     if (orgAdminUid) {
-      await adminDb.collection('notifications').add({
-        userId: orgAdminUid,
+      const bodyText = `${offer.targetName} ${action === 'accept' ? 'قبل' : 'رفض'} عرضك${offer.contentTitle ? ` (${offer.contentTitle})` : ''}`;
+      await notifyUser({
+        uid: orgAdminUid,
+        type: 'content_offer',
         title: action === 'accept' ? 'تم قبول العرض' : 'تم رفض العرض',
-        description: `${offer.targetName} ${action === 'accept' ? 'قبل' : 'رفض'} عرضك${offer.contentTitle ? ` (${offer.contentTitle})` : ''}`,
+        body: bodyText,
         link: `/organization-dashboard/${offer.targetRole === 'mentor' ? 'mentors' : 'coaches'}`,
-        isRead: false,
-        createdAt: new Date().toISOString(),
+        email: { subject: action === 'accept' ? 'تم قبول العرض' : 'تم رفض العرض', bodyHtml: bodyText },
       });
     }
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { notifyUser } from '@/lib/notify';
 
 export const dynamic = 'force-dynamic';
 
@@ -107,14 +108,18 @@ export async function PATCH(req: NextRequest) {
             enrolledCourses: FieldValue.arrayUnion(orderData.courseId),
           });
           // In-app notification with course link
-          await adminDb.collection('notifications').add({
-            userId: orderData.userId,
+          await notifyUser({
+            uid: orderData.userId,
             type: 'course_enrolled',
             title: 'تم تأكيد اشتراكك في الدورة',
             body: `تم قبول طلبك والتسجيل في دورة "${courseTitle}". يمكنك بدء الدورة الآن.`,
             link: `/dashboard/training/${orderData.courseId}`,
-            read: false,
-            createdAt: new Date(),
+            email: {
+              subject: 'تم تأكيد اشتراكك في الدورة',
+              bodyHtml: `تم قبول طلبك والتسجيل في دورة <strong>${courseTitle}</strong>. يمكنك بدء الدورة الآن.`,
+              ctaText: 'بدء الدورة',
+              ctaLink: courseUrl,
+            },
           });
         } catch { /* non-fatal */ }
       }

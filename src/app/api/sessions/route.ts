@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
-import { FieldValue } from 'firebase-admin/firestore';
+import { notifyUser } from '@/lib/notify';
+import { SITE_URL } from '@/lib/email-templates';
 
 export async function GET(req: NextRequest) {
   try {
@@ -64,20 +65,23 @@ export async function POST(req: NextRequest) {
       createdAt: new Date().toISOString(),
     });
 
-    const now = FieldValue.serverTimestamp();
     const attendees: string[] = Array.isArray(body.attendees) ? body.attendees : [];
     const sessionTitle: string = body.title || 'جلسة جديدة';
 
     // Notify each attendee
     const attendeeNotifications = attendees.map((attendeeId: string) =>
-      adminDb.collection('notifications').add({
-        userId: attendeeId,
+      notifyUser({
+        uid: attendeeId,
         type: 'session_invite',
         title: 'دعوة جلسة جديدة',
         body: `تمت دعوتك لجلسة: ${sessionTitle}`,
         link: '/beneficiary-dashboard/sessions',
-        read: false,
-        createdAt: now,
+        email: {
+          subject: 'دعوة جلسة جديدة',
+          bodyHtml: `تمت دعوتك لجلسة: <strong>${sessionTitle}</strong>.`,
+          ctaText: 'عرض الجلسة',
+          ctaLink: `${SITE_URL}/beneficiary-dashboard/sessions`,
+        },
       })
     );
 
@@ -89,14 +93,18 @@ export async function POST(req: NextRequest) {
         .where('organizationId', '==', orgId)
         .get();
       orgNotifications = orgUsersSnap.docs.map((d) =>
-        adminDb.collection('notifications').add({
-          userId: d.id,
+        notifyUser({
+          uid: d.id,
           type: 'session_created',
           title: 'جلسة جديدة في منظمتك',
           body: `تم إنشاء جلسة جديدة: ${sessionTitle}`,
           link: '/organization-dashboard/sessions',
-          read: false,
-          createdAt: now,
+          email: {
+            subject: 'جلسة جديدة في منظمتك',
+            bodyHtml: `تم إنشاء جلسة جديدة: <strong>${sessionTitle}</strong>.`,
+            ctaText: 'عرض الجلسات',
+            ctaLink: `${SITE_URL}/organization-dashboard/sessions`,
+          },
         })
       );
     }

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
+import { sendBrandedEmail } from '@/lib/notify';
+import { SITE_URL } from '@/lib/email-templates';
 
 // POST { email, orgId, groupName? }
 // Creates a record in orgInvitations and returns { success: true }
@@ -33,6 +35,17 @@ export async function POST(req: NextRequest) {
     }
 
     await adminDb.collection('orgInvitations').add(invitation);
+
+    try {
+      const orgSnap = await adminDb.collection('organizations').doc(orgId).get();
+      const orgName = orgSnap.data()?.name || 'منظمة';
+      await sendBrandedEmail(email, {
+        subject: `دعوة للانضمام إلى ${orgName} على EmpowerHub`,
+        bodyHtml: `دعتك منظمة <strong>${orgName}</strong> للانضمام إلى منصة EmpowerHub كمستفيد${groupName ? ` ضمن مجموعة ${groupName}` : ''}. أنشئ حسابك للبدء.`,
+        ctaText: 'إنشاء حساب',
+        ctaLink: `${SITE_URL}/register`,
+      });
+    } catch {}
 
     return NextResponse.json({ success: true });
   } catch (err: unknown) {

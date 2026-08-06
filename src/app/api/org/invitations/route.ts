@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { checkOrgLimit, checkOrgLocked } from '@/lib/plan-limits';
+import { notifyUser } from '@/lib/notify';
 
 // GET: fetch invitations for the current user
 export async function GET(req: NextRequest) {
@@ -61,15 +62,23 @@ export async function POST(req: NextRequest) {
       await adminAuth.setCustomUserClaims(decoded.uid, { ...claims, organizationId: invite.orgId });
     }
 
-    // Notify the org
-    await adminDb.collection('notifications').add({
-      userId: invite.orgId, // org admin's uid — actually we need org admin uid
-      title: action === 'accept' ? 'قبل الدعوة' : 'رفض الدعوة',
-      description: `${invite.targetName} ${action === 'accept' ? 'قبل' : 'رفض'} دعوة الانضمام للمنظمة`,
-      link: `/organization-dashboard/${invite.targetRole === 'mentor' ? 'mentors' : 'coaches'}`,
-      isRead: false,
-      createdAt: new Date().toISOString(),
-    });
+    // Notify the org admin
+    const orgAdminSnap = await adminDb.collection('users')
+      .where('organizationId', '==', invite.orgId)
+      .where('role', '==', 'organization')
+      .limit(1).get();
+    const orgAdminUid = orgAdminSnap.docs[0]?.id;
+    if (orgAdminUid) {
+      const inviteBody = `${invite.targetName} ${action === 'accept' ? 'قبل' : 'رفض'} دعوة الانضمام للمنظمة`;
+      await notifyUser({
+        uid: orgAdminUid,
+        type: 'org_invitation',
+        title: action === 'accept' ? 'قبل الدعوة' : 'رفض الدعوة',
+        body: inviteBody,
+        link: `/organization-dashboard/${invite.targetRole === 'mentor' ? 'mentors' : 'coaches'}`,
+        email: { subject: action === 'accept' ? 'قبل الدعوة' : 'رفض الدعوة', bodyHtml: inviteBody },
+      });
+    }
 
     return NextResponse.json({ success: true });
   } catch (e: any) {
