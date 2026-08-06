@@ -47,8 +47,9 @@ function sessionDate(s: any): Date | null {
 // explicitly marked it completed, or its scheduled time has passed and it
 // wasn't cancelled. Relying on 'completed' alone undercounts, since mentors/
 // coaches rarely go back and mark old sessions — this is what made the
-// dashboard totals look wrong.
-function isBillable(s: any): boolean {
+// dashboard totals look wrong. Exported so other billing surfaces (the
+// per-person hourly-contract tables) apply the same definition.
+export function isBillable(s: any): boolean {
   if (s.status === 'cancelled') return false;
   if (s.status === 'completed') return true;
   const d = sessionDate(s);

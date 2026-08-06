@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { isBillable } from '@/lib/session-earnings';
 
 async function getOrgId(decoded: any): Promise<string | null> {
   let orgId = decoded.organizationId as string | undefined;
@@ -43,23 +44,21 @@ export async function GET(req: NextRequest) {
       };
     });
 
-    // Get completed sessions for each coach in this org
+    // Billable sessions for each coach: hosted by them, and either explicitly
+    // marked completed or past their scheduled time (excluding cancelled) —
+    // querying by hostId alone and filtering in code, since requiring an
+    // exact 'completed' status (or a reliably-stamped organizationId on the
+    // session doc) silently undercounts real, already-happened sessions.
     const sessionSnaps = await Promise.all(
-      coachIds.map(id =>
-        adminDb
-          .collection('sessions')
-          .where('hostId', '==', id)
-          .where('organizationId', '==', orgId)
-          .where('status', '==', 'completed')
-          .get()
-      )
+      coachIds.map(id => adminDb.collection('sessions').where('hostId', '==', id).get())
     );
 
     const hoursMap: Record<string, number> = {};
     coachIds.forEach((id, i) => {
       let totalMinutes = 0;
       sessionSnaps[i].docs.forEach(d => {
-        totalMinutes += d.data().duration || 0;
+        const data = d.data();
+        if (isBillable(data)) totalMinutes += data.duration || 0;
       });
       hoursMap[id] = Math.round((totalMinutes / 60) * 10) / 10;
     });
