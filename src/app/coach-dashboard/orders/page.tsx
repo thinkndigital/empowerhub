@@ -47,6 +47,7 @@ type ConfirmResult = {
 
 interface FinancialOrder {
   id: string;
+  type?: 'course' | 'session';
   productName: string;
   courseName: string;
   totalAmount: number;
@@ -55,7 +56,14 @@ interface FinancialOrder {
   netAmount: number;
   status: string;
   createdAt: string | null;
+  hours?: number;
 }
+
+const sessionStatusLabel: Record<string, { label: string; className: string }> = {
+  completed: { label: 'مكتملة', className: 'bg-emerald-100 text-emerald-700' },
+  scheduled: { label: 'مجدولة', className: 'bg-amber-100 text-amber-700' },
+  cancelled: { label: 'ملغاة', className: 'bg-red-100 text-red-700' },
+};
 
 interface Payout {
   id: string;
@@ -184,32 +192,39 @@ export default function CoachOrdersPage() {
     }
   };
 
+  const exportStatusLabel = (o: FinancialOrder) =>
+    o.type === 'session'
+      ? (sessionStatusLabel[o.status]?.label ?? o.status)
+      : o.status === 'confirmed' ? 'مؤكد' : o.status === 'pending' ? 'قيد الانتظار' : o.status === 'rejected' ? 'مرفوض' : o.status;
+
   const handleExportCSV = () => {
-    const headers = ["التاريخ", "الدورة", "المبلغ الإجمالي", `العمولة (${commissionRate}%)`, "صافي المستحق", "الحالة"];
+    const headers = ["النوع", "التاريخ", "البند", "المبلغ الإجمالي", "الخصم", "صافي المستحق", "الحالة"];
     const rows = financialOrders.map(o => [
+      o.type === 'session' ? 'جلسة' : 'دورة',
       o.createdAt ? new Date(o.createdAt).toLocaleDateString('ar-EG') : '',
       o.courseName || o.productName || '',
       o.totalAmount,
       o.commissionAmount,
       o.netAmount,
-      o.status === 'confirmed' ? 'مؤكد' : o.status === 'pending' ? 'قيد الانتظار' : o.status === 'rejected' ? 'مرفوض' : o.status,
+      exportStatusLabel(o),
     ]);
-    exportToExcel('كشف_مالي_دوراتي', headers, rows);
+    exportToExcel('كشف_مالي', headers, rows);
   };
 
   const handleExportPDF = () => {
-    const headers = ["التاريخ", "الدورة", "الإجمالي", "العمولة", "الصافي", "الحالة"];
+    const headers = ["النوع", "التاريخ", "البند", "الإجمالي", "الخصم", "الصافي", "الحالة"];
     const rows = financialOrders.map(o => [
+      o.type === 'session' ? 'جلسة' : 'دورة',
       o.createdAt ? new Date(o.createdAt).toLocaleDateString('ar-EG') : '',
       o.courseName || o.productName || '',
       `${o.totalAmount} ${currencySymbol}`,
       `${o.commissionAmount} ${currencySymbol}`,
       `${o.netAmount} ${currencySymbol}`,
-      o.status === 'confirmed' ? 'مؤكد' : o.status === 'pending' ? 'قيد الانتظار' : o.status === 'rejected' ? 'مرفوض' : o.status,
+      exportStatusLabel(o),
     ]);
-    exportToPDF('الكشف المالي - دوراتي', headers, rows, summary ? { summary: {
-      'إجمالي المبيعات': `${summary.totalGross.toFixed(2)} ${currencySymbol}`,
-      'عمولة EmpowerHub': `${summary.totalCommission.toFixed(2)} ${currencySymbol}`,
+    exportToPDF('الكشف المالي', headers, rows, summary ? { summary: {
+      'إجمالي المبيعات والجلسات': `${summary.totalGross.toFixed(2)} ${currencySymbol}`,
+      'إجمالي الخصومات': `${summary.totalCommission.toFixed(2)} ${currencySymbol}`,
       'صافي المستحق': `${summary.totalNet.toFixed(2)} ${currencySymbol}`,
       'تم استلامه': `${summary.totalPaid.toFixed(2)} ${currencySymbol}`,
       'الرصيد المتبقي': `${summary.remaining.toFixed(2)} ${currencySymbol}`,
@@ -347,7 +362,9 @@ export default function CoachOrdersPage() {
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
               <h2 className="text-lg font-semibold">كشف مالي</h2>
-              <p className="text-xs text-muted-foreground">نسبة عمولة EmpowerHub: {commissionRate}%</p>
+              <p className="text-xs text-muted-foreground">
+                عمولة EmpowerHub على مبيعات الدورات: {commissionRate}% — بالإضافة لمستحقات الجلسات التدريبية حسب سعر الساعة ونسبة المنظمة
+              </p>
             </div>
             <div className="flex gap-2 flex-wrap">
               <Button variant="outline" size="sm" onClick={loadFinancial} disabled={financialLoading} className="gap-2">
@@ -368,8 +385,8 @@ export default function CoachOrdersPage() {
           {/* Financial Summary Cards */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {[
-              { label: 'إجمالي المبيعات', value: summary ? `${summary.totalGross.toFixed(2)} ${currencySymbol}` : '...', icon: TrendingUp, color: 'text-blue-500' },
-              { label: 'عمولة EmpowerHub', value: summary ? `${summary.totalCommission.toFixed(2)} ${currencySymbol}` : '...', icon: DollarSign, color: 'text-amber-500' },
+              { label: 'إجمالي المبيعات والجلسات', value: summary ? `${summary.totalGross.toFixed(2)} ${currencySymbol}` : '...', icon: TrendingUp, color: 'text-blue-500' },
+              { label: 'إجمالي الخصومات', value: summary ? `${summary.totalCommission.toFixed(2)} ${currencySymbol}` : '...', icon: DollarSign, color: 'text-amber-500' },
               { label: 'صافي المستحق', value: summary ? `${summary.totalNet.toFixed(2)} ${currencySymbol}` : '...', icon: Wallet, color: 'text-emerald-500' },
               { label: 'تم استلامه', value: summary ? `${summary.totalPaid.toFixed(2)} ${currencySymbol}` : '...', icon: CheckCircle, color: 'text-emerald-600' },
               { label: 'الرصيد المتبقي', value: summary ? `${summary.remaining.toFixed(2)} ${currencySymbol}` : '...', icon: Banknote, color: 'text-red-500' },
@@ -387,7 +404,7 @@ export default function CoachOrdersPage() {
           {/* Financial Orders Table */}
           <Card className="border-0 shadow-sm">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">تفاصيل الطلبات</CardTitle>
+              <CardTitle className="text-base">تفاصيل المستحقات</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               {financialLoading ? (
@@ -395,47 +412,55 @@ export default function CoachOrdersPage() {
               ) : financialOrders.length === 0 ? (
                 <div className="py-12 text-center text-muted-foreground">
                   <ShoppingBag className="h-10 w-10 mx-auto mb-3 opacity-20" />
-                  <p className="text-sm">لا توجد طلبات مالية</p>
+                  <p className="text-sm">لا توجد طلبات أو جلسات مالية بعد</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="text-right">النوع</TableHead>
                         <TableHead className="text-right">التاريخ</TableHead>
-                        <TableHead className="text-right">الدورة</TableHead>
+                        <TableHead className="text-right">البند</TableHead>
                         <TableHead className="text-right">المبلغ الإجمالي</TableHead>
-                        <TableHead className="text-right">العمولة ({commissionRate}%)</TableHead>
+                        <TableHead className="text-right">الخصم</TableHead>
                         <TableHead className="text-right">صافي المستحق</TableHead>
                         <TableHead className="text-right">الحالة</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {financialOrders.map(order => (
-                        <TableRow key={order.id}>
-                          <TableCell className="text-xs text-muted-foreground">
-                            {order.createdAt ? new Date(order.createdAt).toLocaleDateString('ar-EG') : '—'}
-                          </TableCell>
-                          <TableCell className="text-sm font-medium">{order.courseName || order.productName || '—'}</TableCell>
-                          <TableCell className="text-sm">{order.totalAmount.toFixed(2)} {currencySymbol}</TableCell>
-                          <TableCell className="text-sm text-amber-600">{order.commissionAmount.toFixed(2)} {currencySymbol}</TableCell>
-                          <TableCell className="text-sm font-bold text-emerald-600">{order.netAmount.toFixed(2)} {currencySymbol}</TableCell>
-                          <TableCell>
-                            <Badge className={`text-xs border-0 ${
-                              order.status === 'confirmed'
-                                ? 'bg-emerald-100 text-emerald-700'
-                                : order.status === 'pending'
-                                ? 'bg-amber-100 text-amber-700'
-                                : 'bg-red-100 text-red-700'
-                            }`}>
-                              {order.status === 'confirmed' ? 'مؤكد'
-                                : order.status === 'pending' ? 'قيد الانتظار'
-                                : order.status === 'rejected' ? 'مرفوض'
-                                : order.status}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {financialOrders.map(order => {
+                        const isSession = order.type === 'session';
+                        const st = isSession
+                          ? (sessionStatusLabel[order.status] ?? { label: order.status, className: 'bg-muted text-muted-foreground' })
+                          : order.status === 'confirmed'
+                          ? { label: 'مؤكد', className: 'bg-emerald-100 text-emerald-700' }
+                          : order.status === 'pending'
+                          ? { label: 'قيد الانتظار', className: 'bg-amber-100 text-amber-700' }
+                          : { label: 'مرفوض', className: 'bg-red-100 text-red-700' };
+                        return (
+                          <TableRow key={order.id}>
+                            <TableCell>
+                              <Badge variant="outline" className="text-xs">{isSession ? 'جلسة' : 'دورة'}</Badge>
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">
+                              {order.createdAt ? new Date(order.createdAt).toLocaleDateString('ar-EG') : '—'}
+                            </TableCell>
+                            <TableCell className="text-sm font-medium">
+                              {order.courseName || order.productName || '—'}
+                              {isSession && order.hours != null && (
+                                <span className="text-xs text-muted-foreground mr-1">({order.hours} ساعة)</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-sm">{order.totalAmount.toFixed(2)} {currencySymbol}</TableCell>
+                            <TableCell className="text-sm text-amber-600">{order.commissionAmount.toFixed(2)} {currencySymbol}</TableCell>
+                            <TableCell className="text-sm font-bold text-emerald-600">{order.netAmount.toFixed(2)} {currencySymbol}</TableCell>
+                            <TableCell>
+                              <Badge className={`text-xs border-0 ${st.className}`}>{st.label}</Badge>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </div>
