@@ -15,6 +15,7 @@ export default function PaymentCallbackPage() {
   const [isCourseOrder, setIsCourseOrder] = useState(false);
   const [courseId, setCourseId] = useState('');
   const [isSubscriptionOrder, setIsSubscriptionOrder] = useState(false);
+  const [isSessionOrder, setIsSessionOrder] = useState(false);
   const [isPopup, setIsPopup] = useState(false);
 
   useEffect(() => {
@@ -65,6 +66,10 @@ export default function PaymentCallbackPage() {
           if (data.order?.type === 'subscription') {
             setIsSubscriptionOrder(true);
             setMessage('تم الدفع بنجاح! تم تفعيل اشتراكك ويمكنك الآن استخدام لوحة التحكم.');
+          }
+          if (data.order?.type === 'session') {
+            setIsSessionOrder(true);
+            setMessage('تم الدفع بنجاح! سيتم التواصل معك قريباً لتأكيد موعد الجلسة.');
           }
         })
         .catch(() => {});
@@ -163,11 +168,16 @@ export default function PaymentCallbackPage() {
                   <Link href="/organization-dashboard">الذهاب للوحة التحكم</Link>
                 </Button>
               )}
-              {!isSubscriptionOrder && (
+              {!isSubscriptionOrder && !isSessionOrder && (
                 <Button asChild variant={isCourseOrder ? 'outline' : 'default'} className="w-full">
                   <Link href={isCourseOrder ? '/dashboard/training' : '/market'}>
                     {isCourseOrder ? 'دوراتي' : 'العودة للمتجر'}
                   </Link>
+                </Button>
+              )}
+              {isSessionOrder && (
+                <Button asChild className="w-full">
+                  <Link href="/">العودة للرئيسية</Link>
                 </Button>
               )}
             </div>

@@ -16,6 +16,7 @@ import { Menu, X, ChevronDown, Users, GraduationCap } from "lucide-react";
 const navLinks = [
   { href: '/#roles', label: 'كيف تعمل' },
   { href: '/#services', label: 'الخدمات' },
+  { href: '/courses', label: 'الدورات' },
   { href: '/live-sessions', label: 'جلسات مباشرة' },
   { href: '/articles', label: 'المقالات' },
   { href: '/projects', label: 'الفرص' },

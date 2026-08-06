@@ -45,7 +45,7 @@ const defaultConfig: PaymentConfig = {
 
 type GwKey = 'moyasar' | 'stripe' | 'paypal' | 'paytabs' | 'hyperpay' | 'tamara' | 'tabby';
 
-const GATEWAYS: { key: GwKey; name: string; desc: string; logo: string; fields: { key: string; label: string; hint?: string; type?: string; options?: string[] }[] }[] = [
+const GATEWAYS: { key: GwKey; name: string; desc: string; logo: string; disabled?: boolean; fields: { key: string; label: string; hint?: string; type?: string; options?: string[] }[] }[] = [
   {
     key: 'moyasar', name: 'Moyasar', logo: '🏦',
     desc: 'بوابة الدفع السعودية — تدعم Mada، Visa، Mastercard، STC Pay، Apple Pay',
@@ -82,8 +82,8 @@ const GATEWAYS: { key: GwKey; name: string; desc: string; logo: string; fields: 
     ],
   },
   {
-    key: 'hyperpay', name: 'HyperPay', logo: '⚡',
-    desc: 'HyperPay — تدعم Mada، Visa، Mastercard في السوق السعودي',
+    key: 'hyperpay', name: 'HyperPay', logo: '⚡', disabled: true,
+    desc: 'HyperPay — غير مدعومة بعد على المنصة (قيد التطوير)، لا يمكن تفعيلها حالياً',
     fields: [
       { key: 'accessToken', label: 'Access Token', type: 'password' },
       { key: 'entityIdVisa', label: 'Entity ID (Visa/Mastercard)' },
@@ -144,14 +144,22 @@ function GatewayCard({ gwDef, value, onChange }: {
             <p className="text-foreground font-semibold text-sm">{gwDef.name}</p>
             <p className="text-muted-foreground text-xs truncate">{gwDef.desc}</p>
           </div>
-          <Badge className={value.enabled ? 'bg-emerald-500/20 text-emerald-400 border-0' : 'bg-muted/60 text-muted-foreground border-0'}>
-            {value.enabled ? 'مفعّل' : 'معطّل'}
+          <Badge className={gwDef.disabled ? 'bg-muted/60 text-muted-foreground border-0' : value.enabled ? 'bg-emerald-500/20 text-emerald-400 border-0' : 'bg-muted/60 text-muted-foreground border-0'}>
+            {gwDef.disabled ? 'قيد التطوير' : value.enabled ? 'مفعّل' : 'معطّل'}
           </Badge>
-          <Switch checked={value.enabled} onCheckedChange={v => set('enabled', v)} onClick={e => e.stopPropagation()} />
+          <Switch checked={!gwDef.disabled && value.enabled} disabled={gwDef.disabled} onCheckedChange={v => set('enabled', v)} onClick={e => e.stopPropagation()} />
           {open ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
         </div>
 
-        {open && (
+        {open && gwDef.disabled && (
+          <div className="px-4 pb-4 border-t border-border pt-4">
+            <div className="flex items-center gap-2 p-3 bg-muted/40 border border-border rounded-xl text-muted-foreground text-xs">
+              <AlertCircle className="h-4 w-4 flex-shrink-0" />
+              <span>هذه البوابة قيد التطوير على المنصة ولا يمكن تفعيلها بعد — اختر بوابة أخرى.</span>
+            </div>
+          </div>
+        )}
+        {open && !gwDef.disabled && (
           <div className="px-4 pb-4 border-t border-border pt-4 space-y-4">
             <div className="space-y-2">
               <Label>التسمية في نموذج الطلب</Label>

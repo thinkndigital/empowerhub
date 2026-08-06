@@ -162,33 +162,12 @@ export async function POST(req: NextRequest) {
     }
 
     // ─── HyperPay ────────────────────────────────────────────────────────────
+    // Not wired up end-to-end yet: it needs a Copy&amp;Pay widget page plus a
+    // server-side payment-status check (HyperPay doesn't redirect back with a
+    // simple ?status=paid like the other gateways). Rejected explicitly here
+    // instead of silently redirecting to a page that doesn't exist.
     if (gateway === 'hyperpay') {
-      const gw = config?.hyperpay || {};
-      if (!gw.enabled) return NextResponse.json({ error: 'الدفع عبر HyperPay غير مفعّل' }, { status: 400 });
-      if (!gw.accessToken) return NextResponse.json({ error: 'بيانات HyperPay غير مكتملة' }, { status: 400 });
-
-      const hpBase = gw.mode === 'live' ? 'https://eu-prod.oppwa.com' : 'https://eu-test.oppwa.com';
-      const entityId = gw.entityIdVisa || gw.entityIdMada;
-      const params = new URLSearchParams({
-        entityId,
-        amount: amount.toFixed(2),
-        currency,
-        paymentType: 'DB',
-        'customParameters[orderId]': orderId,
-      });
-      const res = await fetch(`${hpBase}/v1/checkouts`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${gw.accessToken}`, 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: params.toString(),
-      });
-      if (!res.ok) {
-        const e = await res.json();
-        return NextResponse.json({ error: e.result?.description || 'خطأ في HyperPay' }, { status: 500 });
-      }
-      const hp = await res.json();
-      const paymentUrl = `${host}/payment/hyperpay?checkoutId=${hp.id}&orderId=${orderId}`;
-      await adminDb.collection('orders').doc(orderId).update({ paymentId: hp.id, paymentGateway: 'hyperpay' });
-      return NextResponse.json({ ok: true, paymentUrl, paymentId: hp.id });
+      return NextResponse.json({ error: 'الدفع عبر HyperPay غير مدعوم حالياً — يرجى اختيار وسيلة دفع أخرى.' }, { status: 400 });
     }
 
     // ─── Tamara ──────────────────────────────────────────────────────────────

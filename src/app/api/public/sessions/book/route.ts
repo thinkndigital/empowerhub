@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
       quantity: 1,
       paymentMethod: paymentMethod || 'cod',
       status: 'pending',
-      paymentStatus: paymentMethod === 'cod' ? 'cod' : 'unpaid',
+      paymentStatus: 'unpaid',
       hostId,
       hostName,
       hostRole: hostRole || 'mentor',

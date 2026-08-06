@@ -1,13 +1,15 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const requested = Number(req.nextUrl.searchParams.get('limit'));
+    const limit = requested > 0 ? Math.min(requested, 60) : 12;
     const [snap1, snap2] = await Promise.all([
-      adminDb.collection('courses').where('status', '==', 'published').limit(12).get(),
-      adminDb.collection('courses').where('status', '==', 'منشورة').limit(12).get(),
+      adminDb.collection('courses').where('status', '==', 'published').limit(limit).get(),
+      adminDb.collection('courses').where('status', '==', 'منشورة').limit(limit).get(),
     ]);
 
     const seen = new Set<string>();
