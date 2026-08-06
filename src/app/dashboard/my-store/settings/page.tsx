@@ -181,12 +181,14 @@ export default function StoreSettingsPage() {
   };
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold tracking-tight">إعدادات المتجر</h1>
-      <p className="text-muted-foreground mb-6">إدارة الهوية المرئية ومعلومات التواصل لمتجرك.</p>
+    <div className="space-y-6" dir="rtl">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">إعدادات المتجر</h1>
+        <p className="text-muted-foreground">إدارة الهوية المرئية ومعلومات التواصل لمتجرك.</p>
+      </div>
 
       {storeId && (
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between p-4 rounded-xl border border-primary/20 bg-primary/5 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between p-4 rounded-xl border border-primary/20 bg-primary/5">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
               <Link2 className="h-4 w-4 text-primary" />

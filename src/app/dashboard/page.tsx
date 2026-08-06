@@ -70,8 +70,8 @@ export default function DashboardPage() {
   const progress = (userProfile as any)?.progress || 0;
 
   return (
-    <>
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-2">
+    <div className="space-y-6" dir="rtl">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">لوحة التحكم</h1>
           <p className="text-sm text-muted-foreground mt-1">
@@ -256,6 +256,6 @@ export default function DashboardPage() {
           </Card>
         </div>
       </div>
-    </>
+    </div>
   );
 }

@@ -237,7 +237,7 @@ export default function AdminCourseEditPage({ params }: { params: { courseId: st
   if (!course) {
     return (
         <div className="text-center">
-            <h1 className="text-2xl font-bold">الدورة غير موجودة</h1>
+            <h1 className="text-2xl font-bold tracking-tight">الدورة غير موجودة</h1>
             <p className="text-muted-foreground">لم نتمكن من العثور على الدورة التي تبحث عنها.</p>
             <Button asChild className="mt-4">
                 <Link href="/admin-dashboard/courses">العودة إلى الدورات</Link>
@@ -248,7 +248,7 @@ export default function AdminCourseEditPage({ params }: { params: { courseId: st
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
                  <h1 className="text-2xl font-bold tracking-tight">تحرير محتوى الدورة (المشرف)</h1>

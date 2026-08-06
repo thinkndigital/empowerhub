@@ -556,7 +556,7 @@ export default function ContentPage() {
   return (
     <div className="space-y-6" dir="rtl">
       <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
+        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
           <Layers className="h-6 w-6 text-primary" />
           محتوى السوشال ميديا
         </h1>

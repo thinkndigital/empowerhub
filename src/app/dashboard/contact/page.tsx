@@ -82,9 +82,9 @@ export default function ContactOrganizationPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir="rtl">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">التواصل مع المنظمة</h1>
+        <h1 className="text-2xl font-bold tracking-tight">التواصل مع المنظمة</h1>
         <p className="text-muted-foreground mt-1">أرسل طلباتك واستفساراتك لمدير منظمتك مباشرةً.</p>
       </div>
 

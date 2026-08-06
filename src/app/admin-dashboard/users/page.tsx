@@ -144,8 +144,8 @@ export default function UsersPage() {
   }
 
   return (
-    <>
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+    <div className="space-y-6" dir="rtl">
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">المستخدمون</h1>
         <p className="text-sm text-muted-foreground">عرض وإدارة جميع المستخدمين المسجلين على المنصة.</p>
@@ -324,6 +324,6 @@ export default function UsersPage() {
         </Form>
       </DialogContent>
     </Dialog>
-    </>
+    </div>
   );
 }

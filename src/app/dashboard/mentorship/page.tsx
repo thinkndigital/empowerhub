@@ -138,9 +138,9 @@ export default function MentorshipPage() {
 
   return (
     <>
-    <div className="space-y-6">
+    <div className="space-y-6" dir="rtl">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">الإرشاد والتوجيه</h1>
+        <h1 className="text-2xl font-bold tracking-tight">الإرشاد والتوجيه</h1>
         <p className="text-muted-foreground mt-1">تابع جلساتك الإرشادية وتواصل مع مرشدك.</p>
       </div>
 

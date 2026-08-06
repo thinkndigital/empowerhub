@@ -284,7 +284,7 @@ export default function OrganizationsPage() {
   // ── JSX ───────────────────────────────────────────────────────────────────
 
   return (
-    <div dir="rtl">
+    <div className="space-y-6" dir="rtl">
       <Card className="border-0 shadow-sm">
         <CardHeader>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

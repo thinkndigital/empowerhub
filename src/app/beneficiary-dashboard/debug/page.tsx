@@ -28,9 +28,9 @@ export default function BeneficiaryDebugPage() {
   useEffect(() => { if (user) load(); }, [user]);
 
   return (
-    <div className="space-y-4 p-4" dir="rtl">
+    <div className="space-y-6" dir="rtl">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">تشخيص بيانات المستفيد</h1>
+        <h1 className="text-2xl font-bold tracking-tight">تشخيص بيانات المستفيد</h1>
         <Button size="sm" onClick={load} disabled={loading}>
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
           تحديث

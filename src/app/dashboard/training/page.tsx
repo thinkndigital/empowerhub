@@ -136,10 +136,10 @@ export default function TrainingPage() {
   const totalCompleted = courses.filter(c => (progressMap[c.id] || 0) >= 100).length;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6" dir="rtl">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">الدورات التدريبية</h1>
+          <h1 className="text-2xl font-bold tracking-tight">الدورات التدريبية</h1>
           <p className="text-muted-foreground mt-1">
             {loading ? "جاري التحميل..." : `${totalCompleted} من ${totalCourses} دورات مكتملة`}
           </p>

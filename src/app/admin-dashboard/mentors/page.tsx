@@ -78,8 +78,8 @@ export default function MentorsPage() {
   };
 
   return (
-    <>
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+    <div className="space-y-6" dir="rtl">
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">المرشدون</h1>
         <p className="text-sm text-muted-foreground">إدارة المرشدين في المنصة وتتبع أدائهم.</p>
@@ -209,6 +209,6 @@ export default function MentorsPage() {
             </div>
         </DialogContent>
     </Dialog>
-    </>
+    </div>
   );
 }

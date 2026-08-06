@@ -218,7 +218,7 @@ export default function MyStorePage() {
 
   return (
     <>
-    <div className="space-y-8">
+    <div className="space-y-6" dir="rtl">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">لوحة تحكم متجري</h1>
         <p className="text-muted-foreground">نظرة عامة على أداء متجرك الإلكتروني.</p>

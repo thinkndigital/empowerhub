@@ -115,7 +115,7 @@ export default function AnalyticsPage() {
   };
 
   return (
-    <>
+    <div className="space-y-6" dir="rtl">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h1 className="text-2xl font-bold tracking-tight">تحليلات المنصة</h1>
         <Dialog open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen}>
@@ -273,6 +273,6 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
       </div>
-    </>
+    </div>
   );
 }
