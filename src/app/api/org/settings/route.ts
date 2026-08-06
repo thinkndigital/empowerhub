@@ -33,7 +33,7 @@ export async function PUT(req: NextRequest) {
 
     // Organizations may only edit their own operational settings — brand
     // color (primaryColor) is admin-only and managed from the admin panel.
-    const allowedFields = ['name', 'logoUrl', 'courseSessionPrice', 'mentorshipSessionPrice'];
+    const allowedFields = ['name', 'logoUrl', 'courseSessionPrice', 'mentorshipSessionPrice', 'orgCommissionPercent'];
 
     // Remove any undefined / null values that Firestore rejects, and drop
     // any field outside the allowlist.

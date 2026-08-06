@@ -13,7 +13,7 @@ import { ArrowRight, Users, Calendar, CheckCircle, Clock, XCircle, Building2, Wa
 type Beneficiary = { id: string; name?: string; progress?: number };
 type Session = { id: string; title?: string; date?: any; status?: string };
 type OrgHistoryEntry = { id: string; organizationId: string; organizationName: string; joinedAt: string | null; leftAt: string | null };
-type Earnings = { pricePerAttendee: number; completedSessions: number; totalAttendees: number; total: number };
+type Earnings = { hourlyRate: number; orgCommissionPercent: number; billableSessions: number; totalHours: number; gross: number; orgCut: number; net: number };
 type MentorProfile = {
   id: string; name?: string; email?: string; bio?: string; specializations?: string;
   sessions?: Session[];
@@ -102,21 +102,29 @@ export default function MentorProfilePage() {
             {profile?.earnings && (
               <Card className="border-0 shadow-sm">
                 <CardHeader><CardTitle className="text-base flex items-center gap-2"><Wallet className="h-4 w-4" />المحاسبة</CardTitle></CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-3 gap-3 text-center">
+                <CardContent className="space-y-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
                     <div>
-                      <p className="text-xl font-bold">{profile.earnings.total.toLocaleString()}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">إجمالي المستحقات (د.أ)</p>
+                      <p className="text-xl font-bold text-primary">{profile.earnings.net.toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">صافي المستحقات (د.أ)</p>
                     </div>
                     <div>
-                      <p className="text-xl font-bold">{profile.earnings.completedSessions}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">جلسات مكتملة</p>
+                      <p className="text-xl font-bold">{profile.earnings.gross.toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">الإجمالي قبل الخصم (د.أ)</p>
                     </div>
                     <div>
-                      <p className="text-xl font-bold">{profile.earnings.pricePerAttendee.toLocaleString()}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">سعر الجلسة/شخص (د.أ)</p>
+                      <p className="text-xl font-bold">{profile.earnings.billableSessions}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">جلسات محتسبة</p>
+                    </div>
+                    <div>
+                      <p className="text-xl font-bold">{profile.earnings.totalHours}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">إجمالي الساعات</p>
                     </div>
                   </div>
+                  <p className="text-xs text-muted-foreground text-center border-t pt-3">
+                    سعر الساعة {profile.earnings.hourlyRate.toLocaleString()} د.أ، ونسبة المنظمة {profile.earnings.orgCommissionPercent}%
+                    {profile.earnings.orgCut > 0 && <> (خُصم {profile.earnings.orgCut.toLocaleString()} د.أ)</>}
+                  </p>
                 </CardContent>
               </Card>
             )}

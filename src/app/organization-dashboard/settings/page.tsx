@@ -56,6 +56,7 @@ const settingsSchema = z.object({
   logo: z.any(),
   courseSessionPrice: z.coerce.number().min(0, { message: "يجب أن يكون السعر 0 أو أكثر." }),
   mentorshipSessionPrice: z.coerce.number().min(0, { message: "يجب أن يكون السعر 0 أو أكثر." }),
+  orgCommissionPercent: z.coerce.number().min(0, { message: "يجب أن تكون النسبة 0 أو أكثر." }).max(100, { message: "لا يمكن أن تتجاوز النسبة 100%." }),
 });
 
 export default function OrgSettingsPage() {
@@ -74,6 +75,7 @@ export default function OrgSettingsPage() {
       name: "EmpowerHub",
       courseSessionPrice: 50,
       mentorshipSessionPrice: 30,
+      orgCommissionPercent: 0,
     },
   });
 
@@ -92,6 +94,7 @@ export default function OrgSettingsPage() {
       if (data.logoUrl) setLogoPreview(data.logoUrl);
       if (data.courseSessionPrice != null) form.setValue('courseSessionPrice', data.courseSessionPrice);
       if (data.mentorshipSessionPrice != null) form.setValue('mentorshipSessionPrice', data.mentorshipSessionPrice);
+      if (data.orgCommissionPercent != null) form.setValue('orgCommissionPercent', data.orgCommissionPercent);
       if (data.inviteCode) setInviteCode(data.inviteCode);
     } catch {
       // Fallback to localStorage
@@ -342,9 +345,9 @@ export default function OrgSettingsPage() {
 
           <Card className="border-0 shadow-sm">
             <CardHeader>
-              <CardTitle>تسعير الخدمات</CardTitle>
+              <CardTitle>تسعير الخدمات والمحاسبة</CardTitle>
               <CardDescription>
-                تحديد أسعار الجلسات بالدينار الأردني (د.أ) التي يقدمها المدربون والمرشدون.
+                تحديد أسعار الساعة بالدينار الأردني (د.أ) للجلسات التي يقدمها المدربون والمرشدون، ونسبة المنظمة من هذه الجلسات — تُحتسب مستحقاتهم تلقائياً وتظهر في لوحاتهم الخاصة.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -353,12 +356,12 @@ export default function OrgSettingsPage() {
                 name="courseSessionPrice"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="flex items-center gap-2"><BookOpen className="h-4 w-4" /> سعر جلسة التدريب (لكل شخص)</FormLabel>
+                    <FormLabel className="flex items-center gap-2"><BookOpen className="h-4 w-4" /> سعر ساعة التدريب</FormLabel>
                     <FormControl>
                       <Input type="number" step="0.5" min="0" placeholder="50" {...field} />
                     </FormControl>
                     <FormDescription>
-                      المبلغ المحتسب لكل مستفيد عن كل جلسة تدريب فردية.
+                      المبلغ المحتسب لكل ساعة من جلسات التدريب التي يقدمها المدرب (يُحسب حسب مدة الجلسة الفعلية).
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -369,12 +372,28 @@ export default function OrgSettingsPage() {
                 name="mentorshipSessionPrice"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="flex items-center gap-2"><Users className="h-4 w-4" /> سعر جلسة الإرشاد (لكل شخص)</FormLabel>
+                    <FormLabel className="flex items-center gap-2"><Users className="h-4 w-4" /> سعر ساعة الإرشاد</FormLabel>
                     <FormControl>
                       <Input type="number" step="0.5" min="0" placeholder="30" {...field} />
                     </FormControl>
                     <FormDescription>
-                      المبلغ المحتسب لكل مستفيد عن كل جلسة إرشاد.
+                      المبلغ المحتسب لكل ساعة من جلسات الإرشاد التي يقدمها المرشد (يُحسب حسب مدة الجلسة الفعلية).
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="orgCommissionPercent"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2"><CreditCard className="h-4 w-4" /> نسبة المنظمة من الجلسات (%)</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="1" min="0" max="100" placeholder="0" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      النسبة التي تخصمها المنظمة من مستحقات المدربين والمرشدين قبل صرفها — الباقي هو صافي مستحقاتهم.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

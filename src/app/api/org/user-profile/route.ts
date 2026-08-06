@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import { getOrgHistory } from '@/lib/org-history';
+import { computeSessionEarnings } from '@/lib/session-earnings';
 
 export async function GET(req: NextRequest) {
   try {
@@ -79,30 +80,13 @@ export async function GET(req: NextRequest) {
 
     const organizationHistory = await getOrgHistory(userId);
 
-    // Earnings — the org sets a per-attendee price for mentorship vs. coaching
-    // sessions (organizations/{orgId}.mentorshipSessionPrice / courseSessionPrice);
-    // this turns that price into an actual figure for what this mentor/coach
-    // has earned from their own completed, hosted sessions.
-    let earnings: { pricePerAttendee: number; completedSessions: number; totalAttendees: number; total: number } | null = null;
-    if ((userData.role === 'mentor' || userData.role === 'coach') && userData.organizationId) {
-      const orgSnap = await adminDb.collection('organizations').doc(userData.organizationId).get();
-      const orgData = orgSnap.data();
-      const pricePerAttendee = (userData.role === 'mentor'
-        ? orgData?.mentorshipSessionPrice
-        : orgData?.courseSessionPrice) ?? 0;
-
-      const hostedCompleted = sessions.filter((s: any) => s.hostId === userId && s.status === 'completed');
-      const totalAttendees = hostedCompleted.reduce((sum: number, s: any) => {
-        const count = Array.isArray(s.attendees) ? s.attendees.length : (s.beneficiaryId ? 1 : 0);
-        return sum + count;
-      }, 0);
-
-      earnings = {
-        pricePerAttendee,
-        completedSessions: hostedCompleted.length,
-        totalAttendees,
-        total: pricePerAttendee * totalAttendees,
-      };
+    // Earnings — same hourly-rate + org-commission calculation used on the
+    // mentor's/coach's own dashboard (/api/mentor/financial, /api/coach/financial),
+    // so an org admin sees exactly the same numbers the mentor/coach sees.
+    let earnings = null;
+    if (userData.role === 'mentor' || userData.role === 'coach') {
+      const { summary } = await computeSessionEarnings(userId, userData.role, userData.organizationId);
+      earnings = summary;
     }
 
     return NextResponse.json({

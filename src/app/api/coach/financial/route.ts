@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { computeSessionEarnings } from '@/lib/session-earnings';
 
 export const dynamic = 'force-dynamic';
 
@@ -60,6 +61,17 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // Session-based earnings: the org pays an hourly rate (set on the org's
+    // settings page) for coaching sessions this coach hosted, minus the
+    // org's own commission — separate from the platform's course-sale cut.
+    let organizationId = (decoded as any).organizationId as string | undefined;
+    if (!organizationId) {
+      const userDoc = await adminDb.collection('users').doc(uid).get();
+      organizationId = userDoc.data()?.organizationId;
+    }
+    const { entries: sessionEntries, summary: sessionSummary } = await computeSessionEarnings(uid, 'coach', organizationId);
+    orderDocs.push(...sessionEntries);
+
     orderDocs.sort((a, b) => {
       const da = a.createdAt ? new Date(a.createdAt).getTime() : 0;
       const db = b.createdAt ? new Date(b.createdAt).getTime() : 0;
@@ -88,6 +100,7 @@ export async function GET(req: NextRequest) {
       orders: orderDocs,
       payouts,
       commissionRate,
+      sessionEarnings: sessionSummary,
       summary: {
         totalGross: Math.round(totalGross * 100) / 100,
         totalCommission: Math.round(totalCommission * 100) / 100,
