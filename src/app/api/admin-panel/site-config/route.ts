@@ -94,6 +94,7 @@ const defaultConfig = {
     showStats: true, showFeatures: true, showOpportunities: true, showHowItWorks: true,
     showRoles: true, showMentors: true, showCoaches: true, showBlog: true,
     showTestimonials: true, showProducts: true, showStores: true, showPricing: true, showContact: true, showCTA: true,
+    showAISpotlight: true, showFAQ: true, showCourses: true, showSessions: true, showSuccessStories: true,
   },
   footer: {
     description: 'منصة EmpowerHub للتمكين الرقمي',
@@ -103,7 +104,23 @@ const defaultConfig = {
     linkedin: '',
     instagram: '',
     copyright: '© 2024 EmpowerHub. جميع الحقوق محفوظة.',
+    newsletterTitle: '',
+    newsletterPlaceholder: '',
+    newsletterButton: '',
+    quickLinksTitle: '',
+    roleLinksTitle: '',
+    companyLinksTitle: '',
+    legalLinksTitle: '',
   },
+  sectionHeadings: {
+    roles: {}, features: {}, experts: {}, courses: {}, sessions: {}, products: {},
+    stores: {}, pricing: {}, testimonials: {}, blog: {}, opportunities: {}, successStories: {}, contact: {},
+  } as Record<string, { eyebrow?: string; heading?: string; subheading?: string }>,
+  aiSpotlight: {
+    eyebrow: '', heading: '', subheading: '',
+    cards: [{ title: '', description: '' }, { title: '', description: '' }],
+  },
+  faq: [] as { question: string; answer: string }[],
 };
 
 export async function GET() {
@@ -128,6 +145,13 @@ export async function GET() {
         { ...(defaultConfig.sectionStyles as any)[k], ...(d?.sectionStyles?.[k] || {}) },
       ])
     ),
+    sectionHeadings: Object.fromEntries(
+      Object.keys(defaultConfig.sectionHeadings).map(k => [
+        k,
+        { ...(defaultConfig.sectionHeadings as any)[k], ...(d?.sectionHeadings?.[k] || {}) },
+      ])
+    ),
+    aiSpotlight: { ...defaultConfig.aiSpotlight, ...d?.aiSpotlight },
     stats: d?.stats ?? defaultConfig.stats,
     features: d?.features ?? defaultConfig.features,
     opportunities: d?.opportunities ?? defaultConfig.opportunities,
@@ -135,6 +159,7 @@ export async function GET() {
     testimonials: d?.testimonials ?? defaultConfig.testimonials,
     blogPosts: d?.blogPosts ?? defaultConfig.blogPosts,
     roles: d?.roles ?? defaultConfig.roles,
+    faq: d?.faq ?? defaultConfig.faq,
   };
   return NextResponse.json({ config });
 }

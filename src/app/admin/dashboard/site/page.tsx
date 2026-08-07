@@ -44,9 +44,33 @@ interface SiteConfig {
     showStats: boolean; showFeatures: boolean; showOpportunities: boolean; showHowItWorks: boolean;
     showRoles: boolean; showMentors: boolean; showCoaches: boolean; showBlog: boolean;
     showTestimonials: boolean; showProducts: boolean; showStores: boolean; showPricing: boolean; showContact: boolean; showCTA: boolean;
+    showAISpotlight: boolean; showFAQ: boolean; showCourses: boolean; showSessions: boolean; showSuccessStories: boolean;
   };
-  footer: { description: string; email: string; phone: string; twitter: string; linkedin: string; instagram: string; copyright: string };
+  footer: {
+    description: string; email: string; phone: string; twitter: string; linkedin: string; instagram: string; copyright: string;
+    newsletterTitle: string; newsletterPlaceholder: string; newsletterButton: string;
+    quickLinksTitle: string; roleLinksTitle: string; companyLinksTitle: string; legalLinksTitle: string;
+  };
+  sectionHeadings: Record<string, { eyebrow?: string; heading?: string; subheading?: string }>;
+  aiSpotlight: { eyebrow: string; heading: string; subheading: string; cards: { title: string; description: string }[] };
+  faq: { question: string; answer: string }[];
 }
+
+const SECTION_HEADING_KEYS: { key: string; label: string }[] = [
+  { key: 'roles', label: 'جولة الأدوار' },
+  { key: 'features', label: 'المميزات' },
+  { key: 'experts', label: 'المرشدون والمدربون' },
+  { key: 'courses', label: 'الدورات' },
+  { key: 'sessions', label: 'الجلسات المباشرة' },
+  { key: 'products', label: 'المنتجات' },
+  { key: 'stores', label: 'المتاجر' },
+  { key: 'pricing', label: 'خطط الأسعار' },
+  { key: 'testimonials', label: 'آراء المستخدمين' },
+  { key: 'blog', label: 'المقالات' },
+  { key: 'opportunities', label: 'الفرص والمشاريع' },
+  { key: 'successStories', label: 'قصص النجاح' },
+  { key: 'contact', label: 'التواصل' },
+];
 
 const defaultConfig: SiteConfig = {
   siteName: 'EmpowerHub', tagline: 'منصة التمكين الرقمي',
@@ -80,8 +104,16 @@ const defaultConfig: SiteConfig = {
     showStats: true, showFeatures: true, showOpportunities: true, showHowItWorks: true,
     showRoles: true, showMentors: true, showCoaches: true, showBlog: true,
     showTestimonials: true, showProducts: true, showStores: true, showPricing: true, showContact: true, showCTA: true,
+    showAISpotlight: true, showFAQ: true, showCourses: true, showSessions: true, showSuccessStories: true,
   },
-  footer: { description: '', email: '', phone: '', twitter: '', linkedin: '', instagram: '', copyright: '' },
+  footer: {
+    description: '', email: '', phone: '', twitter: '', linkedin: '', instagram: '', copyright: '',
+    newsletterTitle: '', newsletterPlaceholder: '', newsletterButton: '',
+    quickLinksTitle: '', roleLinksTitle: '', companyLinksTitle: '', legalLinksTitle: '',
+  },
+  sectionHeadings: Object.fromEntries(SECTION_HEADING_KEYS.map(s => [s.key, {}])),
+  aiSpotlight: { eyebrow: '', heading: '', subheading: '', cards: [{ title: '', description: '' }, { title: '', description: '' }] },
+  faq: [],
 };
 
 function SaveBar({ onSave, saving, saved }: { onSave: () => void; saving: boolean; saved: boolean }) {
@@ -264,6 +296,18 @@ export default function SiteEditorPage() {
           stats: d.config.stats ?? defaultConfig.stats,
           features: d.config.features ?? defaultConfig.features,
           opportunities: d.config.opportunities ?? defaultConfig.opportunities,
+          faq: d.config.faq ?? defaultConfig.faq,
+          sectionHeadings: Object.fromEntries(
+            SECTION_HEADING_KEYS.map(s => [
+              s.key,
+              { ...(defaultConfig.sectionHeadings as any)[s.key], ...(d.config.sectionHeadings?.[s.key] || {}) },
+            ])
+          ),
+          aiSpotlight: {
+            ...defaultConfig.aiSpotlight,
+            ...d.config.aiSpotlight,
+            cards: d.config.aiSpotlight?.cards?.length ? d.config.aiSpotlight.cards : defaultConfig.aiSpotlight.cards,
+          },
         }));
       }
       setLoading(false);
@@ -332,6 +376,27 @@ export default function SiteEditorPage() {
   const removeTestimonial = (i: number) =>
     setConfig(c => ({ ...c, testimonials: c.testimonials.filter((_, idx) => idx !== i) }));
 
+  // Section headings
+  const setSectionHeading = (key: string, field: 'eyebrow' | 'heading' | 'subheading', v: string) =>
+    setConfig(c => ({ ...c, sectionHeadings: { ...c.sectionHeadings, [key]: { ...c.sectionHeadings[key], [field]: v } } }));
+
+  // AI Spotlight
+  const setAISpotlight = (k: 'eyebrow' | 'heading' | 'subheading', v: string) =>
+    setConfig(c => ({ ...c, aiSpotlight: { ...c.aiSpotlight, [k]: v } }));
+  const updateAISpotlightCard = (i: number, k: 'title' | 'description', v: string) =>
+    setConfig(c => {
+      const cards = [...c.aiSpotlight.cards];
+      cards[i] = { ...cards[i], [k]: v };
+      return { ...c, aiSpotlight: { ...c.aiSpotlight, cards } };
+    });
+
+  // FAQ
+  const addFaq = () => setConfig(c => ({ ...c, faq: [...c.faq, { question: '', answer: '' }] }));
+  const updateFaq = (i: number, k: 'question' | 'answer', v: string) =>
+    setConfig(c => { const f = [...c.faq]; f[i] = { ...f[i], [k]: v }; return { ...c, faq: f }; });
+  const removeFaq = (i: number) =>
+    setConfig(c => ({ ...c, faq: c.faq.filter((_, idx) => idx !== i) }));
+
   if (loading) return <div className="text-muted-foreground text-center py-16">جاري التحميل...</div>;
 
   return (
@@ -355,6 +420,9 @@ export default function SiteEditorPage() {
               { value: 'testimonials', label: 'الآراء', icon: Star },
               { value: 'contact', label: 'التواصل', icon: Phone },
               { value: 'cta', label: 'CTA بانر', icon: MessageSquare },
+              { value: 'headings', label: 'عناوين الأقسام', icon: Globe },
+              { value: 'aiSpotlight', label: 'الذكاء الاصطناعي', icon: Sparkles },
+              { value: 'faq', label: 'الأسئلة الشائعة', icon: MessageSquare },
               { value: 'sections', label: 'الأقسام', icon: Eye },
               { value: 'footer', label: 'الفوتر', icon: Link2 },
             ].map(t => (
@@ -787,6 +855,11 @@ export default function SiteEditorPage() {
                   { key: 'showPricing' as const, label: 'قسم خطط الأسعار', desc: 'يعرض الخطط المُدارة من صفحة "خطط التسعير" — لن يظهر القسم إن لم توجد خطط' },
                   { key: 'showContact' as const, label: 'قسم التواصل', desc: 'نموذج ومعلومات التواصل' },
                   { key: 'showCTA' as const, label: 'قسم الدعوة للعمل', desc: 'بانر التسجيل في نهاية الصفحة' },
+                  { key: 'showAISpotlight' as const, label: 'قسم الذكاء الاصطناعي', desc: 'قسم "مدعوم بالذكاء الاصطناعي" الغامق' },
+                  { key: 'showFAQ' as const, label: 'قسم الأسئلة الشائعة', desc: 'الأسئلة والأجوبة الشائعة' },
+                  { key: 'showCourses' as const, label: 'قسم الدورات', desc: 'عرض الدورات التدريبية' },
+                  { key: 'showSessions' as const, label: 'قسم الجلسات المباشرة', desc: 'يعرض الجلسات المتاحة — لن يظهر القسم إن لم توجد جلسات' },
+                  { key: 'showSuccessStories' as const, label: 'قسم قصص النجاح', desc: 'يعرض قصص نجاح المستفيدين — لن يظهر القسم إن لم توجد قصص' },
                 ].map(item => (
                   <div key={item.key} className="flex items-center justify-between p-4 bg-muted/40 rounded-xl border border-border hover:border-border transition-all">
                     <div className="flex items-center gap-3">
@@ -841,6 +914,153 @@ export default function SiteEditorPage() {
                     <Input value={config.footer.instagram} onChange={e => setFooter('instagram', e.target.value)} placeholder="https://instagram.com/..." dir="ltr" />
                   </div>
                 </div>
+                <div className="pt-2 border-t border-border space-y-4">
+                  <p className="text-sm font-medium text-foreground">شريط الاشتراك بالنشرة</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label>عنوان شريط الاشتراك</Label>
+                      <Input value={config.footer.newsletterTitle} onChange={e => setFooter('newsletterTitle', e.target.value)} placeholder="انضم لمجتمع EmpowerHub الآن" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>نص حقل البريد</Label>
+                      <Input value={config.footer.newsletterPlaceholder} onChange={e => setFooter('newsletterPlaceholder', e.target.value)} placeholder="بريدك الإلكتروني" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>نص زر الاشتراك</Label>
+                      <Input value={config.footer.newsletterButton} onChange={e => setFooter('newsletterButton', e.target.value)} placeholder="اشترك" />
+                    </div>
+                  </div>
+                </div>
+                <div className="pt-2 border-t border-border space-y-4">
+                  <p className="text-sm font-medium text-foreground">عناوين أعمدة الروابط</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label>عمود الروابط السريعة</Label>
+                      <Input value={config.footer.quickLinksTitle} onChange={e => setFooter('quickLinksTitle', e.target.value)} placeholder="روابط سريعة" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>عمود "ابدأ كـ"</Label>
+                      <Input value={config.footer.roleLinksTitle} onChange={e => setFooter('roleLinksTitle', e.target.value)} placeholder="ابدأ كـ" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>عمود الشركة</Label>
+                      <Input value={config.footer.companyLinksTitle} onChange={e => setFooter('companyLinksTitle', e.target.value)} placeholder="الشركة" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>عمود قانوني</Label>
+                      <Input value={config.footer.legalLinksTitle} onChange={e => setFooter('legalLinksTitle', e.target.value)} placeholder="قانوني" />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* SECTION HEADINGS */}
+          <TabsContent value="headings" className="mt-4">
+            <Card className="border-0 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-foreground text-base">عناوين الأقسام</CardTitle>
+                <p className="text-muted-foreground text-xs">النص التمهيدي والعنوان والوصف الفرعي لكل قسم في الصفحة الرئيسية — اتركها فارغة لاستخدام النص الافتراضي</p>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {SECTION_HEADING_KEYS.map(s => (
+                  <div key={s.key} className="p-4 bg-muted/40 rounded-xl border border-border space-y-3">
+                    <p className="text-sm font-semibold text-foreground">{s.label}</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">النص التمهيدي</Label>
+                        <Input
+                          value={config.sectionHeadings[s.key]?.eyebrow || ''}
+                          onChange={e => setSectionHeading(s.key, 'eyebrow', e.target.value)}
+                          placeholder="افتراضي"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">العنوان</Label>
+                        <Input
+                          value={config.sectionHeadings[s.key]?.heading || ''}
+                          onChange={e => setSectionHeading(s.key, 'heading', e.target.value)}
+                          placeholder="افتراضي"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">الوصف الفرعي</Label>
+                        <Input
+                          value={config.sectionHeadings[s.key]?.subheading || ''}
+                          onChange={e => setSectionHeading(s.key, 'subheading', e.target.value)}
+                          placeholder="افتراضي"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* AI SPOTLIGHT */}
+          <TabsContent value="aiSpotlight" className="mt-4">
+            <Card className="border-0 shadow-sm">
+              <CardHeader><CardTitle className="text-foreground text-base">قسم الذكاء الاصطناعي</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>النص التمهيدي</Label>
+                    <Input value={config.aiSpotlight.eyebrow} onChange={e => setAISpotlight('eyebrow', e.target.value)} placeholder="مدعوم بالذكاء الاصطناعي" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>العنوان</Label>
+                    <Input value={config.aiSpotlight.heading} onChange={e => setAISpotlight('heading', e.target.value)} placeholder="توصيات ذكية تسبقك خطوة." />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>الوصف الفرعي</Label>
+                  <Textarea value={config.aiSpotlight.subheading} onChange={e => setAISpotlight('subheading', e.target.value)} rows={2} className="resize-none" />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {config.aiSpotlight.cards.map((card, i) => (
+                    <div key={i} className="p-3 rounded-xl border border-border bg-muted/30 space-y-2">
+                      <Label className="text-xs">بطاقة {i + 1} — العنوان</Label>
+                      <Input value={card.title} onChange={e => updateAISpotlightCard(i, 'title', e.target.value)} />
+                      <Label className="text-xs">بطاقة {i + 1} — الوصف</Label>
+                      <Textarea value={card.description} onChange={e => updateAISpotlightCard(i, 'description', e.target.value)} rows={2} className="resize-none" />
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* FAQ */}
+          <TabsContent value="faq" className="mt-4">
+            <Card className="border-0 shadow-sm">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-foreground text-base">الأسئلة الشائعة</CardTitle>
+                  <Button type="button" size="sm" variant="outline" onClick={addFaq} className="gap-1">
+                    <Plus className="h-4 w-4" />إضافة سؤال
+                  </Button>
+                </div>
+                <p className="text-muted-foreground text-xs">اتركها فارغة لاستخدام الأسئلة الافتراضية</p>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {config.faq.length === 0 && (
+                  <p className="text-muted-foreground text-sm py-4 text-center">لا توجد أسئلة مخصصة بعد — يتم عرض الأسئلة الافتراضية.</p>
+                )}
+                {config.faq.map((item, i) => (
+                  <div key={i} className="p-4 bg-muted/40 rounded-xl border border-border space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs">السؤال</Label>
+                      <Button type="button" size="sm" variant="ghost" onClick={() => removeFaq(i)} className="h-7 w-7 p-0 text-muted-foreground hover:text-red-400">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                    <Input value={item.question} onChange={e => updateFaq(i, 'question', e.target.value)} placeholder="نص السؤال" />
+                    <Label className="text-xs">الإجابة</Label>
+                    <Textarea value={item.answer} onChange={e => updateFaq(i, 'answer', e.target.value)} rows={2} className="resize-none" placeholder="نص الإجابة" />
+                  </div>
+                ))}
               </CardContent>
             </Card>
           </TabsContent>

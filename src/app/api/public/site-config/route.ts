@@ -105,6 +105,11 @@ const defaultConfig = {
     showPricing: true,
     showContact: true,
     showCTA: true,
+    showAISpotlight: true,
+    showFAQ: true,
+    showCourses: true,
+    showSessions: true,
+    showSuccessStories: true,
   },
   footer: {
     description: 'منصة متكاملة للتمكين الرقمي تجمع التدريب، الإرشاد، والتجارة الإلكترونية في مكان واحد.',
@@ -114,7 +119,23 @@ const defaultConfig = {
     linkedin: '',
     instagram: '',
     copyright: '© 2024 EmpowerHub. جميع الحقوق محفوظة.',
+    newsletterTitle: '',
+    newsletterPlaceholder: '',
+    newsletterButton: '',
+    quickLinksTitle: '',
+    roleLinksTitle: '',
+    companyLinksTitle: '',
+    legalLinksTitle: '',
   },
+  sectionHeadings: {
+    roles: {}, features: {}, experts: {}, courses: {}, sessions: {}, products: {},
+    stores: {}, pricing: {}, testimonials: {}, blog: {}, opportunities: {}, successStories: {}, contact: {},
+  } as Record<string, { eyebrow?: string; heading?: string; subheading?: string }>,
+  aiSpotlight: {
+    eyebrow: '', heading: '', subheading: '',
+    cards: [{ title: '', description: '' }, { title: '', description: '' }],
+  },
+  faq: [] as { question: string; answer: string }[],
 };
 
 export async function GET() {
@@ -137,6 +158,13 @@ export async function GET() {
           { ...(defaultConfig.sectionStyles as any)[k], ...(data?.sectionStyles?.[k] || {}) },
         ])
       ),
+      sectionHeadings: Object.fromEntries(
+        Object.keys(defaultConfig.sectionHeadings).map(k => [
+          k,
+          { ...(defaultConfig.sectionHeadings as any)[k], ...(data?.sectionHeadings?.[k] || {}) },
+        ])
+      ),
+      aiSpotlight: { ...defaultConfig.aiSpotlight, ...data?.aiSpotlight },
       stats: data?.stats ?? defaultConfig.stats,
       features: data?.features ?? defaultConfig.features,
       opportunities: data?.opportunities ?? defaultConfig.opportunities,
@@ -144,6 +172,7 @@ export async function GET() {
       testimonials: data?.testimonials ?? defaultConfig.testimonials,
       blogPosts: data?.blogPosts ?? defaultConfig.blogPosts,
       roles: data?.roles ?? defaultConfig.roles,
+      faq: data?.faq ?? defaultConfig.faq,
     };
     return NextResponse.json({ config });
   } catch {

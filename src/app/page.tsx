@@ -130,8 +130,16 @@ interface SiteConfig {
     showStats: boolean; showFeatures: boolean; showOpportunities: boolean; showHowItWorks: boolean;
     showRoles: boolean; showMentors: boolean; showCoaches: boolean; showCourses: boolean; showBlog: boolean;
     showTestimonials: boolean; showProducts: boolean; showStores: boolean; showPricing: boolean; showContact: boolean; showCTA: boolean;
+    showAISpotlight?: boolean; showFAQ?: boolean; showSessions?: boolean; showSuccessStories?: boolean;
   };
-  footer: { description: string; email: string; phone: string; twitter: string; linkedin: string; instagram: string; copyright: string };
+  footer: {
+    description: string; email: string; phone: string; twitter: string; linkedin: string; instagram: string; copyright: string;
+    newsletterTitle?: string; newsletterPlaceholder?: string; newsletterButton?: string;
+    quickLinksTitle?: string; roleLinksTitle?: string; companyLinksTitle?: string; legalLinksTitle?: string;
+  };
+  sectionHeadings?: Record<string, { eyebrow?: string; heading?: string; subheading?: string }>;
+  aiSpotlight?: { eyebrow?: string; heading?: string; subheading?: string; cards?: { title?: string; description?: string }[] };
+  faq?: { question: string; answer: string }[];
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -611,10 +619,16 @@ export default function LandingPage() {
     showStats: true, showFeatures: true, showOpportunities: true, showHowItWorks: true,
     showRoles: true, showMentors: true, showCoaches: true, showCourses: true, showBlog: true,
     showTestimonials: true, showProducts: true, showStores: true, showPricing: true, showContact: true, showCTA: true,
+    showAISpotlight: true, showFAQ: true, showSessions: true, showSuccessStories: true,
     ...(cfg?.sections ?? {}),
   };
 
   const sectionStyle = (key: string) => cfg?.sectionStyles?.[key] || {};
+
+  // Section eyebrow/heading/subheading text — admin-editable per section key,
+  // falling back to the original copy when nothing's been set.
+  const sh = (key: string, field: 'eyebrow' | 'heading' | 'subheading', fallback: string) =>
+    (cfg?.sectionHeadings?.[key] as any)?.[field] || fallback;
 
   const heroTitle = cfg?.hero?.title || 'بوابتك للتمكين والنجاح';
   const heroSubtitle = cfg?.hero?.subtitle || 'منصة متكاملة تجمع بين التدريب المتخصص، الإرشاد الشخصي، والتجارة الإلكترونية لمساعدتك على بناء مستقبلك.';
@@ -1036,13 +1050,13 @@ export default function LandingPage() {
               <div className="text-center mb-10 sm:mb-14">
                 <p className="inline-flex items-center justify-center gap-2 text-xs font-semibold text-muted-foreground mb-3">
                   <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                  جولة داخل المنصة
+                  {sh('roles', 'eyebrow', 'جولة داخل المنصة')}
                 </p>
                 <h2 className="text-3xl sm:text-4xl md:text-[2.75rem] font-extrabold tracking-tight text-foreground leading-[1.1] text-balance">
-                  منصة واحدة، تجربة مصمّمة لكل دور
+                  {sh('roles', 'heading', 'منصة واحدة، تجربة مصمّمة لكل دور')}
                 </h2>
                 <p className="mt-3 text-muted-foreground text-sm sm:text-base leading-relaxed max-w-xl mx-auto">
-                  اختر دورك وشاهد كيف تبدو تجربتك داخل EmpowerHub.
+                  {sh('roles', 'subheading', 'اختر دورك وشاهد كيف تبدو تجربتك داخل EmpowerHub.')}
                 </p>
               </div>
 
@@ -1132,6 +1146,7 @@ export default function LandingPage() {
         )}
 
         {/* ── AI Spotlight (dark) ──────────────────────────────────────────────── */}
+        {sections.showAISpotlight && (
         <section className="grain-overlay relative overflow-hidden bg-foreground py-16 sm:py-20 md:py-28">
           <div className="absolute inset-0 pointer-events-none">
             <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-primary/25 rounded-full blur-[140px]" />
@@ -1140,13 +1155,13 @@ export default function LandingPage() {
             <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-16">
               <p className="inline-flex items-center gap-2 text-xs font-semibold text-white/50 mb-4">
                 <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                مدعوم بالذكاء الاصطناعي
+                {cfg?.aiSpotlight?.eyebrow || 'مدعوم بالذكاء الاصطناعي'}
               </p>
               <h2 className="text-3xl sm:text-4xl md:text-[2.75rem] font-extrabold tracking-tight leading-[1.1] mb-4 text-balance">
-                <span className="text-white">توصيات ذكية تسبقك خطوة.</span>
+                <span className="text-white">{cfg?.aiSpotlight?.heading || 'توصيات ذكية تسبقك خطوة.'}</span>
               </h2>
               <p className="text-white/60 text-sm sm:text-base leading-relaxed">
-                يحلل EmpowerHub تقدمك وأهدافك ليقترح عليك الدورة، المرشد، أو الفرصة التالية — بدل أن تبحث عنها بنفسك.
+                {cfg?.aiSpotlight?.subheading || 'يحلل EmpowerHub تقدمك وأهدافك ليقترح عليك الدورة، المرشد، أو الفرصة التالية — بدل أن تبحث عنها بنفسك.'}
               </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-4xl mx-auto">
@@ -1154,19 +1169,20 @@ export default function LandingPage() {
                 <div className="h-10 w-10 rounded-xl bg-primary/20 flex items-center justify-center mb-4">
                   <Sparkles className="h-5 w-5 text-primary" />
                 </div>
-                <h3 className="text-base font-bold text-white mb-2">مسار تعلّم مخصص</h3>
-                <p className="text-sm text-white/60 leading-relaxed">يقترح عليك الدورات والجلسات الأنسب لهدفك ومستواك الحالي، ويحدّثها كلما تقدمت.</p>
+                <h3 className="text-base font-bold text-white mb-2">{cfg?.aiSpotlight?.cards?.[0]?.title || 'مسار تعلّم مخصص'}</h3>
+                <p className="text-sm text-white/60 leading-relaxed">{cfg?.aiSpotlight?.cards?.[0]?.description || 'يقترح عليك الدورات والجلسات الأنسب لهدفك ومستواك الحالي، ويحدّثها كلما تقدمت.'}</p>
               </div>
               <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 sm:p-7">
                 <div className="h-10 w-10 rounded-xl bg-primary/20 flex items-center justify-center mb-4">
                   <BarChart3 className="h-5 w-5 text-primary" />
                 </div>
-                <h3 className="text-base font-bold text-white mb-2">تحليلات تقدم واضحة</h3>
-                <p className="text-sm text-white/60 leading-relaxed">تقارير مرئية تُظهر ما أنجزته وما تحتاج التركيز عليه بعد ذلك — لا أرقام مبعثرة.</p>
+                <h3 className="text-base font-bold text-white mb-2">{cfg?.aiSpotlight?.cards?.[1]?.title || 'تحليلات تقدم واضحة'}</h3>
+                <p className="text-sm text-white/60 leading-relaxed">{cfg?.aiSpotlight?.cards?.[1]?.description || 'تقارير مرئية تُظهر ما أنجزته وما تحتاج التركيز عليه بعد ذلك — لا أرقام مبعثرة.'}</p>
               </div>
             </div>
           </div>
         </section>
+        )}
 
 
         {/* ── All Platform Services ────────────────────────────────────────────── */}
@@ -1176,13 +1192,13 @@ export default function LandingPage() {
             <div className="mb-10 sm:mb-14">
               <p className="inline-flex items-center gap-2 text-xs font-semibold text-muted-foreground mb-3">
                 <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                ما تقدمه المنصة
+                {sh('features', 'eyebrow', 'ما تقدمه المنصة')}
               </p>
               <h2 className="text-3xl sm:text-4xl md:text-[2.75rem] font-extrabold tracking-tight text-foreground leading-[1.1] mb-3 text-balance">
-                كل ما تحتاجه لبناء مستقبلك في مكان واحد
+                {sh('features', 'heading', 'كل ما تحتاجه لبناء مستقبلك في مكان واحد')}
               </h2>
               <p className="text-muted-foreground text-sm sm:text-base max-w-xl leading-relaxed">
-                منصة متكاملة تجمع التدريب، الإرشاد، المشاريع، والتجارة — كل شيء تحتاجه في رحلة تمكينك الرقمي.
+                {sh('features', 'subheading', 'منصة متكاملة تجمع التدريب، الإرشاد، المشاريع، والتجارة — كل شيء تحتاجه في رحلة تمكينك الرقمي.')}
               </p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1226,9 +1242,9 @@ export default function LandingPage() {
               <div className="text-center mb-10 sm:mb-14">
                 <p className="inline-flex items-center justify-center gap-2 text-xs font-semibold text-muted-foreground mb-3">
                   <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                  فريق الخبراء
+                  {sh('experts', 'eyebrow', 'فريق الخبراء')}
                 </p>
-                <h2 className="text-3xl sm:text-4xl md:text-[2.75rem] font-extrabold tracking-tight text-foreground mb-4 text-balance">تعلم من الأفضل</h2>
+                <h2 className="text-3xl sm:text-4xl md:text-[2.75rem] font-extrabold tracking-tight text-foreground mb-4 text-balance">{sh('experts', 'heading', 'تعلم من الأفضل')}</h2>
                 <div className="flex flex-wrap justify-center gap-2">
                   {sections.showMentors && (
                     <Button variant="outline" size="sm" asChild>
@@ -1297,10 +1313,10 @@ export default function LandingPage() {
               <div className="text-center mb-10 sm:mb-12">
                 <p className="inline-flex items-center justify-center gap-2 text-xs font-semibold text-muted-foreground mb-3">
                   <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                  الدورات التدريبية
+                  {sh('courses', 'eyebrow', 'الدورات التدريبية')}
                 </p>
                 <h2 className="text-3xl sm:text-4xl md:text-[2.75rem] font-extrabold tracking-tight text-foreground mb-4 text-balance">
-                  طور مهاراتك مع دوراتنا
+                  {sh('courses', 'heading', 'طور مهاراتك مع دوراتنا')}
                 </h2>
                 {!loadingCourses && courses.length > 0 && (
                   <div className="flex flex-col items-center gap-2.5">
@@ -1373,15 +1389,15 @@ export default function LandingPage() {
         )}
 
         {/* ── Public Sessions ─────────────────────────────────────────────────── */}
-        {publicSessions.length > 0 && (
+        {sections.showSessions && publicSessions.length > 0 && (
           <section id="sessions" className="py-16 sm:py-20 md:py-28 bg-muted/30">
             <div className="container">
               <div className="text-center mb-8 sm:mb-10">
                 <p className="inline-flex items-center justify-center gap-2 text-xs font-semibold text-muted-foreground mb-3">
                   <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                  جلسات إرشادية
+                  {sh('sessions', 'eyebrow', 'جلسات إرشادية')}
                 </p>
-                <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground mb-4 text-balance">الجلسات المتاحة</h2>
+                <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground mb-4 text-balance">{sh('sessions', 'heading', 'الجلسات المتاحة')}</h2>
                 <div className="inline-flex items-center gap-0.5 bg-background rounded-lg p-0.5 border border-border/50">
                   {(['all', 'free', 'paid'] as const).map(f => (
                     <button key={f} onClick={() => setSessionFilter(f)}
@@ -1423,9 +1439,9 @@ export default function LandingPage() {
               <div className="text-center mb-10 sm:mb-12">
                 <p className="inline-flex items-center justify-center gap-2 text-xs font-semibold text-muted-foreground mb-3">
                   <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                  متجر المجتمع
+                  {sh('products', 'eyebrow', 'متجر المجتمع')}
                 </p>
-                <h2 className="text-3xl sm:text-4xl md:text-[2.75rem] font-extrabold tracking-tight text-foreground mb-4 text-balance">منتجات من مجتمعنا</h2>
+                <h2 className="text-3xl sm:text-4xl md:text-[2.75rem] font-extrabold tracking-tight text-foreground mb-4 text-balance">{sh('products', 'heading', 'منتجات من مجتمعنا')}</h2>
                 <Button asChild variant="outline" size="sm">
                   <Link href="/market">
                     تصفح جميع المنتجات
@@ -1464,9 +1480,9 @@ export default function LandingPage() {
               <div className="text-center mb-10 sm:mb-12">
                 <p className="inline-flex items-center justify-center gap-2 text-xs font-semibold text-muted-foreground mb-3">
                   <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                  رواد الأعمال
+                  {sh('stores', 'eyebrow', 'رواد الأعمال')}
                 </p>
-                <h2 className="text-3xl sm:text-4xl md:text-[2.75rem] font-extrabold tracking-tight text-foreground text-balance">متاجر مجتمعنا</h2>
+                <h2 className="text-3xl sm:text-4xl md:text-[2.75rem] font-extrabold tracking-tight text-foreground text-balance">{sh('stores', 'heading', 'متاجر مجتمعنا')}</h2>
               </div>
               {loadingStores ? (
                 <div className="flex gap-4 overflow-x-auto pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -1537,9 +1553,9 @@ export default function LandingPage() {
               <div className="text-center mb-8 sm:mb-10">
                 <p className="inline-flex items-center justify-center gap-2 text-xs font-semibold text-muted-foreground mb-3">
                   <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                  خطط الأسعار
+                  {sh('pricing', 'eyebrow', 'خطط الأسعار')}
                 </p>
-                <h2 className="text-3xl sm:text-4xl md:text-[2.75rem] font-extrabold tracking-tight text-foreground text-balance">اختر الخطة المناسبة لك</h2>
+                <h2 className="text-3xl sm:text-4xl md:text-[2.75rem] font-extrabold tracking-tight text-foreground text-balance">{sh('pricing', 'heading', 'اختر الخطة المناسبة لك')}</h2>
               </div>
 
               {/* Billing cycle toggle */}
@@ -1640,9 +1656,9 @@ export default function LandingPage() {
               <div className="text-center mb-12 sm:mb-16">
                 <p className="inline-flex items-center justify-center gap-2 text-xs font-semibold text-muted-foreground mb-3">
                   <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                  قصص النجاح
+                  {sh('testimonials', 'eyebrow', 'قصص النجاح')}
                 </p>
-                <h2 className="text-3xl sm:text-4xl md:text-[2.75rem] font-extrabold tracking-tight text-foreground text-balance">ماذا يقول مجتمعنا</h2>
+                <h2 className="text-3xl sm:text-4xl md:text-[2.75rem] font-extrabold tracking-tight text-foreground text-balance">{sh('testimonials', 'heading', 'ماذا يقول مجتمعنا')}</h2>
               </div>
               <div className="flex gap-5 overflow-x-auto pb-3 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {testimonialsData.map((t, i) => (
@@ -1679,10 +1695,10 @@ export default function LandingPage() {
               <div className="text-center mb-10 sm:mb-12">
                 <p className="inline-flex items-center justify-center gap-2 text-xs font-semibold text-muted-foreground mb-3">
                   <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                  رؤى ومعرفة
+                  {sh('blog', 'eyebrow', 'رؤى ومعرفة')}
                 </p>
                 <h2 className="text-3xl sm:text-4xl md:text-[2.75rem] font-extrabold tracking-tight text-foreground mb-4 text-balance">
-                  أحدث المقالات
+                  {sh('blog', 'heading', 'أحدث المقالات')}
                 </h2>
                 <Link href="/articles" className="inline-flex items-center gap-1 text-sm font-semibold text-primary">
                   عرض جميع المقالات <ArrowLeft className="h-3.5 w-3.5" />
@@ -1750,10 +1766,10 @@ export default function LandingPage() {
               <div className="text-center mb-10 sm:mb-12">
                 <p className="inline-flex items-center justify-center gap-2 text-xs font-semibold text-muted-foreground mb-3">
                   <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                  فرص حقيقية
+                  {sh('opportunities', 'eyebrow', 'فرص حقيقية')}
                 </p>
                 <h2 className="text-3xl sm:text-4xl md:text-[2.75rem] font-extrabold tracking-tight text-foreground mb-4 text-balance">
-                  أحدث الفرص والمشاريع
+                  {sh('opportunities', 'heading', 'أحدث الفرص والمشاريع')}
                 </h2>
                 <Link href="/projects" className="inline-flex items-center gap-1 text-sm font-semibold text-primary">
                   عرض جميع الفرص <ArrowLeft className="h-3.5 w-3.5" />
@@ -1812,19 +1828,19 @@ export default function LandingPage() {
         )}
 
         {/* ── Success Stories ──────────────────────────────────────────────────── */}
-        {successStories.length > 0 && (
+        {sections.showSuccessStories && successStories.length > 0 && (
           <section id="success-stories" className="py-16 sm:py-20 md:py-28">
             <div className="container">
               <div className="text-center mb-12 sm:mb-16">
                 <p className="inline-flex items-center justify-center gap-2 text-xs font-semibold text-muted-foreground mb-3">
                   <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                  إلهام حقيقي
+                  {sh('successStories', 'eyebrow', 'إلهام حقيقي')}
                 </p>
                 <h2 className="text-3xl sm:text-4xl md:text-[2.75rem] font-extrabold tracking-tight text-foreground mb-3 text-balance">
-                  قصص نجاح من مجتمعنا
+                  {sh('successStories', 'heading', 'قصص نجاح من مجتمعنا')}
                 </h2>
                 <p className="text-muted-foreground text-sm max-w-md mx-auto leading-relaxed">
-                  أشخاص حقيقيون غيّروا مساراتهم بفضل التدريب والإرشاد والدعم.
+                  {sh('successStories', 'subheading', 'أشخاص حقيقيون غيّروا مساراتهم بفضل التدريب والإرشاد والدعم.')}
                 </p>
               </div>
               <div className="flex gap-4 overflow-x-auto pb-3 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -1877,6 +1893,7 @@ export default function LandingPage() {
         )}
 
         {/* ── FAQ ──────────────────────────────────────────────────────────────── */}
+        {sections.showFAQ && (
         <section id="faq" className="py-16 sm:py-20 md:py-28">
           <div className="container max-w-3xl">
             <div className="text-center mb-10 sm:mb-14">
@@ -1889,8 +1906,8 @@ export default function LandingPage() {
               </p>
               <h2 className="text-3xl sm:text-4xl md:text-[2.75rem] font-extrabold tracking-tight text-foreground text-balance">كل ما تحتاج معرفته</h2>
             </div>
-            <Accordion type="single" collapsible defaultValue="faq-0" className="rounded-3xl bg-muted/40 px-5 sm:px-7">
-              {[
+            {(() => {
+              const faqItems = cfg?.faq?.length ? cfg.faq.map(f => ({ q: f.question, a: f.answer })) : [
                 {
                   q: 'هل يمكنني تجربة المنصة مجاناً؟',
                   a: 'نعم، يمكنك إنشاء حساب والبدء فوراً بدون بطاقة ائتمان. المنظمات التي تختار خطة مدفوعة تحصل على فترة تجريبية كاملة المزايا قبل تفعيل الاشتراك.',
@@ -1915,19 +1932,25 @@ export default function LandingPage() {
                   q: 'هل المنصة تدعم اللغة العربية بالكامل؟',
                   a: 'المنصة مصممة أساساً باللغة العربية بواجهة من اليمين لليسار (RTL)، من التسجيل وحتى كل تفاصيل لوحات التحكم.',
                 },
-              ].map((item, i) => (
-                <AccordionItem key={i} value={`faq-${i}`} className={i === 5 ? 'border-b-0' : ''}>
-                  <AccordionTrigger className="text-right text-sm sm:text-base hover:no-underline [&>svg]:text-primary">
-                    {item.q}
-                  </AccordionTrigger>
-                  <AccordionContent className="text-sm text-muted-foreground leading-relaxed">
-                    {item.a}
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
+              ];
+              return (
+                <Accordion type="single" collapsible defaultValue="faq-0" className="rounded-3xl bg-muted/40 px-5 sm:px-7">
+                  {faqItems.map((item, i) => (
+                    <AccordionItem key={i} value={`faq-${i}`} className={i === faqItems.length - 1 ? 'border-b-0' : ''}>
+                      <AccordionTrigger className="text-right text-sm sm:text-base hover:no-underline [&>svg]:text-primary">
+                        {item.q}
+                      </AccordionTrigger>
+                      <AccordionContent className="text-sm text-muted-foreground leading-relaxed">
+                        {item.a}
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              );
+            })()}
           </div>
         </section>
+        )}
 
         {/* ── Contact ─────────────────────────────────────────────────────────── */}
         {sections.showContact && (
@@ -1937,13 +1960,13 @@ export default function LandingPage() {
                 <div>
                   <p className="inline-flex items-center gap-2 text-xs font-semibold text-muted-foreground mb-3">
                     <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                    تواصل معنا
+                    {sh('contact', 'eyebrow', 'تواصل معنا')}
                   </p>
                   <h2 className="text-3xl sm:text-4xl md:text-[2.75rem] font-extrabold tracking-tight text-foreground mb-3 sm:mb-4 text-balance">
-                    كيف يمكننا مساعدتك؟
+                    {sh('contact', 'heading', 'كيف يمكننا مساعدتك؟')}
                   </h2>
                   <p className="text-muted-foreground mb-8 sm:mb-10 leading-relaxed text-sm sm:text-base">
-                    نحن هنا للإجابة على استفساراتك ومساعدتك في كل خطوة.
+                    {sh('contact', 'subheading', 'نحن هنا للإجابة على استفساراتك ومساعدتك في كل خطوة.')}
                   </p>
                   <div className="space-y-4 sm:space-y-5">
                     {contactInfo.phone && (

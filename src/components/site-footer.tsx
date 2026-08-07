@@ -15,6 +15,13 @@ interface FooterData {
   linkedin?: string;
   instagram?: string;
   copyright: string;
+  newsletterTitle?: string;
+  newsletterPlaceholder?: string;
+  newsletterButton?: string;
+  quickLinksTitle?: string;
+  roleLinksTitle?: string;
+  companyLinksTitle?: string;
+  legalLinksTitle?: string;
 }
 
 interface FooterLink { href: string; label: string }
@@ -80,7 +87,7 @@ export function SiteFooter({ siteName, footerData, logoUrl }: { siteName?: strin
       <div className="border-b border-background/10">
         <div className="container py-8 sm:py-10 flex flex-col sm:flex-row items-center justify-between gap-5">
           <p className="text-base sm:text-lg font-bold text-background text-center sm:text-right">
-            انضم لمجتمع {displayName} الآن
+            {footerData.newsletterTitle || `انضم لمجتمع ${displayName} الآن`}
           </p>
           <form onSubmit={handleSubscribe} className="flex w-full sm:w-auto items-center gap-2">
             <input
@@ -88,12 +95,12 @@ export function SiteFooter({ siteName, footerData, logoUrl }: { siteName?: strin
               required
               value={email}
               onChange={e => setEmail(e.target.value)}
-              placeholder="بريدك الإلكتروني"
+              placeholder={footerData.newsletterPlaceholder || 'بريدك الإلكتروني'}
               dir="ltr"
               className="h-11 flex-1 sm:w-64 rounded-full bg-background/10 border border-background/15 px-4 text-sm text-background placeholder:text-background/40 outline-none focus-visible:ring-1 focus-visible:ring-primary"
             />
             <Button type="submit" className="h-11 rounded-full px-5 bg-background text-foreground hover:bg-background/90 shrink-0">
-              اشترك
+              {footerData.newsletterButton || 'اشترك'}
             </Button>
           </form>
         </div>
@@ -102,10 +109,10 @@ export function SiteFooter({ siteName, footerData, logoUrl }: { siteName?: strin
       {/* Link grid */}
       <div className="container py-12 sm:py-16">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 sm:gap-10 mb-12 sm:mb-16">
-          <FooterCol title="روابط سريعة" links={quickLinks} />
-          <FooterCol title="ابدأ كـ" links={roleLinks} />
-          <FooterCol title="الشركة" links={companyLinks} />
-          <FooterCol title="قانوني" links={legalLinks} />
+          <FooterCol title={footerData.quickLinksTitle || 'روابط سريعة'} links={quickLinks} />
+          <FooterCol title={footerData.roleLinksTitle || 'ابدأ كـ'} links={roleLinks} />
+          <FooterCol title={footerData.companyLinksTitle || 'الشركة'} links={companyLinks} />
+          <FooterCol title={footerData.legalLinksTitle || 'قانوني'} links={legalLinks} />
         </div>
 
         {/* Bottom row */}
