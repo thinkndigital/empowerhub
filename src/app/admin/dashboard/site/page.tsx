@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   Save, Plus, Trash2, Upload, Globe, Image as ImageIcon, BarChart3, Sparkles,
-  Link2, Eye, EyeOff, MessageSquare, Phone, Star, LogIn,
+  Link2, Eye, EyeOff, MessageSquare, Phone, Star, LogIn, Users,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -54,7 +54,27 @@ interface SiteConfig {
   sectionHeadings: Record<string, { eyebrow?: string; heading?: string; subheading?: string }>;
   aiSpotlight: { eyebrow: string; heading: string; subheading: string; cards: { title: string; description: string }[] };
   faq: { question: string; answer: string }[];
+  header: {
+    navLinks: { label: string }[];
+    teamLabel: string;
+    teamLinks: { label: string }[];
+    loginText: string;
+    registerText: string;
+    registerTextMobile: string;
+  };
+  tourRoles: {
+    headline: string;
+    ctaText: string;
+    benefits: string[];
+    stats: { label: string; value: string }[];
+    items: { title: string; subtitle: string }[];
+  }[];
 }
+
+const HEADER_NAV_LABELS = ['كيف تعمل', 'الخدمات', 'الدورات', 'جلسات مباشرة', 'المقالات', 'الفرص', 'المتجر'];
+const HEADER_TEAM_LABELS = ['المرشدون', 'المدربون'];
+
+const TOUR_ROLE_LABELS = ['المنظمة', 'المرشد', 'المدرب', 'المستفيد', 'المتجر'];
 
 const SECTION_HEADING_KEYS: { key: string; label: string }[] = [
   { key: 'roles', label: 'جولة الأدوار' },
@@ -114,6 +134,96 @@ const defaultConfig: SiteConfig = {
   sectionHeadings: Object.fromEntries(SECTION_HEADING_KEYS.map(s => [s.key, {}])),
   aiSpotlight: { eyebrow: '', heading: '', subheading: '', cards: [{ title: '', description: '' }, { title: '', description: '' }] },
   faq: [],
+  header: {
+    navLinks: HEADER_NAV_LABELS.map(label => ({ label })),
+    teamLabel: 'فريقنا',
+    teamLinks: HEADER_TEAM_LABELS.map(label => ({ label })),
+    loginText: 'تسجيل الدخول',
+    registerText: 'ابدأ مجاناً',
+    registerTextMobile: 'ابدأ',
+  },
+  tourRoles: [
+    {
+      headline: 'أدر برامج التمكين بالكامل من مكان واحد',
+      ctaText: '',
+      benefits: [
+        'إضافة وإدارة المستفيدين والمرشدين والمدربين بسهولة',
+        'تتبع تقدم كل مستفيد بتقارير وتحليلات تفصيلية',
+        'نماذج تقييم مخصصة ترسلها وتحلل نتائجها',
+        'تخصيص هوية منصتك الخاصة بشعارك وألوانك',
+      ],
+      stats: [{ label: 'مستفيدون', value: '٢٥٠' }, { label: 'مرشدون', value: '١٢' }, { label: 'دورات', value: '٣٠' }],
+      items: [
+        { title: 'المستفيدون', subtitle: '٢٥٠ عضو نشط هذا الشهر' },
+        { title: 'تقرير الأثر', subtitle: 'معدل إكمال ٧٨٪' },
+        { title: 'نموذج تقييم جديد', subtitle: 'أُرسل لـ ٤٠ مستفيداً' },
+      ],
+    },
+    {
+      headline: 'قدّم إرشادك وشاهد أثره ينعكس مباشرة',
+      ctaText: '',
+      benefits: [
+        'جدولة جلسات إرشاد فردية مع من تختار مرافقتهم',
+        'متابعة تقدم كل مستفيد تشرف عليه في مكان واحد',
+        'شارك مقالاتك وخبراتك مع مجتمع المنصة',
+        'انضم لأي منظمة عبر كود دعوة بسيط',
+      ],
+      stats: [{ label: 'مستفيدون', value: '١٨' }, { label: 'جلسات', value: '٦' }, { label: 'تقييم', value: '٤.٩' }],
+      items: [
+        { title: 'جلسة اليوم', subtitle: '٣:٠٠ مساءً — مع نور' },
+        { title: 'مستفيديّ', subtitle: '١٨ شخصاً تحت إرشادك' },
+        { title: 'مقال جديد', subtitle: '١٢٠ مشاهدة هذا الأسبوع' },
+      ],
+    },
+    {
+      headline: 'حوّل خبرتك إلى دورات ودخل مستمر',
+      ctaText: '',
+      benefits: [
+        'أنشئ دوراتك التدريبية وانشرها لآلاف المستفيدين',
+        'قدّم جلسات مباشرة وتابع التسجيل والحضور',
+        'تحليلات أداء تفصيلية لكل دورة ومحتوى',
+        'متجرك الخاص لبيع دوراتك مباشرة',
+      ],
+      stats: [{ label: 'دورات', value: '٥' }, { label: 'مشتركون', value: '٣٤٠' }, { label: 'دخل', value: '١٫٢k' }],
+      items: [
+        { title: 'دورة التسويق الرقمي', subtitle: '٣٤٠ مشترك — ٧٥٪ إكمال' },
+        { title: 'جلسة مباشرة قادمة', subtitle: 'غداً — ٥٠ مسجّل' },
+        { title: 'الأداء هذا الشهر', subtitle: '+١٨٪ عن الشهر الماضي' },
+      ],
+    },
+    {
+      headline: 'تعلّم، تدرّب، وابنِ مشروعك الخاص',
+      ctaText: '',
+      benefits: [
+        'دورات تدريبية متخصصة تناسب مسارك المهني',
+        'جلسات إرشاد فردية مع خبراء في مجالك',
+        'متجرك الإلكتروني الخاص لبيع منتجاتك أو خدماتك',
+        'تتبع تقدمك الشخصي خطوة بخطوة',
+      ],
+      stats: [{ label: 'دورات', value: '٣' }, { label: 'تقدمي', value: '٦٥٪' }, { label: 'الطلبات', value: '١٢' }],
+      items: [
+        { title: 'دورتي الحالية', subtitle: 'التسويق الرقمي — ٦٥٪ مكتمل' },
+        { title: 'متجري', subtitle: '١٢ طلباً هذا الشهر' },
+        { title: 'جلستي القادمة', subtitle: 'مع المرشدة سارة — غداً' },
+      ],
+    },
+    {
+      headline: 'تسوّق وبِع داخل مجتمع واحد',
+      ctaText: 'تصفح المتجر',
+      benefits: [
+        'تصفح منتجات وخدمات حقيقية من رواد أعمال في مجتمعنا',
+        'افتح متجرك الخاص وابدأ البيع مباشرة من لوحة تحكمك',
+        'تواصل مع البائعين مباشرة عبر واتساب لإتمام الطلب',
+        'كل الفئات — من المنتجات اليدوية إلى الخدمات الرقمية',
+      ],
+      stats: [{ label: 'منتج', value: '٣٢٠' }, { label: 'متجر', value: '٤٥' }, { label: 'طلب هذا الشهر', value: '١١٠' }],
+      items: [
+        { title: 'طلب جديد', subtitle: 'منتج يدوي — قبل ٥ دقائق' },
+        { title: 'متجر جديد', subtitle: 'انضم اليوم' },
+        { title: 'الأكثر مبيعاً', subtitle: 'شمعة معطرة يدوية' },
+      ],
+    },
+  ],
 };
 
 function SaveBar({ onSave, saving, saved }: { onSave: () => void; saving: boolean; saved: boolean }) {
@@ -308,6 +418,13 @@ export default function SiteEditorPage() {
             ...d.config.aiSpotlight,
             cards: d.config.aiSpotlight?.cards?.length ? d.config.aiSpotlight.cards : defaultConfig.aiSpotlight.cards,
           },
+          header: {
+            ...defaultConfig.header,
+            ...d.config.header,
+            navLinks: d.config.header?.navLinks?.length ? d.config.header.navLinks : defaultConfig.header.navLinks,
+            teamLinks: d.config.header?.teamLinks?.length ? d.config.header.teamLinks : defaultConfig.header.teamLinks,
+          },
+          tourRoles: d.config.tourRoles?.length === defaultConfig.tourRoles.length ? d.config.tourRoles : defaultConfig.tourRoles,
         }));
       }
       setLoading(false);
@@ -397,6 +514,54 @@ export default function SiteEditorPage() {
   const removeFaq = (i: number) =>
     setConfig(c => ({ ...c, faq: c.faq.filter((_, idx) => idx !== i) }));
 
+  // Header
+  const setHeaderField = (k: 'teamLabel' | 'loginText' | 'registerText' | 'registerTextMobile', v: string) =>
+    setConfig(c => ({ ...c, header: { ...c.header, [k]: v } }));
+  const setHeaderNavLabel = (i: number, v: string) =>
+    setConfig(c => {
+      const navLinks = [...c.header.navLinks];
+      navLinks[i] = { label: v };
+      return { ...c, header: { ...c.header, navLinks } };
+    });
+  const setHeaderTeamLabel = (i: number, v: string) =>
+    setConfig(c => {
+      const teamLinks = [...c.header.teamLinks];
+      teamLinks[i] = { label: v };
+      return { ...c, header: { ...c.header, teamLinks } };
+    });
+
+  // Tour Roles
+  const setTourRoleField = (i: number, k: 'headline' | 'ctaText', v: string) =>
+    setConfig(c => {
+      const tourRoles = [...c.tourRoles];
+      tourRoles[i] = { ...tourRoles[i], [k]: v };
+      return { ...c, tourRoles };
+    });
+  const setTourRoleBenefit = (i: number, bi: number, v: string) =>
+    setConfig(c => {
+      const tourRoles = [...c.tourRoles];
+      const benefits = [...tourRoles[i].benefits];
+      benefits[bi] = v;
+      tourRoles[i] = { ...tourRoles[i], benefits };
+      return { ...c, tourRoles };
+    });
+  const setTourRoleStat = (i: number, si: number, k: 'label' | 'value', v: string) =>
+    setConfig(c => {
+      const tourRoles = [...c.tourRoles];
+      const stats = [...tourRoles[i].stats];
+      stats[si] = { ...stats[si], [k]: v };
+      tourRoles[i] = { ...tourRoles[i], stats };
+      return { ...c, tourRoles };
+    });
+  const setTourRoleItem = (i: number, ii: number, k: 'title' | 'subtitle', v: string) =>
+    setConfig(c => {
+      const tourRoles = [...c.tourRoles];
+      const items = [...tourRoles[i].items];
+      items[ii] = { ...items[ii], [k]: v };
+      tourRoles[i] = { ...tourRoles[i], items };
+      return { ...c, tourRoles };
+    });
+
   if (loading) return <div className="text-muted-foreground text-center py-16">جاري التحميل...</div>;
 
   return (
@@ -413,10 +578,12 @@ export default function SiteEditorPage() {
           <TabsList className="bg-muted rounded-xl w-full flex-wrap h-auto gap-1 p-1">
             {[
               { value: 'identity', label: 'الهوية', icon: Globe },
+              { value: 'header', label: 'الهيدر', icon: Link2 },
               { value: 'hero', label: 'الترحيب', icon: ImageIcon },
               { value: 'auth', label: 'صفحات الدخول', icon: LogIn },
               { value: 'stats', label: 'الإحصائيات', icon: BarChart3 },
               { value: 'features', label: 'المميزات', icon: Sparkles },
+              { value: 'tourRoles', label: 'جولة الأدوار', icon: Users },
               { value: 'testimonials', label: 'الآراء', icon: Star },
               { value: 'contact', label: 'التواصل', icon: Phone },
               { value: 'cta', label: 'CTA بانر', icon: MessageSquare },
@@ -508,6 +675,52 @@ export default function SiteEditorPage() {
                 </div>
                 <ImageUploadField label="شعار الموقع (Logo)" value={config.logoUrl} onChange={url => setConfig(c => ({ ...c, logoUrl: url }))} storagePath="site/logo" />
                 <ImageUploadField label="أيقونة الموقع (Favicon)" value={config.faviconUrl} onChange={url => setConfig(c => ({ ...c, faviconUrl: url }))} storagePath="site/favicon" />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* HEADER */}
+          <TabsContent value="header" className="mt-4">
+            <Card className="border-0 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-foreground text-base">شريط التنقل العلوي (الهيدر)</CardTitle>
+                <p className="text-muted-foreground text-xs">يظهر هذا الشريط في أعلى كل صفحات الموقع العامة</p>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="space-y-2">
+                  <Label>روابط التنقل</Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {config.header.navLinks.map((l, i) => (
+                      <Input key={i} value={l.label} onChange={e => setHeaderNavLabel(i, e.target.value)} placeholder={HEADER_NAV_LABELS[i]} />
+                    ))}
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label>عنوان قائمة "فريقنا"</Label>
+                    <Input value={config.header.teamLabel} onChange={e => setHeaderField('teamLabel', e.target.value)} placeholder="فريقنا" />
+                  </div>
+                  {config.header.teamLinks.map((l, i) => (
+                    <div key={i} className="space-y-2">
+                      <Label>رابط فريقنا {i + 1}</Label>
+                      <Input value={l.label} onChange={e => setHeaderTeamLabel(i, e.target.value)} placeholder={HEADER_TEAM_LABELS[i]} />
+                    </div>
+                  ))}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label>نص زر تسجيل الدخول</Label>
+                    <Input value={config.header.loginText} onChange={e => setHeaderField('loginText', e.target.value)} placeholder="تسجيل الدخول" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>نص زر التسجيل (سطح المكتب)</Label>
+                    <Input value={config.header.registerText} onChange={e => setHeaderField('registerText', e.target.value)} placeholder="ابدأ مجاناً" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>نص زر التسجيل (الجوال)</Label>
+                    <Input value={config.header.registerTextMobile} onChange={e => setHeaderField('registerTextMobile', e.target.value)} placeholder="ابدأ" />
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -699,6 +912,63 @@ export default function SiteEditorPage() {
                   </div>
                 ))}
                 <SectionStyleFields config={config} sectionKey="features" setSectionStyle={setSectionStyle} />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* TOUR ROLES */}
+          <TabsContent value="tourRoles" className="mt-4">
+            <Card className="border-0 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-foreground text-base">جولة الأدوار داخل المنصة</CardTitle>
+                <p className="text-muted-foreground text-xs">محتوى قسم "جولة داخل المنصة" — النص والأرقام المعروضة لكل دور في معاينة لوحة التحكم</p>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {config.tourRoles.map((role, i) => (
+                  <div key={i} className="p-4 bg-muted/40 rounded-xl border border-border space-y-4">
+                    <p className="text-sm font-semibold text-foreground">{TOUR_ROLE_LABELS[i]}</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">العنوان الرئيسي</Label>
+                        <Input value={role.headline} onChange={e => setTourRoleField(i, 'headline', e.target.value)} />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">نص زر الدعوة {i === 4 ? '' : '(فارغ = "ابدأ كـ' + TOUR_ROLE_LABELS[i] + '")'}</Label>
+                        <Input value={role.ctaText} onChange={e => setTourRoleField(i, 'ctaText', e.target.value)} />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">المزايا (٤)</Label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {role.benefits.map((b, bi) => (
+                          <Input key={bi} value={b} onChange={e => setTourRoleBenefit(i, bi, e.target.value)} />
+                        ))}
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">الإحصائيات (٣)</Label>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        {role.stats.map((s, si) => (
+                          <div key={si} className="flex gap-1.5">
+                            <Input value={s.value} onChange={e => setTourRoleStat(i, si, 'value', e.target.value)} placeholder="القيمة" className="w-16" />
+                            <Input value={s.label} onChange={e => setTourRoleStat(i, si, 'label', e.target.value)} placeholder="التسمية" className="flex-1" />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">عناصر المعاينة (٣)</Label>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        {role.items.map((it, ii) => (
+                          <div key={ii} className="space-y-1">
+                            <Input value={it.title} onChange={e => setTourRoleItem(i, ii, 'title', e.target.value)} placeholder="العنوان" />
+                            <Input value={it.subtitle} onChange={e => setTourRoleItem(i, ii, 'subtitle', e.target.value)} placeholder="الوصف الفرعي" />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </CardContent>
             </Card>
           </TabsContent>

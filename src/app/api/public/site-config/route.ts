@@ -136,6 +136,107 @@ const defaultConfig = {
     cards: [{ title: '', description: '' }, { title: '', description: '' }],
   },
   faq: [] as { question: string; answer: string }[],
+  header: {
+    navLinks: [
+      { label: 'كيف تعمل' },
+      { label: 'الخدمات' },
+      { label: 'الدورات' },
+      { label: 'جلسات مباشرة' },
+      { label: 'المقالات' },
+      { label: 'الفرص' },
+      { label: 'المتجر' },
+    ],
+    teamLabel: 'فريقنا',
+    teamLinks: [
+      { label: 'المرشدون' },
+      { label: 'المدربون' },
+    ],
+    loginText: 'تسجيل الدخول',
+    registerText: 'ابدأ مجاناً',
+    registerTextMobile: 'ابدأ',
+  },
+  tourRoles: [
+    {
+      headline: 'أدر برامج التمكين بالكامل من مكان واحد',
+      ctaText: '',
+      benefits: [
+        'إضافة وإدارة المستفيدين والمرشدين والمدربين بسهولة',
+        'تتبع تقدم كل مستفيد بتقارير وتحليلات تفصيلية',
+        'نماذج تقييم مخصصة ترسلها وتحلل نتائجها',
+        'تخصيص هوية منصتك الخاصة بشعارك وألوانك',
+      ],
+      stats: [{ label: 'مستفيدون', value: '٢٥٠' }, { label: 'مرشدون', value: '١٢' }, { label: 'دورات', value: '٣٠' }],
+      items: [
+        { title: 'المستفيدون', subtitle: '٢٥٠ عضو نشط هذا الشهر' },
+        { title: 'تقرير الأثر', subtitle: 'معدل إكمال ٧٨٪' },
+        { title: 'نموذج تقييم جديد', subtitle: 'أُرسل لـ ٤٠ مستفيداً' },
+      ],
+    },
+    {
+      headline: 'قدّم إرشادك وشاهد أثره ينعكس مباشرة',
+      ctaText: '',
+      benefits: [
+        'جدولة جلسات إرشاد فردية مع من تختار مرافقتهم',
+        'متابعة تقدم كل مستفيد تشرف عليه في مكان واحد',
+        'شارك مقالاتك وخبراتك مع مجتمع المنصة',
+        'انضم لأي منظمة عبر كود دعوة بسيط',
+      ],
+      stats: [{ label: 'مستفيدون', value: '١٨' }, { label: 'جلسات', value: '٦' }, { label: 'تقييم', value: '٤.٩' }],
+      items: [
+        { title: 'جلسة اليوم', subtitle: '٣:٠٠ مساءً — مع نور' },
+        { title: 'مستفيديّ', subtitle: '١٨ شخصاً تحت إرشادك' },
+        { title: 'مقال جديد', subtitle: '١٢٠ مشاهدة هذا الأسبوع' },
+      ],
+    },
+    {
+      headline: 'حوّل خبرتك إلى دورات ودخل مستمر',
+      ctaText: '',
+      benefits: [
+        'أنشئ دوراتك التدريبية وانشرها لآلاف المستفيدين',
+        'قدّم جلسات مباشرة وتابع التسجيل والحضور',
+        'تحليلات أداء تفصيلية لكل دورة ومحتوى',
+        'متجرك الخاص لبيع دوراتك مباشرة',
+      ],
+      stats: [{ label: 'دورات', value: '٥' }, { label: 'مشتركون', value: '٣٤٠' }, { label: 'دخل', value: '١٫٢k' }],
+      items: [
+        { title: 'دورة التسويق الرقمي', subtitle: '٣٤٠ مشترك — ٧٥٪ إكمال' },
+        { title: 'جلسة مباشرة قادمة', subtitle: 'غداً — ٥٠ مسجّل' },
+        { title: 'الأداء هذا الشهر', subtitle: '+١٨٪ عن الشهر الماضي' },
+      ],
+    },
+    {
+      headline: 'تعلّم، تدرّب، وابنِ مشروعك الخاص',
+      ctaText: '',
+      benefits: [
+        'دورات تدريبية متخصصة تناسب مسارك المهني',
+        'جلسات إرشاد فردية مع خبراء في مجالك',
+        'متجرك الإلكتروني الخاص لبيع منتجاتك أو خدماتك',
+        'تتبع تقدمك الشخصي خطوة بخطوة',
+      ],
+      stats: [{ label: 'دورات', value: '٣' }, { label: 'تقدمي', value: '٦٥٪' }, { label: 'الطلبات', value: '١٢' }],
+      items: [
+        { title: 'دورتي الحالية', subtitle: 'التسويق الرقمي — ٦٥٪ مكتمل' },
+        { title: 'متجري', subtitle: '١٢ طلباً هذا الشهر' },
+        { title: 'جلستي القادمة', subtitle: 'مع المرشدة سارة — غداً' },
+      ],
+    },
+    {
+      headline: 'تسوّق وبِع داخل مجتمع واحد',
+      ctaText: 'تصفح المتجر',
+      benefits: [
+        'تصفح منتجات وخدمات حقيقية من رواد أعمال في مجتمعنا',
+        'افتح متجرك الخاص وابدأ البيع مباشرة من لوحة تحكمك',
+        'تواصل مع البائعين مباشرة عبر واتساب لإتمام الطلب',
+        'كل الفئات — من المنتجات اليدوية إلى الخدمات الرقمية',
+      ],
+      stats: [{ label: 'منتج', value: '٣٢٠' }, { label: 'متجر', value: '٤٥' }, { label: 'طلب هذا الشهر', value: '١١٠' }],
+      items: [
+        { title: 'طلب جديد', subtitle: 'منتج يدوي — قبل ٥ دقائق' },
+        { title: 'متجر جديد', subtitle: 'انضم اليوم' },
+        { title: 'الأكثر مبيعاً', subtitle: 'شمعة معطرة يدوية' },
+      ],
+    },
+  ],
 };
 
 export async function GET() {
@@ -165,6 +266,12 @@ export async function GET() {
         ])
       ),
       aiSpotlight: { ...defaultConfig.aiSpotlight, ...data?.aiSpotlight },
+      header: {
+        ...defaultConfig.header,
+        ...data?.header,
+        navLinks: data?.header?.navLinks?.length ? data.header.navLinks : defaultConfig.header.navLinks,
+        teamLinks: data?.header?.teamLinks?.length ? data.header.teamLinks : defaultConfig.header.teamLinks,
+      },
       stats: data?.stats ?? defaultConfig.stats,
       features: data?.features ?? defaultConfig.features,
       opportunities: data?.opportunities ?? defaultConfig.opportunities,
@@ -173,6 +280,7 @@ export async function GET() {
       blogPosts: data?.blogPosts ?? defaultConfig.blogPosts,
       roles: data?.roles ?? defaultConfig.roles,
       faq: data?.faq ?? defaultConfig.faq,
+      tourRoles: data?.tourRoles?.length === defaultConfig.tourRoles.length ? data.tourRoles : defaultConfig.tourRoles,
     };
     return NextResponse.json({ config });
   } catch {

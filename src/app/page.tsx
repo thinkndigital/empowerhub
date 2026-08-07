@@ -140,6 +140,8 @@ interface SiteConfig {
   sectionHeadings?: Record<string, { eyebrow?: string; heading?: string; subheading?: string }>;
   aiSpotlight?: { eyebrow?: string; heading?: string; subheading?: string; cards?: { title?: string; description?: string }[] };
   faq?: { question: string; answer: string }[];
+  header?: { navLinks: { label: string }[]; teamLabel: string; teamLinks: { label: string }[]; loginText: string; registerText: string; registerTextMobile: string };
+  tourRoles?: { headline: string; ctaText?: string; benefits: string[]; stats: { label: string; value: string }[]; items: { title: string; subtitle: string }[] }[];
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -651,85 +653,100 @@ export default function LandingPage() {
   ];
 
 
+  // Per-role tour content — admin-editable via cfg.tourRoles[index], falling
+  // back to the original copy when nothing's been set for that role.
+  const tr = (i: number) => cfg?.tourRoles?.[i];
+  const trBenefits = (i: number, fallback: string[]) =>
+    tr(i)?.benefits?.length ? tr(i)!.benefits : fallback;
+  const trStats = (i: number, fallback: { label: string; value: string }[]) =>
+    tr(i)?.stats?.length ? tr(i)!.stats : fallback;
+  const trItem = (i: number, ii: number, field: 'title' | 'subtitle', fallback: string) =>
+    tr(i)?.items?.[ii]?.[field] || fallback;
+
   const tourRoles = [
     {
       key: 'organization', label: 'المنظمة', icon: Building2, path: 'organization-dashboard', link: '/register?role=organization',
-      headline: 'أدر برامج التمكين بالكامل من مكان واحد',
-      benefits: [
+      cta: tr(0)?.ctaText || undefined,
+      headline: tr(0)?.headline || 'أدر برامج التمكين بالكامل من مكان واحد',
+      benefits: trBenefits(0, [
         'إضافة وإدارة المستفيدين والمرشدين والمدربين بسهولة',
         'تتبع تقدم كل مستفيد بتقارير وتحليلات تفصيلية',
         'نماذج تقييم مخصصة ترسلها وتحلل نتائجها',
         'تخصيص هوية منصتك الخاصة بشعارك وألوانك',
-      ],
-      stats: [{ label: 'مستفيدون', value: '٢٥٠' }, { label: 'مرشدون', value: '١٢' }, { label: 'دورات', value: '٣٠' }],
+      ]),
+      stats: trStats(0, [{ label: 'مستفيدون', value: '٢٥٠' }, { label: 'مرشدون', value: '١٢' }, { label: 'دورات', value: '٣٠' }]),
       items: [
-        { icon: Users, title: 'المستفيدون', subtitle: '٢٥٠ عضو نشط هذا الشهر' },
-        { icon: BarChart3, title: 'تقرير الأثر', subtitle: 'معدل إكمال ٧٨٪' },
-        { icon: ClipboardCheck, title: 'نموذج تقييم جديد', subtitle: 'أُرسل لـ ٤٠ مستفيداً' },
+        { icon: Users, title: trItem(0, 0, 'title', 'المستفيدون'), subtitle: trItem(0, 0, 'subtitle', '٢٥٠ عضو نشط هذا الشهر') },
+        { icon: BarChart3, title: trItem(0, 1, 'title', 'تقرير الأثر'), subtitle: trItem(0, 1, 'subtitle', 'معدل إكمال ٧٨٪') },
+        { icon: ClipboardCheck, title: trItem(0, 2, 'title', 'نموذج تقييم جديد'), subtitle: trItem(0, 2, 'subtitle', 'أُرسل لـ ٤٠ مستفيداً') },
       ],
     },
     {
       key: 'mentor', label: 'المرشد', icon: Users, path: 'mentor-dashboard', link: '/register?role=mentor',
-      headline: 'قدّم إرشادك وشاهد أثره ينعكس مباشرة',
-      benefits: [
+      cta: tr(1)?.ctaText || undefined,
+      headline: tr(1)?.headline || 'قدّم إرشادك وشاهد أثره ينعكس مباشرة',
+      benefits: trBenefits(1, [
         'جدولة جلسات إرشاد فردية مع من تختار مرافقتهم',
         'متابعة تقدم كل مستفيد تشرف عليه في مكان واحد',
         'شارك مقالاتك وخبراتك مع مجتمع المنصة',
         'انضم لأي منظمة عبر كود دعوة بسيط',
-      ],
-      stats: [{ label: 'مستفيدون', value: '١٨' }, { label: 'جلسات', value: '٦' }, { label: 'تقييم', value: '٤.٩' }],
+      ]),
+      stats: trStats(1, [{ label: 'مستفيدون', value: '١٨' }, { label: 'جلسات', value: '٦' }, { label: 'تقييم', value: '٤.٩' }]),
       items: [
-        { icon: Calendar, title: 'جلسة اليوم', subtitle: '٣:٠٠ مساءً — مع نور' },
-        { icon: Users, title: 'مستفيديّ', subtitle: '١٨ شخصاً تحت إرشادك' },
-        { icon: FileText, title: 'مقال جديد', subtitle: '١٢٠ مشاهدة هذا الأسبوع' },
+        { icon: Calendar, title: trItem(1, 0, 'title', 'جلسة اليوم'), subtitle: trItem(1, 0, 'subtitle', '٣:٠٠ مساءً — مع نور') },
+        { icon: Users, title: trItem(1, 1, 'title', 'مستفيديّ'), subtitle: trItem(1, 1, 'subtitle', '١٨ شخصاً تحت إرشادك') },
+        { icon: FileText, title: trItem(1, 2, 'title', 'مقال جديد'), subtitle: trItem(1, 2, 'subtitle', '١٢٠ مشاهدة هذا الأسبوع') },
       ],
     },
     {
       key: 'coach', label: 'المدرب', icon: GraduationCap, path: 'coach-dashboard', link: '/register?role=coach',
-      headline: 'حوّل خبرتك إلى دورات ودخل مستمر',
-      benefits: [
+      cta: tr(2)?.ctaText || undefined,
+      headline: tr(2)?.headline || 'حوّل خبرتك إلى دورات ودخل مستمر',
+      benefits: trBenefits(2, [
         'أنشئ دوراتك التدريبية وانشرها لآلاف المستفيدين',
         'قدّم جلسات مباشرة وتابع التسجيل والحضور',
         'تحليلات أداء تفصيلية لكل دورة ومحتوى',
         'متجرك الخاص لبيع دوراتك مباشرة',
-      ],
-      stats: [{ label: 'دورات', value: '٥' }, { label: 'مشتركون', value: '٣٤٠' }, { label: 'دخل', value: '١٫٢k' }],
+      ]),
+      stats: trStats(2, [{ label: 'دورات', value: '٥' }, { label: 'مشتركون', value: '٣٤٠' }, { label: 'دخل', value: '١٫٢k' }]),
       items: [
-        { icon: BookOpen, title: 'دورة التسويق الرقمي', subtitle: '٣٤٠ مشترك — ٧٥٪ إكمال' },
-        { icon: Video, title: 'جلسة مباشرة قادمة', subtitle: 'غداً — ٥٠ مسجّل' },
-        { icon: TrendingUp, title: 'الأداء هذا الشهر', subtitle: '+١٨٪ عن الشهر الماضي' },
+        { icon: BookOpen, title: trItem(2, 0, 'title', 'دورة التسويق الرقمي'), subtitle: trItem(2, 0, 'subtitle', '٣٤٠ مشترك — ٧٥٪ إكمال') },
+        { icon: Video, title: trItem(2, 1, 'title', 'جلسة مباشرة قادمة'), subtitle: trItem(2, 1, 'subtitle', 'غداً — ٥٠ مسجّل') },
+        { icon: TrendingUp, title: trItem(2, 2, 'title', 'الأداء هذا الشهر'), subtitle: trItem(2, 2, 'subtitle', '+١٨٪ عن الشهر الماضي') },
       ],
     },
     {
       key: 'beneficiary', label: 'المستفيد', icon: BookOpen, path: 'beneficiary-dashboard', link: '/register?role=beneficiary',
-      headline: 'تعلّم، تدرّب، وابنِ مشروعك الخاص',
-      benefits: [
+      cta: tr(3)?.ctaText || undefined,
+      headline: tr(3)?.headline || 'تعلّم، تدرّب، وابنِ مشروعك الخاص',
+      benefits: trBenefits(3, [
         'دورات تدريبية متخصصة تناسب مسارك المهني',
         'جلسات إرشاد فردية مع خبراء في مجالك',
         'متجرك الإلكتروني الخاص لبيع منتجاتك أو خدماتك',
         'تتبع تقدمك الشخصي خطوة بخطوة',
-      ],
-      stats: [{ label: 'دورات', value: '٣' }, { label: 'تقدمي', value: '٦٥٪' }, { label: 'الطلبات', value: '١٢' }],
+      ]),
+      stats: trStats(3, [{ label: 'دورات', value: '٣' }, { label: 'تقدمي', value: '٦٥٪' }, { label: 'الطلبات', value: '١٢' }]),
       items: [
-        { icon: BookOpen, title: 'دورتي الحالية', subtitle: 'التسويق الرقمي — ٦٥٪ مكتمل' },
-        { icon: ShoppingBag, title: 'متجري', subtitle: '١٢ طلباً هذا الشهر' },
-        { icon: Calendar, title: 'جلستي القادمة', subtitle: 'مع المرشدة سارة — غداً' },
+        { icon: BookOpen, title: trItem(3, 0, 'title', 'دورتي الحالية'), subtitle: trItem(3, 0, 'subtitle', 'التسويق الرقمي — ٦٥٪ مكتمل') },
+        { icon: ShoppingBag, title: trItem(3, 1, 'title', 'متجري'), subtitle: trItem(3, 1, 'subtitle', '١٢ طلباً هذا الشهر') },
+        { icon: Calendar, title: trItem(3, 2, 'title', 'جلستي القادمة'), subtitle: trItem(3, 2, 'subtitle', 'مع المرشدة سارة — غداً') },
       ],
     },
     {
-      key: 'market', label: 'المتجر', icon: Store, path: 'market', link: '/market', cta: 'تصفح المتجر',
-      headline: 'تسوّق وبِع داخل مجتمع واحد',
-      benefits: [
+      key: 'market', label: 'المتجر', icon: Store, path: 'market', link: '/market',
+      cta: tr(4)?.ctaText || 'تصفح المتجر',
+      headline: tr(4)?.headline || 'تسوّق وبِع داخل مجتمع واحد',
+      benefits: trBenefits(4, [
         'تصفح منتجات وخدمات حقيقية من رواد أعمال في مجتمعنا',
         'افتح متجرك الخاص وابدأ البيع مباشرة من لوحة تحكمك',
         'تواصل مع البائعين مباشرة عبر واتساب لإتمام الطلب',
         'كل الفئات — من المنتجات اليدوية إلى الخدمات الرقمية',
-      ],
-      stats: [{ label: 'منتج', value: '٣٢٠' }, { label: 'متجر', value: '٤٥' }, { label: 'طلب هذا الشهر', value: '١١٠' }],
+      ]),
+      stats: trStats(4, [{ label: 'منتج', value: '٣٢٠' }, { label: 'متجر', value: '٤٥' }, { label: 'طلب هذا الشهر', value: '١١٠' }]),
       items: [
-        { icon: ShoppingBag, title: 'طلب جديد', subtitle: 'منتج يدوي — قبل ٥ دقائق' },
-        { icon: Store, title: 'متجر جديد', subtitle: 'انضم اليوم' },
-        { icon: TrendingUp, title: 'الأكثر مبيعاً', subtitle: 'شمعة معطرة يدوية' },
+        { icon: ShoppingBag, title: trItem(4, 0, 'title', 'طلب جديد'), subtitle: trItem(4, 0, 'subtitle', 'منتج يدوي — قبل ٥ دقائق') },
+        { icon: Store, title: trItem(4, 1, 'title', 'متجر جديد'), subtitle: trItem(4, 1, 'subtitle', 'انضم اليوم') },
+        { icon: TrendingUp, title: trItem(4, 2, 'title', 'الأكثر مبيعاً'), subtitle: trItem(4, 2, 'subtitle', 'شمعة معطرة يدوية') },
       ],
     },
   ];

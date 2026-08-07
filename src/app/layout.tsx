@@ -18,6 +18,26 @@ import { adminDb } from '@/lib/firebase-admin';
 // baked into the static HTML would never update until the next deploy.
 export const revalidate = 60;
 
+const defaultHeaderConfig = {
+  navLinks: [
+    { label: 'كيف تعمل' },
+    { label: 'الخدمات' },
+    { label: 'الدورات' },
+    { label: 'جلسات مباشرة' },
+    { label: 'المقالات' },
+    { label: 'الفرص' },
+    { label: 'المتجر' },
+  ],
+  teamLabel: 'فريقنا',
+  teamLinks: [
+    { label: 'المرشدون' },
+    { label: 'المدربون' },
+  ],
+  loginText: 'تسجيل الدخول',
+  registerText: 'ابدأ مجاناً',
+  registerTextMobile: 'ابدأ',
+};
+
 const getCachedPlatformBrand = unstable_cache(
   async () => {
     try {
@@ -27,13 +47,20 @@ const getCachedPlatformBrand = unstable_cache(
       ]);
       const platformData = platformSnap.data();
       const siteData = siteSnap.data();
+      const headerData = siteData?.header;
       return {
         logoUrl: platformData?.logoUrl || '',
         faviconUrl: platformData?.faviconUrl || siteData?.faviconUrl || '',
         platformName: platformData?.platformName || siteData?.siteName || 'EmpowerHub',
+        header: {
+          ...defaultHeaderConfig,
+          ...headerData,
+          navLinks: headerData?.navLinks?.length ? headerData.navLinks : defaultHeaderConfig.navLinks,
+          teamLinks: headerData?.teamLinks?.length ? headerData.teamLinks : defaultHeaderConfig.teamLinks,
+        },
       };
     } catch {
-      return { logoUrl: '', faviconUrl: '', platformName: 'EmpowerHub' };
+      return { logoUrl: '', faviconUrl: '', platformName: 'EmpowerHub', header: defaultHeaderConfig };
     }
   },
   ['platform-brand'],
@@ -136,7 +163,7 @@ export default async function RootLayout({
       </head>
       <body className="font-body antialiased">
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} storageKey="empowerhub-theme">
-          <PlatformBrandProvider logoUrl={platformBrand.logoUrl} platformName={platformBrand.platformName}>
+          <PlatformBrandProvider logoUrl={platformBrand.logoUrl} platformName={platformBrand.platformName} header={platformBrand.header}>
             <FirebaseProviderDynamic>
               {children}
               <Toaster />
