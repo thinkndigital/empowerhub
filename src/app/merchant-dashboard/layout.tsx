@@ -75,7 +75,9 @@ export default function MerchantDashboardLayout({ children }: { children: React.
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
-          <Logo className="h-16 w-16 animate-pulse" />
+          {platformLogo
+            ? <img src={platformLogo} alt="شعار" className="h-16 w-16 object-contain animate-pulse" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+            : <Logo className="h-16 w-16 animate-pulse" />}
           <p className="text-muted-foreground text-sm">جاري التحميل...</p>
         </div>
       </div>
