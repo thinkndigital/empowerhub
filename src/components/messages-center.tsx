@@ -20,6 +20,14 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { Send, PlusCircle, ArrowLeft, MessageSquare, Search, Users, Trash2, MoreVertical, Ban, ShieldOff } from 'lucide-react';
+import { format, isSameDay, isToday, isYesterday } from 'date-fns';
+import { ar } from 'date-fns/locale';
+
+function dayLabel(date: Date): string {
+  if (isToday(date)) return 'اليوم';
+  if (isYesterday(date)) return 'أمس';
+  return format(date, 'd MMMM yyyy', { locale: ar });
+}
 
 const ROLE_LABELS: Record<string, string> = {
   beneficiary: 'مستفيد',
@@ -434,39 +442,56 @@ export default function MessagesCenter({ title = 'الرسائل' }: MessagesCen
                       <p className="text-sm">ابدأ المحادثة بإرسال رسالة</p>
                     </div>
                   ) : (
-                    messages.map(msg => {
+                    messages.map((msg, i) => {
                       const isOwn = msg.senderId === user?.uid;
                       if (!msg.content) return null;
+
+                      let showDayDivider = false;
+                      const msgDate = new Date(msg.createdAt);
+                      if (!isNaN(msgDate.getTime())) {
+                        const prev = messages[i - 1];
+                        const prevDate = prev ? new Date(prev.createdAt) : null;
+                        showDayDivider = !prevDate || isNaN(prevDate.getTime()) || !isSameDay(msgDate, prevDate);
+                      }
+
                       return (
-                        <div
-                          key={msg.id}
-                          className="flex items-end gap-1"
-                          onMouseEnter={() => isOwn && setHoveredMsgId(msg.id)}
-                          onMouseLeave={() => setHoveredMsgId(null)}
-                        >
-                          {/* Trash button — left of own message bubble */}
-                          {isOwn && hoveredMsgId === msg.id && (
-                            <Button
-                              variant="ghost" size="icon"
-                              className="h-6 w-6 text-muted-foreground hover:text-destructive flex-shrink-0 mb-1"
-                              onClick={() => deleteMessage(msg.id)}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
+                        <div key={msg.id}>
+                          {showDayDivider && !isNaN(msgDate.getTime()) && (
+                            <div className="flex items-center justify-center py-2">
+                              <span className="text-xs font-medium text-muted-foreground bg-muted rounded-full px-3 py-1">
+                                {dayLabel(msgDate)}
+                              </span>
+                            </div>
                           )}
-                          {/* ml-auto pushes own bubbles to the physical RIGHT */}
-                          <div className={`max-w-[72%] rounded-2xl px-4 py-2 ${
-                            isOwn
-                              ? 'ml-auto bg-primary text-primary-foreground rounded-tr-sm'
-                              : 'mr-auto bg-muted rounded-tl-sm'
-                          }`}>
-                            <p className="text-sm leading-relaxed">{msg.content}</p>
-                            <p className={`text-xs mt-1 ${isOwn ? 'text-primary-foreground/60 text-left' : 'text-muted-foreground text-right'}`}>
-                              {(() => {
-                                try { return new Date(msg.createdAt).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }); }
-                                catch { return ''; }
-                              })()}
-                            </p>
+                          <div
+                            className="flex items-end gap-1"
+                            onMouseEnter={() => isOwn && setHoveredMsgId(msg.id)}
+                            onMouseLeave={() => setHoveredMsgId(null)}
+                          >
+                            {/* Trash button — left of own message bubble */}
+                            {isOwn && hoveredMsgId === msg.id && (
+                              <Button
+                                variant="ghost" size="icon"
+                                className="h-6 w-6 text-muted-foreground hover:text-destructive flex-shrink-0 mb-1"
+                                onClick={() => deleteMessage(msg.id)}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
+                            {/* ml-auto pushes own bubbles to the physical RIGHT */}
+                            <div className={`max-w-[72%] rounded-2xl px-4 py-2 ${
+                              isOwn
+                                ? 'ml-auto bg-primary text-primary-foreground rounded-tr-sm'
+                                : 'mr-auto bg-muted rounded-tl-sm'
+                            }`}>
+                              <p className="text-sm leading-relaxed">{msg.content}</p>
+                              <p className={`text-xs mt-1 ${isOwn ? 'text-primary-foreground/60 text-left' : 'text-muted-foreground text-right'}`}>
+                                {(() => {
+                                  try { return new Date(msg.createdAt).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }); }
+                                  catch { return ''; }
+                                })()}
+                              </p>
+                            </div>
                           </div>
                         </div>
                       );
