@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutGrid, Search, Settings, Users, BarChart3,
-  BookOpen, Store, MessageSquare, GraduationCap, ClipboardList, LogOut, Briefcase, Video, Quote, ClipboardCheck,
+  BookOpen, Store, MessageSquare, GraduationCap, ClipboardList, LogOut, Briefcase, Video, Quote, ClipboardCheck, Inbox,
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { signOut } from "firebase/auth";
@@ -44,6 +44,7 @@ const allMenuItems = [
   { href: "/organization-dashboard/reports",         label: "التقارير",           icon: BarChart3,     sectionKey: 'reports' },
   { href: "/organization-dashboard/assessments",     label: "نماذج التقييم",     icon: ClipboardCheck, sectionKey: null },
   { href: "/organization-dashboard/success-stories", label: "قصص النجاح",        icon: Quote,         sectionKey: null },
+  { href: "/organization-dashboard/beneficiary-requests", label: "طلبات المستفيدين", icon: Inbox,   sectionKey: null },
   { href: "/organization-dashboard/messages",        label: "الرسائل",            icon: MessageSquare, sectionKey: 'messages' },
 ];
 
