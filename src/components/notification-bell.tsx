@@ -73,9 +73,6 @@ export function NotificationBell() {
     return () => clearInterval(interval);
   }, [fetchNotifications]);
 
-  // Refresh when dropdown opens
-  useEffect(() => { if (open) fetchNotifications(); }, [open, fetchNotifications]);
-
   const markAsRead = useCallback(async (id: string) => {
     if (!user) return;
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
@@ -102,6 +99,15 @@ export function NotificationBell() {
       });
     } catch { /* silent */ }
   }, [user]);
+
+  // Opening the panel counts as "seen" — clear the unread badge shortly
+  // after, rather than requiring every item to be clicked individually.
+  useEffect(() => {
+    if (!open) return;
+    fetchNotifications();
+    const t = setTimeout(markAllRead, 1500);
+    return () => clearTimeout(t);
+  }, [open, fetchNotifications, markAllRead]);
 
   const handleClick = (notification: Notification) => {
     markAsRead(notification.id);
