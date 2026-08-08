@@ -11,8 +11,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Send, Building, MessageSquare, HelpCircle, Wrench, BookOpen } from "lucide-react";
 import { useUser } from "@/firebase/auth/use-user";
-import { useFirestore } from "@/firebase/provider";
-import { collection, addDoc, query, where, getDocs, serverTimestamp } from "firebase/firestore";
 import { useState } from "react";
 
 const contactFormSchema = z.object({
@@ -22,8 +20,7 @@ const contactFormSchema = z.object({
 
 export default function ContactOrganizationPage() {
   const { toast } = useToast();
-  const { user: authUser, userProfile } = useUser();
-  const firestore = useFirestore();
+  const { user: authUser } = useUser();
   const [submitting, setSubmitting] = useState(false);
 
   const form = useForm<z.infer<typeof contactFormSchema>>({
@@ -32,43 +29,21 @@ export default function ContactOrganizationPage() {
   });
 
   async function onSubmit(values: z.infer<typeof contactFormSchema>) {
-    if (!firestore || !authUser || !userProfile) return;
+    if (!authUser) return;
     setSubmitting(true);
     try {
-      // Find org admin to notify
-      let orgAdminId: string | null = null;
-      if ((userProfile as any).organizationId) {
-        const snap = await getDocs(
-          query(collection(firestore, "users"), where("role", "==", "organization"), where("organizationId", "==", (userProfile as any).organizationId))
-        );
-        if (!snap.empty) orgAdminId = snap.docs[0].id;
-      }
-
-      await addDoc(collection(firestore, "contactRequests"), {
-        senderId: authUser.uid,
-        senderName: userProfile.name || authUser.email,
-        organizationId: (userProfile as any).organizationId || null,
-        subject: values.subject,
-        message: values.message,
-        status: "pending",
-        createdAt: serverTimestamp(),
+      const token = await authUser.getIdToken();
+      const res = await fetch('/api/beneficiary/contact-org', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify(values),
       });
-
-      if (orgAdminId) {
-        await addDoc(collection(firestore, "notifications"), {
-          userId: orgAdminId,
-          title: `طلب جديد: ${values.subject}`,
-          body: `${userProfile.name || 'مستفيد'} أرسل طلباً: ${values.message.slice(0, 80)}`,
-          read: false,
-          createdAt: serverTimestamp(),
-          link: "/organization-dashboard/messages",
-        });
-      }
+      if (!res.ok) throw new Error((await res.json()).error || 'فشل إرسال الطلب');
 
       toast({ title: "تم إرسال طلبك بنجاح", description: `سيتم مراجعة طلبك بخصوص "${values.subject}" من قبل مدير منظمتك.` });
       form.reset();
-    } catch {
-      toast({ variant: "destructive", title: "خطأ!", description: "فشل إرسال الطلب. حاول مرة أخرى." });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "خطأ!", description: e.message || "فشل إرسال الطلب. حاول مرة أخرى." });
     } finally {
       setSubmitting(false);
     }
