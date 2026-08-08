@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
     const decoded = await adminAuth.verifyIdToken(token);
     const body = await req.json();
-    const { name, description, price, category, image } = body;
+    const { name, description, price, category, image, stock } = body;
 
     if (!name || !description || price == null || !category) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -58,6 +58,7 @@ export async function POST(req: NextRequest) {
       name,
       description,
       price: Number(price),
+      stock: stock != null ? Number(stock) : 0,
       category,
       ...(image ? { image } : {}),
       userId: decoded.uid,

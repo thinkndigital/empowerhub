@@ -20,13 +20,14 @@ import { useUser } from "@/firebase/auth/use-user";
 import { Plus, Package, Store, Save, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { translateCategory } from "@/lib/product-category";
 
-type Product = { id: string; name: string; description: string; price: number; category: string; status: string };
+type Product = { id: string; name: string; description: string; price: number; category: string; status: string; stock?: number };
 
 const productSchema = z.object({
   name: z.string().min(2, "الاسم مطلوب"),
   description: z.string().min(5, "الوصف مطلوب"),
   price: z.coerce.number().min(0, "السعر يجب أن يكون موجباً"),
   category: z.string().min(1, "الفئة مطلوبة"),
+  stock: z.coerce.number().int().min(0, "يجب أن يكون المخزون رقمًا صحيحًا."),
 });
 
 const STATUS: Record<string, { label: string; variant: "secondary" | "default" | "destructive" }> = {
@@ -57,7 +58,7 @@ export default function BeneficiaryStorePage() {
 
   const productForm = useForm<z.infer<typeof productSchema>>({
     resolver: zodResolver(productSchema),
-    defaultValues: { name: "", description: "", price: 0, category: "" },
+    defaultValues: { name: "", description: "", price: 0, category: "", stock: 0 },
   });
 
   // Fetch store + products whenever the authenticated user becomes available
@@ -234,6 +235,9 @@ export default function BeneficiaryStorePage() {
                     <FormField control={productForm.control} name="price" render={({ field }) => (
                       <FormItem><FormLabel>السعر (د.أ)</FormLabel><FormControl><Input type="number" min={0} step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
+                    <FormField control={productForm.control} name="stock" render={({ field }) => (
+                      <FormItem><FormLabel>الكمية في المخزون</FormLabel><FormControl><Input type="number" min={0} placeholder="25" {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
                     <FormField control={productForm.control} name="category" render={({ field }) => (
                       <FormItem>
                         <FormLabel>الفئة</FormLabel>
@@ -279,6 +283,7 @@ export default function BeneficiaryStorePage() {
                     <CardContent className="space-y-1">
                       <p className="text-sm text-muted-foreground line-clamp-2">{p.description}</p>
                       <p className="text-lg font-bold text-primary">{isNaN(Number(p.price)) ? '0.00' : Number(p.price).toFixed(2)} د.أ</p>
+                      <p className="text-sm text-muted-foreground">المخزون: {p.stock ?? 0} قطعة</p>
                     </CardContent>
                   </Card>
                 );

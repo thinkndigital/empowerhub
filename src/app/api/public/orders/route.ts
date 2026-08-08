@@ -46,6 +46,7 @@ export async function POST(req: NextRequest) {
       buyerName, buyerPhone, buyerAddress, notes,
       paymentMethod, // 'cod' | 'online'
       quantity = 1,
+      deliveryCost = 0,
     } = body;
 
     if (!productId || !buyerName || !buyerPhone) {
@@ -70,7 +71,8 @@ export async function POST(req: NextRequest) {
       buyerAddress: buyerAddress || '',
       notes: notes || '',
       quantity,
-      totalAmount: (productPrice || 0) * quantity,
+      deliveryCost: deliveryCost || 0,
+      totalAmount: (productPrice || 0) * quantity + (deliveryCost || 0),
       paymentMethod: paymentMethod || 'cod',
       paymentStatus: 'unpaid',
       status: 'pending',

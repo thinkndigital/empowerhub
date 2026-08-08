@@ -99,6 +99,7 @@ export function OrderDialog({ product, isOpen, onOpenChange }: OrderDialogProps)
           productId: product.id,
           productName: product.name,
           productPrice: product.price,
+          deliveryCost: product.deliveryCost || 0,
           storeId: (product as any).storeId || '',
           storeName: (product as any).storeName || '',
           beneficiaryId: product.beneficiaryId,
