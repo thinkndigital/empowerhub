@@ -94,9 +94,11 @@ export async function POST(req: NextRequest) {
     if (action === 'assignMentor') {
       // body.userId = beneficiary, body.mentorId = mentor's uid
       await adminDb.collection('users').doc(body.userId).update({ mentorId: body.mentorId });
-      // Notify mentor
       const benefSnap = await adminDb.collection('users').doc(body.userId).get();
       const benefName = benefSnap.data()?.name || 'مستفيد';
+      const mentorSnap = await adminDb.collection('users').doc(body.mentorId).get();
+      const mentorName = mentorSnap.data()?.name || 'مرشد';
+      // Notify mentor
       const assignMentorBody = `تم تعيينك مرشداً للمستفيد ${benefName}`;
       await notifyUser({
         uid: body.mentorId,
@@ -106,6 +108,16 @@ export async function POST(req: NextRequest) {
         link: '/mentor-dashboard',
         email: { subject: 'تم تعيينك مرشداً', bodyHtml: assignMentorBody },
       });
+      // Notify beneficiary
+      const assignedBenefBody = `تم تعيين المرشد ${mentorName} لمتابعتك.`;
+      await notifyUser({
+        uid: body.userId,
+        type: 'assignment',
+        title: 'تم تعيين مرشد لك',
+        body: assignedBenefBody,
+        link: '/beneficiary-dashboard/mentorship',
+        email: { subject: 'تم تعيين مرشد لك', bodyHtml: assignedBenefBody },
+      });
       return NextResponse.json({ success: true });
     }
 
@@ -114,6 +126,8 @@ export async function POST(req: NextRequest) {
       await adminDb.collection('users').doc(body.userId).update({ coachId: body.coachId });
       const benefSnap2 = await adminDb.collection('users').doc(body.userId).get();
       const benefName2 = benefSnap2.data()?.name || 'مستفيد';
+      const coachSnap = await adminDb.collection('users').doc(body.coachId).get();
+      const coachName = coachSnap.data()?.name || 'مدرب';
       const assignCoachBody = `تم تعيينك مدرباً للمستفيد ${benefName2}`;
       await notifyUser({
         uid: body.coachId,
@@ -122,6 +136,16 @@ export async function POST(req: NextRequest) {
         body: assignCoachBody,
         link: '/coach-dashboard',
         email: { subject: 'تم تعيينك مدرباً', bodyHtml: assignCoachBody },
+      });
+      // Notify beneficiary
+      const assignedBenefBody2 = `تم تعيين المدرب ${coachName} لمتابعتك.`;
+      await notifyUser({
+        uid: body.userId,
+        type: 'assignment',
+        title: 'تم تعيين مدرب لك',
+        body: assignedBenefBody2,
+        link: '/beneficiary-dashboard/training',
+        email: { subject: 'تم تعيين مدرب لك', bodyHtml: assignedBenefBody2 },
       });
       return NextResponse.json({ success: true });
     }
