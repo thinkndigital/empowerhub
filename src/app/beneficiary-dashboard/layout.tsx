@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutGrid, Search, Settings, MessageSquare,
-  BookOpen, Calendar, TrendingUp, ShoppingBag, ClipboardList, LogOut, ClipboardCheck, Layers, Users,
+  BookOpen, Calendar, TrendingUp, ShoppingBag, ClipboardList, LogOut, ClipboardCheck, Layers, Users, Boxes,
 } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { useState, useEffect, useCallback } from "react";
@@ -35,6 +35,7 @@ const allMenuItems = [
   { href: "/beneficiary-dashboard/sessions",     label: "جلساتي",         icon: Calendar,      sectionKey: 'sessions' },
   { href: "/beneficiary-dashboard/messages",     label: "الرسائل",        icon: MessageSquare, sectionKey: 'messages' },
   { href: "/beneficiary-dashboard/store",        label: "متجري",          icon: ShoppingBag,   sectionKey: 'store' },
+  { href: "/beneficiary-dashboard/inventory",    label: "المخزون",        icon: Boxes,         sectionKey: 'store' },
   { href: "/beneficiary-dashboard/orders",       label: "طلباتي",         icon: ClipboardList, sectionKey: 'orders' },
   { href: "/beneficiary-dashboard/customers",    label: "العملاء",        icon: Users,         sectionKey: 'customers' },
   { href: "/beneficiary-dashboard/assessments",  label: "نماذج التقييم", icon: ClipboardCheck, sectionKey: null },

@@ -79,20 +79,38 @@ export async function PUT(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
     const decoded = await adminAuth.verifyIdToken(token);
+    const body = await req.json();
+    const { id, status, ...rest } = body;
+    if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
 
-    // Check caller is org role
-    const userSnap = await adminDb.collection('users').doc(decoded.uid).get();
-    const role = userSnap.data()?.role;
-    if (role !== 'organization') {
-      return NextResponse.json({ error: 'Forbidden: only organizations can approve/reject products' }, { status: 403 });
+    // Org approving/rejecting a product
+    if (status) {
+      const userSnap = await adminDb.collection('users').doc(decoded.uid).get();
+      const role = userSnap.data()?.role;
+      if (role !== 'organization' || !['approved', 'rejected'].includes(status)) {
+        return NextResponse.json({ error: 'Forbidden: only organizations can approve/reject products' }, { status: 403 });
+      }
+      await adminDb.collection('products').doc(id).update({ status });
+      return NextResponse.json({ success: true });
     }
 
-    const { id, status } = await req.json();
-    if (!id || !['approved', 'rejected'].includes(status)) {
-      return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
+    // Owner editing their own product fields (e.g. stock, price)
+    const docSnap = await adminDb.collection('products').doc(id).get();
+    if (!docSnap.exists) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    if (docSnap.data()?.userId !== decoded.uid) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    await adminDb.collection('products').doc(id).update({ status });
+    const allowedFields = ['name', 'description', 'price', 'category', 'stock', 'image'];
+    const updates: Record<string, any> = {};
+    for (const key of allowedFields) {
+      if (key in rest) updates[key] = key === 'price' || key === 'stock' ? Number(rest[key]) : rest[key];
+    }
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
+    }
+
+    await adminDb.collection('products').doc(id).update(updates);
     return NextResponse.json({ success: true });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });

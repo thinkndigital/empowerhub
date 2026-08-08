@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutGrid, Search, Settings, Store,
-  Users, BarChart3, MessageSquare, LogOut, Layers,
+  Users, BarChart3, MessageSquare, LogOut, Layers, Boxes, ClipboardList,
 } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { useEffect, useState } from "react";
@@ -33,6 +33,8 @@ import { ThemeToggle } from "@/components/theme-toggle";
 const menuItems = [
   { href: "/merchant-dashboard", label: "لوحة التحكم", icon: LayoutGrid },
   { href: "/merchant-dashboard/store", label: "متجري", icon: Store },
+  { href: "/merchant-dashboard/inventory", label: "المخزون", icon: Boxes },
+  { href: "/merchant-dashboard/orders", label: "الطلبات", icon: ClipboardList },
   { href: "/merchant-dashboard/customers", label: "العملاء", icon: Users },
   { href: "/merchant-dashboard/reports", label: "التقارير", icon: BarChart3 },
   { href: "/merchant-dashboard/messages", label: "الرسائل", icon: MessageSquare },
