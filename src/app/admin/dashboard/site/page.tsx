@@ -16,6 +16,7 @@ import { useUser } from "@/firebase/auth/use-user";
 import { uploadFile as uploadToStorage } from "@/lib/upload-file";
 import { applyOrgColor } from "@/lib/apply-org-color";
 import { useToast } from "@/hooks/use-toast";
+import { DEFAULT_PLATFORM_SERVICES } from "@/lib/default-platform-services";
 
 interface CtaButton { text: string; link: string; style: 'primary' | 'outline' }
 
@@ -29,7 +30,7 @@ interface SiteConfig {
   faviconUrl: string;
   hero: { title: string; subtitle: string; ctaText: string; ctaSecondaryText: string; backgroundImage: string; buttons: CtaButton[] };
   stats: { label: string; value: string; icon: string }[];
-  features: { title: string; description: string; icon: string }[];
+  features: { title: string; description: string; icon: string; link?: string; linkLabel?: string }[];
   opportunities: { title: string; description: string; icon: string; badge: string; color: string; link: string }[];
   howItWorks: { step: string; title: string; desc: string; icon: string }[];
   testimonials: { name: string; role: string; text: string; stars: number }[];
@@ -105,7 +106,7 @@ const defaultConfig: SiteConfig = {
       { text: 'تعرف على المزيد', link: '#how-it-works', style: 'outline' },
     ],
   },
-  stats: [], features: [], opportunities: [], howItWorks: [], testimonials: [], blogPosts: [],
+  stats: [], features: DEFAULT_PLATFORM_SERVICES.map(f => ({ ...f })), opportunities: [], howItWorks: [], testimonials: [], blogPosts: [],
   contact: { phone: '', whatsapp: '', whatsappLink: '', email: '' },
   ctaBanner: {
     title: '', subtitle: '', primaryText: 'ابدأ مجاناً الآن', secondaryText: 'تجربة المنصة أولاً', backgroundColor: '',
@@ -480,15 +481,14 @@ export default function SiteEditorPage() {
     setConfig(c => ({ ...c, stats: c.stats.filter((_, idx) => idx !== i) }));
 
   // Features
-  const addFeature = () => setConfig(c => ({ ...c, features: [...c.features, { title: '', description: '', icon: 'Star' }] }));
+  const addFeature = () => setConfig(c => ({ ...c, features: [...c.features, { title: '', description: '', icon: 'Star', link: '', linkLabel: '' }] }));
   const updateFeature = (i: number, k: string, v: string) =>
     setConfig(c => { const f = [...c.features]; f[i] = { ...f[i], [k]: v }; return { ...c, features: f }; });
   const removeFeature = (i: number) =>
     setConfig(c => ({ ...c, features: c.features.filter((_, idx) => idx !== i) }));
-  // Clearing the list (not deleting one-by-one) restores the homepage's
-  // built-in 8-service showcase with working links — the same list shown
-  // whenever no custom features are configured. Requires pressing Save.
-  const resetFeatures = () => setConfig(c => ({ ...c, features: [] }));
+  // Restores the platform's 8 built-in services (with their working CTA
+  // links) — the same list shown by default. Requires pressing Save.
+  const resetFeatures = () => setConfig(c => ({ ...c, features: DEFAULT_PLATFORM_SERVICES.map(f => ({ ...f })) }));
 
   // Testimonials
   const addTestimonial = () => setConfig(c => ({ ...c, testimonials: [...c.testimonials, { name: '', role: '', text: '', stars: 5 }] }));
@@ -898,7 +898,7 @@ export default function SiteEditorPage() {
               <CardContent className="space-y-3">
                 {config.features.length === 0 ? (
                   <p className="text-muted-foreground text-center py-6 text-sm leading-relaxed">
-                    لا توجد ميزات مخصصة — الصفحة الرئيسية تعرض حالياً قائمة الخدمات الافتراضية (٨ بطاقات مع روابط). أضف ميزة لتخصيص القائمة، أو احفظ التغييرات بدون إضافة شيء لإبقاء القائمة الافتراضية.
+                    لا توجد ميزات. اضغط "استعادة الافتراضي" لاستعادة قائمة الخدمات الافتراضية (٨ بطاقات مع روابط)، أو أضف ميزة جديدة.
                   </p>
                 ) : config.features.map((feat, i) => (
                   <div key={i} className="p-3 bg-muted/40 rounded-xl border border-border space-y-2">
@@ -921,6 +921,16 @@ export default function SiteEditorPage() {
                     <div>
                       <Label className="text-xs text-muted-foreground">الوصف</Label>
                       <Input value={feat.description} onChange={e => updateFeature(i, 'description', e.target.value)} placeholder="وصف الميزة..." className="mt-1 h-8 text-sm" />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div>
+                        <Label className="text-xs text-muted-foreground">رابط الزر (اختياري)</Label>
+                        <Input value={feat.link || ''} onChange={e => updateFeature(i, 'link', e.target.value)} placeholder="/market" className="mt-1 h-8 text-sm" dir="ltr" />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">نص الزر (اختياري)</Label>
+                        <Input value={feat.linkLabel || ''} onChange={e => updateFeature(i, 'linkLabel', e.target.value)} placeholder="تسوق الآن" className="mt-1 h-8 text-sm" />
+                      </div>
                     </div>
                   </div>
                 ))}

@@ -22,6 +22,7 @@ import { useCurrency } from '@/hooks/use-currency';
 import { applyOrgColor } from '@/lib/apply-org-color';
 import { getDynamicIcon } from '@/lib/dynamic-icons';
 import { translateCategory } from '@/lib/product-category';
+import { DEFAULT_PLATFORM_SERVICES } from '@/lib/default-platform-services';
 import { OrderDialog } from '@/components/order-dialog';
 import { ProductDetailDialog } from '@/components/product-detail-dialog';
 import { SessionBookingDialog } from '@/components/session-booking-dialog';
@@ -819,83 +820,27 @@ export default function LandingPage() {
     copyright: '© 2024 EmpowerHub. جميع الحقوق محفوظة.',
   };
 
-  const platformServices = [
-    {
-      icon: BookOpen,
-      color: 'bg-primary/10 text-primary',
-      title: 'الدورات التدريبية',
-      description: 'محتوى تدريبي متخصص من مدربين معتمدين في مختلف المجالات — من المهارات الرقمية إلى ريادة الأعمال.',
-      link: '#courses',
-      linkLabel: 'استعرض الدورات',
-    },
-    {
-      icon: Video,
-      color: 'bg-sky-500/10 text-sky-600',
-      title: 'الجلسات المباشرة',
-      description: 'حضور مباشر مع المدربين في جلسات تفاعلية مباشرة — سجّل مقدماً واحصل على تجربة تدريبية حقيقية.',
-      link: '/live-sessions',
-      linkLabel: 'اكتشف الجلسات',
-    },
-    {
-      icon: GraduationCap,
-      color: 'bg-violet-500/10 text-violet-600',
-      title: 'الإرشاد الشخصي',
-      description: 'تواصل مع مرشد متخصص يساعدك على رسم مسارك المهني وتجاوز التحديات بتوجيه فردي مثمر.',
-      link: '#experts',
-      linkLabel: 'تعرف على المرشدين',
-    },
-    {
-      icon: Calendar,
-      color: 'bg-amber-500/10 text-amber-600',
-      title: 'جلسات الإرشاد الجماعية',
-      description: 'جلسات مجدولة مفتوحة للمجتمع — احجز مقعدك وانضم إلى نقاشات وورش عمل تفاعلية مع الخبراء.',
-      link: '#sessions',
-      linkLabel: 'احجز جلسة',
-    },
-    {
-      icon: Briefcase,
-      color: 'bg-orange-500/10 text-orange-600',
-      title: 'الفرص والمشاريع',
-      description: 'اكتشف فرص عمل، مشاريع تطوعية، وشراكات من منظمات موثوقة تبحث عن مواهب مجتمعنا.',
-      link: '/projects',
-      linkLabel: 'استعرض الفرص',
-    },
-    {
-      icon: FileText,
-      color: 'bg-emerald-500/10 text-emerald-600',
-      title: 'المقالات والمعرفة',
-      description: 'اقرأ مقالات عملية ورؤى من خبراء المنصة في التسويق الرقمي، ريادة الأعمال، والتطوير المهني.',
-      link: '/articles',
-      linkLabel: 'اقرأ المقالات',
-    },
-    {
-      icon: Store,
-      color: 'bg-rose-500/10 text-rose-600',
-      title: 'المتجر الإلكتروني',
-      description: 'تصفح منتجات حقيقية من رواد أعمال في مجتمعنا — يدوية، رقمية، وخدمات متنوعة بأسعار مناسبة.',
-      link: '/market',
-      linkLabel: 'تسوق الآن',
-    },
-    {
-      icon: Building2,
-      color: 'bg-indigo-500/10 text-indigo-600',
-      title: 'إدارة برامج التمكين',
-      description: 'للمنظمات والجمعيات: أدر مستفيديك، وزّع الدورات والجلسات، وتابع التقدم بتقارير تفصيلية.',
-      link: '/register?role=organization',
-      linkLabel: 'للمنظمات',
-    },
+  // Palette applied by position so admin-edited feature lists still get
+  // the same varied per-card accent colors as the built-in default.
+  const FEATURE_COLORS = [
+    'bg-primary/10 text-primary',
+    'bg-sky-500/10 text-sky-600',
+    'bg-violet-500/10 text-violet-600',
+    'bg-amber-500/10 text-amber-600',
+    'bg-orange-500/10 text-orange-600',
+    'bg-emerald-500/10 text-emerald-600',
+    'bg-rose-500/10 text-rose-600',
+    'bg-indigo-500/10 text-indigo-600',
   ];
-
-  const featuresData = cfg?.features?.length
-    ? cfg.features.map((f: any) => ({
-        icon: getDynamicIcon(f.icon),
-        color: 'bg-primary/10 text-primary',
-        title: f.title,
-        description: f.description,
-        link: '',
-        linkLabel: '',
-      }))
-    : platformServices;
+  const featuresData = (cfg?.features?.length ? cfg.features : DEFAULT_PLATFORM_SERVICES)
+    .map((f: any, i: number) => ({
+      icon: getDynamicIcon(f.icon),
+      color: FEATURE_COLORS[i % FEATURE_COLORS.length],
+      title: f.title,
+      description: f.description,
+      link: f.link || '',
+      linkLabel: f.linkLabel || '',
+    }));
 
   const logoSrc = cfg?.logoUrl || platformLogoFallback;
 

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
+import { DEFAULT_PLATFORM_SERVICES } from '@/lib/default-platform-services';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -25,12 +26,7 @@ const defaultConfig = {
     { label: 'مرشد ومدرب', value: '80+', icon: 'GraduationCap' },
     { label: 'نسبة الرضا', value: '95%', icon: 'Award' },
   ],
-  // Empty on purpose: the homepage (src/app/page.tsx) has its own built-in
-  // 8-service showcase with working CTA links that it renders whenever no
-  // custom features are configured. A non-empty default here used to
-  // silently override that showcase with plainer, link-less placeholder
-  // content the moment this route ever ran with no Firestore doc present.
-  features: [] as { title: string; description: string; icon: string }[],
+  features: DEFAULT_PLATFORM_SERVICES,
   howItWorks: [
     { step: '١', title: 'أنشئ حسابك', desc: 'سجّل مجاناً واختر دورك على المنصة سواء كمستفيد أو مرشد أو منظمة.', icon: 'UserCheck' },
     { step: '٢', title: 'استكشف المحتوى', desc: 'تصفح الدورات التدريبية، تواصل مع المرشدين، وابنِ مهاراتك.', icon: 'Globe' },

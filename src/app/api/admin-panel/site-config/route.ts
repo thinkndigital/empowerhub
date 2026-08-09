@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { adminDb } from '@/lib/firebase-admin';
+import { DEFAULT_PLATFORM_SERVICES } from '@/lib/default-platform-services';
 
 function checkAuth() {
   return cookies().get('ap_session')?.value === 'empowerhub-admin-2026-secret';
@@ -27,12 +28,7 @@ const defaultConfig = {
     { label: 'منظمة', value: '20+', icon: 'Building2' },
     { label: 'دورة', value: '100+', icon: 'BookOpen' },
   ],
-  // Empty on purpose — see the matching comment in
-  // src/app/api/public/site-config/route.ts. The homepage's own built-in
-  // 8-service showcase (with working CTA links) is the real default; a
-  // non-empty list here would silently replace it the moment the admin
-  // panel's Features tab loaded with no Firestore doc present.
-  features: [] as { title: string; description: string; icon: string }[],
+  features: DEFAULT_PLATFORM_SERVICES,
   howItWorks: [
     { step: '١', title: 'أنشئ حسابك', desc: 'سجّل مجاناً واختر دورك على المنصة.', icon: 'UserCheck' },
     { step: '٢', title: 'استكشف المحتوى', desc: 'تصفح الدورات التدريبية وتواصل مع المرشدين.', icon: 'Globe' },
