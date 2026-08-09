@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -15,11 +16,12 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/firebase/auth/use-user";
-import { Inbox, CheckCircle, Clock, Eye } from "lucide-react";
+import { Inbox, CheckCircle, Clock, Eye, UserCircle2 } from "lucide-react";
 import { StatCard, StatGrid } from "@/components/dashboard/stat-card";
 
 type ContactRequest = {
   id: string;
+  senderId?: string;
   senderName: string;
   subject: string;
   message: string;
@@ -120,7 +122,15 @@ export default function BeneficiaryRequestsPage() {
               <TableBody>
                 {requests.map(req => (
                   <TableRow key={req.id}>
-                    <TableCell className="font-medium">{req.senderName || 'مستفيد'}</TableCell>
+                    <TableCell className="font-medium">
+                      {req.senderId ? (
+                        <Link href={`/organization-dashboard/beneficiaries/${req.senderId}`} className="hover:text-primary hover:underline">
+                          {req.senderName || 'مستفيد'}
+                        </Link>
+                      ) : (
+                        req.senderName || 'مستفيد'
+                      )}
+                    </TableCell>
                     <TableCell><Badge variant="outline" className="text-xs">{req.subject}</Badge></TableCell>
                     <TableCell className="max-w-xs">
                       <button onClick={() => setViewing(req)} className="text-sm text-muted-foreground line-clamp-1 hover:text-foreground text-right w-full">
@@ -137,6 +147,13 @@ export default function BeneficiaryRequestsPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1.5">
+                        {req.senderId && (
+                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0" asChild>
+                            <Link href={`/organization-dashboard/beneficiaries/${req.senderId}`} title="عرض ملف المستفيد">
+                              <UserCircle2 className="h-4 w-4" />
+                            </Link>
+                          </Button>
+                        )}
                         <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setViewing(req)}>
                           <Eye className="h-4 w-4" />
                         </Button>
@@ -166,7 +183,14 @@ export default function BeneficiaryRequestsPage() {
             <DialogDescription>من {viewing?.senderName || 'مستفيد'}</DialogDescription>
           </DialogHeader>
           <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{viewing?.message}</p>
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:justify-between">
+            {viewing?.senderId && (
+              <Button variant="ghost" className="gap-1.5" asChild>
+                <Link href={`/organization-dashboard/beneficiaries/${viewing.senderId}`}>
+                  <UserCircle2 className="h-4 w-4" />عرض ملف المستفيد
+                </Link>
+              </Button>
+            )}
             {viewing && (
               <Button
                 variant="outline"
