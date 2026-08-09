@@ -18,6 +18,27 @@ export async function POST(req: NextRequest) {
     const orderDoc = await adminDb.collection('orders').doc(orderId).get();
     const orderData = orderDoc.exists ? orderDoc.data() : null;
 
+    // A cart checkout is one combined payment across N real per-product
+    // orders, coordinated by this lightweight batch doc — mark every child
+    // order paid too, since the buyer only paid the batch total once.
+    if (orderData?.type === 'cart-batch' && Array.isArray(orderData.orderIds)) {
+      const now = new Date();
+      await Promise.all(
+        orderData.orderIds.map((childId: string) =>
+          adminDb.collection('orders').doc(childId).update({
+            paymentStatus: 'paid',
+            status: 'confirmed',
+            paidAt: now,
+          }).catch(() => {})
+        )
+      );
+
+      return NextResponse.json({
+        ok: true,
+        order: { type: 'cart', orderIds: orderData.orderIds },
+      });
+    }
+
     if (orderData?.type === 'subscription' && orderData.orgId && orderData.planId) {
       const now = new Date();
       const endDate = new Date(now);

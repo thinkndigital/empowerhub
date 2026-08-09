@@ -6,16 +6,19 @@ import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useUser } from '@/firebase/auth/use-user';
+import { useCart } from '@/components/cart-provider';
 
 export default function PaymentCallbackPage() {
   const searchParams = useSearchParams();
   const { user: authUser, loading: authLoading } = useUser();
+  const { clear: clearCart } = useCart();
   const [status, setStatus] = useState<'loading' | 'paid' | 'failed'>('loading');
   const [message, setMessage] = useState('');
   const [isCourseOrder, setIsCourseOrder] = useState(false);
   const [courseId, setCourseId] = useState('');
   const [isSubscriptionOrder, setIsSubscriptionOrder] = useState(false);
   const [isSessionOrder, setIsSessionOrder] = useState(false);
+  const [isCartOrder, setIsCartOrder] = useState(false);
   const [isPopup, setIsPopup] = useState(false);
 
   useEffect(() => {
@@ -70,6 +73,11 @@ export default function PaymentCallbackPage() {
           if (data.order?.type === 'session') {
             setIsSessionOrder(true);
             setMessage('تم الدفع بنجاح! سيتم التواصل معك قريباً لتأكيد موعد الجلسة.');
+          }
+          if (data.order?.type === 'cart') {
+            setIsCartOrder(true);
+            setMessage('تم الدفع بنجاح! تم تأكيد جميع طلباتك.');
+            clearCart();
           }
         })
         .catch(() => {});
@@ -168,7 +176,7 @@ export default function PaymentCallbackPage() {
                   <Link href="/organization-dashboard">الذهاب للوحة التحكم</Link>
                 </Button>
               )}
-              {!isSubscriptionOrder && !isSessionOrder && (
+              {!isSubscriptionOrder && !isSessionOrder && !isCartOrder && (
                 <Button asChild variant={isCourseOrder ? 'outline' : 'default'} className="w-full">
                   <Link href={isCourseOrder ? '/dashboard/training' : '/market'}>
                     {isCourseOrder ? 'دوراتي' : 'العودة للمتجر'}
@@ -178,6 +186,11 @@ export default function PaymentCallbackPage() {
               {isSessionOrder && (
                 <Button asChild className="w-full">
                   <Link href="/">العودة للرئيسية</Link>
+                </Button>
+              )}
+              {isCartOrder && (
+                <Button asChild className="w-full">
+                  <Link href="/market">متابعة التسوق</Link>
                 </Button>
               )}
             </div>

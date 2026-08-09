@@ -9,7 +9,9 @@ import { Logo } from "@/components/logo";
 import { usePlatformBrand } from "@/components/platform-brand-provider";
 import { OrderDialog } from "@/components/order-dialog";
 import { ProductDetailDialog } from "@/components/product-detail-dialog";
-import { ShoppingCart, Search, Store, MessageCircle, ArrowLeft, MapPin } from "lucide-react";
+import { useCart } from "@/components/cart-provider";
+import { useToast } from "@/hooks/use-toast";
+import { ShoppingCart, ShoppingBag, Search, Store, MessageCircle, ArrowLeft, MapPin } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import type { Product as LibProduct } from "@/lib/products-data";
 import { translateCategory } from "@/lib/product-category";
@@ -26,6 +28,10 @@ interface Product {
   whatsapp?: string;
   stock?: number;
   beneficiaryId?: string;
+  deliveryCost?: number;
+  storeId?: string;
+  storeName?: string;
+  organizationId?: string;
 }
 
 export default function MarketPage() {
@@ -36,6 +42,25 @@ export default function MarketPage() {
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState("الكل");
   const { logoUrl: platformLogo, platformName } = usePlatformBrand();
+  const { addItem } = useCart();
+  const { toast } = useToast();
+
+  const handleAddToCart = (product: Product) => {
+    if (!product.beneficiaryId) return;
+    addItem({
+      productId: product.id,
+      name: product.name,
+      price: product.price || 0,
+      deliveryCost: product.deliveryCost || 0,
+      imageUrl: product.imageUrl,
+      storeId: product.storeId || '',
+      storeName: product.storeName || product.beneficiaryName || '',
+      beneficiaryId: product.beneficiaryId,
+      organizationId: product.organizationId || '',
+      stock: product.stock,
+    });
+    toast({ title: 'أُضيف للسلة', description: product.name });
+  };
 
   useEffect(() => {
     (async () => {
@@ -230,6 +255,17 @@ export default function MarketPage() {
                         >
                           <MessageCircle className="h-3.5 w-3.5" />
                         </a>
+                      )}
+                      {product.stock !== 0 && product.beneficiaryId && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 w-8 p-0 shrink-0"
+                          aria-label="أضف للسلة"
+                          onClick={() => handleAddToCart(product)}
+                        >
+                          <ShoppingBag className="h-3.5 w-3.5" />
+                        </Button>
                       )}
                       <Button
                         size="sm"

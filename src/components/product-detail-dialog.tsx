@@ -4,8 +4,10 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { ShoppingCart, MessageCircle, MapPin, Store, PackageX, PackageCheck } from "lucide-react";
+import { ShoppingCart, ShoppingBag, MessageCircle, MapPin, Store, PackageX, PackageCheck } from "lucide-react";
 import { translateCategory } from "@/lib/product-category";
+import { useCart } from "@/components/cart-provider";
+import { useToast } from "@/hooks/use-toast";
 
 export interface DetailProduct {
   id: string;
@@ -19,7 +21,10 @@ export interface DetailProduct {
   deliveryCost?: number;
   location?: string;
   beneficiaryName?: string;
+  beneficiaryId?: string;
+  storeId?: string;
   storeName?: string;
+  organizationId?: string;
   whatsapp?: string;
 }
 
@@ -32,12 +37,31 @@ interface ProductDetailDialogProps {
 }
 
 export function ProductDetailDialog({ product, isOpen, onOpenChange, onOrder, currencySymbol = 'د.أ' }: ProductDetailDialogProps) {
+  const { addItem } = useCart();
+  const { toast } = useToast();
   if (!product) return null;
 
   const imageUrl = product.imageUrl || product.image || '';
   const name = product.name || 'منتج';
   const outOfStock = product.stock === 0;
   const sellerName = product.beneficiaryName || product.storeName;
+
+  const handleAddToCart = () => {
+    if (!product.beneficiaryId) return;
+    addItem({
+      productId: product.id,
+      name,
+      price: product.price || 0,
+      deliveryCost: product.deliveryCost || 0,
+      imageUrl,
+      storeId: product.storeId || '',
+      storeName: product.storeName || product.beneficiaryName || '',
+      beneficiaryId: product.beneficiaryId,
+      organizationId: product.organizationId || '',
+      stock: product.stock ?? undefined,
+    });
+    toast({ title: 'أُضيف للسلة', description: name });
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -113,6 +137,12 @@ export function ProductDetailDialog({ product, isOpen, onOpenChange, onOrder, cu
               aria-label="واتساب">
               <MessageCircle className="h-4 w-4" />
             </a>
+          )}
+          {!outOfStock && product.beneficiaryId && (
+            <Button variant="outline" className="gap-2 shrink-0" onClick={handleAddToCart}>
+              <ShoppingBag className="h-4 w-4" />
+              <span className="hidden sm:inline">أضف للسلة</span>
+            </Button>
           )}
           <Button className="flex-1 gap-2" disabled={outOfStock} onClick={() => onOrder(product)}>
             <ShoppingCart className="h-4 w-4" />

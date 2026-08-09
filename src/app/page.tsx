@@ -26,6 +26,7 @@ import { OrderDialog } from '@/components/order-dialog';
 import { ProductDetailDialog } from '@/components/product-detail-dialog';
 import { SessionBookingDialog } from '@/components/session-booking-dialog';
 import { CourseEnrollDialog } from '@/components/course-enroll-dialog';
+import { useCart } from '@/components/cart-provider';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -88,6 +89,8 @@ interface Product {
   storeId?: string;
   storeName?: string;
   organizationId?: string;
+  beneficiaryId?: string;
+  deliveryCost?: number;
   store?: { phone?: string };
   stock?: number | null;
   location?: string;
@@ -394,8 +397,29 @@ const CourseCard = ({ course, onEnroll, currencySymbol }: { course: CourseItem; 
 );
 
 const ProductCard = ({ product, onOrder, onView, currencySymbol }: { product: Product; onOrder: (p: Product) => void; onView: (p: Product) => void; currencySymbol: string }) => {
+  const { addItem } = useCart();
+  const { toast } = useToast();
   const name = product.name || 'منتج';
   const imageUrl = product.imageUrl || product.image || '';
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!product.beneficiaryId) return;
+    addItem({
+      productId: product.id,
+      name,
+      price: product.price || 0,
+      deliveryCost: product.deliveryCost || 0,
+      imageUrl,
+      storeId: product.storeId || '',
+      storeName: product.storeName || '',
+      beneficiaryId: product.beneficiaryId,
+      organizationId: product.organizationId || '',
+      stock: product.stock ?? undefined,
+    });
+    toast({ title: 'أُضيف للسلة', description: name });
+  };
+
   return (
     <div className="group flex flex-col">
       <button
@@ -417,7 +441,7 @@ const ProductCard = ({ product, onOrder, onView, currencySymbol }: { product: Pr
             {translateCategory(product.category)}
           </div>
         )}
-        {/* Quick order — hidden until hover */}
+        {/* Quick actions — hidden until hover */}
         <span
           role="button"
           tabIndex={-1}
@@ -427,6 +451,17 @@ const ProductCard = ({ product, onOrder, onView, currencySymbol }: { product: Pr
         >
           <ShoppingCart className="h-4 w-4" />
         </span>
+        {product.beneficiaryId && (
+          <span
+            role="button"
+            tabIndex={-1}
+            onClick={handleAddToCart}
+            aria-label={`أضف للسلة ${name}`}
+            className="absolute bottom-4 left-16 h-9 w-9 rounded-full bg-background text-foreground shadow-md flex items-center justify-center opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 transition-all duration-200"
+          >
+            <ShoppingBag className="h-4 w-4" />
+          </span>
+        )}
       </button>
       <button onClick={() => onView(product)} className="mt-3 flex items-baseline justify-between gap-2 text-right">
         <span className="text-sm text-muted-foreground line-clamp-1">{name}</span>

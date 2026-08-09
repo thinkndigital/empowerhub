@@ -5,6 +5,7 @@ import './globals.css';
 import { FirebaseProviderDynamic } from '@/components/firebase-provider-dynamic';
 import { ThemeProvider } from '@/components/theme-provider';
 import { PlatformBrandProvider } from '@/components/platform-brand-provider';
+import { CartProvider } from '@/components/cart-provider';
 import { adminDb } from '@/lib/firebase-admin';
 
 // Pages that reference these values may be statically prerendered, so a
@@ -165,8 +166,10 @@ export default async function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} storageKey="empowerhub-theme">
           <PlatformBrandProvider logoUrl={platformBrand.logoUrl} platformName={platformBrand.platformName} header={platformBrand.header}>
             <FirebaseProviderDynamic>
-              {children}
-              <Toaster />
+              <CartProvider>
+                {children}
+                <Toaster />
+              </CartProvider>
             </FirebaseProviderDynamic>
           </PlatformBrandProvider>
         </ThemeProvider>

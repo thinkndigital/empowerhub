@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Logo } from "@/components/logo";
 import { usePlatformBrand } from "@/components/platform-brand-provider";
+import { CartSheet } from "@/components/cart-sheet";
 import { Menu, X, ChevronDown, Users, GraduationCap } from "lucide-react";
 
 const navLinks = [
@@ -86,6 +87,7 @@ export function SiteHeader() {
         </nav>
 
         <div className="hidden md:flex items-center gap-2 mr-auto">
+          <CartSheet />
           <Button variant="ghost" size="sm" asChild className="text-sm font-medium rounded-full">
             <Link href="/login">{loginText}</Link>
           </Button>
@@ -95,6 +97,7 @@ export function SiteHeader() {
         </div>
 
         <div className="flex items-center gap-2 mr-auto md:hidden">
+          <CartSheet />
           <Button size="sm" asChild className="text-xs px-3.5 h-8 rounded-full">
             <Link href="/register">{registerTextMobile}</Link>
           </Button>
