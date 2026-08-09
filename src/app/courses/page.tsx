@@ -6,8 +6,11 @@ import { Button } from "@/components/ui/button";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { BookOpen, Users, Clock } from "lucide-react";
+import { BookOpen, Users, Clock, ShoppingBag } from "lucide-react";
 import { COURSE_CATEGORIES } from "@/lib/course-category";
+import { useCart } from "@/components/cart-provider";
+import { useToast } from "@/hooks/use-toast";
+import { CourseEnrollDialog } from "@/components/course-enroll-dialog";
 
 interface Course {
   id: string;
@@ -32,6 +35,31 @@ export default function CoursesPage() {
   const [loading, setLoading] = useState(true);
   const [levelFilter, setLevelFilter] = useState('الكل');
   const [categoryFilter, setCategoryFilter] = useState('الكل');
+  const [buyCourse, setBuyCourse] = useState<Course | null>(null);
+  const { addItem } = useCart();
+  const { toast } = useToast();
+
+  const handleAddToCart = (course: Course, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    addItem({
+      productId: course.id,
+      name: course.title,
+      price: course.price || 0,
+      deliveryCost: 0,
+      imageUrl: course.coverImageUrl,
+      storeName: course.coachName || '',
+      beneficiaryId: '',
+      type: 'course',
+    });
+    toast({ title: 'أُضيف للسلة', description: course.title });
+  };
+
+  const handleBuyNow = (course: Course, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setBuyCourse(course);
+  };
 
   useEffect(() => {
     async function fetchCourses() {
@@ -182,11 +210,30 @@ export default function CoursesPage() {
                     )}
                   </div>
 
-                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-border">
-                    <span className="font-bold text-foreground">
+                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-border gap-2">
+                    <span className="font-bold text-foreground shrink-0">
                       {course.price ? `${course.price} د.أ` : 'مجاني'}
                     </span>
-                    <Button size="sm" variant="outline">التفاصيل</Button>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {!!course.price && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 w-8 p-0"
+                          aria-label="أضف للسلة"
+                          onClick={e => handleAddToCart(course, e)}
+                        >
+                          <ShoppingBag className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        className="h-8 text-xs px-2.5"
+                        onClick={e => handleBuyNow(course, e)}
+                      >
+                        {course.price ? 'ادفع الآن' : 'سجّل الآن'}
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </Link>
@@ -194,6 +241,16 @@ export default function CoursesPage() {
           </div>
         )}
       </div>
+
+      {buyCourse && (
+        <CourseEnrollDialog
+          courseId={buyCourse.id}
+          courseTitle={buyCourse.title}
+          coursePrice={buyCourse.price}
+          isOpen={!!buyCourse}
+          onOpenChange={open => { if (!open) setBuyCourse(null); }}
+        />
+      )}
     </div>
   );
 }

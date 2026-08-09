@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json({
         ok: true,
-        order: { type: 'cart', orderIds: orderData.orderIds },
+        order: { type: 'cart', orderIds: orderData.orderIds, courseIds: orderData.courseIds || [] },
       });
     }
 

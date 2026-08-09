@@ -14,6 +14,12 @@ export interface CartItem {
   beneficiaryId: string;
   organizationId?: string;
   stock?: number;
+  // Courses are added to the same cart as products (single combined
+  // checkout) — 'course' items reuse productId to hold the courseId and
+  // are always capped at quantity 1 since re-buying access twice is
+  // meaningless. Omitted = 'product', for backward compatibility with
+  // carts already in localStorage.
+  type?: 'product' | 'course';
 }
 
 interface CartContextValue {
@@ -51,6 +57,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const addItem = useCallback((item: Omit<CartItem, "quantity">, qty = 1) => {
     setItems(prev => {
       const existing = prev.find(i => i.productId === item.productId);
+      if (item.type === 'course') {
+        return existing ? prev : [...prev, { ...item, quantity: 1 }];
+      }
       if (existing) {
         return prev.map(i => (i.productId === item.productId ? { ...i, quantity: i.quantity + qty } : i));
       }
@@ -66,7 +75,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setItems(prev =>
       qty <= 0
         ? prev.filter(i => i.productId !== productId)
-        : prev.map(i => (i.productId === productId ? { ...i, quantity: qty } : i))
+        : prev.map(i => (i.productId === productId && i.type !== 'course' ? { ...i, quantity: qty } : i))
     );
   }, []);
 

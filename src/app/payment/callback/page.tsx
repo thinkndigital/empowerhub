@@ -78,6 +78,19 @@ export default function PaymentCallbackPage() {
             setIsCartOrder(true);
             setMessage('تم الدفع بنجاح! تم تأكيد جميع طلباتك.');
             clearCart();
+            const purchasedCourseIds: string[] = data.order.courseIds || [];
+            if (purchasedCourseIds.length && authUser) {
+              try {
+                const token = await authUser.getIdToken();
+                await Promise.all(purchasedCourseIds.map((cId: string) =>
+                  fetch(`/api/courses/${cId}/enroll`, {
+                    method: 'POST',
+                    headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+                    body: JSON.stringify({}),
+                  }).catch(() => {})
+                ));
+              } catch { /* non-fatal */ }
+            }
           }
         })
         .catch(() => {});

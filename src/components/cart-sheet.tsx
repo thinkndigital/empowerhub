@@ -74,22 +74,26 @@ export function CartSheet() {
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          onClick={() => updateQuantity(item.productId, item.quantity - 1)}
-                          className="h-6 w-6 rounded-md border flex items-center justify-center hover:bg-muted transition-colors"
-                        >
-                          <Minus className="h-3 w-3" />
-                        </button>
-                        <span className="text-sm font-medium w-5 text-center">{item.quantity}</span>
-                        <button
-                          onClick={() => updateQuantity(item.productId, item.quantity + 1)}
-                          disabled={item.stock != null && item.quantity >= item.stock}
-                          className="h-6 w-6 rounded-md border flex items-center justify-center hover:bg-muted transition-colors disabled:opacity-40 disabled:pointer-events-none"
-                        >
-                          <Plus className="h-3 w-3" />
-                        </button>
-                      </div>
+                      {item.type === 'course' ? (
+                        <span className="text-xs text-muted-foreground">دورة</span>
+                      ) : (
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => updateQuantity(item.productId, item.quantity - 1)}
+                            className="h-6 w-6 rounded-md border flex items-center justify-center hover:bg-muted transition-colors"
+                          >
+                            <Minus className="h-3 w-3" />
+                          </button>
+                          <span className="text-sm font-medium w-5 text-center">{item.quantity}</span>
+                          <button
+                            onClick={() => updateQuantity(item.productId, item.quantity + 1)}
+                            disabled={item.stock != null && item.quantity >= item.stock}
+                            className="h-6 w-6 rounded-md border flex items-center justify-center hover:bg-muted transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                          >
+                            <Plus className="h-3 w-3" />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}

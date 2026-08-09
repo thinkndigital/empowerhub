@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useCart } from "@/components/cart-provider";
+import { useUser } from "@/firebase/auth/use-user";
 import { Button } from "@/components/ui/button";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter,
@@ -56,6 +57,7 @@ const BNPL_GATEWAYS: GatewayKey[] = ['tamara', 'tabby'];
 export function CartCheckoutDialog({ isOpen, onOpenChange }: CheckoutDialogProps) {
   const { toast } = useToast();
   const { items, total, clear } = useCart();
+  const { user: authUser } = useUser();
   const [paymentConfig, setPaymentConfig] = useState<PaymentConfig>(defaultPaymentConfig);
 
   const [name, setName] = useState('');
@@ -104,6 +106,7 @@ export function CartCheckoutDialog({ isOpen, onOpenChange }: CheckoutDialogProps
           buyerAddress: address,
           notes,
           paymentMethod,
+          buyerUid: authUser?.uid || '',
         }),
       });
 
@@ -130,7 +133,22 @@ export function CartCheckoutDialog({ isOpen, onOpenChange }: CheckoutDialogProps
         }
       }
 
-      // COD success
+      // COD success — for logged-in buyers, enroll them in any purchased
+      // courses immediately (mirrors the single-course COD enrollment flow).
+      const purchasedCourseIds: string[] = cartData.courseIds || [];
+      if (purchasedCourseIds.length && authUser) {
+        try {
+          const token = await authUser.getIdToken();
+          await Promise.all(purchasedCourseIds.map((cId: string) =>
+            fetch(`/api/courses/${cId}/enroll`, {
+              method: 'POST',
+              headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+              body: JSON.stringify({}),
+            }).catch(() => {})
+          ));
+        } catch { /* non-fatal */ }
+      }
+
       clear();
       setDone(true);
       toast({ title: 'تم استلام طلبك بنجاح!', description: `سيتم التواصل معك على ${phone} قريباً.` });
