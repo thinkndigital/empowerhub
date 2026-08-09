@@ -81,24 +81,24 @@ export default function ArticleDetailPage() {
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
-      {/* Cover image */}
-      {article.coverImageUrl && (
-        <div className="w-full aspect-video max-h-[480px] overflow-hidden bg-muted">
-          <img
-            src={article.coverImageUrl}
-            alt={article.title}
-            className="w-full h-full object-cover"
-            onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-          />
-        </div>
-      )}
-
       <div className="container max-w-3xl py-10">
         {/* Back button */}
         <Button variant="ghost" onClick={() => router.push('/articles')} className="mb-6 gap-2 text-muted-foreground">
           <ArrowRight className="h-4 w-4" />
           العودة للمقالات
         </Button>
+
+        {/* Cover image */}
+        {article.coverImageUrl && (
+          <div className="w-full aspect-video max-h-72 rounded-2xl overflow-hidden bg-muted mb-6">
+            <img
+              src={article.coverImageUrl}
+              alt={article.title}
+              className="w-full h-full object-cover"
+              onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+            />
+          </div>
+        )}
 
         {/* Title */}
         <h1 className="text-3xl font-bold text-foreground leading-snug mb-4">{article.title}</h1>
