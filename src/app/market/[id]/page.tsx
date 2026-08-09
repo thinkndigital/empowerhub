@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/components/cart-provider";
@@ -40,6 +41,7 @@ export default function ProductDetailPage() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [buyingNow, setBuyingNow] = useState(false);
+  const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
 
   const fetchProduct = useCallback(async () => {
     if (!id) return;
@@ -57,6 +59,27 @@ export default function ProductDetailPage() {
   }, [id]);
 
   useEffect(() => { fetchProduct(); }, [fetchProduct]);
+
+  // Related products: same category first, padded with other products if
+  // the category doesn't have enough on its own (or the product has none).
+  useEffect(() => {
+    if (!product) return;
+    (async () => {
+      try {
+        const res = await fetch('/api/public/stores');
+        if (!res.ok) return;
+        const data = await res.json();
+        const all = ((data.products || []) as Product[]).filter(p => p.id !== product.id);
+        const sameCategory = product.category
+          ? all.filter(p => p.category === product.category)
+          : [];
+        const rest = all.filter(p => !sameCategory.some(s => s.id === p.id));
+        setRelatedProducts([...sameCategory, ...rest].slice(0, 8));
+      } catch {
+        // silent — related products are a nice-to-have
+      }
+    })();
+  }, [product]);
 
   const outOfStock = product?.stock === 0;
 
@@ -209,6 +232,46 @@ export default function ProductDetailPage() {
             </div>
           </div>
         </div>
+
+        {/* Related products */}
+        {relatedProducts.length > 0 && (
+          <div className="max-w-5xl mt-14 pt-10 border-t border-border">
+            <h2 className="text-xl font-bold text-foreground mb-5">
+              {product.category ? 'منتجات من نفس التصنيف' : 'قد يعجبك أيضاً'}
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+              {relatedProducts.map(p => (
+                <Link
+                  key={p.id}
+                  href={`/market/${p.id}`}
+                  className="group rounded-xl overflow-hidden border border-border bg-card hover:border-primary/30 hover:shadow-sm transition-all flex flex-col"
+                >
+                  <div className="relative h-36 sm:h-40 bg-muted overflow-hidden shrink-0">
+                    {p.imageUrl ? (
+                      <Image
+                        src={p.imageUrl}
+                        alt={p.name}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className="h-full flex items-center justify-center">
+                        <Store className="h-7 w-7 text-muted-foreground/20" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-2.5 sm:p-3 flex flex-col gap-1">
+                    <h3 className="font-semibold text-xs sm:text-sm line-clamp-1 text-foreground">{p.name}</h3>
+                    <p className="font-extrabold text-sm text-foreground tabular-nums leading-none">
+                      {p.price != null ? p.price.toLocaleString('ar') : '—'}
+                      <span className="text-[10px] font-normal text-muted-foreground mr-0.5">د.أ</span>
+                    </p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
