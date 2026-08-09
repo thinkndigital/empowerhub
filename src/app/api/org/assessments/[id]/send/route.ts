@@ -41,44 +41,42 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     const assessmentData = snap.data()!;
 
-    const existingSentTo: string[]        = assessmentData.sentTo || [];
-    const existingSentToCoaches: string[] = assessmentData.sentToCoaches || [];
-    const existingSentToMentors: string[] = assessmentData.sentToMentors || [];
-
-    const newBenef   = beneficiaryIds.filter(id => !existingSentTo.includes(id));
-    const newCoaches = coachIds.filter(id => !existingSentToCoaches.includes(id));
-    const newMentors = mentorIds.filter(id => !existingSentToMentors.includes(id));
-
-    const totalNew = newBenef.length + newCoaches.length + newMentors.length;
-
+    // sentTo/sentToCoaches/sentToMentors track who has access to the form
+    // (used to filter the recipient-side listing) — arrayUnion keeps that
+    // idempotent regardless of who was already on the list. But every
+    // explicit "Send" click is a deliberate action by the org (often used
+    // to remind people who haven't responded yet), so it must notify
+    // *everyone currently selected*, not just recipients who weren't
+    // already tracked — silently skipping already-tracked people here used
+    // to make re-sends appear to do nothing.
     const updatePayload: Record<string, any> = { status: 'active' };
-    if (newBenef.length)   updatePayload.sentTo         = FieldValue.arrayUnion(...newBenef);
-    if (newCoaches.length) updatePayload.sentToCoaches  = FieldValue.arrayUnion(...newCoaches);
-    if (newMentors.length) updatePayload.sentToMentors  = FieldValue.arrayUnion(...newMentors);
+    if (beneficiaryIds.length) updatePayload.sentTo        = FieldValue.arrayUnion(...beneficiaryIds);
+    if (coachIds.length)       updatePayload.sentToCoaches = FieldValue.arrayUnion(...coachIds);
+    if (mentorIds.length)      updatePayload.sentToMentors = FieldValue.arrayUnion(...mentorIds);
     await docRef.update(updatePayload);
 
     const benefBody = `لديك نموذج تقييم "${assessmentData.title}" من ${assessmentData.orgName || 'المنظمة'}`;
     const staffBody = `طُلب منك ملء نموذج تقييم "${assessmentData.title}" من ${assessmentData.orgName || 'المنظمة'}`;
 
     await Promise.all([
-      ...newBenef.map(uid => notifyUser({
+      ...beneficiaryIds.map(uid => notifyUser({
         uid, type: 'assessment', title: 'نموذج تقييم جديد', body: benefBody,
         link: '/beneficiary-dashboard/assessments',
         email: { subject: 'نموذج تقييم جديد', bodyHtml: benefBody, ctaText: 'عرض النموذج', ctaLink: `${SITE_URL}/beneficiary-dashboard/assessments` },
       })),
-      ...newCoaches.map(uid => notifyUser({
+      ...coachIds.map(uid => notifyUser({
         uid, type: 'assessment', title: 'نموذج تقييم جديد', body: staffBody,
         link: '/coach-dashboard/assessments',
         email: { subject: 'نموذج تقييم جديد', bodyHtml: staffBody, ctaText: 'عرض النموذج', ctaLink: `${SITE_URL}/coach-dashboard/assessments` },
       })),
-      ...newMentors.map(uid => notifyUser({
+      ...mentorIds.map(uid => notifyUser({
         uid, type: 'assessment', title: 'نموذج تقييم جديد', body: staffBody,
         link: '/mentor-dashboard/assessments',
         email: { subject: 'نموذج تقييم جديد', bodyHtml: staffBody, ctaText: 'عرض النموذج', ctaLink: `${SITE_URL}/mentor-dashboard/assessments` },
       })),
     ]);
 
-    return NextResponse.json({ success: true, sent: totalNew });
+    return NextResponse.json({ success: true, sent: totalCount });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
