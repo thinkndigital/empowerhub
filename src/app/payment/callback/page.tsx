@@ -19,7 +19,7 @@ export default function PaymentCallbackPage() {
   const [isPopup, setIsPopup] = useState(false);
 
   useEffect(() => {
-    setIsPopup(!!window.opener || window !== window.parent);
+    setIsPopup(!!window.opener);
   }, []);
 
   useEffect(() => {

@@ -11,7 +11,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { PaymentIframeDialog } from "@/components/payment-iframe-dialog";
 import { Calendar, CreditCard, Banknote, CheckCircle } from "lucide-react";
 
 interface GatewayInfo { enabled: boolean; label: string; }
@@ -54,7 +53,6 @@ export function SessionBookingDialog({ isOpen, onOpenChange, hostId, hostName, h
   const [paymentMethod, setPaymentMethod] = useState<'cod' | GatewayKey>('cod');
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
-  const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/public/payment-config').then(r => r.json()).then(d => {
@@ -95,7 +93,7 @@ export function SessionBookingDialog({ isOpen, onOpenChange, hostId, hostName, h
           }),
         });
         const payData = await payRes.json();
-        if (payData.paymentUrl) { setPaymentUrl(payData.paymentUrl); setLoading(false); return; }
+        if (payData.paymentUrl) { window.location.href = payData.paymentUrl; return; }
         throw new Error(payData.error || 'فشل في تهيئة الدفع');
       }
 
@@ -110,18 +108,7 @@ export function SessionBookingDialog({ isOpen, onOpenChange, hostId, hostName, h
 
   const sessionLabel = hostRole === 'coach' ? 'جلسة تدريب' : 'جلسة إرشاد';
 
-  const handlePaymentResult = (status: 'paid' | 'failed') => {
-    setPaymentUrl(null);
-    if (status === 'paid') {
-      setDone(true);
-      toast({ title: 'تم الدفع والحجز بنجاح!', description: `سيتواصل معك ${hostName} قريباً على ${phone}.` });
-    } else {
-      toast({ variant: 'destructive', title: 'لم تكتمل عملية الدفع', description: 'يمكنك المحاولة مرة أخرى.' });
-    }
-  };
-
   return (
-    <>
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md" dir="rtl">
         <DialogHeader>
@@ -220,11 +207,5 @@ export function SessionBookingDialog({ isOpen, onOpenChange, hostId, hostName, h
         )}
       </DialogContent>
     </Dialog>
-    <PaymentIframeDialog
-      paymentUrl={paymentUrl}
-      onOpenChange={open => !open && setPaymentUrl(null)}
-      onResult={handlePaymentResult}
-    />
-    </>
   );
 }

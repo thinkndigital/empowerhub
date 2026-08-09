@@ -12,7 +12,6 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Logo } from "@/components/logo";
 import { usePlatformBrand } from "@/components/platform-brand-provider";
-import { PaymentIframeDialog } from "@/components/payment-iframe-dialog";
 
 interface PlanInfo {
   id: string;
@@ -45,7 +44,6 @@ function PaymentPageInner() {
   const [selectedGateway, setSelectedGateway] = useState<GatewayKey | "">("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
   const { logoUrl: platformLogo } = usePlatformBrand();
 
   useEffect(() => {
@@ -112,24 +110,13 @@ function PaymentPageInner() {
       });
       const payData = await payRes.json();
       if (payData.paymentUrl) {
-        setPaymentUrl(payData.paymentUrl);
-        setSubmitting(false);
+        window.location.href = payData.paymentUrl;
         return;
       }
       throw new Error(payData.error || "فشل في تهيئة الدفع");
     } catch (err: any) {
       toast({ variant: "destructive", title: "خطأ", description: err.message || "حدث خطأ، حاول مرة أخرى." });
       setSubmitting(false);
-    }
-  };
-
-  const handlePaymentResult = (status: "paid" | "failed") => {
-    setPaymentUrl(null);
-    if (status === "paid") {
-      toast({ title: "تم الدفع بنجاح!", description: "تم تفعيل اشتراكك." });
-      router.push("/organization-dashboard");
-    } else {
-      toast({ variant: "destructive", title: "لم تكتمل عملية الدفع", description: "يمكنك المحاولة مرة أخرى." });
     }
   };
 
@@ -224,11 +211,6 @@ function PaymentPageInner() {
           </Card>
         )}
       </div>
-      <PaymentIframeDialog
-        paymentUrl={paymentUrl}
-        onOpenChange={open => !open && setPaymentUrl(null)}
-        onResult={handlePaymentResult}
-      />
     </div>
   );
 }

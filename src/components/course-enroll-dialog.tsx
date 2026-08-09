@@ -11,7 +11,6 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { PaymentIframeDialog } from "@/components/payment-iframe-dialog";
 import { CheckCircle, BookOpen, CreditCard, Banknote, Loader2 } from "lucide-react";
 import Link from "next/link";
 
@@ -64,7 +63,6 @@ export function CourseEnrollDialog({
   const [method, setMethod] = useState<'cod' | GatewayKey>('cod');
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
-  const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
 
   const isFree = coursePrice === null || coursePrice === 0;
   const currency = config.currency || 'JOD';
@@ -147,8 +145,7 @@ export function CourseEnrollDialog({
         });
         const payData = await payRes.json();
         if (payData.paymentUrl) {
-          setPaymentUrl(payData.paymentUrl);
-          setLoading(false);
+          window.location.href = payData.paymentUrl;
           return;
         }
         throw new Error(payData.error || 'فشل في تهيئة الدفع');
@@ -174,21 +171,9 @@ export function CourseEnrollDialog({
     }
   };
 
-  const handlePaymentResult = (status: 'paid' | 'failed') => {
-    setPaymentUrl(null);
-    if (status === 'paid') {
-      setDone(true);
-      onEnrolled?.();
-      toast({ title: 'تم الدفع بنجاح!', description: authUser ? 'تم التسجيل في الدورة.' : 'سيتم التواصل معك للتأكيد.' });
-    } else {
-      toast({ variant: 'destructive', title: 'لم تكتمل عملية الدفع', description: 'يمكنك المحاولة مرة أخرى.' });
-    }
-  };
-
   const enabledGateways = ALL_GW.filter(k => config[k]?.enabled);
 
   return (
-    <>
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md" dir="rtl">
         <DialogHeader>
@@ -309,11 +294,5 @@ export function CourseEnrollDialog({
         )}
       </DialogContent>
     </Dialog>
-    <PaymentIframeDialog
-      paymentUrl={paymentUrl}
-      onOpenChange={open => !open && setPaymentUrl(null)}
-      onResult={handlePaymentResult}
-    />
-    </>
   );
 }

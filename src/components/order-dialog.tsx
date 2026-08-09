@@ -12,7 +12,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { PaymentIframeDialog } from "@/components/payment-iframe-dialog";
 import { type Product as LibProduct } from "@/lib/products-data";
 
 type Product = LibProduct & {
@@ -72,7 +71,6 @@ export function OrderDialog({ product, isOpen, onOpenChange }: OrderDialogProps)
   const [paymentMethod, setPaymentMethod] = useState<'cod' | GatewayKey>('cod');
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
-  const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/public/payment-config').then(r => r.json()).then(d => {
@@ -133,8 +131,7 @@ export function OrderDialog({ product, isOpen, onOpenChange }: OrderDialogProps)
         });
         const payData = await payRes.json();
         if (payData.paymentUrl) {
-          setPaymentUrl(payData.paymentUrl);
-          setLoading(false);
+          window.location.href = payData.paymentUrl;
           return;
         } else {
           throw new Error(payData.error || 'فشل في تهيئة الدفع');
@@ -151,20 +148,9 @@ export function OrderDialog({ product, isOpen, onOpenChange }: OrderDialogProps)
     }
   };
 
-  const handlePaymentResult = (status: 'paid' | 'failed') => {
-    setPaymentUrl(null);
-    if (status === 'paid') {
-      setDone(true);
-      toast({ title: 'تم الدفع بنجاح!', description: `سيتم التواصل معك على ${phone} قريباً.` });
-    } else {
-      toast({ variant: 'destructive', title: 'لم تكتمل عملية الدفع', description: 'يمكنك المحاولة مرة أخرى.' });
-    }
-  };
-
   if (!product) return null;
 
   return (
-    <>
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md" dir="rtl">
         <DialogHeader>
@@ -271,11 +257,5 @@ export function OrderDialog({ product, isOpen, onOpenChange }: OrderDialogProps)
         )}
       </DialogContent>
     </Dialog>
-    <PaymentIframeDialog
-      paymentUrl={paymentUrl}
-      onOpenChange={open => !open && setPaymentUrl(null)}
-      onResult={handlePaymentResult}
-    />
-    </>
   );
 }
