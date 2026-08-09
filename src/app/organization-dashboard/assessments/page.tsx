@@ -14,9 +14,10 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   ClipboardCheck, Plus, Trash2, Send, Users, Eye, ChevronDown, ChevronUp,
-  FileText, Star, List, GripVertical, X, CheckCircle2, Pencil,
+  FileText, Star, List, GripVertical, X, CheckCircle2, Pencil, FolderOpen,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useOrgGroups } from "@/hooks/use-org-groups";
 
 type QuestionType = 'text' | 'rating' | 'choice';
 type AssessmentType = 'pre' | 'post' | 'both';
@@ -45,7 +46,7 @@ interface Assessment {
 }
 
 interface Person { id: string; name: string; email: string; }
-type SendTab = 'beneficiaries' | 'coaches' | 'mentors';
+type SendTab = 'beneficiaries' | 'coaches' | 'mentors' | 'groups';
 
 const typeLabels: Record<AssessmentType, string> = { pre: 'قبلي', post: 'بعدي', both: 'قبلي وبعدي' };
 const typeBadgeColor: Record<AssessmentType, string> = {
@@ -71,6 +72,7 @@ export default function AssessmentsPage() {
   const [beneficiaries, setBeneficiaries] = useState<Person[]>([]);
   const [coaches, setCoaches] = useState<Person[]>([]);
   const [mentors, setMentors] = useState<Person[]>([]);
+  const { data: groups } = useOrgGroups();
 
   // Form dialog state
   const [formOpen, setFormOpen] = useState(false);
@@ -181,6 +183,19 @@ export default function AssessmentsPage() {
   };
 
   const totalSelected = selectedBeneficiaries.length + selectedCoaches.length + selectedMentors.length;
+
+  // Groups are just named subsets of beneficiaries — toggling one adds/
+  // removes its members from the same selectedBeneficiaries list the
+  // "المستفيدون" tab uses, rather than tracking a separate recipient type.
+  const toggleGroup = (memberIds: string[]) => {
+    const validIds = memberIds.filter(id => beneficiaries.some(b => b.id === id));
+    const allSelected = validIds.length > 0 && validIds.every(id => selectedBeneficiaries.includes(id));
+    setSelectedBeneficiaries(prev =>
+      allSelected
+        ? prev.filter(id => !validIds.includes(id))
+        : Array.from(new Set([...prev, ...validIds]))
+    );
+  };
 
   const handleSend = async () => {
     if (!authUser || !sendingAssessment || totalSelected === 0) return;
@@ -412,6 +427,7 @@ export default function AssessmentsPage() {
             {/* Tabs */}
             <div className="flex rounded-lg border overflow-hidden text-sm">
               {([
+                { key: 'groups',        label: 'المجموعات',  count: (groups ?? []).length, sel: (groups ?? []).filter(g => g.memberIds.length > 0 && g.memberIds.every(id => selectedBeneficiaries.includes(id))).length },
                 { key: 'beneficiaries', label: 'المستفيدون', count: beneficiaries.length, sel: selectedBeneficiaries.length },
                 { key: 'coaches',       label: 'المدربون',   count: coaches.length,       sel: selectedCoaches.length },
                 { key: 'mentors',       label: 'المرشدون',   count: mentors.length,        sel: selectedMentors.length },
@@ -424,6 +440,43 @@ export default function AssessmentsPage() {
                 </button>
               ))}
             </div>
+
+            {/* Groups list — selecting a group selects its member
+                beneficiaries into the "المستفيدون" tab's list. */}
+            {sendTab === 'groups' && (
+              <div className="space-y-2">
+                {(groups ?? []).length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-6">
+                    لا توجد مجموعات — يمكنك إنشاؤها من صفحة المستفيدين
+                  </p>
+                ) : (
+                  <div className="space-y-1 max-h-64 overflow-y-auto">
+                    {(groups ?? []).map(g => {
+                      const validMemberIds = g.memberIds.filter(id => beneficiaries.some(b => b.id === id));
+                      const allSelected = validMemberIds.length > 0 && validMemberIds.every(id => selectedBeneficiaries.includes(id));
+                      return (
+                        <div key={g.id} className="flex items-center gap-2 py-1.5 px-1 rounded-lg hover:bg-muted/40">
+                          <Checkbox
+                            id={`group-${g.id}`}
+                            checked={allSelected}
+                            disabled={validMemberIds.length === 0}
+                            onCheckedChange={() => toggleGroup(g.memberIds)}
+                          />
+                          <label htmlFor={`group-${g.id}`} className="text-sm cursor-pointer flex-1 flex items-center gap-1.5">
+                            <FolderOpen className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                            <span className="font-medium">{g.name}</span>
+                            <span className="text-muted-foreground text-xs mr-1">({validMemberIds.length} مستفيد)</span>
+                          </label>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground bg-muted/40 rounded-lg px-3 py-2">
+                  اختيار مجموعة يحدد جميع أعضائها ضمن تبويب "المستفيدون".
+                </p>
+              </div>
+            )}
 
             {/* People list */}
             {([
