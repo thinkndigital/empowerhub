@@ -23,8 +23,6 @@ import { applyOrgColor } from '@/lib/apply-org-color';
 import { getDynamicIcon } from '@/lib/dynamic-icons';
 import { translateCategory } from '@/lib/product-category';
 import { DEFAULT_PLATFORM_SERVICES } from '@/lib/default-platform-services';
-import { OrderDialog } from '@/components/order-dialog';
-import { ProductDetailDialog } from '@/components/product-detail-dialog';
 import { SessionBookingDialog } from '@/components/session-booking-dialog';
 import { CourseEnrollDialog } from '@/components/course-enroll-dialog';
 import { useCart } from '@/components/cart-provider';
@@ -397,13 +395,14 @@ const CourseCard = ({ course, onEnroll, currencySymbol }: { course: CourseItem; 
   </div>
 );
 
-const ProductCard = ({ product, onOrder, onView, currencySymbol }: { product: Product; onOrder: (p: Product) => void; onView: (p: Product) => void; currencySymbol: string }) => {
+const ProductCard = ({ product, currencySymbol }: { product: Product; currencySymbol: string }) => {
   const { addItem } = useCart();
   const { toast } = useToast();
   const name = product.name || 'منتج';
   const imageUrl = product.imageUrl || product.image || '';
 
   const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
     if (!product.beneficiaryId) return;
     addItem({
@@ -423,8 +422,8 @@ const ProductCard = ({ product, onOrder, onView, currencySymbol }: { product: Pr
 
   return (
     <div className="group flex flex-col">
-      <button
-        onClick={() => onView(product)}
+      <Link
+        href={`/market/${product.id}`}
         aria-label={`عرض تفاصيل ${name}`}
         className="relative block w-full aspect-square rounded-3xl bg-muted/60 p-2.5 shadow-sm group-hover:shadow-md transition-shadow duration-200 text-right"
       >
@@ -442,34 +441,25 @@ const ProductCard = ({ product, onOrder, onView, currencySymbol }: { product: Pr
             {translateCategory(product.category)}
           </div>
         )}
-        {/* Quick actions — hidden until hover */}
-        <span
-          role="button"
-          tabIndex={-1}
-          onClick={e => { e.stopPropagation(); onOrder(product); }}
-          aria-label={`اطلب ${name}`}
-          className="absolute bottom-4 left-4 h-9 w-9 rounded-full bg-background text-foreground shadow-md flex items-center justify-center opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 transition-all duration-200"
-        >
-          <ShoppingCart className="h-4 w-4" />
-        </span>
+        {/* Quick add-to-cart — hidden until hover */}
         {product.beneficiaryId && (
           <span
             role="button"
             tabIndex={-1}
             onClick={handleAddToCart}
             aria-label={`أضف للسلة ${name}`}
-            className="absolute bottom-4 left-16 h-9 w-9 rounded-full bg-background text-foreground shadow-md flex items-center justify-center opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 transition-all duration-200"
+            className="absolute bottom-4 left-4 h-9 w-9 rounded-full bg-background text-foreground shadow-md flex items-center justify-center opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 transition-all duration-200"
           >
             <ShoppingBag className="h-4 w-4" />
           </span>
         )}
-      </button>
-      <button onClick={() => onView(product)} className="mt-3 flex items-baseline justify-between gap-2 text-right">
+      </Link>
+      <Link href={`/market/${product.id}`} className="mt-3 flex items-baseline justify-between gap-2 text-right">
         <span className="text-sm text-muted-foreground line-clamp-1">{name}</span>
         {product.price != null && (
           <span className="text-sm font-semibold text-foreground tabular-nums shrink-0">{product.price?.toLocaleString('ar')} {currencySymbol}</span>
         )}
-      </button>
+      </Link>
     </div>
   );
 };
@@ -548,8 +538,6 @@ export default function LandingPage() {
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [loadingStores, setLoadingStores] = useState(true);
   const [loadingCourses, setLoadingCourses] = useState(true);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [viewProduct, setViewProduct] = useState<Product | null>(null);
   const [selectedCourse, setSelectedCourse] = useState<CourseItem | null>(null);
   const [selectedSession, setSelectedSession] = useState<PublicSession | null>(null);
   const [bookingHost, setBookingHost] = useState<MentorUser | null>(null);
@@ -1461,7 +1449,7 @@ export default function LandingPage() {
                 <div className="flex gap-4 overflow-x-auto pb-3 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {products.map(p => (
                     <div key={p.id} className="w-[46vw] sm:w-64 shrink-0 snap-start">
-                      <ProductCard product={p} currencySymbol={currencySymbol} onOrder={setSelectedProduct} onView={setViewProduct} />
+                      <ProductCard product={p} currencySymbol={currencySymbol} />
                     </div>
                   ))}
                 </div>
@@ -2080,28 +2068,6 @@ export default function LandingPage() {
       </main>
 
       {/* ── Dialogs ─────────────────────────────────────────────────────────── */}
-      <ProductDetailDialog
-        product={viewProduct}
-        isOpen={!!viewProduct}
-        onOpenChange={open => { if (!open) setViewProduct(null); }}
-        currencySymbol={currencySymbol}
-        onOrder={p => { setViewProduct(null); setSelectedProduct(p as unknown as Product); }}
-      />
-
-      <OrderDialog
-        product={selectedProduct ? {
-          id: selectedProduct.id,
-          name: selectedProduct.name || '',
-          price: selectedProduct.price ?? 0,
-          imageUrl: selectedProduct.imageUrl || selectedProduct.image || '',
-          storeId: selectedProduct.storeId || '',
-          storeName: selectedProduct.storeName || '',
-          organizationId: selectedProduct.organizationId || '',
-        } as any : null}
-        isOpen={!!selectedProduct}
-        onOpenChange={open => { if (!open) setSelectedProduct(null); }}
-      />
-
       {selectedCourse && (
         <CourseEnrollDialog
           courseId={selectedCourse.id}

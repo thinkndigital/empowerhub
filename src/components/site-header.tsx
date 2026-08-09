@@ -11,8 +11,22 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Logo } from "@/components/logo";
 import { usePlatformBrand } from "@/components/platform-brand-provider";
-import { CartSheet } from "@/components/cart-sheet";
-import { Menu, X, ChevronDown, Users, GraduationCap } from "lucide-react";
+import { useCart } from "@/components/cart-provider";
+import { Menu, X, ChevronDown, Users, GraduationCap, ShoppingCart } from "lucide-react";
+
+function CartLink() {
+  const { count } = useCart();
+  return (
+    <Link href="/cart" className="relative p-2 rounded-lg text-foreground hover:bg-muted/60 transition-colors" aria-label="سلة المشتريات">
+      <ShoppingCart className="h-5 w-5" />
+      {count > 0 && (
+        <span className="absolute top-0.5 left-0.5 h-4.5 min-w-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center leading-none">
+          {count}
+        </span>
+      )}
+    </Link>
+  );
+}
 
 const navLinks = [
   { href: '/#roles', label: 'كيف تعمل' },
@@ -87,7 +101,7 @@ export function SiteHeader() {
         </nav>
 
         <div className="hidden md:flex items-center gap-2 mr-auto">
-          <CartSheet />
+          <CartLink />
           <Button variant="ghost" size="sm" asChild className="text-sm font-medium rounded-full">
             <Link href="/login">{loginText}</Link>
           </Button>
@@ -97,7 +111,7 @@ export function SiteHeader() {
         </div>
 
         <div className="flex items-center gap-2 mr-auto md:hidden">
-          <CartSheet />
+          <CartLink />
           <Button size="sm" asChild className="text-xs px-3.5 h-8 rounded-full">
             <Link href="/register">{registerTextMobile}</Link>
           </Button>

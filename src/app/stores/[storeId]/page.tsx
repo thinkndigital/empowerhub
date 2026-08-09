@@ -4,13 +4,10 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { OrderDialog } from "@/components/order-dialog";
-import { ProductDetailDialog } from "@/components/product-detail-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ShoppingCart, MapPin, MessageCircle, Store, Phone, Facebook, Instagram, Twitter, PackageX } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrency } from "@/hooks/use-currency";
-import type { Product as LibProduct } from "@/lib/products-data";
 import { translateCategory } from "@/lib/product-category";
 
 interface StoreData {
@@ -44,8 +41,6 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<LibProduct | null>(null);
-  const [viewProduct, setViewProduct] = useState<Product | null>(null);
   const [activeCategory, setActiveCategory] = useState('الكل');
   const [sortOrder, setSortOrder] = useState<'default' | 'price-asc' | 'price-desc'>('default');
 
@@ -248,8 +243,8 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
                   return (
                     <div key={product.id} className="group">
                       {/* Image — padded frame, shadow-elevation on hover, Medusa-style */}
-                      <button
-                        onClick={() => setViewProduct(product)}
+                      <Link
+                        href={`/market/${product.id}`}
                         aria-label={`عرض تفاصيل ${product.name}`}
                         className="relative block w-full aspect-[3/4] rounded-xl bg-muted/60 p-2.5 shadow-sm group-hover:shadow-md transition-shadow duration-200 text-right"
                       >
@@ -274,24 +269,20 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
                         {/* Quick order — hidden until hover, keeps ordering one tap away without cluttering the grid */}
                         {!outOfStock && (
                           <span
-                            role="button"
-                            tabIndex={-1}
-                            onClick={e => { e.stopPropagation(); setSelectedProduct(product as unknown as LibProduct); }}
-                            aria-label={`اطلب ${product.name}`}
                             className="absolute bottom-4 left-4 h-9 w-9 rounded-full bg-background text-foreground shadow-md flex items-center justify-center opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 transition-all duration-200"
                           >
                             <ShoppingCart className="h-4 w-4" />
                           </span>
                         )}
-                      </button>
+                      </Link>
 
                       {/* Body */}
-                      <button onClick={() => setViewProduct(product)} className="mt-3 flex items-baseline justify-between gap-2 w-full text-right">
+                      <Link href={`/market/${product.id}`} className="mt-3 flex items-baseline justify-between gap-2 w-full text-right">
                         <span className="text-sm text-muted-foreground line-clamp-1">{product.name}</span>
                         <span className="text-sm font-semibold text-foreground tabular-nums shrink-0">
                           {product.price?.toLocaleString('ar') ?? '—'} {currencySymbol}
                         </span>
-                      </button>
+                      </Link>
                     </div>
                   );
                 })}
@@ -300,20 +291,6 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
           </div>
         </div>
       </div>
-
-      <ProductDetailDialog
-        product={viewProduct}
-        isOpen={!!viewProduct}
-        onOpenChange={open => { if (!open) setViewProduct(null); }}
-        currencySymbol={currencySymbol}
-        onOrder={p => { setViewProduct(null); setSelectedProduct(p as unknown as LibProduct); }}
-      />
-
-      <OrderDialog
-        product={selectedProduct}
-        isOpen={!!selectedProduct}
-        onOpenChange={open => { if (!open) setSelectedProduct(null); }}
-      />
     </div>
   );
 }

@@ -7,13 +7,10 @@ import { Button } from "@/components/ui/button";
 import { SiteHeader } from "@/components/site-header";
 import { Logo } from "@/components/logo";
 import { usePlatformBrand } from "@/components/platform-brand-provider";
-import { OrderDialog } from "@/components/order-dialog";
-import { ProductDetailDialog } from "@/components/product-detail-dialog";
 import { useCart } from "@/components/cart-provider";
 import { useToast } from "@/hooks/use-toast";
 import { ShoppingCart, ShoppingBag, Search, Store, MessageCircle, ArrowLeft, MapPin } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import type { Product as LibProduct } from "@/lib/products-data";
 import { translateCategory } from "@/lib/product-category";
 
 interface Product {
@@ -35,8 +32,6 @@ interface Product {
 }
 
 export default function MarketPage() {
-  const [selectedProduct, setSelectedProduct] = useState<LibProduct | null>(null);
-  const [viewProduct, setViewProduct] = useState<Product | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -193,8 +188,8 @@ export default function MarketPage() {
                   className="group rounded-xl overflow-hidden border border-border bg-card hover:border-primary/30 hover:shadow-sm transition-all flex flex-col"
                 >
                   {/* Image */}
-                  <button
-                    onClick={() => setViewProduct(product)}
+                  <Link
+                    href={`/market/${product.id}`}
                     aria-label={`عرض تفاصيل ${product.name}`}
                     className="relative h-40 sm:h-48 bg-muted overflow-hidden shrink-0 block w-full text-right"
                   >
@@ -215,10 +210,10 @@ export default function MarketPage() {
                         {translateCategory(product.category)}
                       </div>
                     )}
-                  </button>
+                  </Link>
 
                   {/* Body */}
-                  <button onClick={() => setViewProduct(product)} className="p-3 sm:p-4 flex flex-col gap-1 flex-grow text-right">
+                  <Link href={`/market/${product.id}`} className="p-3 sm:p-4 flex flex-col gap-1 flex-grow text-right">
                     <h3 className="font-semibold text-sm line-clamp-1 text-foreground">{product.name}</h3>
                     {product.description && (
                       <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{product.description}</p>
@@ -236,7 +231,7 @@ export default function MarketPage() {
                         </p>
                       )}
                     </div>
-                  </button>
+                  </Link>
 
                   {/* Footer */}
                   <div className="px-3 sm:px-4 pb-3 sm:pb-4 pt-3 border-t border-border flex items-center justify-between gap-2">
@@ -267,13 +262,11 @@ export default function MarketPage() {
                           <ShoppingBag className="h-3.5 w-3.5" />
                         </Button>
                       )}
-                      <Button
-                        size="sm"
-                        className="h-8 text-xs px-2.5 sm:px-3 gap-1"
-                        onClick={() => setSelectedProduct(product as unknown as LibProduct)}
-                      >
-                        <ShoppingCart className="h-3.5 w-3.5" />
-                        <span className="hidden sm:inline">اطلب</span>
+                      <Button size="sm" className="h-8 text-xs px-2.5 sm:px-3 gap-1" asChild>
+                        <Link href={`/market/${product.id}`}>
+                          <ShoppingCart className="h-3.5 w-3.5" />
+                          <span className="hidden sm:inline">اطلب</span>
+                        </Link>
                       </Button>
                     </div>
                   </div>
@@ -328,19 +321,6 @@ export default function MarketPage() {
           </div>
         </div>
       </footer>
-
-      <ProductDetailDialog
-        product={viewProduct}
-        isOpen={!!viewProduct}
-        onOpenChange={open => { if (!open) setViewProduct(null); }}
-        onOrder={p => { setViewProduct(null); setSelectedProduct(p as unknown as LibProduct); }}
-      />
-
-      <OrderDialog
-        product={selectedProduct}
-        isOpen={!!selectedProduct}
-        onOpenChange={open => { if (!open) setSelectedProduct(null); }}
-      />
     </div>
   );
 }
