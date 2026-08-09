@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { useUser } from "@/firebase/auth/use-user";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   ClipboardCheck, Plus, Trash2, Send, Users, Eye, ChevronDown, ChevronUp,
-  FileText, Star, List, GripVertical, X, CheckCircle2, Pencil, FolderOpen,
+  FileText, Star, List, GripVertical, X, CheckCircle2, Pencil, FolderOpen, BarChart3,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useOrgGroups } from "@/hooks/use-org-groups";
@@ -285,6 +286,11 @@ export default function AssessmentsPage() {
                   </Button>
                   <Button size="sm" className="h-8 gap-1.5 text-xs" onClick={() => openSend(a)}>
                     <Send className="h-3.5 w-3.5" />إرسال
+                  </Button>
+                  <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs" asChild>
+                    <Link href={`/organization-dashboard/assessments/${a.id}/results`}>
+                      <BarChart3 className="h-3.5 w-3.5" />النتائج
+                    </Link>
                   </Button>
                   <Button size="sm" variant="ghost" className="h-8 gap-1.5 text-xs" onClick={() => { setPreviewAssessment(a); setPreviewOpen(true); }}>
                     <Eye className="h-3.5 w-3.5" />معاينة
