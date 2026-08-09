@@ -25,14 +25,12 @@ const defaultConfig = {
     { label: 'مرشد ومدرب', value: '80+', icon: 'GraduationCap' },
     { label: 'نسبة الرضا', value: '95%', icon: 'Award' },
   ],
-  features: [
-    { title: 'تدريب متخصص', description: 'مسارات تعليمية ودورات تدريبية مصممة لتزويدك بالمهارات المطلوبة في سوق العمل الحديث.', icon: 'BookOpen' },
-    { title: 'إرشاد شخصي', description: 'تواصل مع مرشدين وخبراء لمساعدتك في رحلتك وتقديم النصح والتوجيه المخصص.', icon: 'Users' },
-    { title: 'متجر إلكتروني', description: 'أنشئ متجرك الخاص، اعرض منتجاتك، وابدأ في تحقيق الدخل من مشروعك بسهولة.', icon: 'Store' },
-    { title: 'تقارير وتحليلات', description: 'تابع تقدمك ونموك بتقارير مرئية شاملة تساعدك على اتخاذ قرارات أفضل.', icon: 'BarChart3' },
-    { title: 'توصيات بالذكاء الاصطناعي', description: 'احصل على توصيات مخصصة لمحتوى التدريب والموارد المناسبة لأهدافك.', icon: 'Zap' },
-    { title: 'أمان وموثوقية', description: 'بياناتك محمية بأحدث تقنيات الأمان. نضمن لك تجربة موثوقة وآمنة في كل وقت.', icon: 'Shield' },
-  ],
+  // Empty on purpose: the homepage (src/app/page.tsx) has its own built-in
+  // 8-service showcase with working CTA links that it renders whenever no
+  // custom features are configured. A non-empty default here used to
+  // silently override that showcase with plainer, link-less placeholder
+  // content the moment this route ever ran with no Firestore doc present.
+  features: [] as { title: string; description: string; icon: string }[],
   howItWorks: [
     { step: '١', title: 'أنشئ حسابك', desc: 'سجّل مجاناً واختر دورك على المنصة سواء كمستفيد أو مرشد أو منظمة.', icon: 'UserCheck' },
     { step: '٢', title: 'استكشف المحتوى', desc: 'تصفح الدورات التدريبية، تواصل مع المرشدين، وابنِ مهاراتك.', icon: 'Globe' },

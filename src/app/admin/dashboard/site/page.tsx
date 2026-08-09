@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   Save, Plus, Trash2, Upload, Globe, Image as ImageIcon, BarChart3, Sparkles,
-  Link2, Eye, EyeOff, MessageSquare, Phone, Star, LogIn, Users,
+  Link2, Eye, EyeOff, MessageSquare, Phone, Star, LogIn, Users, RotateCcw,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -485,6 +485,10 @@ export default function SiteEditorPage() {
     setConfig(c => { const f = [...c.features]; f[i] = { ...f[i], [k]: v }; return { ...c, features: f }; });
   const removeFeature = (i: number) =>
     setConfig(c => ({ ...c, features: c.features.filter((_, idx) => idx !== i) }));
+  // Clearing the list (not deleting one-by-one) restores the homepage's
+  // built-in 8-service showcase with working links — the same list shown
+  // whenever no custom features are configured. Requires pressing Save.
+  const resetFeatures = () => setConfig(c => ({ ...c, features: [] }));
 
   // Testimonials
   const addTestimonial = () => setConfig(c => ({ ...c, testimonials: [...c.testimonials, { name: '', role: '', text: '', stars: 5 }] }));
@@ -882,11 +886,20 @@ export default function SiteEditorPage() {
             <Card className="border-0 shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-foreground text-base">بطاقات المميزات</CardTitle>
-                <Button size="sm" onClick={addFeature} className="gap-1"><Plus className="h-3.5 w-3.5" />إضافة ميزة</Button>
+                <div className="flex items-center gap-2">
+                  {config.features.length > 0 && (
+                    <Button size="sm" variant="outline" onClick={resetFeatures} className="gap-1">
+                      <RotateCcw className="h-3.5 w-3.5" />استعادة الافتراضي
+                    </Button>
+                  )}
+                  <Button size="sm" onClick={addFeature} className="gap-1"><Plus className="h-3.5 w-3.5" />إضافة ميزة</Button>
+                </div>
               </CardHeader>
               <CardContent className="space-y-3">
                 {config.features.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-6">لا توجد ميزات. أضف واحدة!</p>
+                  <p className="text-muted-foreground text-center py-6 text-sm leading-relaxed">
+                    لا توجد ميزات مخصصة — الصفحة الرئيسية تعرض حالياً قائمة الخدمات الافتراضية (٨ بطاقات مع روابط). أضف ميزة لتخصيص القائمة، أو احفظ التغييرات بدون إضافة شيء لإبقاء القائمة الافتراضية.
+                  </p>
                 ) : config.features.map((feat, i) => (
                   <div key={i} className="p-3 bg-muted/40 rounded-xl border border-border space-y-2">
                     <div className="flex items-center justify-between">

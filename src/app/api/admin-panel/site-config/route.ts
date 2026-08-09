@@ -27,12 +27,12 @@ const defaultConfig = {
     { label: 'منظمة', value: '20+', icon: 'Building2' },
     { label: 'دورة', value: '100+', icon: 'BookOpen' },
   ],
-  features: [
-    { title: 'التدريب المهني', description: 'دورات تدريبية متنوعة تناسب احتياجاتك', icon: 'BookOpen' },
-    { title: 'الإرشاد الشخصي', description: 'تواصل مع مرشدين متخصصين في مجالك', icon: 'Users' },
-    { title: 'السوق الرقمي', description: 'بع منتجاتك وخدماتك بسهولة', icon: 'ShoppingBag' },
-    { title: 'التقارير والتحليل', description: 'تتبع تقدمك مع تقارير تفصيلية', icon: 'BarChart3' },
-  ],
+  // Empty on purpose — see the matching comment in
+  // src/app/api/public/site-config/route.ts. The homepage's own built-in
+  // 8-service showcase (with working CTA links) is the real default; a
+  // non-empty list here would silently replace it the moment the admin
+  // panel's Features tab loaded with no Firestore doc present.
+  features: [] as { title: string; description: string; icon: string }[],
   howItWorks: [
     { step: '١', title: 'أنشئ حسابك', desc: 'سجّل مجاناً واختر دورك على المنصة.', icon: 'UserCheck' },
     { step: '٢', title: 'استكشف المحتوى', desc: 'تصفح الدورات التدريبية وتواصل مع المرشدين.', icon: 'Globe' },
