@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Search, Clock, Tag } from "lucide-react";
 
@@ -20,23 +19,17 @@ interface Article {
   readTime: number;
 }
 
-const ROLE_LABELS: Record<string, string> = {
-  mentor: 'مرشد',
-  coach: 'مدرب',
-};
-
 export default function ArticlesPage() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'mentor' | 'coach'>('all');
+  const [categoryFilter, setCategoryFilter] = useState('الكل');
   const [search, setSearch] = useState('');
 
   useEffect(() => {
     async function fetchArticles() {
       setLoading(true);
       try {
-        const url = filter === 'all' ? '/api/public/articles' : `/api/public/articles?role=${filter}`;
-        const res = await fetch(url);
+        const res = await fetch('/api/public/articles');
         const json = await res.json();
         setArticles(json.articles || []);
       } catch {
@@ -46,9 +39,15 @@ export default function ArticlesPage() {
       }
     }
     fetchArticles();
-  }, [filter]);
+  }, []);
+
+  const categories = useMemo(() => {
+    const cats = Array.from(new Set(articles.flatMap(a => a.tags || []).filter(Boolean)));
+    return ["الكل", ...cats];
+  }, [articles]);
 
   const filtered = articles.filter(a => {
+    if (categoryFilter !== 'الكل' && !(a.tags || []).includes(categoryFilter)) return false;
     if (!search) return true;
     const q = search.toLowerCase();
     return (
@@ -83,40 +82,35 @@ export default function ArticlesPage() {
       </div>
 
       <div className="container py-10">
-        {/* Filter + Search */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-8">
-          {/* Filter tabs */}
-          <div className="flex gap-2 bg-muted rounded-xl p-1">
-            {[
-              { key: 'all', label: 'الكل' },
-              { key: 'mentor', label: 'مرشدون' },
-              { key: 'coach', label: 'مدربون' },
-            ].map(tab => (
+        {/* Search */}
+        <div className="relative mb-6 max-w-md">
+          <Search className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="ابحث في المقالات..."
+            className="pr-9"
+          />
+        </div>
+
+        {/* Category filter pills */}
+        {!loading && categories.length > 1 && (
+          <div className="flex flex-wrap gap-2 mb-8">
+            {categories.map(cat => (
               <button
-                key={tab.key}
-                onClick={() => setFilter(tab.key as typeof filter)}
-                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                  filter === tab.key
-                    ? 'bg-background shadow text-foreground'
-                    : 'text-muted-foreground hover:text-foreground'
+                key={cat}
+                onClick={() => setCategoryFilter(cat)}
+                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                  categoryFilter === cat
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground'
                 }`}
               >
-                {tab.label}
+                {cat}
               </button>
             ))}
           </div>
-
-          {/* Search */}
-          <div className="relative flex-1">
-            <Search className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="ابحث في المقالات..."
-              className="pr-9"
-            />
-          </div>
-        </div>
+        )}
 
         {/* Articles grid */}
         {loading ? (
@@ -189,12 +183,7 @@ export default function ArticlesPage() {
                       <AvatarFallback className="text-xs">{article.authorName?.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-medium text-foreground truncate">{article.authorName}</span>
-                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                          {ROLE_LABELS[article.authorRole] || article.authorRole}
-                        </Badge>
-                      </div>
+                      <span className="text-xs font-medium text-foreground truncate block">{article.authorName}</span>
                       <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
                         <span>{formatDate(article.publishedAt)}</span>
                         <span className="flex items-center gap-0.5">
