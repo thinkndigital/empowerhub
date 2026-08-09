@@ -41,8 +41,9 @@ type Product = {
   description?: string;
   price: number;
   category?: string;
-  userId: string;
+  userId?: string;
   userName?: string;
+  beneficiaryId?: string;
   storeId?: string;
   status: 'pending' | 'approved' | 'rejected';
   createdAt?: string;
@@ -53,8 +54,11 @@ type Order = {
   productId?: string;
   productName?: string;
   storeId?: string;
+  beneficiaryId?: string;
+  type?: string;
   buyerName?: string;
   total?: number;
+  totalAmount?: number;
   status?: string;
   createdAt?: string;
 };
@@ -101,11 +105,15 @@ export default function OrgStoresPage() {
       setAllOrders(orders);
 
       const storesWithStats: StoreWithStats[] = rawStores.map(store => {
-        const storeProducts = products.filter(p => p.userId === store.beneficiaryId || p.storeId === store.id);
-        const storeOrders = orders.filter(o => o.storeId === store.id);
+        const storeProducts = products.filter(p =>
+          p.storeId === store.id || p.userId === store.beneficiaryId || p.beneficiaryId === store.beneficiaryId
+        );
+        const storeOrders = orders.filter(o =>
+          o.storeId === store.id || (o.beneficiaryId === store.beneficiaryId && o.type !== 'course')
+        );
         const revenue = storeOrders
           .filter(o => o.status === 'delivered' || o.status === 'مكتمل')
-          .reduce((sum, o) => sum + (o.total || 0), 0);
+          .reduce((sum, o) => sum + (o.totalAmount ?? o.total ?? 0), 0);
         return {
           ...store,
           productCount: storeProducts.length,
@@ -166,7 +174,7 @@ export default function OrgStoresPage() {
   const totalProducts = allProducts.length;
   const totalRevenue = allOrders
     .filter(o => o.status === 'delivered' || o.status === 'مكتمل')
-    .reduce((sum, o) => sum + (o.total || 0), 0);
+    .reduce((sum, o) => sum + (o.totalAmount ?? o.total ?? 0), 0);
 
   return (
     <div className="space-y-6" dir="rtl">
@@ -366,7 +374,7 @@ export default function OrgStoresPage() {
                       <TableRow key={order.id}>
                         <TableCell className="text-sm">{order.productName || '—'}</TableCell>
                         <TableCell className="text-sm hidden md:table-cell">{order.buyerName || '—'}</TableCell>
-                        <TableCell className="text-sm">{order.total?.toFixed(2) || '—'} د.أ</TableCell>
+                        <TableCell className="text-sm">{(order.totalAmount ?? order.total)?.toFixed(2) || '—'} د.أ</TableCell>
                         <TableCell>
                           <Badge variant={order.status === 'delivered' || order.status === 'مكتمل' ? 'default' : 'secondary'} className="text-xs">
                             {order.status || 'قيد المعالجة'}
