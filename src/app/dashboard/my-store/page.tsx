@@ -9,7 +9,8 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { format } from "date-fns";
-import { ar } from "date-fns/locale";
+import { ar as arLocale, enUS } from "date-fns/locale";
+import { useLanguage } from "@/components/language-provider";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -57,8 +58,33 @@ const statusMap: { [key in Order['status']]: { text: string; variant: 'default' 
   cancelled: { text: "ملغي", variant: "destructive" },
 };
 
+const statusMapEn: { [key in Order['status']]: { text: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' } } = {
+  pending: { text: "Pending", variant: "secondary" },
+  shipped: { text: "Shipped", variant: "default" },
+  delivered: { text: "Delivered", variant: "outline" },
+  cancelled: { text: "Cancelled", variant: "destructive" },
+};
+
+// PRODUCT_CATEGORIES values are stored verbatim in Firestore (canonical
+// Arabic), so the submitted `value` always stays Arabic — only the
+// displayed label is translated.
+const CATEGORY_LABELS_EN: Record<string, string> = {
+  'مصنوعات يدوية': 'Handmade goods',
+  'طعام ومشروبات': 'Food & beverages',
+  'ملابس وأزياء': 'Clothing & fashion',
+  'حرف يدوية': 'Handicrafts',
+  'خدمات': 'Services',
+  'منتجات زراعية': 'Agricultural products',
+  'منزل وديكور': 'Home & decor',
+  'أخرى': 'Other',
+};
+
 export default function MyStorePage() {
   const { toast } = useToast();
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
+  const locale = lang === 'en' ? enUS : arLocale;
+  const tStatusMap = lang === 'en' ? statusMapEn : statusMap;
   const pathname = usePathname();
   const { user: authUser, userProfile, loading: authLoading } = useUser();
   const [products, setProducts] = useState<Product[]>([]);
@@ -167,9 +193,9 @@ export default function MyStorePage() {
         ),
       });
 
-      if (!res.ok) throw new Error((await res.json()).error || 'فشل الحفظ');
+      if (!res.ok) throw new Error((await res.json()).error || bi('فشل الحفظ', 'Save failed'));
 
-      toast({ title: editProduct ? "تم التعديل بنجاح!" : "تمت الإضافة بنجاح!", description: `"${values.name}"` });
+      toast({ title: editProduct ? bi("تم التعديل بنجاح!", "Updated successfully!") : bi("تمت الإضافة بنجاح!", "Added successfully!"), description: `"${values.name}"` });
       form.reset();
       setIsDialogOpen(false);
       setEditProduct(null);
@@ -177,7 +203,7 @@ export default function MyStorePage() {
       setImageFile(null);
       fetchData();
     } catch (e: any) {
-      toast({ variant: "destructive", title: "خطأ", description: e.message || "فشل حفظ المنتج." });
+      toast({ variant: "destructive", title: bi("خطأ", "Error"), description: e.message || bi("فشل حفظ المنتج.", "Failed to save the product.") });
     } finally {
       setIsUploading(false);
     }
@@ -191,11 +217,11 @@ export default function MyStorePage() {
         method: 'DELETE',
         headers: { authorization: `Bearer ${token}` },
       });
-      toast({ variant: "destructive", title: "تم الحذف!", description: `تم حذف "${productToDelete.name}".` });
+      toast({ variant: "destructive", title: bi("تم الحذف!", "Deleted!"), description: bi(`تم حذف "${productToDelete.name}".`, `"${productToDelete.name}" was deleted.`) });
       setProductToDelete(null);
       fetchData();
     } catch {
-      toast({ variant: "destructive", title: "خطأ", description: "فشل حذف المنتج." });
+      toast({ variant: "destructive", title: bi("خطأ", "Error"), description: bi("فشل حذف المنتج.", "Failed to delete the product.") });
       setProductToDelete(null);
     }
   }
@@ -209,39 +235,39 @@ export default function MyStorePage() {
         headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
         body: JSON.stringify({ id: orderId, status, _collection: 'orders' }),
       });
-      toast({ title: "تم تحديث حالة الطلب", description: `"${statusMap[status].text}"` });
+      toast({ title: bi("تم تحديث حالة الطلب", "Order status updated"), description: `"${tStatusMap[status].text}"` });
       fetchData();
     } catch {
-      toast({ variant: "destructive", title: "خطأ", description: "فشل تحديث حالة الطلب." });
+      toast({ variant: "destructive", title: bi("خطأ", "Error"), description: bi("فشل تحديث حالة الطلب.", "Failed to update order status.") });
     }
   }
 
   return (
     <>
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={dir}>
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">لوحة تحكم متجري</h1>
-        <p className="text-muted-foreground">نظرة عامة على أداء متجرك الإلكتروني.</p>
+        <h1 className="text-2xl font-bold tracking-tight">{bi("لوحة تحكم متجري", "My store dashboard")}</h1>
+        <p className="text-muted-foreground">{bi("نظرة عامة على أداء متجرك الإلكتروني.", "An overview of your online store's performance.")}</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-0 shadow-sm"><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">إجمالي الإيرادات</CardTitle><div className="h-9 w-9 rounded-lg bg-primary flex items-center justify-center"><DollarSign className="h-5 w-5 text-white" /></div></CardHeader><CardContent>{isLoading ? <Skeleton className="h-8 w-24" /> : <div className="text-2xl font-bold">{storeStats.totalRevenue} د.أ</div>}<p className="text-xs text-muted-foreground mt-1">من الطلبات المكتملة</p></CardContent></Card>
-        <Card className="border-0 shadow-sm"><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">إجمالي المنتجات</CardTitle><div className="h-9 w-9 rounded-lg bg-emerald-500 flex items-center justify-center"><Package className="h-5 w-5 text-white" /></div></CardHeader><CardContent>{isLoading ? <Skeleton className="h-8 w-16" /> : <div className="text-2xl font-bold">{storeStats.totalProducts}</div>}<p className="text-xs text-muted-foreground mt-1">منتج معروض في المتجر</p></CardContent></Card>
-        <Card className="border-0 shadow-sm"><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">الطلبات</CardTitle><div className="h-9 w-9 rounded-lg bg-amber-500 flex items-center justify-center"><ShoppingCart className="h-5 w-5 text-white" /></div></CardHeader><CardContent>{isLoading ? <Skeleton className="h-8 w-16" /> : <div className="text-2xl font-bold">{storeStats.totalOrders}</div>}<p className="text-xs text-muted-foreground mt-1">إجمالي الطلبات المستلمة</p></CardContent></Card>
-        <Card className="border-0 shadow-sm"><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">العملاء</CardTitle><div className="h-9 w-9 rounded-lg bg-purple-500 flex items-center justify-center"><Users className="h-5 w-5 text-white" /></div></CardHeader><CardContent>{isLoading ? <Skeleton className="h-8 w-16" /> : <div className="text-2xl font-bold">{storeStats.newCustomers}</div>}<p className="text-xs text-muted-foreground mt-1">إجمالي عدد العملاء</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">{bi("إجمالي الإيرادات", "Total revenue")}</CardTitle><div className="h-9 w-9 rounded-lg bg-primary flex items-center justify-center"><DollarSign className="h-5 w-5 text-white" /></div></CardHeader><CardContent>{isLoading ? <Skeleton className="h-8 w-24" /> : <div className="text-2xl font-bold">{storeStats.totalRevenue} {bi('د.أ', 'JOD')}</div>}<p className="text-xs text-muted-foreground mt-1">{bi("من الطلبات المكتملة", "From completed orders")}</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">{bi("إجمالي المنتجات", "Total products")}</CardTitle><div className="h-9 w-9 rounded-lg bg-emerald-500 flex items-center justify-center"><Package className="h-5 w-5 text-white" /></div></CardHeader><CardContent>{isLoading ? <Skeleton className="h-8 w-16" /> : <div className="text-2xl font-bold">{storeStats.totalProducts}</div>}<p className="text-xs text-muted-foreground mt-1">{bi("منتج معروض في المتجر", "Products listed in the store")}</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">{bi("الطلبات", "Orders")}</CardTitle><div className="h-9 w-9 rounded-lg bg-amber-500 flex items-center justify-center"><ShoppingCart className="h-5 w-5 text-white" /></div></CardHeader><CardContent>{isLoading ? <Skeleton className="h-8 w-16" /> : <div className="text-2xl font-bold">{storeStats.totalOrders}</div>}<p className="text-xs text-muted-foreground mt-1">{bi("إجمالي الطلبات المستلمة", "Total orders received")}</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">{bi("العملاء", "Customers")}</CardTitle><div className="h-9 w-9 rounded-lg bg-purple-500 flex items-center justify-center"><Users className="h-5 w-5 text-white" /></div></CardHeader><CardContent>{isLoading ? <Skeleton className="h-8 w-16" /> : <div className="text-2xl font-bold">{storeStats.newCustomers}</div>}<p className="text-xs text-muted-foreground mt-1">{bi("إجمالي عدد العملاء", "Total number of customers")}</p></CardContent></Card>
       </div>
 
       <div>
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight">منتجاتك</h2>
-            <p className="text-muted-foreground">إدارة منتجات متجرك.</p>
+            <h2 className="text-2xl font-bold tracking-tight">{bi("منتجاتك", "Your products")}</h2>
+            <p className="text-muted-foreground">{bi("إدارة منتجات متجرك.", "Manage your store's products.")}</p>
           </div>
           <div className="flex items-center gap-2">
             <Button asChild variant="outline">
-              <Link href={`${pathname}/settings`}><Settings className="ml-2 h-4 w-4" />إعدادات المتجر</Link>
+              <Link href={`${pathname}/settings`}><Settings className="ml-2 h-4 w-4" />{bi("إعدادات المتجر", "Store settings")}</Link>
             </Button>
-            <Button onClick={openDialogForAdd}><PlusCircle className="ml-2 h-4 w-4" />إضافة منتج جديد</Button>
+            <Button onClick={openDialogForAdd}><PlusCircle className="ml-2 h-4 w-4" />{bi("إضافة منتج جديد", "Add new product")}</Button>
           </div>
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mt-4">
@@ -260,8 +286,8 @@ export default function MyStorePage() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => openDialogForEdit(product)}><Edit className="ml-2 h-4 w-4" />تعديل المنتج</DropdownMenuItem>
-                      <DropdownMenuItem className="text-red-500" onSelect={() => setProductToDelete(product)}><Trash2 className="ml-2 h-4 w-4" />حذف المنتج</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => openDialogForEdit(product)}><Edit className="ml-2 h-4 w-4" />{bi("تعديل المنتج", "Edit product")}</DropdownMenuItem>
+                      <DropdownMenuItem className="text-red-500" onSelect={() => setProductToDelete(product)}><Trash2 className="ml-2 h-4 w-4" />{bi("حذف المنتج", "Delete product")}</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
@@ -269,69 +295,69 @@ export default function MyStorePage() {
               <CardContent className="p-4 flex-grow">
                 <CardTitle className="text-lg">{product.name}</CardTitle>
                 <p className="text-sm text-muted-foreground line-clamp-2 mt-1 h-[40px]">{product.description}</p>
-                <p className="text-sm text-muted-foreground mt-2">المخزون: {product.stock} قطعة</p>
+                <p className="text-sm text-muted-foreground mt-2">{bi(`المخزون: ${product.stock} قطعة`, `Stock: ${product.stock} units`)}</p>
               </CardContent>
               <CardFooter className="flex justify-between items-center p-4 pt-0">
                 <div>
-                  <p className="text-lg font-semibold">{product.price?.toFixed(2)} د.أ</p>
+                  <p className="text-lg font-semibold">{product.price?.toFixed(2)} {bi('د.أ', 'JOD')}</p>
                   {product.deliveryCost && product.deliveryCost > 0 && (
-                    <p className="text-xs text-muted-foreground">+ {product.deliveryCost.toFixed(2)} د.أ توصيل</p>
+                    <p className="text-xs text-muted-foreground">{bi(`+ ${product.deliveryCost.toFixed(2)} د.أ توصيل`, `+ ${product.deliveryCost.toFixed(2)} JOD delivery`)}</p>
                   )}
                 </div>
                 <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <MapPin className="h-4 w-4" />{product.location || 'غير محدد'}
+                  <MapPin className="h-4 w-4" />{product.location || bi('غير محدد', 'Not specified')}
                 </div>
               </CardFooter>
             </Card>
           ))}
           {!isLoading && products.length === 0 && (
             <div className="col-span-full text-center h-40 flex items-center justify-center">
-              <p>لم تقم بإضافة أي منتجات بعد. انقر على "إضافة منتج جديد" للبدء.</p>
+              <p>{bi('لم تقم بإضافة أي منتجات بعد. انقر على "إضافة منتج جديد" للبدء.', 'You haven\'t added any products yet. Click "Add new product" to get started.')}</p>
             </div>
           )}
         </div>
       </div>
 
       <Card className="border-0 shadow-sm">
-        <CardHeader><CardTitle>الطلبات الواردة</CardTitle><CardDescription>إدارة الطلبات الجديدة على منتجاتك.</CardDescription></CardHeader>
+        <CardHeader><CardTitle>{bi("الطلبات الواردة", "Incoming orders")}</CardTitle><CardDescription>{bi("إدارة الطلبات الجديدة على منتجاتك.", "Manage new orders for your products.")}</CardDescription></CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>المنتج</TableHead>
-                <TableHead>الزبون</TableHead>
-                <TableHead>تاريخ الطلب</TableHead>
-                <TableHead>الحالة</TableHead>
-                <TableHead className="text-right"><span className="sr-only">الإجراءات</span></TableHead>
+                <TableHead>{bi("المنتج", "Product")}</TableHead>
+                <TableHead>{bi("الزبون", "Customer")}</TableHead>
+                <TableHead>{bi("تاريخ الطلب", "Order date")}</TableHead>
+                <TableHead>{bi("الحالة", "Status")}</TableHead>
+                <TableHead className="text-right"><span className="sr-only">{bi("الإجراءات", "Actions")}</span></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading && <TableRow><TableCell colSpan={5} className="h-24 text-center">جاري تحميل الطلبات...</TableCell></TableRow>}
+              {isLoading && <TableRow><TableCell colSpan={5} className="h-24 text-center">{bi("جاري تحميل الطلبات...", "Loading orders...")}</TableCell></TableRow>}
               {!isLoading && orders.map(order => (
                 <TableRow key={order.id}>
                   <TableCell className="font-medium">{order.productName}</TableCell>
-                  <TableCell>{order.buyerName || 'غير محدد'}</TableCell>
-                  <TableCell>{order.createdAt ? format(new Date(order.createdAt._seconds ? order.createdAt._seconds * 1000 : order.createdAt), "d MMMM yyyy", { locale: ar }) : 'غير محدد'}</TableCell>
+                  <TableCell>{order.buyerName || bi('غير محدد', 'Not specified')}</TableCell>
+                  <TableCell>{order.createdAt ? format(new Date(order.createdAt._seconds ? order.createdAt._seconds * 1000 : order.createdAt), "d MMMM yyyy", { locale }) : bi('غير محدد', 'Not specified')}</TableCell>
                   <TableCell>
-                    <Badge variant={statusMap[order.status]?.variant} className={order.status === 'delivered' ? 'text-green-600 border-green-600' : ''}>
-                      {statusMap[order.status]?.text}
+                    <Badge variant={tStatusMap[order.status]?.variant} className={order.status === 'delivered' ? 'text-green-600 border-green-600' : ''}>
+                      {tStatusMap[order.status]?.text}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>تغيير الحالة</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={() => handleUpdateOrderStatus(order.id, 'shipped')}><Truck className="ml-2 h-4 w-4" />تمييز كـ تم الشحن</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleUpdateOrderStatus(order.id, 'delivered')}><CheckCircle className="ml-2 h-4 w-4" />تمييز كـ تم التوصيل</DropdownMenuItem>
-                        <DropdownMenuItem className="text-red-500" onClick={() => handleUpdateOrderStatus(order.id, 'cancelled')}><XCircle className="ml-2 h-4 w-4" />إلغاء الطلب</DropdownMenuItem>
+                        <DropdownMenuLabel>{bi("تغيير الحالة", "Change status")}</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => handleUpdateOrderStatus(order.id, 'shipped')}><Truck className="ml-2 h-4 w-4" />{bi("تمييز كـ تم الشحن", "Mark as shipped")}</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleUpdateOrderStatus(order.id, 'delivered')}><CheckCircle className="ml-2 h-4 w-4" />{bi("تمييز كـ تم التوصيل", "Mark as delivered")}</DropdownMenuItem>
+                        <DropdownMenuItem className="text-red-500" onClick={() => handleUpdateOrderStatus(order.id, 'cancelled')}><XCircle className="ml-2 h-4 w-4" />{bi("إلغاء الطلب", "Cancel order")}</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
                 </TableRow>
               ))}
               {!isLoading && orders.length === 0 && (
-                <TableRow><TableCell colSpan={5} className="text-center h-24">لا توجد طلبات حالية.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="text-center h-24">{bi("لا توجد طلبات حالية.", "No current orders.")}</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
@@ -343,48 +369,48 @@ export default function MyStorePage() {
       setIsDialogOpen(isOpen);
       if (!isOpen) { setEditProduct(null); setImagePreview(null); setImageFile(null); form.reset(); }
     }}>
-      <DialogContent className="sm:max-w-lg" dir="rtl">
+      <DialogContent className="sm:max-w-lg" dir={dir}>
         <DialogHeader>
-          <DialogTitle>{editProduct ? 'تعديل المنتج' : 'إضافة منتج جديد'}</DialogTitle>
-          <DialogDescription>{editProduct ? 'قم بتحديث تفاصيل المنتج.' : 'أدخل تفاصيل المنتج الجديد.'}</DialogDescription>
+          <DialogTitle>{editProduct ? bi('تعديل المنتج', 'Edit product') : bi('إضافة منتج جديد', 'Add new product')}</DialogTitle>
+          <DialogDescription>{editProduct ? bi('قم بتحديث تفاصيل المنتج.', 'Update the product details.') : bi('أدخل تفاصيل المنتج الجديد.', 'Enter the new product details.')}</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4 max-h-[70vh] overflow-y-auto px-2">
             <FormField control={form.control} name="name" render={({ field }) => (
-              <FormItem><FormLabel>اسم المنتج</FormLabel><FormControl><Input placeholder="مثال: خاتم فضة" {...field} /></FormControl><FormMessage /></FormItem>
+              <FormItem><FormLabel>{bi("اسم المنتج", "Product name")}</FormLabel><FormControl><Input placeholder={bi("مثال: خاتم فضة", "e.g. Silver ring")} {...field} /></FormControl><FormMessage /></FormItem>
             )} />
             <FormField control={form.control} name="description" render={({ field }) => (
-              <FormItem><FormLabel>وصف المنتج</FormLabel><FormControl><Textarea placeholder="وصف موجز للمنتج ومميزاته..." {...field} /></FormControl><FormMessage /></FormItem>
+              <FormItem><FormLabel>{bi("وصف المنتج", "Product description")}</FormLabel><FormControl><Textarea placeholder={bi("وصف موجز للمنتج ومميزاته...", "A brief description of the product and its features...")} {...field} /></FormControl><FormMessage /></FormItem>
             )} />
             <FormItem>
-              <FormLabel>صورة المنتج</FormLabel>
+              <FormLabel>{bi("صورة المنتج", "Product image")}</FormLabel>
               <FormControl><Input type="file" accept="image/png, image/jpeg, image/gif" onChange={handleImageChange} /></FormControl>
             </FormItem>
             {imagePreview && (
-              <div><FormLabel>معاينة الصورة</FormLabel><div className="mt-2"><Image src={imagePreview} alt="معاينة" width={100} height={100} className="rounded-md object-cover border" /></div></div>
+              <div><FormLabel>{bi("معاينة الصورة", "Image preview")}</FormLabel><div className="mt-2"><Image src={imagePreview} alt={bi("معاينة", "Preview")} width={100} height={100} className="rounded-md object-cover border" /></div></div>
             )}
             <FormField control={form.control} name="location" render={({ field }) => (
-              <FormItem><FormLabel>الموقع (المدينة)</FormLabel><FormControl><Input placeholder="مثال: الرياض" {...field} /></FormControl><FormMessage /></FormItem>
+              <FormItem><FormLabel>{bi("الموقع (المدينة)", "Location (city)")}</FormLabel><FormControl><Input placeholder={bi("مثال: الرياض", "e.g. Riyadh")} {...field} /></FormControl><FormMessage /></FormItem>
             )} />
             <div className="grid grid-cols-2 gap-4">
               <FormField control={form.control} name="price" render={({ field }) => (
-                <FormItem><FormLabel>السعر (د.أ)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="150.00" {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>{bi("السعر (د.أ)", "Price (JOD)")}</FormLabel><FormControl><Input type="number" step="0.01" placeholder="150.00" {...field} /></FormControl><FormMessage /></FormItem>
               )} />
               <FormField control={form.control} name="deliveryCost" render={({ field }) => (
-                <FormItem><FormLabel>تكلفة التوصيل (د.أ)</FormLabel><FormControl><Input type="number" step="0.1" placeholder="3.00" {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>{bi("تكلفة التوصيل (د.أ)", "Delivery cost (JOD)")}</FormLabel><FormControl><Input type="number" step="0.1" placeholder="3.00" {...field} /></FormControl><FormMessage /></FormItem>
               )} />
             </div>
             <FormField control={form.control} name="stock" render={({ field }) => (
-              <FormItem><FormLabel>الكمية في المخزون</FormLabel><FormControl><Input type="number" placeholder="25" {...field} /></FormControl><FormMessage /></FormItem>
+              <FormItem><FormLabel>{bi("الكمية في المخزون", "Stock quantity")}</FormLabel><FormControl><Input type="number" placeholder="25" {...field} /></FormControl><FormMessage /></FormItem>
             )} />
             <FormField control={form.control} name="category" render={({ field }) => (
               <FormItem>
-                <FormLabel className="flex items-center gap-2"><Tag className="h-4 w-4" /> التصنيف</FormLabel>
+                <FormLabel className="flex items-center gap-2"><Tag className="h-4 w-4" /> {bi("التصنيف", "Category")}</FormLabel>
                 <Select onValueChange={field.onChange} value={field.value}>
-                  <FormControl><SelectTrigger><SelectValue placeholder="اختر تصنيف..." /></SelectTrigger></FormControl>
+                  <FormControl><SelectTrigger><SelectValue placeholder={bi("اختر تصنيف...", "Choose a category...")} /></SelectTrigger></FormControl>
                   <SelectContent>
                     {PRODUCT_CATEGORIES.map(cat => (
-                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                      <SelectItem key={cat} value={cat}>{lang === 'en' ? (CATEGORY_LABELS_EN[cat] ?? cat) : cat}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -392,8 +418,8 @@ export default function MyStorePage() {
               </FormItem>
             )} />
             <DialogFooter className="sticky bottom-0 bg-background pt-4">
-              <DialogClose asChild><Button variant="ghost">إلغاء</Button></DialogClose>
-              <Button type="submit" disabled={isUploading}>{isUploading ? 'جاري الحفظ...' : editProduct ? 'حفظ التغييرات' : 'إضافة المنتج'}</Button>
+              <DialogClose asChild><Button variant="ghost">{bi("إلغاء", "Cancel")}</Button></DialogClose>
+              <Button type="submit" disabled={isUploading}>{isUploading ? bi('جاري الحفظ...', 'Saving...') : editProduct ? bi('حفظ التغييرات', 'Save changes') : bi('إضافة المنتج', 'Add product')}</Button>
             </DialogFooter>
           </form>
         </Form>
@@ -401,14 +427,14 @@ export default function MyStorePage() {
     </Dialog>
 
     <AlertDialog open={!!productToDelete} onOpenChange={(isOpen) => !isOpen && setProductToDelete(null)}>
-      <AlertDialogContent dir="rtl">
+      <AlertDialogContent dir={dir}>
         <AlertDialogHeader>
-          <AlertDialogTitle>هل أنت متأكد تمامًا؟</AlertDialogTitle>
-          <AlertDialogDescription>هذا الإجراء سيقوم بحذف المنتج "{productToDelete?.name}" نهائيًا من متجرك.</AlertDialogDescription>
+          <AlertDialogTitle>{bi("هل أنت متأكد تمامًا؟", "Are you absolutely sure?")}</AlertDialogTitle>
+          <AlertDialogDescription>{bi(`هذا الإجراء سيقوم بحذف المنتج "${productToDelete?.name}" نهائيًا من متجرك.`, `This action will permanently delete the product "${productToDelete?.name}" from your store.`)}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>إلغاء</AlertDialogCancel>
-          <AlertDialogAction onClick={handleDelete}>نعم، قم بالحذف</AlertDialogAction>
+          <AlertDialogCancel>{bi("إلغاء", "Cancel")}</AlertDialogCancel>
+          <AlertDialogAction onClick={handleDelete}>{bi("نعم، قم بالحذف", "Yes, delete")}</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

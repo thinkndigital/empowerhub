@@ -15,6 +15,7 @@ import { useUser } from "@/firebase/auth/use-user";
 import { uploadFile as uploadToStorage } from "@/lib/upload-file";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Save, Building, Facebook, Instagram, Twitter, MessageCircle, Link2, Copy, Check } from "lucide-react";
+import { useLanguage } from "@/components/language-provider";
 
 const storeSettingsSchema = z.object({
   name: z.string().min(2, { message: "يجب أن يكون اسم المتجر حرفين على الأقل." }),
@@ -35,6 +36,8 @@ type StoreSettingsFormValues = z.infer<typeof storeSettingsSchema>;
 
 export default function StoreSettingsPage() {
   const { toast } = useToast();
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const { user: authUser, loading: authLoading } = useUser();
   const [storeId, setStoreId] = useState<string | null>(null);
   const [storeSlug, setStoreSlug] = useState<string>("");
@@ -88,7 +91,7 @@ export default function StoreSettingsPage() {
         if (json.store.coverUrl) setCoverPreview(json.store.coverUrl);
       }
     } catch {
-      toast({ variant: "destructive", title: "خطأ", description: "فشل في جلب بيانات المتجر." });
+      toast({ variant: "destructive", title: bi("خطأ", "Error"), description: bi("فشل في جلب بيانات المتجر.", "Failed to fetch store data.") });
     } finally {
       setLoading(false);
     }
@@ -144,15 +147,15 @@ export default function StoreSettingsPage() {
         body: JSON.stringify(storeData),
       });
 
-      if (!res.ok) throw new Error((await res.json()).error || 'فشل الحفظ');
+      if (!res.ok) throw new Error((await res.json()).error || bi('فشل الحفظ', 'Save failed'));
 
       const json = await res.json();
       if (!storeId && json.id) setStoreId(json.id);
       if (json.slug) setStoreSlug(json.slug);
 
-      toast({ title: storeId ? "تم الحفظ بنجاح" : "تم إنشاء متجرك!", description: "تم حفظ إعدادات متجرك." });
+      toast({ title: storeId ? bi("تم الحفظ بنجاح", "Saved successfully") : bi("تم إنشاء متجرك!", "Your store was created!"), description: bi("تم حفظ إعدادات متجرك.", "Your store settings have been saved.") });
     } catch (e: any) {
-      toast({ variant: "destructive", title: "حدث خطأ!", description: e.message || "لم نتمكن من حفظ الإعدادات." });
+      toast({ variant: "destructive", title: bi("حدث خطأ!", "An error occurred!"), description: e.message || bi("لم نتمكن من حفظ الإعدادات.", "We couldn't save the settings.") });
     } finally {
       setIsSaving(false);
     }
@@ -176,15 +179,15 @@ export default function StoreSettingsPage() {
       setLinkCopied(true);
       setTimeout(() => setLinkCopied(false), 2000);
     } catch {
-      toast({ variant: "destructive", title: "تعذر النسخ", description: "انسخ الرابط يدوياً." });
+      toast({ variant: "destructive", title: bi("تعذر النسخ", "Could not copy"), description: bi("انسخ الرابط يدوياً.", "Please copy the link manually.") });
     }
   };
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={dir}>
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">إعدادات المتجر</h1>
-        <p className="text-muted-foreground">إدارة الهوية المرئية ومعلومات التواصل لمتجرك.</p>
+        <h1 className="text-2xl font-bold tracking-tight">{bi("إعدادات المتجر", "Store settings")}</h1>
+        <p className="text-muted-foreground">{bi("إدارة الهوية المرئية ومعلومات التواصل لمتجرك.", "Manage your store's visual identity and contact information.")}</p>
       </div>
 
       {storeId && (
@@ -194,7 +197,7 @@ export default function StoreSettingsPage() {
               <Link2 className="h-4 w-4 text-primary" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs text-muted-foreground mb-0.5">رابط متجرك الخاص</p>
+              <p className="text-xs text-muted-foreground mb-0.5">{bi("رابط متجرك الخاص", "Your store's link")}</p>
               <a href={publicPath} target="_blank" rel="noopener noreferrer" dir="ltr"
                 className="text-sm font-semibold text-foreground hover:text-primary transition-colors truncate block">
                 {publicUrl}
@@ -203,7 +206,7 @@ export default function StoreSettingsPage() {
           </div>
           <Button type="button" variant="outline" size="sm" onClick={copyLink} className="shrink-0 gap-1.5">
             {linkCopied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
-            {linkCopied ? 'تم النسخ' : 'نسخ الرابط'}
+            {linkCopied ? bi('تم النسخ', 'Copied') : bi('نسخ الرابط', 'Copy link')}
           </Button>
         </div>
       )}
@@ -211,60 +214,60 @@ export default function StoreSettingsPage() {
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
           <Card className="border-0 shadow-sm">
-            <CardHeader><CardTitle className="flex items-center gap-2"><Building className="h-5 w-5" /> المعلومات الأساسية</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="flex items-center gap-2"><Building className="h-5 w-5" /> {bi("المعلومات الأساسية", "Basic information")}</CardTitle></CardHeader>
             <CardContent className="space-y-6">
               <FormField control={form.control} name="name" render={({ field }) => (
-                <FormItem><FormLabel>اسم المتجر</FormLabel><FormControl><Input placeholder="مثال: إبداعات سارة" {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>{bi("اسم المتجر", "Store name")}</FormLabel><FormControl><Input placeholder={bi("مثال: إبداعات سارة", "e.g. Sara's Creations")} {...field} /></FormControl><FormMessage /></FormItem>
               )} />
               <FormField control={form.control} name="description" render={({ field }) => (
-                <FormItem><FormLabel>وصف المتجر</FormLabel><FormControl><Textarea placeholder="وصف موجز عن متجرك وما تقدمه..." {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>{bi("وصف المتجر", "Store description")}</FormLabel><FormControl><Textarea placeholder={bi("وصف موجز عن متجرك وما تقدمه...", "A brief description of your store and what it offers...")} {...field} /></FormControl><FormMessage /></FormItem>
               )} />
               <FormItem>
-                <FormLabel>شعار المتجر</FormLabel>
+                <FormLabel>{bi("شعار المتجر", "Store logo")}</FormLabel>
                 <FormControl><Input type="file" accept="image/png, image/jpeg, image/gif" onChange={handleLogoChange} /></FormControl>
-                {logoPreview && <div className="mt-2"><Image src={logoPreview} alt="معاينة" width={100} height={100} className="rounded-md object-cover border" /></div>}
+                {logoPreview && <div className="mt-2"><Image src={logoPreview} alt={bi("معاينة", "Preview")} width={100} height={100} className="rounded-md object-cover border" /></div>}
               </FormItem>
               <FormItem>
-                <FormLabel>صورة الغلاف</FormLabel>
+                <FormLabel>{bi("صورة الغلاف", "Cover image")}</FormLabel>
                 <FormControl><Input type="file" accept="image/png, image/jpeg, image/gif" onChange={handleCoverChange} /></FormControl>
-                {coverPreview && <div className="mt-2"><Image src={coverPreview} alt="غلاف" width={300} height={100} className="rounded-md object-cover border w-full max-h-32" /></div>}
+                {coverPreview && <div className="mt-2"><Image src={coverPreview} alt={bi("غلاف", "Cover")} width={300} height={100} className="rounded-md object-cover border w-full max-h-32" /></div>}
               </FormItem>
             </CardContent>
           </Card>
 
           <Card className="border-0 shadow-sm">
-            <CardHeader><CardTitle>معلومات التواصل</CardTitle></CardHeader>
+            <CardHeader><CardTitle>{bi("معلومات التواصل", "Contact information")}</CardTitle></CardHeader>
             <CardContent className="space-y-6">
               <FormField control={form.control} name="location" render={({ field }) => (
-                <FormItem><FormLabel>الموقع (المدينة)</FormLabel><FormControl><Input placeholder="مثال: عمّان" {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>{bi("الموقع (المدينة)", "Location (city)")}</FormLabel><FormControl><Input placeholder={bi("مثال: عمّان", "e.g. Amman")} {...field} /></FormControl><FormMessage /></FormItem>
               )} />
               <FormField control={form.control} name="phone" render={({ field }) => (
-                <FormItem><FormLabel>رقم الهاتف للتواصل</FormLabel><FormControl><Input dir="ltr" placeholder="+962 7..." {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>{bi("رقم الهاتف للتواصل", "Contact phone number")}</FormLabel><FormControl><Input dir="ltr" placeholder="+962 7..." {...field} /></FormControl><FormMessage /></FormItem>
               )} />
               <FormField control={form.control} name="whatsapp" render={({ field }) => (
-                <FormItem><FormLabel className="flex items-center gap-2"><MessageCircle className="h-4 w-4 text-green-500" /> رقم واتساب</FormLabel><FormControl><Input dir="ltr" placeholder="+966 5XX XXX XXXX" {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel className="flex items-center gap-2"><MessageCircle className="h-4 w-4 text-green-500" /> {bi("رقم واتساب", "WhatsApp number")}</FormLabel><FormControl><Input dir="ltr" placeholder="+966 5XX XXX XXXX" {...field} /></FormControl><FormMessage /></FormItem>
               )} />
             </CardContent>
           </Card>
 
           <Card className="border-0 shadow-sm">
-            <CardHeader><CardTitle>حسابات التواصل الاجتماعي</CardTitle></CardHeader>
+            <CardHeader><CardTitle>{bi("حسابات التواصل الاجتماعي", "Social media accounts")}</CardTitle></CardHeader>
             <CardContent className="space-y-6">
               <FormField control={form.control} name="socials.facebook" render={({ field }) => (
-                <FormItem><FormLabel className="flex items-center gap-2"><Facebook className="h-4 w-4" /> فيسبوك</FormLabel><FormControl><Input dir="ltr" placeholder="https://facebook.com/yourpage" {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel className="flex items-center gap-2"><Facebook className="h-4 w-4" /> {bi("فيسبوك", "Facebook")}</FormLabel><FormControl><Input dir="ltr" placeholder="https://facebook.com/yourpage" {...field} /></FormControl><FormMessage /></FormItem>
               )} />
               <FormField control={form.control} name="socials.instagram" render={({ field }) => (
-                <FormItem><FormLabel className="flex items-center gap-2"><Instagram className="h-4 w-4" /> انستغرام</FormLabel><FormControl><Input dir="ltr" placeholder="https://instagram.com/yourprofile" {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel className="flex items-center gap-2"><Instagram className="h-4 w-4" /> {bi("انستغرام", "Instagram")}</FormLabel><FormControl><Input dir="ltr" placeholder="https://instagram.com/yourprofile" {...field} /></FormControl><FormMessage /></FormItem>
               )} />
               <FormField control={form.control} name="socials.twitter" render={({ field }) => (
-                <FormItem><FormLabel className="flex items-center gap-2"><Twitter className="h-4 w-4" /> إكس (تويتر سابقاً)</FormLabel><FormControl><Input dir="ltr" placeholder="https://x.com/yourhandle" {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel className="flex items-center gap-2"><Twitter className="h-4 w-4" /> {bi("إكس (تويتر سابقاً)", "X (formerly Twitter)")}</FormLabel><FormControl><Input dir="ltr" placeholder="https://x.com/yourhandle" {...field} /></FormControl><FormMessage /></FormItem>
               )} />
             </CardContent>
           </Card>
 
           <Button type="submit" disabled={isSaving}>
             <Save className="ml-2 h-4 w-4" />
-            {isSaving ? 'جاري الحفظ...' : 'حفظ الإعدادات'}
+            {isSaving ? bi('جاري الحفظ...', 'Saving...') : bi('حفظ الإعدادات', 'Save settings')}
           </Button>
         </form>
       </Form>

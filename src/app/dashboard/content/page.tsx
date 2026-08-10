@@ -13,6 +13,7 @@ import {
   Download, Upload, ImageIcon, Type, Layers, Move, RefreshCw,
   Video, Plus, X, Trash2, Library, Loader2,
 } from 'lucide-react';
+import { useLanguage } from '@/components/language-provider';
 
 // ─── أحجام السوشال ميديا ───────────────────────────────────────
 const SIZES = [
@@ -27,6 +28,12 @@ const SIZES = [
   { id: 'snap',       label: 'Snapchat / TikTok',   w: 1080, h: 1920 },
   { id: 'pinterest',  label: 'Pinterest',           w: 1000, h: 1500 },
 ];
+
+// English overrides for the two size labels that carry Arabic words.
+const SIZE_LABEL_EN: Record<string, string> = {
+  'ig-square': 'Instagram Square',
+  'ig-portrait': 'Instagram Portrait',
+};
 
 const LIBRARY_SIZE = SIZES[1]; // مقاس الحفظ بالمكتبة (Instagram مربع)
 const EDITOR_W = 540; // عرض محرر المعاينة بالبكسل
@@ -140,9 +147,10 @@ async function bakeVideoOverlay(
   logoImg: HTMLImageElement | null,
   logoEl: LogoEl,
   textEls: TextEl[],
+  bi: (ar: string, en: string) => string,
 ): Promise<Blob> {
   if (typeof MediaRecorder === 'undefined') {
-    throw new Error('المتصفح لا يدعم تحرير الفيديو');
+    throw new Error(bi('المتصفح لا يدعم تحرير الفيديو', 'This browser does not support video editing'));
   }
 
   const video = document.createElement('video');
@@ -151,7 +159,7 @@ async function bakeVideoOverlay(
 
   await new Promise<void>((resolve, reject) => {
     video.onloadedmetadata = () => resolve();
-    video.onerror = () => reject(new Error('تعذر تحميل الفيديو'));
+    video.onerror = () => reject(new Error(bi('تعذر تحميل الفيديو', 'Failed to load video')));
   });
 
   const cw = video.videoWidth;
@@ -162,7 +170,7 @@ async function bakeVideoOverlay(
   const ctx = canvas.getContext('2d');
   if (!ctx || typeof (canvas as any).captureStream !== 'function') {
     URL.revokeObjectURL(video.src);
-    throw new Error('المتصفح لا يدعم تحرير الفيديو');
+    throw new Error(bi('المتصفح لا يدعم تحرير الفيديو', 'This browser does not support video editing'));
   }
 
   const canvasStream: MediaStream = (canvas as any).captureStream(30);
@@ -214,6 +222,8 @@ async function bakeVideoOverlay(
 // ─── الصفحة ────────────────────────────────────────────────────
 export default function ContentPage() {
   const { toast } = useToast();
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const { user } = useUser();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -396,10 +406,10 @@ export default function ContentPage() {
 
   const exportAll = async () => {
     if (!hasContent()) {
-      toast({ variant: 'destructive', title: 'لا يوجد محتوى', description: 'أضف صورة أو شعار أو نص أولاً.' });
+      toast({ variant: 'destructive', title: bi('لا يوجد محتوى', 'No content'), description: bi('أضف صورة أو شعار أو نص أولاً.', 'Add an image, logo, or text first.') });
       return;
     }
-    toast({ title: 'جاري التصدير...', description: `${SIZES.length} صورة` });
+    toast({ title: bi('جاري التصدير...', 'Exporting...'), description: bi(`${SIZES.length} صورة`, `${SIZES.length} images`) });
 
     for (let i = 0; i < SIZES.length; i++) {
       const s = SIZES[i];
@@ -420,7 +430,7 @@ export default function ContentPage() {
       });
     }
 
-    toast({ title: 'تم التصدير!', description: 'تم تحميل جميع الأحجام.' });
+    toast({ title: bi('تم التصدير!', 'Exported!'), description: bi('تم تحميل جميع الأحجام.', 'All sizes have been downloaded.') });
   };
 
   const exportOne = (s: typeof SIZES[0]) => {
@@ -442,17 +452,17 @@ export default function ContentPage() {
   const saveImageToLibrary = async () => {
     if (!user) return;
     if (!hasContent()) {
-      toast({ variant: 'destructive', title: 'لا يوجد محتوى', description: 'أضف صورة أو شعار أو نص أولاً.' });
+      toast({ variant: 'destructive', title: bi('لا يوجد محتوى', 'No content'), description: bi('أضف صورة أو شعار أو نص أولاً.', 'Add an image, logo, or text first.') });
       return;
     }
     if (!contentTitle.trim()) {
-      toast({ variant: 'destructive', title: 'اسم المنشور مطلوب', description: 'الرجاء كتابة اسم المنشور قبل الحفظ.' });
+      toast({ variant: 'destructive', title: bi('اسم المنشور مطلوب', 'Post title required'), description: bi('الرجاء كتابة اسم المنشور قبل الحفظ.', 'Please enter a post title before saving.') });
       return;
     }
     setSavingImage(true);
     try {
       const token = await user.getIdToken();
-      toast({ title: 'جاري الحفظ...', description: `يتم إنشاء ${SIZES.length} مقاسات` });
+      toast({ title: bi('جاري الحفظ...', 'Saving...'), description: bi(`يتم إنشاء ${SIZES.length} مقاسات`, `Generating ${SIZES.length} sizes`) });
 
       const mediaUrls: SizedMedia[] = [];
       for (const s of SIZES) {
@@ -463,7 +473,7 @@ export default function ContentPage() {
         drawCanvas(ctx, s.w, s.h, bgImg, logoImg, logoEl, textEls, bgColor);
 
         const blob: Blob = await new Promise((resolve, reject) => {
-          canvas.toBlob(b => (b ? resolve(b) : reject(new Error('فشل إنشاء الصورة'))), 'image/png');
+          canvas.toBlob(b => (b ? resolve(b) : reject(new Error(bi('فشل إنشاء الصورة', 'Failed to create image')))), 'image/png');
         });
         const file = new File([blob], `content-${s.id}-${Date.now()}.png`, { type: 'image/png' });
         const url = await uploadFile(file, 'social-content', token);
@@ -477,13 +487,13 @@ export default function ContentPage() {
         headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
         body: JSON.stringify({ title: contentTitle, type: 'image', mediaUrl, mediaUrls }),
       });
-      if (!res.ok) throw new Error((await res.json()).error || 'فشل الحفظ');
+      if (!res.ok) throw new Error((await res.json()).error || bi('فشل الحفظ', 'Save failed'));
 
-      toast({ title: 'تم الحفظ بالمكتبة', description: `تم حفظ ${SIZES.length} مقاسات.` });
+      toast({ title: bi('تم الحفظ بالمكتبة', 'Saved to library'), description: bi(`تم حفظ ${SIZES.length} مقاسات.`, `${SIZES.length} sizes saved.`) });
       setContentTitle('');
       fetchLibrary();
     } catch (e: any) {
-      toast({ variant: 'destructive', title: 'فشل الحفظ', description: e.message });
+      toast({ variant: 'destructive', title: bi('فشل الحفظ', 'Save failed'), description: e.message });
     } finally {
       setSavingImage(false);
     }
@@ -493,7 +503,7 @@ export default function ContentPage() {
   const saveVideoToLibrary = async () => {
     if (!user || !videoFile) return;
     if (!videoCaption.trim()) {
-      toast({ variant: 'destructive', title: 'اسم المنشور مطلوب', description: 'الرجاء كتابة اسم المنشور قبل الحفظ.' });
+      toast({ variant: 'destructive', title: bi('اسم المنشور مطلوب', 'Post title required'), description: bi('الرجاء كتابة اسم المنشور قبل الحفظ.', 'Please enter a post title before saving.') });
       return;
     }
     setSavingVideo(true);
@@ -504,14 +514,14 @@ export default function ContentPage() {
 
       if (hasOverlay) {
         try {
-          toast({ title: 'جاري دمج النص والشعار مع الفيديو...' });
-          const blob = await bakeVideoOverlay(videoFile, logoImg, logoEl, textEls);
+          toast({ title: bi('جاري دمج النص والشعار مع الفيديو...', 'Merging text and logo with the video...') });
+          const blob = await bakeVideoOverlay(videoFile, logoImg, logoEl, textEls, bi);
           fileToUpload = new File([blob], `content-video-${Date.now()}.webm`, { type: 'video/webm' });
         } catch {
           toast({
             variant: 'destructive',
-            title: 'تعذّر دمج العناصر مع الفيديو',
-            description: 'سيتم حفظ الفيديو الأصلي بدون تعديل.',
+            title: bi('تعذّر دمج العناصر مع الفيديو', 'Could not merge elements with the video'),
+            description: bi('سيتم حفظ الفيديو الأصلي بدون تعديل.', 'The original video will be saved without changes.'),
           });
         }
       }
@@ -523,15 +533,15 @@ export default function ContentPage() {
         headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
         body: JSON.stringify({ title: videoCaption, type: 'video', mediaUrl }),
       });
-      if (!res.ok) throw new Error((await res.json()).error || 'فشل الحفظ');
+      if (!res.ok) throw new Error((await res.json()).error || bi('فشل الحفظ', 'Save failed'));
 
-      toast({ title: 'تم حفظ الفيديو بالمكتبة' });
+      toast({ title: bi('تم حفظ الفيديو بالمكتبة', 'Video saved to library') });
       setVideoFile(null);
       setVideoPreview(null);
       setVideoCaption('');
       fetchLibrary();
     } catch (e: any) {
-      toast({ variant: 'destructive', title: 'فشل الحفظ', description: e.message });
+      toast({ variant: 'destructive', title: bi('فشل الحفظ', 'Save failed'), description: e.message });
     } finally {
       setSavingVideo(false);
     }
@@ -546,22 +556,22 @@ export default function ContentPage() {
         method: 'DELETE',
         headers: { authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error((await res.json()).error || 'فشل الحذف');
+      if (!res.ok) throw new Error((await res.json()).error || bi('فشل الحذف', 'Delete failed'));
       setLibraryItems(prev => prev.filter(i => i.id !== id));
     } catch (e: any) {
-      toast({ variant: 'destructive', title: 'فشل الحذف', description: e.message });
+      toast({ variant: 'destructive', title: bi('فشل الحذف', 'Delete failed'), description: e.message });
     }
   };
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={dir}>
       <div>
         <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
           <Layers className="h-6 w-6 text-primary" />
-          محتوى السوشال ميديا
+          {bi("محتوى السوشال ميديا", "Social media content")}
         </h1>
         <p className="text-muted-foreground mt-1">
-          أضف صورتك وشعارك ونصوصك — صدّر لجميع المنصات أو احفظ بمكتبتك
+          {bi("أضف صورتك وشعارك ونصوصك — صدّر لجميع المنصات أو احفظ بمكتبتك", "Add your image, logo, and text — export for all platforms or save to your library")}
         </p>
       </div>
 
@@ -573,7 +583,7 @@ export default function ContentPage() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
-                <ImageIcon className="h-4 w-4 text-primary" /> الصورة الخلفية
+                <ImageIcon className="h-4 w-4 text-primary" /> {bi("الصورة الخلفية", "Background image")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -581,14 +591,14 @@ export default function ContentPage() {
                 <div className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-4 text-center hover:border-primary/50 transition-colors">
                   <Upload className="h-6 w-6 mx-auto mb-1 text-muted-foreground" />
                   <span className="text-sm text-muted-foreground">
-                    {bgImg ? 'تم الرفع ✓' : 'انقر لرفع صورة'}
+                    {bgImg ? bi('تم الرفع ✓', 'Uploaded ✓') : bi('انقر لرفع صورة', 'Click to upload an image')}
                   </span>
                 </div>
                 <input id="bg-upload" type="file" accept="image/*" className="hidden" onChange={onBgUpload} />
               </Label>
               {!bgImg && (
                 <div className="flex items-center gap-2">
-                  <Label className="text-xs whitespace-nowrap">أو لون</Label>
+                  <Label className="text-xs whitespace-nowrap">{bi("أو لون", "Or a color")}</Label>
                   <input
                     type="color"
                     value={bgColor}
@@ -599,7 +609,7 @@ export default function ContentPage() {
               )}
               {bgImg && (
                 <Button variant="ghost" size="sm" className="w-full text-xs" onClick={() => setBgImg(null)}>
-                  <RefreshCw className="h-3 w-3 ml-1" /> إزالة الصورة
+                  <RefreshCw className="h-3 w-3 ml-1" /> {bi("إزالة الصورة", "Remove image")}
                 </Button>
               )}
             </CardContent>
@@ -609,7 +619,7 @@ export default function ContentPage() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
-                <ImageIcon className="h-4 w-4 text-primary" /> الشعار
+                <ImageIcon className="h-4 w-4 text-primary" /> {bi("الشعار", "Logo")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -617,7 +627,7 @@ export default function ContentPage() {
                 <div className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-4 text-center hover:border-primary/50 transition-colors">
                   <Upload className="h-6 w-6 mx-auto mb-1 text-muted-foreground" />
                   <span className="text-sm text-muted-foreground">
-                    {logoImg ? 'تم الرفع ✓' : 'ارفع الشعار (PNG شفاف)'}
+                    {logoImg ? bi('تم الرفع ✓', 'Uploaded ✓') : bi('ارفع الشعار (PNG شفاف)', 'Upload logo (transparent PNG)')}
                   </span>
                 </div>
                 <input id="logo-upload" type="file" accept="image/*" className="hidden" onChange={onLogoUpload} />
@@ -625,7 +635,7 @@ export default function ContentPage() {
               {logoImg && (
                 <>
                   <div>
-                    <Label className="text-xs mb-1 block">حجم الشعار ({Math.round(logoEl.size * 100)}%)</Label>
+                    <Label className="text-xs mb-1 block">{bi(`حجم الشعار (${Math.round(logoEl.size * 100)}%)`, `Logo size (${Math.round(logoEl.size * 100)}%)`)}</Label>
                     <Slider
                       min={5} max={60} step={1}
                       value={[Math.round(logoEl.size * 100)]}
@@ -633,7 +643,7 @@ export default function ContentPage() {
                     />
                   </div>
                   <p className="text-xs text-muted-foreground flex items-center gap-1">
-                    <Move className="h-3 w-3" /> اسحب الشعار على اللوحة لتحريكه
+                    <Move className="h-3 w-3" /> {bi("اسحب الشعار على اللوحة لتحريكه", "Drag the logo on the canvas to move it")}
                   </p>
                 </>
               )}
@@ -644,7 +654,7 @@ export default function ContentPage() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
-                <Type className="h-4 w-4 text-primary" /> النصوص
+                <Type className="h-4 w-4 text-primary" /> {bi("النصوص", "Text")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -659,7 +669,7 @@ export default function ContentPage() {
                         : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted'
                     }`}
                   >
-                    {t.text || `نص ${i + 1}`}
+                    {t.text || bi(`نص ${i + 1}`, `Text ${i + 1}`)}
                     {textEls.length > 1 && (
                       <X
                         className="h-3 w-3 shrink-0"
@@ -669,24 +679,24 @@ export default function ContentPage() {
                   </button>
                 ))}
                 <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={addTextEl}>
-                  <Plus className="h-3 w-3" /> نص جديد
+                  <Plus className="h-3 w-3" /> {bi("نص جديد", "New text")}
                 </Button>
               </div>
 
               {selectedText && (
                 <>
                   <div>
-                    <Label className="text-xs mb-1 block">النص أو الرقم</Label>
+                    <Label className="text-xs mb-1 block">{bi("النص أو الرقم", "Text or number")}</Label>
                     <Input
                       value={selectedText.text}
                       onChange={e => updateSelectedText({ text: e.target.value })}
-                      placeholder="مثال: 0501234567"
+                      placeholder={bi("مثال: 0501234567", "e.g. 0501234567")}
                       className="text-right"
                     />
                   </div>
                   <div className="flex gap-3 items-center">
                     <div className="flex-1">
-                      <Label className="text-xs mb-1 block">حجم الخط ({Math.round(selectedText.fontSize * 100)}%)</Label>
+                      <Label className="text-xs mb-1 block">{bi(`حجم الخط (${Math.round(selectedText.fontSize * 100)}%)`, `Font size (${Math.round(selectedText.fontSize * 100)}%)`)}</Label>
                       <Slider
                         min={2} max={15} step={0.5}
                         value={[Math.round(selectedText.fontSize * 100)]}
@@ -694,7 +704,7 @@ export default function ContentPage() {
                       />
                     </div>
                     <div>
-                      <Label className="text-xs mb-1 block">اللون</Label>
+                      <Label className="text-xs mb-1 block">{bi("اللون", "Color")}</Label>
                       <input
                         type="color"
                         value={selectedText.color}
@@ -708,11 +718,11 @@ export default function ContentPage() {
                     className={`w-full text-xs ${selectedText.bold ? 'bg-primary/10 border-primary' : ''}`}
                     onClick={() => updateSelectedText({ bold: !selectedText.bold })}
                   >
-                    {selectedText.bold ? 'خط عريض ✓' : 'خط عريض'}
+                    {selectedText.bold ? bi('خط عريض ✓', 'Bold ✓') : bi('خط عريض', 'Bold')}
                   </Button>
                   {selectedText.text && (
                     <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Move className="h-3 w-3" /> اسحب النص المحدد على اللوحة لتحريكه
+                      <Move className="h-3 w-3" /> {bi("اسحب النص المحدد على اللوحة لتحريكه", "Drag the selected text on the canvas to move it")}
                     </p>
                   )}
                 </>
@@ -724,21 +734,21 @@ export default function ContentPage() {
           <Card>
             <CardContent className="pt-4 space-y-2">
               <div>
-                <Label className="text-xs mb-1 block">اسم المنشور *</Label>
+                <Label className="text-xs mb-1 block">{bi("اسم المنشور *", "Post title *")}</Label>
                 <Input
                   value={contentTitle}
                   onChange={e => setContentTitle(e.target.value)}
-                  placeholder="مثال: عرض نهاية الأسبوع"
+                  placeholder={bi("مثال: عرض نهاية الأسبوع", "e.g. Weekend offer")}
                   className="text-right"
                 />
               </div>
               <Button className="w-full gap-2 shadow-md" onClick={exportAll} size="lg">
                 <Download className="h-5 w-5" />
-                تصدير كل الأحجام ({SIZES.length} صورة)
+                {bi(`تصدير كل الأحجام (${SIZES.length} صورة)`, `Export all sizes (${SIZES.length} images)`)}
               </Button>
               <Button variant="outline" className="w-full gap-2" onClick={saveImageToLibrary} disabled={savingImage}>
                 {savingImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Library className="h-4 w-4" />}
-                حفظ في المكتبة (كل الأحجام)
+                {bi("حفظ في المكتبة (كل الأحجام)", "Save to library (all sizes)")}
               </Button>
             </CardContent>
           </Card>
@@ -747,7 +757,7 @@ export default function ContentPage() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
-                <Video className="h-4 w-4 text-primary" /> فيديو
+                <Video className="h-4 w-4 text-primary" /> {bi("فيديو", "Video")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -755,7 +765,7 @@ export default function ContentPage() {
                 <div className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-4 text-center hover:border-primary/50 transition-colors">
                   <Upload className="h-6 w-6 mx-auto mb-1 text-muted-foreground" />
                   <span className="text-sm text-muted-foreground">
-                    {videoFile ? 'تم الرفع ✓' : 'ارفع فيديو (حتى 20 ميجابايت)'}
+                    {videoFile ? bi('تم الرفع ✓', 'Uploaded ✓') : bi('ارفع فيديو (حتى 20 ميجابايت)', 'Upload a video (up to 20 MB)')}
                   </span>
                 </div>
                 <input id="video-upload" type="file" accept="video/mp4,video/webm,video/quicktime" className="hidden" onChange={onVideoUpload} />
@@ -766,22 +776,22 @@ export default function ContentPage() {
               {videoFile && (
                 <>
                   <div>
-                    <Label className="text-xs mb-1 block">اسم المنشور *</Label>
+                    <Label className="text-xs mb-1 block">{bi("اسم المنشور *", "Post title *")}</Label>
                     <Input
                       value={videoCaption}
                       onChange={e => setVideoCaption(e.target.value)}
-                      placeholder="مثال: فيديو ترويجي"
+                      placeholder={bi("مثال: فيديو ترويجي", "e.g. Promotional video")}
                       className="text-right"
                     />
                   </div>
                   {(logoImg || textEls.some(t => t.text.trim())) && (
                     <p className="text-xs text-primary flex items-center gap-1">
-                      <Layers className="h-3 w-3" /> سيتم دمج النص والشعار الحاليين مع الفيديو تلقائياً عند الحفظ
+                      <Layers className="h-3 w-3" /> {bi("سيتم دمج النص والشعار الحاليين مع الفيديو تلقائياً عند الحفظ", "The current text and logo will be automatically merged with the video when saved")}
                     </p>
                   )}
                   <Button className="w-full gap-2" onClick={saveVideoToLibrary} disabled={savingVideo}>
                     {savingVideo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Library className="h-4 w-4" />}
-                    حفظ الفيديو بالمكتبة
+                    {bi("حفظ الفيديو بالمكتبة", "Save video to library")}
                   </Button>
                 </>
               )}
@@ -794,7 +804,7 @@ export default function ContentPage() {
           {/* محرر المعاينة */}
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">المحرر — اسحب العناصر لتحريكها</CardTitle>
+              <CardTitle className="text-base">{bi("المحرر — اسحب العناصر لتحريكها", "Editor — drag elements to move them")}</CardTitle>
             </CardHeader>
             <CardContent className="flex justify-center p-2" ref={containerRef}>
               <canvas
@@ -813,7 +823,7 @@ export default function ContentPage() {
 
           {/* شبكة معاينة الأحجام */}
           <div>
-            <h3 className="text-sm font-medium mb-3 text-muted-foreground">معاينة الأحجام — انقر لتحميل مقاس واحد</h3>
+            <h3 className="text-sm font-medium mb-3 text-muted-foreground">{bi("معاينة الأحجام — انقر لتحميل مقاس واحد", "Size previews — click to download a single size")}</h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {SIZES.map(s => (
                 <button
@@ -827,7 +837,7 @@ export default function ContentPage() {
                     bgImg={bgImg} logoImg={logoImg}
                     logoEl={logoEl} textEls={textEls} bgColor={bgColor}
                   />
-                  <p className="text-xs font-medium mt-1 truncate">{s.label}</p>
+                  <p className="text-xs font-medium mt-1 truncate">{lang === 'en' ? (SIZE_LABEL_EN[s.id] ?? s.label) : s.label}</p>
                   <p className="text-[10px] text-muted-foreground">{s.w}×{s.h}</p>
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-primary/20 rounded-lg">
                     <Download className="h-5 w-5 text-primary" />
@@ -840,7 +850,7 @@ export default function ContentPage() {
           {/* المكتبة */}
           <div>
             <h3 className="text-sm font-medium mb-3 text-muted-foreground flex items-center gap-2">
-              <Library className="h-4 w-4" /> مكتبتي ({libraryItems.length})
+              <Library className="h-4 w-4" /> {bi(`مكتبتي (${libraryItems.length})`, `My library (${libraryItems.length})`)}
             </h3>
             {libraryLoading ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -848,7 +858,7 @@ export default function ContentPage() {
               </div>
             ) : libraryItems.length === 0 ? (
               <div className="border-2 border-dashed border-muted-foreground/20 rounded-lg py-10 text-center text-sm text-muted-foreground">
-                لا يوجد محتوى محفوظ بعد — احفظ صورة أو فيديو لتظهر هنا
+                {bi("لا يوجد محتوى محفوظ بعد — احفظ صورة أو فيديو لتظهر هنا", "No saved content yet — save an image or video to see it here")}
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -866,6 +876,8 @@ export default function ContentPage() {
 
 // ── بطاقة عنصر بالمكتبة (مع أحجام قابلة للتوسيع للصور) ─────────
 function LibraryItemCard({ item, onDelete }: { item: LibraryItem; onDelete: (id: string) => void }) {
+  const { lang } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const [expanded, setExpanded] = useState(false);
   const hasSizes = item.type === 'image' && !!item.mediaUrls && item.mediaUrls.length > 0;
 
@@ -877,13 +889,13 @@ function LibraryItemCard({ item, onDelete }: { item: LibraryItem; onDelete: (id:
         <video src={item.mediaUrl} className="w-full aspect-square object-cover" muted />
       )}
       <div className="p-2">
-        <p className="text-xs font-medium truncate">{item.title || 'بدون عنوان'}</p>
+        <p className="text-xs font-medium truncate">{item.title || bi('بدون عنوان', 'Untitled')}</p>
         {hasSizes && (
           <button
             onClick={() => setExpanded(v => !v)}
             className="text-[10px] text-primary hover:underline mt-0.5"
           >
-            {expanded ? 'إخفاء الأحجام' : `كل الأحجام (${item.mediaUrls!.length})`}
+            {expanded ? bi('إخفاء الأحجام', 'Hide sizes') : bi(`كل الأحجام (${item.mediaUrls!.length})`, `All sizes (${item.mediaUrls!.length})`)}
           </button>
         )}
       </div>

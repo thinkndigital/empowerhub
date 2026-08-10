@@ -10,6 +10,7 @@ import { useUser } from "@/firebase/auth/use-user";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { useState, useMemo, useEffect, useCallback } from "react";
+import { useLanguage } from "@/components/language-provider";
 
 type Course = {
   id: string;
@@ -30,7 +31,10 @@ const EmptyState = ({ title, description }: { title: string; description: string
   </div>
 );
 
-const CourseCard = ({ course, progress, completed = false }: { course: Course; progress: number; completed?: boolean }) => (
+const CourseCard = ({ course, progress, completed = false }: { course: Course; progress: number; completed?: boolean }) => {
+  const { lang } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
+  return (
   <Card className={`card-hover flex flex-col border-0 shadow-sm ${completed ? "bg-muted/30" : "bg-card"}`}>
     <CardHeader>
       <div className="flex items-start justify-between gap-2">
@@ -49,13 +53,13 @@ const CourseCard = ({ course, progress, completed = false }: { course: Course; p
     <CardContent className="flex-grow">
       <div className="space-y-2">
         <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span className="flex items-center gap-1"><BarChart3 className="h-3 w-3" />التقدم</span>
+          <span className="flex items-center gap-1"><BarChart3 className="h-3 w-3" />{bi("التقدم", "Progress")}</span>
           <span className="font-medium">{progress}%</span>
         </div>
         <Progress value={progress} className="h-2" />
         {!completed && progress > 0 && (
           <p className="text-xs text-primary flex items-center gap-1">
-            <Clock className="h-3 w-3" />جارٍ — تبقى {100 - progress}% للإكمال
+            <Clock className="h-3 w-3" />{bi(`جارٍ — تبقى ${100 - progress}% للإكمال`, `In progress — ${100 - progress}% left to complete`)}
           </p>
         )}
       </div>
@@ -64,15 +68,16 @@ const CourseCard = ({ course, progress, completed = false }: { course: Course; p
       <Button className="w-full" variant={completed ? "secondary" : "default"} asChild>
         <Link href={`/dashboard/training/${course.id}`}>
           {completed
-            ? <><BookMarked className="ml-2 h-4 w-4" />مراجعة الدورة</>
+            ? <><BookMarked className="ml-2 h-4 w-4" />{bi("مراجعة الدورة", "Review course")}</>
             : progress > 0
-              ? <><PlayCircle className="ml-2 h-4 w-4" />متابعة الدورة</>
-              : <><PlayCircle className="ml-2 h-4 w-4" />ابدأ الدورة</>}
+              ? <><PlayCircle className="ml-2 h-4 w-4" />{bi("متابعة الدورة", "Continue course")}</>
+              : <><PlayCircle className="ml-2 h-4 w-4" />{bi("ابدأ الدورة", "Start course")}</>}
         </Link>
       </Button>
     </CardFooter>
   </Card>
-);
+  );
+};
 
 const SkeletonCard = () => (
   <Card className="border-0 shadow-sm">
@@ -86,6 +91,8 @@ const SkeletonCard = () => (
 );
 
 export default function TrainingPage() {
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const { user: authUser, loading: authLoading } = useUser();
   const [search, setSearch] = useState("");
   const [courses, setCourses] = useState<Course[]>([]);
@@ -136,17 +143,17 @@ export default function TrainingPage() {
   const totalCompleted = courses.filter(c => (progressMap[c.id] || 0) >= 100).length;
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={dir}>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">الدورات التدريبية</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{bi("الدورات التدريبية", "Training courses")}</h1>
           <p className="text-muted-foreground mt-1">
-            {loading ? "جاري التحميل..." : `${totalCompleted} من ${totalCourses} دورات مكتملة`}
+            {loading ? bi("جاري التحميل...", "Loading...") : bi(`${totalCompleted} من ${totalCourses} دورات مكتملة`, `${totalCompleted} of ${totalCourses} courses completed`)}
           </p>
         </div>
         <div className="relative w-full sm:w-64">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="ابحث عن دورة..." className="pr-9" value={search} onChange={e => setSearch(e.target.value)} />
+          <Input placeholder={bi("ابحث عن دورة...", "Search for a course...")} className="pr-9" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
       </div>
 
@@ -154,14 +161,14 @@ export default function TrainingPage() {
         <Card className="border-0 shadow-sm bg-gradient-to-l from-primary/5 to-accent/5">
           <CardContent className="pt-5 pb-5">
             <div className="flex items-center justify-between mb-2">
-              <span className="font-semibold text-sm">التقدم الإجمالي في مساري التعليمي</span>
+              <span className="font-semibold text-sm">{bi("التقدم الإجمالي في مساري التعليمي", "Overall progress in my learning path")}</span>
               <span className="text-sm font-bold text-primary">{Math.round((totalCompleted / totalCourses) * 100)}%</span>
             </div>
             <Progress value={Math.round((totalCompleted / totalCourses) * 100)} className="h-3" />
             <div className="flex gap-4 mt-3 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1"><CheckCircle2 className="h-3 w-3 text-primary" />{totalCompleted} مكتملة</span>
-              <span className="flex items-center gap-1"><PlayCircle className="h-3 w-3 text-accent" />{inProgress.length} جارية</span>
-              <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{notStarted.length} لم تبدأ</span>
+              <span className="flex items-center gap-1"><CheckCircle2 className="h-3 w-3 text-primary" />{bi(`${totalCompleted} مكتملة`, `${totalCompleted} completed`)}</span>
+              <span className="flex items-center gap-1"><PlayCircle className="h-3 w-3 text-accent" />{bi(`${inProgress.length} جارية`, `${inProgress.length} in progress`)}</span>
+              <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{bi(`${notStarted.length} لم تبدأ`, `${notStarted.length} not started`)}</span>
             </div>
           </CardContent>
         </Card>
@@ -169,7 +176,7 @@ export default function TrainingPage() {
 
       {(loading || inProgress.length > 0) && (
         <section>
-          <h2 className="text-xl font-bold mb-4 flex items-center gap-2"><PlayCircle className="h-5 w-5 text-accent" />جارية</h2>
+          <h2 className="text-xl font-bold mb-4 flex items-center gap-2"><PlayCircle className="h-5 w-5 text-accent" />{bi("جارية", "In progress")}</h2>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {loading ? [...Array(2)].map((_, i) => <SkeletonCard key={i} />) : inProgress.map(c => <CourseCard key={c.id} course={c} progress={progressMap[c.id] || 0} />)}
           </div>
@@ -177,20 +184,20 @@ export default function TrainingPage() {
       )}
 
       <section>
-        <h2 className="text-xl font-bold mb-4 flex items-center gap-2"><BookHeart className="h-5 w-5 text-primary" />الدورات المتاحة</h2>
+        <h2 className="text-xl font-bold mb-4 flex items-center gap-2"><BookHeart className="h-5 w-5 text-primary" />{bi("الدورات المتاحة", "Available courses")}</h2>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {loading
             ? [...Array(3)].map((_, i) => <SkeletonCard key={i} />)
             : notStarted.length > 0
               ? notStarted.map(c => <CourseCard key={c.id} course={c} progress={0} />)
-              : <EmptyState title="لا توجد دورات متاحة" description="لم يتم تعيين أي دورات لك بعد. تواصل مع مدير منظمتك." />}
+              : <EmptyState title={bi("لا توجد دورات متاحة", "No available courses")} description={bi("لم يتم تعيين أي دورات لك بعد. تواصل مع مدير منظمتك.", "No courses have been assigned to you yet. Contact your organization admin.")} />}
         </div>
       </section>
 
       {(loading || completedC.length > 0) && (
         <section>
           <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <CheckCircle2 className="h-5 w-5 text-primary" />مكتملة
+            <CheckCircle2 className="h-5 w-5 text-primary" />{bi("مكتملة", "Completed")}
             {completedC.length > 0 && <Badge className="bg-primary/10 text-primary border-primary/20">{completedC.length}</Badge>}
           </h2>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

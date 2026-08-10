@@ -12,8 +12,9 @@ import { useFirestore } from "@/firebase/provider";
 import { collection, addDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, isPast, parseISO } from "date-fns";
-import { ar } from "date-fns/locale";
+import { ar as arLocale, enUS } from "date-fns/locale";
 import { EvaluationDialog } from "@/components/evaluation-dialog";
+import { useLanguage } from "@/components/language-provider";
 
 type Session = {
   id: string;
@@ -32,6 +33,9 @@ type EvaluationTarget = {
 
 export default function MentorshipPage() {
   const { toast } = useToast();
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
+  const locale = lang === 'en' ? enUS : arLocale;
   const [message, setMessage] = useState("");
   const { user: authUser, userProfile, loading: authLoading } = useUser();
   const firestore = useFirestore();
@@ -83,7 +87,7 @@ export default function MentorshipPage() {
 
   const handleSendMessage = async () => {
     if (!message.trim()) {
-      toast({ variant: "destructive", title: "خطأ", description: "لا يمكن إرسال رسالة فارغة." });
+      toast({ variant: "destructive", title: bi("خطأ", "Error"), description: bi("لا يمكن إرسال رسالة فارغة.", "Cannot send an empty message.") });
       return;
     }
     if (!firestore || !authUser || !mentor) return;
@@ -120,10 +124,10 @@ export default function MentorshipPage() {
         createdAt: serverTimestamp(),
         link: "/mentor-dashboard/messages",
       });
-      toast({ title: "تم الإرسال!", description: "تم إرسال رسالتك إلى مرشدك بنجاح." });
+      toast({ title: bi("تم الإرسال!", "Sent!"), description: bi("تم إرسال رسالتك إلى مرشدك بنجاح.", "Your message was sent to your mentor successfully.") });
       setMessage("");
     } catch {
-      toast({ variant: "destructive", title: "خطأ!", description: "فشل إرسال الرسالة. حاول مرة أخرى." });
+      toast({ variant: "destructive", title: bi("خطأ!", "Error!"), description: bi("فشل إرسال الرسالة. حاول مرة أخرى.", "Failed to send the message. Please try again.") });
     }
   };
 
@@ -132,16 +136,16 @@ export default function MentorshipPage() {
     setEvaluationTarget({
       sessionId: session.id,
       evaluatedId: mentor.id,
-      evaluatedName: mentor.name || 'المرشد',
+      evaluatedName: mentor.name || bi('المرشد', 'Mentor'),
     });
   };
 
   return (
     <>
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={dir}>
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">الإرشاد والتوجيه</h1>
-        <p className="text-muted-foreground mt-1">تابع جلساتك الإرشادية وتواصل مع مرشدك.</p>
+        <h1 className="text-2xl font-bold tracking-tight">{bi("الإرشاد والتوجيه", "Mentoring & guidance")}</h1>
+        <p className="text-muted-foreground mt-1">{bi("تابع جلساتك الإرشادية وتواصل مع مرشدك.", "Track your mentoring sessions and connect with your mentor.")}</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -150,16 +154,16 @@ export default function MentorshipPage() {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <Video className="h-4 w-4 text-primary" />
-                الجلسات القادمة
+                {bi("الجلسات القادمة", "Upcoming sessions")}
               </CardTitle>
-              <CardDescription>استعد لجلسات الإرشاد القادمة.</CardDescription>
+              <CardDescription>{bi("استعد لجلسات الإرشاد القادمة.", "Get ready for your upcoming mentoring sessions.")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               {loading && <Skeleton className="h-20 w-full" />}
               {!loading && upcomingSessions.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground">
                   <Calendar className="h-10 w-10 mx-auto mb-3 opacity-30" />
-                  <p className="text-sm">لا توجد جلسات قادمة</p>
+                  <p className="text-sm">{bi("لا توجد جلسات قادمة", "No upcoming sessions")}</p>
                 </div>
               )}
               {!loading && upcomingSessions.map(session => (
@@ -167,14 +171,14 @@ export default function MentorshipPage() {
                   <div>
                     <p className="font-semibold">{session.title}</p>
                     <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1.5">
-                      <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {format(parseISO(session.date), "d MMMM yyyy", { locale: ar })}</span>
-                      <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {format(parseISO(session.date), "p", { locale: ar })}</span>
+                      <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {format(parseISO(session.date), "d MMMM yyyy", { locale })}</span>
+                      <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {format(parseISO(session.date), "p", { locale })}</span>
                     </div>
                   </div>
                   <Button size="sm" className="shadow-sm" asChild>
                     <a href={session.meetLink || "https://meet.google.com"} target="_blank" rel="noopener noreferrer">
                       <Video className="ml-2 h-3.5 w-3.5" />
-                      انضم
+                      {bi("انضم", "Join")}
                     </a>
                   </Button>
                 </div>
@@ -186,16 +190,16 @@ export default function MentorshipPage() {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <Star className="h-4 w-4 text-primary" />
-                الجلسات السابقة
+                {bi("الجلسات السابقة", "Past sessions")}
               </CardTitle>
-              <CardDescription>مراجعة ملاحظات الجلسات السابقة وتقييمها.</CardDescription>
+              <CardDescription>{bi("مراجعة ملاحظات الجلسات السابقة وتقييمها.", "Review notes from past sessions and rate them.")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               {loading && <Skeleton className="h-24 w-full" />}
               {!loading && pastSessions.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground">
                   <User className="h-10 w-10 mx-auto mb-3 opacity-30" />
-                  <p className="text-sm">لا توجد جلسات سابقة</p>
+                  <p className="text-sm">{bi("لا توجد جلسات سابقة", "No past sessions")}</p>
                 </div>
               )}
               {!loading && pastSessions.map(session => (
@@ -203,14 +207,14 @@ export default function MentorshipPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="font-semibold text-sm">{session.title}</p>
-                      <span className="text-xs text-muted-foreground">{format(parseISO(session.date), "d MMMM yyyy", { locale: ar })}</span>
+                      <span className="text-xs text-muted-foreground">{format(parseISO(session.date), "d MMMM yyyy", { locale })}</span>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2">{session.notes || "لا توجد ملاحظات."}</p>
+                    <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2">{session.notes || bi("لا توجد ملاحظات.", "No notes.")}</p>
                   </div>
                   {session.status === 'completed' && (
                     <Button variant="outline" size="sm" className="shrink-0" onClick={() => handleEvaluationClick(session)}>
                       <Star className="ml-1.5 h-3.5 w-3.5" />
-                      تقييم
+                      {bi("تقييم", "Rate")}
                     </Button>
                   )}
                 </div>
@@ -235,16 +239,16 @@ export default function MentorshipPage() {
               <CardHeader className="items-center text-center pb-2">
                 <Avatar className="w-20 h-20 border-4 border-primary/20 shadow-md">
                   <AvatarImage src={mentor.avatarUrl} />
-                  <AvatarFallback className="bg-primary/10 text-primary text-xl">{mentor.name?.charAt(0) || 'م'}</AvatarFallback>
+                  <AvatarFallback className="bg-primary/10 text-primary text-xl">{mentor.name?.charAt(0) || bi('م', 'M')}</AvatarFallback>
                 </Avatar>
                 <div className="pt-2">
-                  <CardTitle className="text-base">{mentor.name || 'مرشد'}</CardTitle>
-                  <CardDescription className="text-xs mt-1">{mentor.expertise || "خبير في مجاله"}</CardDescription>
+                  <CardTitle className="text-base">{mentor.name || bi('مرشد', 'Mentor')}</CardTitle>
+                  <CardDescription className="text-xs mt-1">{mentor.expertise || bi("خبير في مجاله", "Expert in their field")}</CardDescription>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="bg-muted/40 rounded-xl p-3 text-xs text-muted-foreground text-center leading-relaxed italic">
-                  "مهمتي مساعدتك على تحقيق أهدافك وتحويل فكرتك إلى مشروع ناجح."
+                  {bi("\"مهمتي مساعدتك على تحقيق أهدافك وتحويل فكرتك إلى مشروع ناجح.\"", "\"My mission is to help you achieve your goals and turn your idea into a successful project.\"")}
                 </div>
               </CardContent>
             </Card>
@@ -254,25 +258,25 @@ export default function MentorshipPage() {
                 <div className="p-4 bg-muted rounded-full mb-3">
                   <User className="h-8 w-8 text-muted-foreground" />
                 </div>
-                <CardTitle className="text-base">لم يتم تعيين مرشد</CardTitle>
-                <CardDescription className="text-sm">تواصل مع مدير منظمتك لتعيين مرشد لك.</CardDescription>
+                <CardTitle className="text-base">{bi("لم يتم تعيين مرشد", "No mentor assigned")}</CardTitle>
+                <CardDescription className="text-sm">{bi("تواصل مع مدير منظمتك لتعيين مرشد لك.", "Contact your organization admin to have a mentor assigned to you.")}</CardDescription>
               </CardHeader>
             </Card>
           )}
 
           <Card className="border-0 shadow-sm">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">أرسل رسالة لمرشدك</CardTitle>
+              <CardTitle className="text-base">{bi("أرسل رسالة لمرشدك", "Send a message to your mentor")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <Textarea
-                placeholder="اكتب رسالتك هنا..."
+                placeholder={bi("اكتب رسالتك هنا...", "Type your message here...")}
                 className="min-h-[110px] resize-none"
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 disabled={!mentor}
               />
-              <Button className="w-full shadow-sm" onClick={handleSendMessage} disabled={!mentor}>إرسال الرسالة</Button>
+              <Button className="w-full shadow-sm" onClick={handleSendMessage} disabled={!mentor}>{bi("إرسال الرسالة", "Send message")}</Button>
             </CardContent>
           </Card>
         </div>

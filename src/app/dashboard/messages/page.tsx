@@ -1,5 +1,7 @@
 'use client';
 import MessagesCenter from '@/components/messages-center';
+import { useLanguage } from '@/components/language-provider';
 export default function DashboardMessagesPage() {
-  return <MessagesCenter title="الرسائل" />;
+  const { lang } = useLanguage();
+  return <MessagesCenter title={lang === 'en' ? 'Messages' : 'الرسائل'} />;
 }

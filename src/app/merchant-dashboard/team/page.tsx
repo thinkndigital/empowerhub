@@ -29,6 +29,16 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useUser } from "@/firebase/auth/use-user";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MERCHANT_PERMISSIONS, MERCHANT_PERMISSION_LABELS, type MerchantPermission } from "@/lib/merchant-permissions";
+import { useLanguage } from "@/components/language-provider";
+
+const MERCHANT_PERMISSION_LABELS_EN: Record<MerchantPermission, string> = {
+  store: 'My store',
+  inventory: 'Inventory & products',
+  orders: 'Orders',
+  customers: 'Customers',
+  reports: 'Reports',
+  content: 'Social media content',
+};
 
 type TeamMember = {
   id: string; name: string; email: string;
@@ -43,6 +53,9 @@ const formSchema = z.object({
 
 export default function MerchantTeamPage() {
   const { toast } = useToast();
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
+  const tPermLabels = lang === 'en' ? MERCHANT_PERMISSION_LABELS_EN : MERCHANT_PERMISSION_LABELS;
   const { user, userProfile } = useUser();
   const isStaff = userProfile?.role === 'merchant_staff';
 
@@ -91,13 +104,16 @@ export default function MerchantTeamPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      toast({ title: "تمت الإضافة بنجاح!", description: `تمت إضافة "${values.name}" لفريقك. كلمة المرور: EmpowerHub@2024` });
+      toast({
+        title: bi("تمت الإضافة بنجاح!", "Added successfully!"),
+        description: bi(`تمت إضافة "${values.name}" لفريقك. كلمة المرور: EmpowerHub@2024`, `"${values.name}" was added to your team. Password: EmpowerHub@2024`),
+      });
       form.reset();
       setAddPermissions([]);
       setIsAddOpen(false);
       fetchTeam();
     } catch (err: any) {
-      toast({ variant: "destructive", title: "خطأ!", description: err.message });
+      toast({ variant: "destructive", title: bi("خطأ!", "Error!"), description: err.message });
     } finally {
       setSaving(false);
     }
@@ -120,11 +136,11 @@ export default function MerchantTeamPage() {
         body: JSON.stringify({ memberId: editMember.id, merchantRole: editRole, permissions: editPermissions }),
       });
       if (!res.ok) throw new Error((await res.json()).error);
-      toast({ title: "تم التحديث" });
+      toast({ title: bi("تم التحديث", "Updated") });
       setEditMember(null);
       fetchTeam();
     } catch (err: any) {
-      toast({ variant: "destructive", title: "خطأ!", description: err.message });
+      toast({ variant: "destructive", title: bi("خطأ!", "Error!"), description: err.message });
     } finally {
       setSaving(false);
     }
@@ -140,11 +156,15 @@ export default function MerchantTeamPage() {
         body: JSON.stringify({ memberId: memberToDelete.id }),
       });
       if (!res.ok) throw new Error((await res.json()).error);
-      toast({ variant: "destructive", title: "تمت الإزالة!", description: `تمت إزالة "${memberToDelete.name}" من الفريق.` });
+      toast({
+        variant: "destructive",
+        title: bi("تمت الإزالة!", "Removed!"),
+        description: bi(`تمت إزالة "${memberToDelete.name}" من الفريق.`, `"${memberToDelete.name}" was removed from the team.`),
+      });
       setMemberToDelete(null);
       fetchTeam();
     } catch (err: any) {
-      toast({ variant: "destructive", title: "خطأ!", description: err.message });
+      toast({ variant: "destructive", title: bi("خطأ!", "Error!"), description: err.message });
       setMemberToDelete(null);
     }
   }
@@ -155,45 +175,45 @@ export default function MerchantTeamPage() {
 
   if (isStaff) {
     return (
-      <div dir="rtl" className="flex flex-col items-center justify-center py-24 text-center gap-2">
+      <div dir={dir} className="flex flex-col items-center justify-center py-24 text-center gap-2">
         <ShieldCheck className="h-10 w-10 text-muted-foreground/40" />
-        <p className="text-muted-foreground">هذه الصفحة متاحة لصاحب المتجر فقط.</p>
+        <p className="text-muted-foreground">{bi("هذه الصفحة متاحة لصاحب المتجر فقط.", "This page is only available to the store owner.")}</p>
       </div>
     );
   }
 
   return (
-    <div dir="rtl" className="space-y-6">
+    <div dir={dir} className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">الفريق والصلاحيات</h1>
-          <p className="text-muted-foreground">أضف أعضاء لفريق متجرك وحدد صلاحياتهم.</p>
+          <h1 className="text-2xl font-bold tracking-tight">{bi("الفريق والصلاحيات", "Team & permissions")}</h1>
+          <p className="text-muted-foreground">{bi("أضف أعضاء لفريق متجرك وحدد صلاحياتهم.", "Add members to your store team and set their permissions.")}</p>
         </div>
         <Dialog open={isAddOpen} onOpenChange={o => { setIsAddOpen(o); if (!o) { form.reset(); setAddPermissions([]); } }}>
           <DialogTrigger asChild>
-            <Button><PlusCircle className="ml-2 h-4 w-4" />إضافة عضو</Button>
+            <Button><PlusCircle className="ml-2 h-4 w-4" />{bi("إضافة عضو", "Add member")}</Button>
           </DialogTrigger>
-          <DialogContent dir="rtl">
+          <DialogContent dir={dir}>
             <DialogHeader>
-              <DialogTitle>إضافة عضو جديد للفريق</DialogTitle>
-              <DialogDescription>أدخل معلومات العضو وحدد دوره وصلاحياته.</DialogDescription>
+              <DialogTitle>{bi("إضافة عضو جديد للفريق", "Add a new team member")}</DialogTitle>
+              <DialogDescription>{bi("أدخل معلومات العضو وحدد دوره وصلاحياته.", "Enter the member's information and set their role and permissions.")}</DialogDescription>
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-2">
                 <FormField control={form.control} name="name" render={({ field }) => (
-                  <FormItem><FormLabel>الاسم الكامل</FormLabel><FormControl><Input placeholder="مثال: خالد الأحمد" {...field} /></FormControl><FormMessage /></FormItem>
+                  <FormItem><FormLabel>{bi("الاسم الكامل", "Full name")}</FormLabel><FormControl><Input placeholder={bi("مثال: خالد الأحمد", "e.g. Khaled Al-Ahmad")} {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="email" render={({ field }) => (
-                  <FormItem><FormLabel>البريد الإلكتروني</FormLabel><FormControl><Input dir="ltr" placeholder="khaled@example.com" {...field} /></FormControl><FormMessage /></FormItem>
+                  <FormItem><FormLabel>{bi("البريد الإلكتروني", "Email")}</FormLabel><FormControl><Input dir="ltr" placeholder="khaled@example.com" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="merchantRole" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>الدور</FormLabel>
+                    <FormLabel>{bi("الدور", "Role")}</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                       <SelectContent>
-                        <SelectItem value="admin">مدير — صلاحية كاملة</SelectItem>
-                        <SelectItem value="staff">عضو فريق — صلاحيات محددة</SelectItem>
+                        <SelectItem value="admin">{bi("مدير — صلاحية كاملة", "Admin — full access")}</SelectItem>
+                        <SelectItem value="staff">{bi("عضو فريق — صلاحيات محددة", "Team member — limited permissions")}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -201,20 +221,20 @@ export default function MerchantTeamPage() {
                 )} />
                 {addRoleWatch === 'staff' && (
                   <div className="space-y-2">
-                    <FormLabel>الصلاحيات</FormLabel>
+                    <FormLabel>{bi("الصلاحيات", "Permissions")}</FormLabel>
                     <div className="grid grid-cols-2 gap-2">
                       {MERCHANT_PERMISSIONS.map(perm => (
                         <label key={perm} className="flex items-center gap-2 text-sm rounded-lg border border-border p-2.5 cursor-pointer hover:bg-muted/40">
                           <Checkbox checked={addPermissions.includes(perm)} onCheckedChange={() => togglePermission(addPermissions, setAddPermissions, perm)} />
-                          {MERCHANT_PERMISSION_LABELS[perm]}
+                          {tPermLabels[perm]}
                         </label>
                       ))}
                     </div>
                   </div>
                 )}
                 <DialogFooter>
-                  <DialogClose asChild><Button type="button" variant="ghost">إلغاء</Button></DialogClose>
-                  <Button type="submit" disabled={saving}>{saving ? 'جاري الإضافة...' : 'إضافة'}</Button>
+                  <DialogClose asChild><Button type="button" variant="ghost">{bi("إلغاء", "Cancel")}</Button></DialogClose>
+                  <Button type="submit" disabled={saving}>{saving ? bi('جاري الإضافة...', 'Adding...') : bi('إضافة', 'Add')}</Button>
                 </DialogFooter>
               </form>
             </Form>
@@ -224,19 +244,19 @@ export default function MerchantTeamPage() {
 
       <Card className="border-0 shadow-sm">
         <CardHeader>
-          <CardTitle className="text-base">أعضاء الفريق</CardTitle>
-          <CardDescription>{!loading ? `${team.length} عضو` : 'جاري التحميل...'}</CardDescription>
+          <CardTitle className="text-base">{bi("أعضاء الفريق", "Team members")}</CardTitle>
+          <CardDescription>{!loading ? bi(`${team.length} عضو`, `${team.length} members`) : bi('جاري التحميل...', 'Loading...')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>الاسم</TableHead>
-                  <TableHead className="hidden md:table-cell">البريد الإلكتروني</TableHead>
-                  <TableHead>الدور</TableHead>
-                  <TableHead className="hidden lg:table-cell">الصلاحيات</TableHead>
-                  <TableHead><span className="sr-only">إجراءات</span></TableHead>
+                  <TableHead>{bi("الاسم", "Name")}</TableHead>
+                  <TableHead className="hidden md:table-cell">{bi("البريد الإلكتروني", "Email")}</TableHead>
+                  <TableHead>{bi("الدور", "Role")}</TableHead>
+                  <TableHead className="hidden lg:table-cell">{bi("الصلاحيات", "Permissions")}</TableHead>
+                  <TableHead><span className="sr-only">{bi("إجراءات", "Actions")}</span></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -262,18 +282,18 @@ export default function MerchantTeamPage() {
                     <TableCell className="hidden md:table-cell">{member.email}</TableCell>
                     <TableCell>
                       <Badge variant={member.merchantRole === 'admin' ? 'default' : 'secondary'} className="text-xs">
-                        {member.merchantRole === 'admin' ? 'مدير' : 'عضو فريق'}
+                        {member.merchantRole === 'admin' ? bi('مدير', 'Admin') : bi('عضو فريق', 'Team member')}
                       </Badge>
                     </TableCell>
                     <TableCell className="hidden lg:table-cell">
                       {member.merchantRole === 'admin' ? (
-                        <span className="text-xs text-muted-foreground">كل الصلاحيات</span>
+                        <span className="text-xs text-muted-foreground">{bi("كل الصلاحيات", "All permissions")}</span>
                       ) : (
                         <div className="flex flex-wrap gap-1">
                           {(member.permissions || []).length === 0 ? (
-                            <span className="text-xs text-muted-foreground">بدون صلاحيات</span>
+                            <span className="text-xs text-muted-foreground">{bi("بدون صلاحيات", "No permissions")}</span>
                           ) : member.permissions.map(p => (
-                            <Badge key={p} variant="outline" className="text-[10px] py-0">{MERCHANT_PERMISSION_LABELS[p]}</Badge>
+                            <Badge key={p} variant="outline" className="text-[10px] py-0">{tPermLabels[p]}</Badge>
                           ))}
                         </div>
                       )}
@@ -284,10 +304,10 @@ export default function MerchantTeamPage() {
                           <Button size="icon" variant="ghost"><MoreHorizontal className="h-4 w-4" /></Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={() => openEdit(member)}><Edit className="ml-2 h-4 w-4" />تعديل الصلاحيات</DropdownMenuItem>
+                          <DropdownMenuLabel>{bi("الإجراءات", "Actions")}</DropdownMenuLabel>
+                          <DropdownMenuItem onClick={() => openEdit(member)}><Edit className="ml-2 h-4 w-4" />{bi("تعديل الصلاحيات", "Edit permissions")}</DropdownMenuItem>
                           <DropdownMenuItem className="text-red-500" onSelect={e => { e.preventDefault(); setMemberToDelete(member); }}>
-                            <Trash2 className="ml-2 h-4 w-4" />إزالة من الفريق
+                            <Trash2 className="ml-2 h-4 w-4" />{bi("إزالة من الفريق", "Remove from team")}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -299,8 +319,8 @@ export default function MerchantTeamPage() {
                     <TableCell colSpan={5}>
                       <div className="flex flex-col items-center gap-2 py-10 text-center">
                         <Users className="h-8 w-8 text-muted-foreground/30" />
-                        <p className="font-medium text-muted-foreground">لا يوجد أعضاء في الفريق</p>
-                        <p className="text-sm text-muted-foreground/70">أضف أعضاء لإدارة متجرك معك</p>
+                        <p className="font-medium text-muted-foreground">{bi("لا يوجد أعضاء في الفريق", "No team members yet")}</p>
+                        <p className="text-sm text-muted-foreground/70">{bi("أضف أعضاء لإدارة متجرك معك", "Add members to help manage your store")}</p>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -313,29 +333,29 @@ export default function MerchantTeamPage() {
 
       {/* Edit permissions dialog */}
       <Dialog open={!!editMember} onOpenChange={o => !o && setEditMember(null)}>
-        <DialogContent dir="rtl">
+        <DialogContent dir={dir}>
           <DialogHeader>
-            <DialogTitle>تعديل صلاحيات {editMember?.name}</DialogTitle>
+            <DialogTitle>{bi(`تعديل صلاحيات ${editMember?.name}`, `Edit permissions for ${editMember?.name}`)}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-2">
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">الدور</label>
+              <label className="text-sm font-medium">{bi("الدور", "Role")}</label>
               <Select value={editRole} onValueChange={v => setEditRole(v as 'admin' | 'staff')}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="admin">مدير — صلاحية كاملة</SelectItem>
-                  <SelectItem value="staff">عضو فريق — صلاحيات محددة</SelectItem>
+                  <SelectItem value="admin">{bi("مدير — صلاحية كاملة", "Admin — full access")}</SelectItem>
+                  <SelectItem value="staff">{bi("عضو فريق — صلاحيات محددة", "Team member — limited permissions")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             {editRole === 'staff' && (
               <div className="space-y-2">
-                <label className="text-sm font-medium">الصلاحيات</label>
+                <label className="text-sm font-medium">{bi("الصلاحيات", "Permissions")}</label>
                 <div className="grid grid-cols-2 gap-2">
                   {MERCHANT_PERMISSIONS.map(perm => (
                     <label key={perm} className="flex items-center gap-2 text-sm rounded-lg border border-border p-2.5 cursor-pointer hover:bg-muted/40">
                       <Checkbox checked={editPermissions.includes(perm)} onCheckedChange={() => togglePermission(editPermissions, setEditPermissions, perm)} />
-                      {MERCHANT_PERMISSION_LABELS[perm]}
+                      {tPermLabels[perm]}
                     </label>
                   ))}
                 </div>
@@ -343,23 +363,26 @@ export default function MerchantTeamPage() {
             )}
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setEditMember(null)}>إلغاء</Button>
-            <Button onClick={saveEdit} disabled={saving}>{saving ? 'جاري الحفظ...' : 'حفظ'}</Button>
+            <Button variant="ghost" onClick={() => setEditMember(null)}>{bi("إلغاء", "Cancel")}</Button>
+            <Button onClick={saveEdit} disabled={saving}>{saving ? bi('جاري الحفظ...', 'Saving...') : bi('حفظ', 'Save')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <AlertDialog open={!!memberToDelete} onOpenChange={o => !o && setMemberToDelete(null)}>
-        <AlertDialogContent dir="rtl">
+        <AlertDialogContent dir={dir}>
           <AlertDialogHeader>
-            <AlertDialogTitle>هل أنت متأكد تمامًا؟</AlertDialogTitle>
+            <AlertDialogTitle>{bi("هل أنت متأكد تمامًا؟", "Are you absolutely sure?")}</AlertDialogTitle>
             <AlertDialogDescription>
-              هذا الإجراء سيقوم بإزالة "{memberToDelete?.name}" من فريق متجرك ويلغي وصوله للوحة التحكم.
+              {bi(
+                `هذا الإجراء سيقوم بإزالة "${memberToDelete?.name}" من فريق متجرك ويلغي وصوله للوحة التحكم.`,
+                `This action will remove "${memberToDelete?.name}" from your store team and revoke their access to the dashboard.`
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>إلغاء</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}>نعم، قم بالإزالة</AlertDialogAction>
+            <AlertDialogCancel>{bi("إلغاء", "Cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>{bi("نعم، قم بالإزالة", "Yes, remove")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

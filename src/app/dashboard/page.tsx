@@ -10,16 +10,20 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useUser } from "@/firebase/auth/use-user";
 import { format, isPast, parseISO } from "date-fns";
-import { ar } from "date-fns/locale";
+import { ar as arLocale, enUS } from "date-fns/locale";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatCard, StatGrid } from "@/components/dashboard/stat-card";
+import { useLanguage } from "@/components/language-provider";
 
 type Session = { id: string; title: string; date: string; status: string; meetLink?: string };
 type Course = { id: string; title: string; progress?: number; category?: string };
 type Order = { id: string; status: string; total?: number };
 
 export default function DashboardPage() {
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
+  const locale = lang === 'en' ? enUS : arLocale;
   const { user: authUser, userProfile, loading: authLoading } = useUser();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
@@ -70,48 +74,51 @@ export default function DashboardPage() {
   const progress = (userProfile as any)?.progress || 0;
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={dir}>
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">لوحة التحكم</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">{bi("لوحة التحكم", "Dashboard")}</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            مرحباً {userProfile?.name ? `${userProfile.name.split(' ')[0]}` : ''}! هنا يمكنك متابعة تقدمك والحصول على توصيات مخصصة.
+            {bi(
+              `مرحباً ${userProfile?.name ? `${userProfile.name.split(' ')[0]}` : ''}! هنا يمكنك متابعة تقدمك والحصول على توصيات مخصصة.`,
+              `Welcome ${userProfile?.name ? `${userProfile.name.split(' ')[0]}` : ''}! Here you can track your progress and get personalized recommendations.`
+            )}
           </p>
         </div>
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-card border border-border/70 rounded-lg px-3 py-2 w-fit" style={{boxShadow:'var(--shadow-xs)'}}>
           <Clock className="h-3.5 w-3.5" />
-          <span>{format(new Date(), "EEEE، d MMMM yyyy", { locale: ar })}</span>
+          <span>{format(new Date(), lang === 'en' ? "EEEE, d MMMM yyyy" : "EEEE، d MMMM yyyy", { locale })}</span>
         </div>
       </div>
 
       {/* Stats Row */}
       <StatGrid>
         <StatCard
-          title="التقدم العام"
+          title={bi("التقدم العام", "Overall progress")}
           value={`${progress}%`}
-          description="نسبة الإنجاز في البرنامج"
+          description={bi("نسبة الإنجاز في البرنامج", "Program completion rate")}
           icon={Activity}
           active
           loading={loading}
         />
         <StatCard
-          title="جلسات الإرشاد"
+          title={bi("جلسات الإرشاد", "Mentoring sessions")}
           value={`${completedSessions}`}
-          description="جلسة مكتملة"
+          description={bi("جلسة مكتملة", "Completed sessions")}
           icon={BookOpenCheck}
           loading={loading}
         />
         <StatCard
-          title="إيرادات المتجر"
-          value={`${storeRevenue.toFixed(0)} د.أ`}
-          description="من الطلبات المكتملة"
+          title={bi("إيرادات المتجر", "Store revenue")}
+          value={`${storeRevenue.toFixed(0)} ${bi('د.أ', 'JOD')}`}
+          description={bi("من الطلبات المكتملة", "From completed orders")}
           icon={DollarSign}
           loading={loading}
         />
         <StatCard
-          title="الدورات المتاحة"
+          title={bi("الدورات المتاحة", "Available courses")}
           value={`${courses.length}`}
-          description="دورة تدريبية"
+          description={bi("دورة تدريبية", "Training courses")}
           icon={Target}
           loading={loading}
         />
@@ -122,12 +129,12 @@ export default function DashboardPage() {
         <Card className="border border-primary/20 bg-primary/5 rounded-xl mb-0" style={{boxShadow:'var(--shadow-xs)'}}>
           <CardContent className="p-5">
             <div className="flex justify-between items-center mb-3">
-              <span className="text-sm font-semibold">تقدمك في البرنامج</span>
+              <span className="text-sm font-semibold">{bi("تقدمك في البرنامج", "Your program progress")}</span>
               <span className="text-sm font-bold text-primary tabular-nums">{progress}%</span>
             </div>
             <Progress value={progress} className="h-2" />
             {progress >= 100 && (
-              <p className="text-xs text-emerald-600 mt-2 font-medium">أحسنت! لقد أتممت البرنامج بنجاح.</p>
+              <p className="text-xs text-emerald-600 mt-2 font-medium">{bi("أحسنت! لقد أتممت البرنامج بنجاح.", "Well done! You've successfully completed the program.")}</p>
             )}
           </CardContent>
         </Card>
@@ -142,7 +149,7 @@ export default function DashboardPage() {
           {(loading || mentor) && (
             <Card className="bg-card border border-border/70 rounded-xl" style={{boxShadow:'var(--shadow-xs)'}}>
               <CardHeader className="px-5 pt-5 pb-3">
-                <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground"><User className="h-4 w-4 text-primary" /> مرشدي</CardTitle>
+                <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground"><User className="h-4 w-4 text-primary" /> {bi("مرشدي", "My mentor")}</CardTitle>
               </CardHeader>
               <CardContent className="px-5 pb-5">
                 {loading ? (
@@ -151,7 +158,7 @@ export default function DashboardPage() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <Avatar className="h-11 w-11 ring-2 ring-primary/15">
-                        <AvatarFallback className="bg-primary/10 text-primary font-bold text-base">{mentor.name?.[0] || 'م'}</AvatarFallback>
+                        <AvatarFallback className="bg-primary/10 text-primary font-bold text-base">{mentor.name?.[0] || bi('م', 'M')}</AvatarFallback>
                       </Avatar>
                       <div>
                         <p className="font-semibold text-sm">{mentor.name}</p>
@@ -160,7 +167,7 @@ export default function DashboardPage() {
                       </div>
                     </div>
                     <Button size="sm" className="h-8 px-4 text-xs rounded-lg" asChild>
-                      <Link href="/dashboard/mentorship">تواصل</Link>
+                      <Link href="/dashboard/mentorship">{bi("تواصل", "Contact")}</Link>
                     </Button>
                   </div>
                 ) : null}
@@ -176,9 +183,9 @@ export default function DashboardPage() {
             <Card className="bg-card border border-border/70 rounded-xl" style={{boxShadow:'var(--shadow-xs)'}}>
               <CardHeader className="px-5 pt-5 pb-3">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-semibold text-foreground">الدورات التدريبية</CardTitle>
+                  <CardTitle className="text-sm font-semibold text-foreground">{bi("الدورات التدريبية", "Training courses")}</CardTitle>
                   <Button variant="ghost" size="sm" asChild className="h-7 text-xs text-primary hover:text-primary px-2">
-                    <Link href="/dashboard/training">عرض الكل <ChevronLeft className="h-3 w-3 mr-1" /></Link>
+                    <Link href="/dashboard/training">{bi("عرض الكل", "View all")} <ChevronLeft className="h-3 w-3 mr-1" /></Link>
                   </Button>
                 </div>
               </CardHeader>
@@ -200,23 +207,23 @@ export default function DashboardPage() {
           {/* Quick Actions */}
           <Card className="bg-card border border-border/70 rounded-xl" style={{boxShadow:'var(--shadow-xs)'}}>
             <CardHeader className="px-5 pt-5 pb-3">
-              <CardTitle className="text-sm font-semibold text-foreground">إجراءات سريعة</CardTitle>
+              <CardTitle className="text-sm font-semibold text-foreground">{bi("إجراءات سريعة", "Quick actions")}</CardTitle>
             </CardHeader>
             <CardContent className="px-5 pb-5 grid grid-cols-2 gap-2">
               <Button variant="outline" size="sm" asChild className="w-full justify-start gap-2 text-xs h-9 rounded-lg border-border/60">
-                <Link href="/dashboard/training"><BookOpenCheck className="h-3.5 w-3.5 text-primary" />الدورات</Link>
+                <Link href="/dashboard/training"><BookOpenCheck className="h-3.5 w-3.5 text-primary" />{bi("الدورات", "Courses")}</Link>
               </Button>
               <Button variant="outline" size="sm" asChild className="w-full justify-start gap-2 text-xs h-9 rounded-lg border-border/60">
-                <Link href="/dashboard/my-store"><DollarSign className="h-3.5 w-3.5 text-amber-500" />المتجر</Link>
+                <Link href="/dashboard/my-store"><DollarSign className="h-3.5 w-3.5 text-amber-500" />{bi("المتجر", "Store")}</Link>
               </Button>
               <Button variant="outline" size="sm" asChild className="w-full justify-start gap-2 text-xs h-9 rounded-lg border-border/60">
-                <Link href="/dashboard/mentorship"><Activity className="h-3.5 w-3.5 text-primary" />إرشاد</Link>
+                <Link href="/dashboard/mentorship"><Activity className="h-3.5 w-3.5 text-primary" />{bi("إرشاد", "Mentoring")}</Link>
               </Button>
               <Button variant="outline" size="sm" asChild className="w-full justify-start gap-2 text-xs h-9 rounded-lg border-border/60">
-                <Link href="/dashboard/reports"><TrendingUp className="h-3.5 w-3.5 text-purple-500" />التقارير</Link>
+                <Link href="/dashboard/reports"><TrendingUp className="h-3.5 w-3.5 text-purple-500" />{bi("التقارير", "Reports")}</Link>
               </Button>
               <Button variant="outline" size="sm" asChild className="w-full justify-start gap-2 text-xs h-9 rounded-lg border-border/60 col-span-2">
-                <Link href="/dashboard/settings"><Target className="h-3.5 w-3.5 text-muted-foreground" />تحديث ملفي الشخصي</Link>
+                <Link href="/dashboard/settings"><Target className="h-3.5 w-3.5 text-muted-foreground" />{bi("تحديث ملفي الشخصي", "Update my profile")}</Link>
               </Button>
             </CardContent>
           </Card>
@@ -224,7 +231,7 @@ export default function DashboardPage() {
           {/* Upcoming Sessions */}
           <Card className="bg-card border border-border/70 rounded-xl" style={{boxShadow:'var(--shadow-xs)'}}>
             <CardHeader className="px-5 pt-5 pb-3">
-              <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground"><Calendar className="h-4 w-4 text-primary" /> المواعيد القادمة</CardTitle>
+              <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground"><Calendar className="h-4 w-4 text-primary" /> {bi("المواعيد القادمة", "Upcoming appointments")}</CardTitle>
             </CardHeader>
             <CardContent className="px-5 pb-5">
               {loading ? (
@@ -235,11 +242,11 @@ export default function DashboardPage() {
                     <div key={session.id} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
                       <div className="h-9 w-9 rounded-lg bg-primary/10 flex flex-col items-center justify-center text-primary shrink-0">
                         <span className="text-xs font-bold leading-none">{format(parseISO(session.date), 'd')}</span>
-                        <span className="text-xs leading-none text-primary/70">{format(parseISO(session.date), 'MMM', { locale: ar })}</span>
+                        <span className="text-xs leading-none text-primary/70">{format(parseISO(session.date), 'MMM', { locale })}</span>
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-xs line-clamp-1 text-foreground">{session.title}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">{format(parseISO(session.date), 'p', { locale: ar })}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{format(parseISO(session.date), 'p', { locale })}</p>
                       </div>
                       {session.meetLink && (
                         <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0 rounded-lg text-muted-foreground hover:text-primary" asChild>
@@ -250,7 +257,7 @@ export default function DashboardPage() {
                   ))}
                 </div>
               ) : (
-                <p className="text-xs text-muted-foreground">لا توجد مواعيد قادمة.</p>
+                <p className="text-xs text-muted-foreground">{bi("لا توجد مواعيد قادمة.", "No upcoming appointments.")}</p>
               )}
             </CardContent>
           </Card>

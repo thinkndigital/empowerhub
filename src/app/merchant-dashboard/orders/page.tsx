@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { format } from "date-fns";
-import { ar } from "date-fns/locale";
+import { ar as arLocale, enUS } from "date-fns/locale";
+import { useLanguage } from "@/components/language-provider";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -34,7 +35,18 @@ const statusMap: Record<Order['status'], { text: string; variant: 'default' | 's
   cancelled: { text: "ملغي", variant: "destructive" },
 };
 
+const statusMapEn: Record<Order['status'], { text: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
+  pending: { text: "Pending", variant: "secondary" },
+  shipped: { text: "Shipped", variant: "default" },
+  delivered: { text: "Delivered", variant: "outline" },
+  cancelled: { text: "Cancelled", variant: "destructive" },
+};
+
 export default function MerchantOrdersPage() {
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
+  const locale = lang === 'en' ? enUS : arLocale;
+  const tStatusMap = lang === 'en' ? statusMapEn : statusMap;
   const { user } = useUser();
   const { toast } = useToast();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -74,30 +86,30 @@ export default function MerchantOrdersPage() {
         body: JSON.stringify({ id: orderId, status, _collection: 'orders' }),
       });
       setOrders(prev => prev.map(o => (o.id === orderId ? { ...o, status } : o)));
-      toast({ title: "تم تحديث حالة الطلب", description: statusMap[status].text });
+      toast({ title: bi("تم تحديث حالة الطلب", "Order status updated"), description: tStatusMap[status].text });
     } catch {
-      toast({ variant: "destructive", title: "خطأ", description: "فشل تحديث حالة الطلب." });
+      toast({ variant: "destructive", title: bi("خطأ", "Error"), description: bi("فشل تحديث حالة الطلب.", "Failed to update order status.") });
     }
   }
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={dir}>
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">الطلبات</h1>
-        <p className="text-sm text-muted-foreground">إدارة الطلبات الواردة على منتجاتك.</p>
+        <h1 className="text-2xl font-bold tracking-tight">{bi("الطلبات", "Orders")}</h1>
+        <p className="text-sm text-muted-foreground">{bi("إدارة الطلبات الواردة على منتجاتك.", "Manage incoming orders for your products.")}</p>
       </div>
 
       <StatGrid>
-        <StatCard title="إجمالي الطلبات" value={`${stats.total}`} icon={ClipboardList} loading={loading} />
-        <StatCard title="قيد الانتظار" value={`${stats.pending}`} icon={ClipboardList} loading={loading} active={stats.pending > 0} />
-        <StatCard title="تم التوصيل" value={`${stats.delivered}`} icon={CheckCircle} loading={loading} />
-        <StatCard title="الإيرادات المكتملة" value={`${stats.revenue.toFixed(2)} د.أ`} icon={DollarSign} loading={loading} />
+        <StatCard title={bi("إجمالي الطلبات", "Total orders")} value={`${stats.total}`} icon={ClipboardList} loading={loading} />
+        <StatCard title={bi("قيد الانتظار", "Pending")} value={`${stats.pending}`} icon={ClipboardList} loading={loading} active={stats.pending > 0} />
+        <StatCard title={bi("تم التوصيل", "Delivered")} value={`${stats.delivered}`} icon={CheckCircle} loading={loading} />
+        <StatCard title={bi("الإيرادات المكتملة", "Completed revenue")} value={`${stats.revenue.toFixed(2)} ${bi('د.أ', 'JOD')}`} icon={DollarSign} loading={loading} />
       </StatGrid>
 
       <Card className="border-0 shadow-sm">
         <CardHeader>
-          <CardTitle className="text-base">الطلبات الواردة</CardTitle>
-          <CardDescription>إدارة الطلبات الجديدة على منتجاتك.</CardDescription>
+          <CardTitle className="text-base">{bi("الطلبات الواردة", "Incoming orders")}</CardTitle>
+          <CardDescription>{bi("إدارة الطلبات الجديدة على منتجاتك.", "Manage new orders for your products.")}</CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -105,44 +117,44 @@ export default function MerchantOrdersPage() {
           ) : orders.length === 0 ? (
             <div className="text-center py-16 text-muted-foreground space-y-2">
               <ClipboardList className="h-12 w-12 mx-auto opacity-30" />
-              <p>لا توجد طلبات حالية.</p>
+              <p>{bi("لا توجد طلبات حالية.", "No current orders.")}</p>
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>المنتج</TableHead>
-                  <TableHead>الزبون</TableHead>
-                  <TableHead>الإجمالي</TableHead>
-                  <TableHead>تاريخ الطلب</TableHead>
-                  <TableHead>الحالة</TableHead>
-                  <TableHead className="text-right"><span className="sr-only">الإجراءات</span></TableHead>
+                  <TableHead>{bi("المنتج", "Product")}</TableHead>
+                  <TableHead>{bi("الزبون", "Customer")}</TableHead>
+                  <TableHead>{bi("الإجمالي", "Total")}</TableHead>
+                  <TableHead>{bi("تاريخ الطلب", "Order date")}</TableHead>
+                  <TableHead>{bi("الحالة", "Status")}</TableHead>
+                  <TableHead className="text-right"><span className="sr-only">{bi("الإجراءات", "Actions")}</span></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {orders.map(order => (
                   <TableRow key={order.id}>
                     <TableCell className="font-medium">{order.productName}</TableCell>
-                    <TableCell>{order.buyerName || 'غير محدد'}</TableCell>
-                    <TableCell className="tabular-nums">{(order.totalAmount ?? 0).toFixed(2)} د.أ</TableCell>
+                    <TableCell>{order.buyerName || bi('غير محدد', 'Not specified')}</TableCell>
+                    <TableCell className="tabular-nums">{(order.totalAmount ?? 0).toFixed(2)} {bi('د.أ', 'JOD')}</TableCell>
                     <TableCell>
                       {order.createdAt
-                        ? format(new Date(order.createdAt._seconds ? order.createdAt._seconds * 1000 : order.createdAt), "d MMMM yyyy", { locale: ar })
-                        : 'غير محدد'}
+                        ? format(new Date(order.createdAt._seconds ? order.createdAt._seconds * 1000 : order.createdAt), "d MMMM yyyy", { locale })
+                        : bi('غير محدد', 'Not specified')}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={statusMap[order.status]?.variant} className={order.status === 'delivered' ? 'text-green-600 border-green-600' : ''}>
-                        {statusMap[order.status]?.text}
+                      <Badge variant={tStatusMap[order.status]?.variant} className={order.status === 'delivered' ? 'text-green-600 border-green-600' : ''}>
+                        {tStatusMap[order.status]?.text}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>تغيير الحالة</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={() => updateStatus(order.id, 'shipped')}><Truck className="ml-2 h-4 w-4" />تمييز كـ تم الشحن</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => updateStatus(order.id, 'delivered')}><CheckCircle className="ml-2 h-4 w-4" />تمييز كـ تم التوصيل</DropdownMenuItem>
-                          <DropdownMenuItem className="text-red-500" onClick={() => updateStatus(order.id, 'cancelled')}><XCircle className="ml-2 h-4 w-4" />إلغاء الطلب</DropdownMenuItem>
+                          <DropdownMenuLabel>{bi("تغيير الحالة", "Change status")}</DropdownMenuLabel>
+                          <DropdownMenuItem onClick={() => updateStatus(order.id, 'shipped')}><Truck className="ml-2 h-4 w-4" />{bi("تمييز كـ تم الشحن", "Mark as shipped")}</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => updateStatus(order.id, 'delivered')}><CheckCircle className="ml-2 h-4 w-4" />{bi("تمييز كـ تم التوصيل", "Mark as delivered")}</DropdownMenuItem>
+                          <DropdownMenuItem className="text-red-500" onClick={() => updateStatus(order.id, 'cancelled')}><XCircle className="ml-2 h-4 w-4" />{bi("إلغاء الطلب", "Cancel order")}</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>

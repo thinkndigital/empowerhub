@@ -16,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { useLanguage } from "@/components/language-provider";
 
 type AssessmentQuestion = { question: string; type: "rating" | "text" };
 
@@ -41,18 +42,20 @@ const quizSchema = z.object({ answer: z.string({ required_error: "الرجاء �
 
 const AssessmentViewer = ({ title, questions }: { title: string; questions: AssessmentQuestion[] }) => {
   const { toast } = useToast();
+  const { lang } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const [ratings, setRatings] = useState<Record<number, number>>({});
   const [texts, setTexts] = useState<Record<number, string>>({});
 
   const handleSubmit = () => {
-    toast({ title: "تم إرسال التقييم", description: "شكرًا لمشاركتك، تم حفظ إجاباتك بنجاح." });
+    toast({ title: bi("تم إرسال التقييم", "Assessment submitted"), description: bi("شكرًا لمشاركتك، تم حفظ إجاباتك بنجاح.", "Thank you for participating, your answers have been saved successfully.") });
   };
 
   return (
     <Card className="border-0 shadow-sm">
       <CardHeader>
         <CardTitle className="flex items-center gap-2"><BookCheck className="h-5 w-5" />{title}</CardTitle>
-        <CardDescription>الرجاء الإجابة على الأسئلة التالية بصدق لمساعدتنا على فهم احتياجاتك وقياس تقدمك.</CardDescription>
+        <CardDescription>{bi("الرجاء الإجابة على الأسئلة التالية بصدق لمساعدتنا على فهم احتياجاتك وقياس تقدمك.", "Please answer the following questions honestly to help us understand your needs and measure your progress.")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {questions.map((q, i) => (
@@ -67,11 +70,11 @@ const AssessmentViewer = ({ title, questions }: { title: string; questions: Asse
               </div>
             )}
             {q.type === "text" && (
-              <Textarea placeholder="اكتب إجابتك هنا..." value={texts[i] || ""} onChange={e => setTexts(t => ({ ...t, [i]: e.target.value }))} />
+              <Textarea placeholder={bi("اكتب إجابتك هنا...", "Write your answer here...")} value={texts[i] || ""} onChange={e => setTexts(t => ({ ...t, [i]: e.target.value }))} />
             )}
           </div>
         ))}
-        <Button onClick={handleSubmit}><ThumbsUp className="ml-2 h-4 w-4" />إرسال التقييم</Button>
+        <Button onClick={handleSubmit}><ThumbsUp className="ml-2 h-4 w-4" />{bi("إرسال التقييم", "Submit assessment")}</Button>
       </CardContent>
     </Card>
   );
@@ -86,6 +89,8 @@ function getVideoEmbedUrl(url?: string): string | null {
 
 export default function CourseDetailsPage({ params }: { params: { courseId: string } }) {
   const { toast } = useToast();
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const { user: authUser } = useUser();
 
   const [course, setCourse] = useState<Course | null>(null);
@@ -105,7 +110,7 @@ export default function CourseDetailsPage({ params }: { params: { courseId: stri
       });
       if (!res.ok) {
         const err = await res.json();
-        setError(err.error || 'فشل تحميل الدورة');
+        setError(err.error || bi('فشل تحميل الدورة', 'Failed to load the course'));
         return;
       }
       const json = await res.json();
@@ -145,10 +150,10 @@ export default function CourseDetailsPage({ params }: { params: { courseId: stri
     if (!course?.quiz || !authUser) return;
     const isCorrect = values.answer === course.quiz.correctAnswer;
     toast({
-      title: isCorrect ? "إجابة صحيحة! 🎉" : "إجابة خاطئة",
+      title: isCorrect ? bi("إجابة صحيحة! 🎉", "Correct answer! 🎉") : bi("إجابة خاطئة", "Incorrect answer"),
       description: isCorrect
-        ? "أحسنت! تم تحديث تقدمك في الدورة."
-        : `حاول مرة أخرى. الجواب الصحيح هو: ${course.quiz.correctAnswer}`,
+        ? bi("أحسنت! تم تحديث تقدمك في الدورة.", "Well done! Your course progress has been updated.")
+        : bi(`حاول مرة أخرى. الجواب الصحيح هو: ${course.quiz.correctAnswer}`, `Try again. The correct answer is: ${course.quiz.correctAnswer}`),
       variant: isCorrect ? "default" : "destructive",
     });
     if (isCorrect) {
@@ -164,7 +169,7 @@ export default function CourseDetailsPage({ params }: { params: { courseId: stri
 
   if (loading) {
     return (
-      <div className="space-y-6" dir="rtl">
+      <div className="space-y-6" dir={dir}>
         <Skeleton className="h-10 w-3/4" />
         <Skeleton className="h-6 w-full" />
         <Card className="border-0 shadow-sm"><CardHeader><Skeleton className="h-6 w-1/4" /></CardHeader><CardContent><Skeleton className="aspect-video w-full" /></CardContent></Card>
@@ -174,10 +179,10 @@ export default function CourseDetailsPage({ params }: { params: { courseId: stri
 
   if (error || !course) {
     return (
-      <div className="text-center" dir="rtl">
-        <h1 className="text-2xl font-bold tracking-tight">الدورة غير موجودة</h1>
-        <p className="text-muted-foreground">{error || 'لم نتمكن من العثور على الدورة التي تبحث عنها.'}</p>
-        <Button asChild className="mt-4"><Link href="/dashboard/training"><ArrowRight className="ml-2 h-4 w-4" />العودة إلى قائمة الدورات</Link></Button>
+      <div className="text-center" dir={dir}>
+        <h1 className="text-2xl font-bold tracking-tight">{bi("الدورة غير موجودة", "Course not found")}</h1>
+        <p className="text-muted-foreground">{error || bi('لم نتمكن من العثور على الدورة التي تبحث عنها.', "We couldn't find the course you're looking for.")}</p>
+        <Button asChild className="mt-4"><Link href="/dashboard/training"><ArrowRight className="ml-2 h-4 w-4" />{bi("العودة إلى قائمة الدورات", "Back to course list")}</Link></Button>
       </div>
     );
   }
@@ -187,7 +192,7 @@ export default function CourseDetailsPage({ params }: { params: { courseId: stri
   const selectedLessonVideoUrl = getVideoEmbedUrl(selectedLesson?.videoUrl);
 
   return (
-    <div dir="rtl">
+    <div dir={dir}>
       <div className="space-y-6">
         {/* Header */}
         <div>
@@ -201,17 +206,17 @@ export default function CourseDetailsPage({ params }: { params: { courseId: stri
         <Card className="border-0 shadow-sm bg-primary/5">
           <CardContent className="pt-4 pb-4">
             <div className="flex justify-between text-sm mb-2">
-              <span className="font-medium">تقدمك في هذه الدورة</span>
+              <span className="font-medium">{bi("تقدمك في هذه الدورة", "Your progress in this course")}</span>
               <span className="font-bold text-primary">{progress}%</span>
             </div>
             <Progress value={progress} className="h-2" />
-            {progress >= 100 && <p className="text-xs text-green-600 mt-2 font-medium">أحسنت! لقد أكملت هذه الدورة بنجاح.</p>}
+            {progress >= 100 && <p className="text-xs text-green-600 mt-2 font-medium">{bi("أحسنت! لقد أكملت هذه الدورة بنجاح.", "Well done! You've successfully completed this course.")}</p>}
           </CardContent>
         </Card>
 
         {/* Pre-assessment */}
         {course.preAssessment && course.preAssessment.length > 0 && (
-          <AssessmentViewer title="تقييم قبلي" questions={course.preAssessment} />
+          <AssessmentViewer title={bi("تقييم قبلي", "Pre-assessment")} questions={course.preAssessment} />
         )}
 
         {/* Lessons sidebar + content OR single video */}
@@ -222,7 +227,7 @@ export default function CourseDetailsPage({ params }: { params: { courseId: stri
               <Card className="border-0 shadow-sm">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm flex items-center gap-2">
-                    <BookOpen className="h-4 w-4" /> الدروس
+                    <BookOpen className="h-4 w-4" /> {bi("الدروس", "Lessons")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-2">
@@ -283,7 +288,7 @@ export default function CourseDetailsPage({ params }: { params: { courseId: stri
         ) : singleVideoUrl ? (
           <Card className="border-0 shadow-sm">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><Film className="h-5 w-5" />محتوى الفيديو</CardTitle>
+              <CardTitle className="flex items-center gap-2"><Film className="h-5 w-5" />{bi("محتوى الفيديو", "Video content")}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="aspect-video">
@@ -303,7 +308,7 @@ export default function CourseDetailsPage({ params }: { params: { courseId: stri
         {course.quiz?.question && course.quiz?.options && (
           <Card className="border-0 shadow-sm">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><HelpCircle className="h-5 w-5" />اختبار قصير</CardTitle>
+              <CardTitle className="flex items-center gap-2"><HelpCircle className="h-5 w-5" />{bi("اختبار قصير", "Short quiz")}</CardTitle>
               <CardDescription>{course.quiz.question}</CardDescription>
             </CardHeader>
             <CardContent>
@@ -324,7 +329,7 @@ export default function CourseDetailsPage({ params }: { params: { courseId: stri
                       <FormMessage />
                     </FormItem>
                   )} />
-                  <Button type="submit"><CheckCircle className="ml-2 h-4 w-4" />تحقق من الإجابة</Button>
+                  <Button type="submit"><CheckCircle className="ml-2 h-4 w-4" />{bi("تحقق من الإجابة", "Check answer")}</Button>
                 </form>
               </Form>
             </CardContent>
@@ -333,12 +338,12 @@ export default function CourseDetailsPage({ params }: { params: { courseId: stri
 
         {/* Post-assessment */}
         {course.postAssessment && course.postAssessment.length > 0 && (
-          <AssessmentViewer title="تقييم بعدي" questions={course.postAssessment} />
+          <AssessmentViewer title={bi("تقييم بعدي", "Post-assessment")} questions={course.postAssessment} />
         )}
 
         <div className="text-center pb-8">
           <Button variant="outline" asChild>
-            <Link href="/dashboard/training"><ArrowRight className="ml-2 h-4 w-4" />العودة إلى قائمة الدورات</Link>
+            <Link href="/dashboard/training"><ArrowRight className="ml-2 h-4 w-4" />{bi("العودة إلى قائمة الدورات", "Back to course list")}</Link>
           </Button>
         </div>
       </div>
