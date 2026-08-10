@@ -19,6 +19,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useLanguage } from "@/components/language-provider";
 
 interface Plan {
   id: string;
@@ -56,17 +57,19 @@ const iconOptions = ['Star', 'Zap', 'Building2', 'Crown'];
 const iconMap: Record<string, any> = { Star, Zap, Building2, Crown };
 
 const planColors = [
-  { label: 'أزرق', value: '#3b82f6' },
-  { label: 'بنفسجي', value: '#8b5cf6' },
-  { label: 'ذهبي', value: '#f59e0b' },
-  { label: 'أخضر', value: '#10b981' },
-  { label: 'وردي', value: '#ec4899' },
-  { label: 'رمادي', value: '#6b7280' },
+  { label: 'أزرق', labelEn: 'Blue', value: '#3b82f6' },
+  { label: 'بنفسجي', labelEn: 'Purple', value: '#8b5cf6' },
+  { label: 'ذهبي', labelEn: 'Gold', value: '#f59e0b' },
+  { label: 'أخضر', labelEn: 'Green', value: '#10b981' },
+  { label: 'وردي', labelEn: 'Pink', value: '#ec4899' },
+  { label: 'رمادي', labelEn: 'Gray', value: '#6b7280' },
 ];
 
 export default function PlansPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editPlan, setEditPlan] = useState<Plan | null>(null);
   const [deletePlan, setDeletePlan] = useState<Plan | null>(null);
@@ -154,43 +157,43 @@ export default function PlansPage() {
   const IconComp = iconMap[form.icon] || Star;
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={dir}>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">خطط الاشتراك</h1>
-          <p className="text-muted-foreground text-sm">إدارة خطط التسعير والميزات لكل خطة</p>
+          <h1 className="text-2xl font-bold text-foreground">{bi('خطط الاشتراك', 'Subscription Plans')}</h1>
+          <p className="text-muted-foreground text-sm">{bi('إدارة خطط التسعير والميزات لكل خطة', 'Manage pricing plans and features for each plan')}</p>
         </div>
         <Button onClick={openAdd} className="bg-primary gap-2 w-full sm:w-auto">
           <Plus className="h-4 w-4" />
-          إضافة خطة جديدة
+          {bi('إضافة خطة جديدة', 'Add new plan')}
         </Button>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">الفترة التجريبية المجانية</CardTitle>
+          <CardTitle className="text-base">{bi('الفترة التجريبية المجانية', 'Free Trial Period')}</CardTitle>
         </CardHeader>
         <CardContent className="flex items-center gap-3">
-          <Label className="shrink-0">مدة التجربة لكل منظمة جديدة تختار خطة مجانية</Label>
+          <Label className="shrink-0">{bi('مدة التجربة لكل منظمة جديدة تختار خطة مجانية', 'Trial duration for each new organization choosing a free plan')}</Label>
           <Select value={trialDays} onValueChange={handleSaveTrial} disabled={savingTrial}>
             <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="7">7 أيام</SelectItem>
-              <SelectItem value="14">14 يوماً</SelectItem>
-              <SelectItem value="30">30 يوماً (شهر)</SelectItem>
+              <SelectItem value="7">{bi('7 أيام', '7 days')}</SelectItem>
+              <SelectItem value="14">{bi('14 يوماً', '14 days')}</SelectItem>
+              <SelectItem value="30">{bi('30 يوماً (شهر)', '30 days (1 month)')}</SelectItem>
             </SelectContent>
           </Select>
         </CardContent>
       </Card>
 
       {loading ? (
-        <p className="text-muted-foreground text-center py-16">جاري التحميل...</p>
+        <p className="text-muted-foreground text-center py-16">{bi('جاري التحميل...', 'Loading...')}</p>
       ) : plans.length === 0 ? (
         <div className="text-center py-16 space-y-4">
-          <p className="text-muted-foreground">لا توجد خطط. أضف خطتك الأولى!</p>
+          <p className="text-muted-foreground">{bi('لا توجد خطط. أضف خطتك الأولى!', 'No plans. Add your first plan!')}</p>
           <Button onClick={openAdd} variant="outline" className="gap-2">
             <Plus className="h-4 w-4" />
-            إضافة خطة
+            {bi('إضافة خطة', 'Add plan')}
           </Button>
         </div>
       ) : (
@@ -204,7 +207,7 @@ export default function PlansPage() {
               >
                 {plan.highlighted && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <span className="bg-primary text-primary-foreground text-xs px-3 py-1 rounded-full font-medium">الأكثر شعبية</span>
+                    <span className="bg-primary text-primary-foreground text-xs px-3 py-1 rounded-full font-medium">{bi('الأكثر شعبية', 'Most Popular')}</span>
                   </div>
                 )}
                 <CardContent className="p-6">
@@ -233,18 +236,18 @@ export default function PlansPage() {
                   <div className="mb-4">
                     <div className="flex items-baseline gap-1">
                       <span className="text-3xl font-bold text-foreground">{plan.priceMonthly.toLocaleString()}</span>
-                      <span className="text-muted-foreground text-sm">{plan.currency}/شهر</span>
+                      <span className="text-muted-foreground text-sm">{plan.currency}{bi('/شهر', '/mo')}</span>
                     </div>
                     {plan.priceAnnual > 0 && (
                       <p className="text-muted-foreground text-xs mt-1">
-                        أو {plan.priceAnnual.toLocaleString()} {plan.currency}/سنة
+                        {bi('أو', 'or')} {plan.priceAnnual.toLocaleString()} {plan.currency}{bi('/سنة', '/yr')}
                         {' '}
                         <span className="text-emerald-400">
-                          (وفر {Math.round((1 - plan.priceAnnual / (plan.priceMonthly * 12)) * 100)}%)
+                          ({bi('وفر', 'save')} {Math.round((1 - plan.priceAnnual / (plan.priceMonthly * 12)) * 100)}%)
                         </span>
                       </p>
                     )}
-                    {plan.priceMonthly === 0 && <p className="text-emerald-400 text-sm font-medium mt-1">مجاني</p>}
+                    {plan.priceMonthly === 0 && <p className="text-emerald-400 text-sm font-medium mt-1">{bi('مجاني', 'Free')}</p>}
                   </div>
 
                   {/* Description */}
@@ -253,10 +256,10 @@ export default function PlansPage() {
                   {/* Limits */}
                   <div className="grid grid-cols-2 gap-2 mb-4 p-3 bg-muted/40 rounded-xl">
                     {[
-                      { label: 'مستخدم', val: plan.limits?.maxUsers },
-                      { label: 'مرشد', val: plan.limits?.maxMentors },
-                      { label: 'دورة', val: plan.limits?.maxCourses },
-                      { label: 'GB تخزين', val: plan.limits?.maxStorage },
+                      { label: bi('مستخدم', 'Users'), val: plan.limits?.maxUsers },
+                      { label: bi('مرشد', 'Mentors'), val: plan.limits?.maxMentors },
+                      { label: bi('دورة', 'Courses'), val: plan.limits?.maxCourses },
+                      { label: bi('GB تخزين', 'GB Storage'), val: plan.limits?.maxStorage },
                     ].map(item => (
                       <div key={item.label} className="text-center">
                         <p className="text-foreground font-bold text-sm">{item.val === -1 ? '∞' : item.val}</p>
@@ -274,7 +277,7 @@ export default function PlansPage() {
                       </li>
                     ))}
                     {(plan.features || []).length > 4 && (
-                      <li className="text-muted-foreground text-xs pr-5">+{plan.features.length - 4} ميزات أخرى</li>
+                      <li className="text-muted-foreground text-xs pr-5">{bi(`+${plan.features.length - 4} ميزات أخرى`, `+${plan.features.length - 4} more features`)}</li>
                     )}
                   </ul>
                 </CardContent>
@@ -286,41 +289,41 @@ export default function PlansPage() {
 
       {/* Add/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={open => !open && setDialogOpen(false)}>
-        <DialogContent dir="rtl" className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent dir={dir} className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editPlan ? `تعديل: ${editPlan.name}` : 'إضافة خطة جديدة'}</DialogTitle>
+            <DialogTitle>{editPlan ? bi(`تعديل: ${editPlan.name}`, `Edit: ${editPlan.name}`) : bi('إضافة خطة جديدة', 'Add New Plan')}</DialogTitle>
           </DialogHeader>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Name */}
             <div className="space-y-2">
-              <Label>اسم الخطة (عربي)</Label>
-              <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="مثال: الخطة الاحترافية" />
+              <Label>{bi('اسم الخطة (عربي)', 'Plan name (Arabic)')}</Label>
+              <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder={bi('مثال: الخطة الاحترافية', 'e.g. Pro Plan')} />
             </div>
             <div className="space-y-2">
-              <Label>الاسم (إنجليزي)</Label>
+              <Label>{bi('الاسم (إنجليزي)', 'Name (English)')}</Label>
               <Input value={form.nameEn} onChange={e => setForm(f => ({ ...f, nameEn: e.target.value }))} placeholder="Pro Plan" dir="ltr" />
             </div>
             <div className="space-y-2">
-              <Label>المفتاح (key)</Label>
+              <Label>{bi('المفتاح (key)', 'Key')}</Label>
               <Input value={form.key} onChange={e => setForm(f => ({ ...f, key: e.target.value }))} placeholder="pro" dir="ltr" />
             </div>
             <div className="space-y-2">
-              <Label>العملة</Label>
+              <Label>{bi('العملة', 'Currency')}</Label>
               <Input value={form.currency} onChange={e => setForm(f => ({ ...f, currency: e.target.value }))} placeholder="JOD" dir="ltr" />
             </div>
             <div className="space-y-2">
-              <Label>السعر الشهري</Label>
+              <Label>{bi('السعر الشهري', 'Monthly price')}</Label>
               <Input type="number" value={form.priceMonthly} onChange={e => setForm(f => ({ ...f, priceMonthly: +e.target.value }))} />
             </div>
             <div className="space-y-2">
-              <Label>السعر السنوي</Label>
+              <Label>{bi('السعر السنوي', 'Annual price')}</Label>
               <Input type="number" value={form.priceAnnual} onChange={e => setForm(f => ({ ...f, priceAnnual: +e.target.value }))} />
             </div>
 
             {/* Color */}
             <div className="space-y-2">
-              <Label>اللون</Label>
+              <Label>{bi('اللون', 'Color')}</Label>
               <div className="flex gap-2 flex-wrap">
                 {planColors.map(c => (
                   <button
@@ -329,7 +332,7 @@ export default function PlansPage() {
                     onClick={() => setForm(f => ({ ...f, color: c.value }))}
                     className={`h-8 w-8 rounded-lg border-2 transition-all ${form.color === c.value ? 'border-white scale-110' : 'border-transparent'}`}
                     style={{ backgroundColor: c.value }}
-                    title={c.label}
+                    title={bi(c.label, c.labelEn)}
                   />
                 ))}
                 <input type="color" value={form.color} onChange={e => setForm(f => ({ ...f, color: e.target.value }))} className="h-8 w-8 rounded-lg cursor-pointer border-0" />
@@ -338,7 +341,7 @@ export default function PlansPage() {
 
             {/* Icon */}
             <div className="space-y-2">
-              <Label>الأيقونة</Label>
+              <Label>{bi('الأيقونة', 'Icon')}</Label>
               <div className="flex gap-2">
                 {iconOptions.map(ic => {
                   const Ic = iconMap[ic];
@@ -359,40 +362,40 @@ export default function PlansPage() {
             {/* Highlighted */}
             <div className="sm:col-span-2 flex items-center justify-between p-3 bg-muted/40 rounded-xl border border-border">
               <div>
-                <p className="text-foreground text-sm font-medium">خطة مميزة</p>
-                <p className="text-muted-foreground text-xs">يظهر عليها "الأكثر شعبية"</p>
+                <p className="text-foreground text-sm font-medium">{bi('خطة مميزة', 'Highlighted plan')}</p>
+                <p className="text-muted-foreground text-xs">{bi('يظهر عليها "الأكثر شعبية"', 'Shows "Most Popular" on it')}</p>
               </div>
               <Switch checked={form.highlighted} onCheckedChange={v => setForm(f => ({ ...f, highlighted: v }))} />
             </div>
 
             {/* Description */}
             <div className="sm:col-span-2 space-y-2">
-              <Label>الوصف</Label>
-              <Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={2} placeholder="وصف مختصر للخطة..." className="resize-none" />
+              <Label>{bi('الوصف', 'Description')}</Label>
+              <Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={2} placeholder={bi('وصف مختصر للخطة...', 'A brief description of the plan...')} className="resize-none" />
             </div>
 
             {/* Features */}
             <div className="sm:col-span-2 space-y-2">
-              <Label>الميزات (سطر لكل ميزة)</Label>
+              <Label>{bi('الميزات (سطر لكل ميزة)', 'Features (one per line)')}</Label>
               <Textarea
                 value={form.featuresText}
                 onChange={e => setForm(f => ({ ...f, featuresText: e.target.value }))}
                 rows={5}
-                placeholder="وصول كامل لجميع الدورات&#10;دعم فني 24/7&#10;تقارير تفصيلية&#10;..."
+                placeholder={bi('وصول كامل لجميع الدورات\nدعم فني 24/7\nتقارير تفصيلية\n...', 'Full access to all courses\n24/7 support\nDetailed reports\n...')}
                 className="resize-none font-mono text-sm"
               />
             </div>
 
             {/* Limits */}
             <div className="sm:col-span-2 space-y-3">
-              <Label>الحدود والقيود (-1 = غير محدود)</Label>
+              <Label>{bi('الحدود والقيود (-1 = غير محدود)', 'Limits (-1 = unlimited)')}</Label>
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                 {[
-                  { key: 'maxUsers' as const, label: 'مستخدمون' },
-                  { key: 'maxMentors' as const, label: 'مرشدون' },
-                  { key: 'maxCourses' as const, label: 'دورات' },
-                  { key: 'maxProducts' as const, label: 'منتجات' },
-                  { key: 'maxStorage' as const, label: 'تخزين (GB)' },
+                  { key: 'maxUsers' as const, label: bi('مستخدمون', 'Users') },
+                  { key: 'maxMentors' as const, label: bi('مرشدون', 'Mentors') },
+                  { key: 'maxCourses' as const, label: bi('دورات', 'Courses') },
+                  { key: 'maxProducts' as const, label: bi('منتجات', 'Products') },
+                  { key: 'maxStorage' as const, label: bi('تخزين (GB)', 'Storage (GB)') },
                 ].map(item => (
                   <div key={item.key} className="space-y-1">
                     <Label className="text-xs text-muted-foreground">{item.label}</Label>
@@ -409,9 +412,9 @@ export default function PlansPage() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>إلغاء</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>{bi('إلغاء', 'Cancel')}</Button>
             <Button onClick={handleSave} disabled={!form.name || saving} className="gap-2">
-              {saving ? 'جاري الحفظ...' : editPlan ? 'حفظ التغييرات' : 'إضافة الخطة'}
+              {saving ? bi('جاري الحفظ...', 'Saving...') : editPlan ? bi('حفظ التغييرات', 'Save changes') : bi('إضافة الخطة', 'Add plan')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -419,14 +422,14 @@ export default function PlansPage() {
 
       {/* Delete */}
       <AlertDialog open={!!deletePlan} onOpenChange={o => !o && setDeletePlan(null)}>
-        <AlertDialogContent dir="rtl">
+        <AlertDialogContent dir={dir}>
           <AlertDialogHeader>
-            <AlertDialogTitle>حذف الخطة</AlertDialogTitle>
-            <AlertDialogDescription>هل أنت متأكد من حذف خطة "{deletePlan?.name}"؟</AlertDialogDescription>
+            <AlertDialogTitle>{bi('حذف الخطة', 'Delete Plan')}</AlertDialogTitle>
+            <AlertDialogDescription>{bi(`هل أنت متأكد من حذف خطة "${deletePlan?.name}"؟`, `Are you sure you want to delete the "${deletePlan?.name}" plan?`)}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>إلغاء</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">حذف</AlertDialogAction>
+            <AlertDialogCancel>{bi('إلغاء', 'Cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">{bi('حذف', 'Delete')}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
