@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { exportToExcel, exportToPDF } from "@/lib/export-utils";
+import { useLanguage } from "@/components/language-provider";
 
 interface StoreItem {
   id: string;
@@ -80,6 +81,15 @@ const orderStatusLabel: Record<string, string> = {
   cancelled: 'ملغي',
 };
 
+const orderStatusLabelEn: Record<string, string> = {
+  pending: 'Pending',
+  confirmed: 'Confirmed',
+  shipped: 'Shipped',
+  completed: 'Completed',
+  delivered: 'Delivered',
+  cancelled: 'Cancelled',
+};
+
 function StoresTab() {
   const [stores, setStores] = useState<StoreItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -89,6 +99,9 @@ function StoresTab() {
   const [editLocation, setEditLocation] = useState('');
   const [saving, setSaving] = useState(false);
   const [ownerFilter, setOwnerFilter] = useState<'all' | 'merchant'>('all');
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
+  const locale = lang === 'en' ? 'en-US' : 'ar-EG';
 
   const load = async () => {
     setLoading(true);
@@ -144,17 +157,17 @@ function StoresTab() {
   return (
     <div className="space-y-4">
       <div className="flex gap-3 items-center flex-wrap">
-        <span className="text-muted-foreground text-sm shrink-0">{stores.length} متجر</span>
+        <span className="text-muted-foreground text-sm shrink-0">{bi(`${stores.length} متجر`, `${stores.length} stores`)}</span>
         <div className="relative flex-1 max-w-xs">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="بحث عن متجر..." className="pr-9" />
+          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder={bi('بحث عن متجر...', 'Search for a store...')} className="pr-9" />
         </div>
         <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
           <button onClick={() => setOwnerFilter('all')} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${ownerFilter === 'all' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'}`}>
-            الكل
+            {bi('الكل', 'All')}
           </button>
           <button onClick={() => setOwnerFilter('merchant')} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${ownerFilter === 'merchant' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'}`}>
-            متاجر التجار ({merchantStoresCount})
+            {bi('متاجر التجار', 'Merchant stores')} ({merchantStoresCount})
           </button>
         </div>
         <Button variant="outline" size="icon" onClick={load} disabled={loading}>
@@ -163,11 +176,11 @@ function StoresTab() {
       </div>
 
       {loading ? (
-        <div className="text-center py-12 text-muted-foreground">جاري التحميل...</div>
+        <div className="text-center py-12 text-muted-foreground">{bi('جاري التحميل...', 'Loading...')}</div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
           <Store className="h-10 w-10 mx-auto mb-3 opacity-30" />
-          <p>لا توجد متاجر</p>
+          <p>{bi('لا توجد متاجر', 'No stores')}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -186,18 +199,18 @@ function StoresTab() {
                     <div className="flex items-center gap-1.5">
                       <p className="text-foreground font-semibold text-sm truncate">{store.name}</p>
                       {store.ownerRole === 'merchant' && (
-                        <Badge className="bg-amber-500/20 text-amber-500 text-[10px] border-0 shrink-0 px-1.5">تاجر</Badge>
+                        <Badge className="bg-amber-500/20 text-amber-500 text-[10px] border-0 shrink-0 px-1.5">{bi('تاجر', 'Merchant')}</Badge>
                       )}
                     </div>
-                    <p className="text-muted-foreground text-xs truncate">{store.beneficiaryName || 'بدون صاحب'}</p>
+                    <p className="text-muted-foreground text-xs truncate">{store.beneficiaryName || bi('بدون صاحب', 'No owner')}</p>
                     {store.location && <p className="text-muted-foreground text-xs truncate">{store.location}</p>}
                   </div>
-                  {store.hidden && <Badge className="bg-muted text-muted-foreground text-xs border-0 flex-shrink-0">مخفي</Badge>}
+                  {store.hidden && <Badge className="bg-muted text-muted-foreground text-xs border-0 flex-shrink-0">{bi('مخفي', 'Hidden')}</Badge>}
                 </div>
 
                 <div className="flex items-center justify-between text-xs text-muted-foreground mb-3">
-                  <span>{store.productsCount} منتج</span>
-                  {store.createdAt && <span>{new Date(store.createdAt).toLocaleDateString('ar-EG')}</span>}
+                  <span>{bi(`${store.productsCount} منتج`, `${store.productsCount} products`)}</span>
+                  {store.createdAt && <span>{new Date(store.createdAt).toLocaleDateString(locale)}</span>}
                 </div>
 
                 <div className="flex gap-2">
@@ -208,7 +221,7 @@ function StoresTab() {
                     onClick={() => toggleHidden(store)}
                   >
                     {store.hidden ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-                    {store.hidden ? 'إظهار' : 'إخفاء'}
+                    {store.hidden ? bi('إظهار', 'Show') : bi('إخفاء', 'Hide')}
                   </Button>
                   <Button size="sm" variant="outline" className="h-8 w-8 p-0 text-muted-foreground hover:text-blue-400 hover:border-blue-500/30" onClick={() => openEdit(store)}>
                     <Edit2 className="h-3.5 w-3.5" />
@@ -221,12 +234,12 @@ function StoresTab() {
                     </AlertDialogTrigger>
                     <AlertDialogContent className="bg-muted border-border">
                       <AlertDialogHeader>
-                        <AlertDialogTitle className="text-foreground">حذف المتجر</AlertDialogTitle>
-                        <AlertDialogDescription className="text-muted-foreground">هل أنت متأكد من حذف متجر "{store.name}"؟ هذا الإجراء لا يمكن التراجع عنه.</AlertDialogDescription>
+                        <AlertDialogTitle className="text-foreground">{bi('حذف المتجر', 'Delete Store')}</AlertDialogTitle>
+                        <AlertDialogDescription className="text-muted-foreground">{bi(`هل أنت متأكد من حذف متجر "${store.name}"؟ هذا الإجراء لا يمكن التراجع عنه.`, `Are you sure you want to delete "${store.name}"? This action cannot be undone.`)}</AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel>إلغاء</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => deleteStore(store.id)} className="bg-red-600 hover:bg-red-700">حذف</AlertDialogAction>
+                        <AlertDialogCancel>{bi('إلغاء', 'Cancel')}</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => deleteStore(store.id)} className="bg-red-600 hover:bg-red-700">{bi('حذف', 'Delete')}</AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
@@ -239,23 +252,23 @@ function StoresTab() {
 
       {/* Edit Dialog */}
       <Dialog open={!!editStore} onOpenChange={o => !o && setEditStore(null)}>
-        <DialogContent className="bg-muted border-border text-foreground" dir="rtl">
+        <DialogContent className="bg-muted border-border text-foreground" dir={dir}>
           <DialogHeader>
-            <DialogTitle>تعديل المتجر</DialogTitle>
+            <DialogTitle>{bi('تعديل المتجر', 'Edit Store')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label>اسم المتجر</Label>
+              <Label>{bi('اسم المتجر', 'Store name')}</Label>
               <Input value={editName} onChange={e => setEditName(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label>الموقع</Label>
-              <Input value={editLocation} onChange={e => setEditLocation(e.target.value)} placeholder="المدينة..." />
+              <Label>{bi('الموقع', 'Location')}</Label>
+              <Input value={editLocation} onChange={e => setEditLocation(e.target.value)} placeholder={bi('المدينة...', 'City...')} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditStore(null)}>إلغاء</Button>
-            <Button onClick={saveEdit} disabled={saving}>{saving ? 'جاري الحفظ...' : 'حفظ'}</Button>
+            <Button variant="outline" onClick={() => setEditStore(null)}>{bi('إلغاء', 'Cancel')}</Button>
+            <Button onClick={saveEdit} disabled={saving}>{saving ? bi('جاري الحفظ...', 'Saving...') : bi('حفظ', 'Save')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -272,6 +285,8 @@ function ProductsTab() {
   const [editPrice, setEditPrice] = useState('');
   const [editCategory, setEditCategory] = useState('');
   const [saving, setSaving] = useState(false);
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
 
   const load = async () => {
     setLoading(true);
@@ -334,10 +349,10 @@ function ProductsTab() {
   return (
     <div className="space-y-4">
       <div className="flex gap-3 items-center">
-        <span className="text-muted-foreground text-sm shrink-0">{products.length} منتج</span>
+        <span className="text-muted-foreground text-sm shrink-0">{bi(`${products.length} منتج`, `${products.length} products`)}</span>
         <div className="relative flex-1 max-w-xs">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="بحث عن منتج..." className="pr-9" />
+          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder={bi('بحث عن منتج...', 'Search for a product...')} className="pr-9" />
         </div>
         <Button variant="outline" size="icon" onClick={load} disabled={loading}>
           <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
@@ -345,11 +360,11 @@ function ProductsTab() {
       </div>
 
       {loading ? (
-        <div className="text-center py-12 text-muted-foreground">جاري التحميل...</div>
+        <div className="text-center py-12 text-muted-foreground">{bi('جاري التحميل...', 'Loading...')}</div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
           <Package className="h-10 w-10 mx-auto mb-3 opacity-30" />
-          <p>لا توجد منتجات</p>
+          <p>{bi('لا توجد منتجات', 'No products')}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -364,11 +379,11 @@ function ProductsTab() {
                 <div className="mb-3">
                   <div className="flex items-start justify-between gap-2 mb-1">
                     <p className="text-foreground font-semibold text-sm line-clamp-2 flex-1">{product.name}</p>
-                    {product.hidden && <Badge className="bg-muted text-muted-foreground text-xs border-0 flex-shrink-0">مخفي</Badge>}
+                    {product.hidden && <Badge className="bg-muted text-muted-foreground text-xs border-0 flex-shrink-0">{bi('مخفي', 'Hidden')}</Badge>}
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     {product.price != null && (
-                      <span className="text-primary text-sm font-semibold">{product.price} د.أ</span>
+                      <span className="text-primary text-sm font-semibold">{product.price} {bi('د.أ', 'JOD')}</span>
                     )}
                     {product.category && (
                       <Badge className="bg-primary/10 text-primary border-0 text-xs">{translateCategory(product.category)}</Badge>
@@ -389,7 +404,7 @@ function ProductsTab() {
                     onClick={() => toggleHidden(product)}
                   >
                     {product.hidden ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-                    {product.hidden ? 'إظهار' : 'إخفاء'}
+                    {product.hidden ? bi('إظهار', 'Show') : bi('إخفاء', 'Hide')}
                   </Button>
                   <Button size="sm" variant="outline" className="h-8 w-8 p-0 text-muted-foreground hover:text-blue-400 hover:border-blue-500/30" onClick={() => openEdit(product)}>
                     <Edit2 className="h-3.5 w-3.5" />
@@ -402,12 +417,12 @@ function ProductsTab() {
                     </AlertDialogTrigger>
                     <AlertDialogContent className="bg-muted border-border">
                       <AlertDialogHeader>
-                        <AlertDialogTitle className="text-foreground">حذف المنتج</AlertDialogTitle>
-                        <AlertDialogDescription className="text-muted-foreground">هل أنت متأكد من حذف "{product.name}"؟</AlertDialogDescription>
+                        <AlertDialogTitle className="text-foreground">{bi('حذف المنتج', 'Delete Product')}</AlertDialogTitle>
+                        <AlertDialogDescription className="text-muted-foreground">{bi(`هل أنت متأكد من حذف "${product.name}"؟`, `Are you sure you want to delete "${product.name}"?`)}</AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel>إلغاء</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => deleteProduct(product.id)} className="bg-red-600 hover:bg-red-700">حذف</AlertDialogAction>
+                        <AlertDialogCancel>{bi('إلغاء', 'Cancel')}</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => deleteProduct(product.id)} className="bg-red-600 hover:bg-red-700">{bi('حذف', 'Delete')}</AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
@@ -420,29 +435,29 @@ function ProductsTab() {
 
       {/* Edit Dialog */}
       <Dialog open={!!editProduct} onOpenChange={o => !o && setEditProduct(null)}>
-        <DialogContent className="bg-muted border-border text-foreground" dir="rtl">
+        <DialogContent className="bg-muted border-border text-foreground" dir={dir}>
           <DialogHeader>
-            <DialogTitle>تعديل المنتج</DialogTitle>
+            <DialogTitle>{bi('تعديل المنتج', 'Edit Product')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label>اسم المنتج</Label>
+              <Label>{bi('اسم المنتج', 'Product name')}</Label>
               <Input value={editName} onChange={e => setEditName(e.target.value)} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>السعر (د.أ)</Label>
+                <Label>{bi('السعر (د.أ)', 'Price (JOD)')}</Label>
                 <Input value={editPrice} onChange={e => setEditPrice(e.target.value)} type="number" min="0" dir="ltr" />
               </div>
               <div className="space-y-2">
-                <Label>التصنيف</Label>
-                <Input value={editCategory} onChange={e => setEditCategory(e.target.value)} placeholder="ملابس، إلكترونيات..." />
+                <Label>{bi('التصنيف', 'Category')}</Label>
+                <Input value={editCategory} onChange={e => setEditCategory(e.target.value)} placeholder={bi('ملابس، إلكترونيات...', 'Clothing, Electronics...')} />
               </div>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditProduct(null)}>إلغاء</Button>
-            <Button onClick={saveEdit} disabled={saving}>{saving ? 'جاري الحفظ...' : 'حفظ'}</Button>
+            <Button variant="outline" onClick={() => setEditProduct(null)}>{bi('إلغاء', 'Cancel')}</Button>
+            <Button onClick={saveEdit} disabled={saving}>{saving ? bi('جاري الحفظ...', 'Saving...') : bi('حفظ', 'Save')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -457,6 +472,10 @@ function OrdersTab() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [commissionRate, setCommissionRate] = useState(0);
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
+  const locale = lang === 'en' ? 'en-US' : 'ar-EG';
+  const tOrderStatus = lang === 'en' ? orderStatusLabelEn : orderStatusLabel;
 
   const load = async () => {
     setLoading(true);
@@ -483,15 +502,17 @@ function OrdersTab() {
     o.productName?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const exportHeaders = ["المنتج", "المتجر", "الزبون", "الهاتف", "المبلغ (د.أ)", "الحالة", "التاريخ"];
+  const exportHeaders = lang === 'en'
+    ? ["Product", "Store", "Customer", "Phone", "Amount (JOD)", "Status", "Date"]
+    : ["المنتج", "المتجر", "الزبون", "الهاتف", "المبلغ (د.أ)", "الحالة", "التاريخ"];
   const exportRows = filtered.map(o => [
     o.productName || '—',
     o.storeName || '—',
     o.buyerName || '—',
     o.buyerPhone || '—',
     o.totalAmount.toFixed(2),
-    orderStatusLabel[o.status] || o.status,
-    o.createdAt ? new Date(o.createdAt).toLocaleDateString('ar-EG') : '—',
+    tOrderStatus[o.status] || o.status,
+    o.createdAt ? new Date(o.createdAt).toLocaleDateString(locale) : '—',
   ]);
 
   return (
@@ -500,40 +521,43 @@ function OrdersTab() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <Card className="border-0 shadow-sm">
             <CardContent className="p-4">
-              <p className="text-muted-foreground text-xs mb-1">إجمالي المبيعات المكتملة</p>
-              <p className="text-foreground text-xl font-bold">{settledSales.toFixed(2)} د.أ</p>
+              <p className="text-muted-foreground text-xs mb-1">{bi('إجمالي المبيعات المكتملة', 'Total completed sales')}</p>
+              <p className="text-foreground text-xl font-bold">{settledSales.toFixed(2)} {bi('د.أ', 'JOD')}</p>
             </CardContent>
           </Card>
           <Card className="border-0 shadow-sm">
             <CardContent className="p-4">
-              <p className="text-muted-foreground text-xs mb-1">نسبة عمولة المنصة</p>
+              <p className="text-muted-foreground text-xs mb-1">{bi('نسبة عمولة المنصة', 'Platform commission rate')}</p>
               <p className="text-foreground text-xl font-bold">{commissionRate}%</p>
             </CardContent>
           </Card>
           <Card className="border-0 shadow-sm">
             <CardContent className="p-4">
-              <p className="text-muted-foreground text-xs mb-1">عمولة المنصة المقدّرة</p>
-              <p className="text-primary text-xl font-bold">{commissionAmount.toFixed(2)} د.أ</p>
+              <p className="text-muted-foreground text-xs mb-1">{bi('عمولة المنصة المقدّرة', 'Estimated platform commission')}</p>
+              <p className="text-primary text-xl font-bold">{commissionAmount.toFixed(2)} {bi('د.أ', 'JOD')}</p>
             </CardContent>
           </Card>
         </div>
       )}
 
       <div className="flex gap-3 items-center flex-wrap">
-        <span className="text-muted-foreground text-sm shrink-0">{orders.length} طلب</span>
+        <span className="text-muted-foreground text-sm shrink-0">{bi(`${orders.length} طلب`, `${orders.length} orders`)}</span>
         <div className="relative flex-1 max-w-xs">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="بحث بالزبون، الهاتف، المتجر..." className="pr-9" />
+          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder={bi('بحث بالزبون، الهاتف، المتجر...', 'Search by customer, phone, store...')} className="pr-9" />
         </div>
         <div className="flex-1" />
         <Button variant="outline" size="icon" onClick={load} disabled={loading}>
           <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
         </Button>
-        <Button variant="outline" size="sm" className="gap-2" disabled={loading || filtered.length === 0} onClick={() => exportToExcel('طلبات_المنصة', exportHeaders, exportRows, { sheetName: 'الطلبات' })}>
+        <Button variant="outline" size="sm" className="gap-2" disabled={loading || filtered.length === 0} onClick={() => exportToExcel(bi('طلبات_المنصة', 'platform_orders'), exportHeaders, exportRows, { sheetName: bi('الطلبات', 'Orders') })}>
           <Download className="h-4 w-4" />
           Excel
         </Button>
-        <Button variant="outline" size="sm" className="gap-2" disabled={loading || filtered.length === 0} onClick={() => exportToPDF('طلبات المنصة - EmpowerHub', exportHeaders, exportRows, { summary: {
+        <Button variant="outline" size="sm" className="gap-2" disabled={loading || filtered.length === 0} onClick={() => exportToPDF(bi('طلبات المنصة - EmpowerHub', 'Platform Orders - EmpowerHub'), exportHeaders, exportRows, { summary: lang === 'en' ? {
+          'Total Orders': String(filtered.length),
+          'Total Sales': `${filtered.reduce((s, o) => s + o.totalAmount, 0).toFixed(2)} JOD`,
+        } : {
           'إجمالي الطلبات': String(filtered.length),
           'إجمالي المبيعات': `${filtered.reduce((s, o) => s + o.totalAmount, 0).toFixed(2)} د.أ`,
         } })}>
@@ -547,24 +571,24 @@ function OrdersTab() {
           <Table>
             <TableHeader>
               <TableRow className="border-border hover:bg-transparent">
-                <TableHead className="text-muted-foreground">المنتج</TableHead>
-                <TableHead className="text-muted-foreground">المتجر</TableHead>
-                <TableHead className="text-muted-foreground">الزبون</TableHead>
-                <TableHead className="text-muted-foreground">الهاتف</TableHead>
-                <TableHead className="text-muted-foreground">المبلغ</TableHead>
-                <TableHead className="text-muted-foreground">الحالة</TableHead>
-                <TableHead className="text-muted-foreground">التاريخ</TableHead>
+                <TableHead className="text-muted-foreground">{bi('المنتج', 'Product')}</TableHead>
+                <TableHead className="text-muted-foreground">{bi('المتجر', 'Store')}</TableHead>
+                <TableHead className="text-muted-foreground">{bi('الزبون', 'Customer')}</TableHead>
+                <TableHead className="text-muted-foreground">{bi('الهاتف', 'Phone')}</TableHead>
+                <TableHead className="text-muted-foreground">{bi('المبلغ', 'Amount')}</TableHead>
+                <TableHead className="text-muted-foreground">{bi('الحالة', 'Status')}</TableHead>
+                <TableHead className="text-muted-foreground">{bi('التاريخ', 'Date')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loading && <TableRow className="border-border"><TableCell colSpan={7} className="h-24 text-center text-muted-foreground">جاري التحميل...</TableCell></TableRow>}
+              {loading && <TableRow className="border-border"><TableCell colSpan={7} className="h-24 text-center text-muted-foreground">{bi('جاري التحميل...', 'Loading...')}</TableCell></TableRow>}
               {!loading && filtered.map(o => (
                 <TableRow key={o.id} className="border-border">
                   <TableCell className="text-foreground text-sm">{o.productName || '—'}</TableCell>
                   <TableCell className="text-foreground/90 text-sm">{o.storeName || '—'}</TableCell>
                   <TableCell className="text-foreground/90 text-sm">{o.buyerName || '—'}</TableCell>
                   <TableCell className="text-muted-foreground text-sm" dir="ltr">{o.buyerPhone || '—'}</TableCell>
-                  <TableCell className="text-primary text-sm font-semibold">{o.totalAmount.toFixed(2)} د.أ</TableCell>
+                  <TableCell className="text-primary text-sm font-semibold">{o.totalAmount.toFixed(2)} {bi('د.أ', 'JOD')}</TableCell>
                   <TableCell>
                     <Badge className={`border-0 text-xs ${
                       o.status === 'completed' || o.status === 'delivered' || o.status === 'confirmed'
@@ -573,14 +597,14 @@ function OrdersTab() {
                         ? 'bg-amber-500/20 text-amber-400'
                         : 'bg-red-500/20 text-red-400'
                     }`}>
-                      {orderStatusLabel[o.status] || o.status}
+                      {tOrderStatus[o.status] || o.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-muted-foreground text-xs">{o.createdAt ? new Date(o.createdAt).toLocaleDateString('ar-EG') : '—'}</TableCell>
+                  <TableCell className="text-muted-foreground text-xs">{o.createdAt ? new Date(o.createdAt).toLocaleDateString(locale) : '—'}</TableCell>
                 </TableRow>
               ))}
               {!loading && filtered.length === 0 && (
-                <TableRow className="border-border"><TableCell colSpan={7} className="h-24 text-center text-muted-foreground">لا توجد طلبات</TableCell></TableRow>
+                <TableRow className="border-border"><TableCell colSpan={7} className="h-24 text-center text-muted-foreground">{bi('لا توجد طلبات', 'No orders')}</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
@@ -594,6 +618,9 @@ function CustomersTab() {
   const [orders, setOrders] = useState<OrderItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
+  const locale = lang === 'en' ? 'en-US' : 'ar-EG';
 
   const load = async () => {
     setLoading(true);
@@ -621,7 +648,7 @@ function CustomersTab() {
       } else {
         map.set(key, {
           key,
-          name: o.buyerName || 'غير محدد',
+          name: o.buyerName || bi('غير محدد', 'Unspecified'),
           phone: o.buyerPhone || '',
           address: o.buyerAddress || '',
           ordersCount: 1,
@@ -643,14 +670,16 @@ function CustomersTab() {
     revenue: customers.reduce((s, c) => s + c.totalSpent, 0),
   };
 
-  const exportHeaders = ["اسم العميل", "الهاتف", "العنوان", "عدد الطلبات", "إجمالي الإنفاق (د.أ)", "آخر طلب"];
+  const exportHeaders = lang === 'en'
+    ? ["Customer name", "Phone", "Address", "Orders count", "Total spent (JOD)", "Last order"]
+    : ["اسم العميل", "الهاتف", "العنوان", "عدد الطلبات", "إجمالي الإنفاق (د.أ)", "آخر طلب"];
   const exportRows = filtered.map(c => [
     c.name,
     c.phone || '—',
     c.address || '—',
     c.ordersCount,
     c.totalSpent.toFixed(2),
-    c.lastOrderAt ? new Date(c.lastOrderAt).toLocaleDateString('ar-EG') : '—',
+    c.lastOrderAt ? new Date(c.lastOrderAt).toLocaleDateString(locale) : '—',
   ]);
 
   return (
@@ -660,21 +689,21 @@ function CustomersTab() {
           <CardContent className="pt-4 pb-4">
             <Users className="h-4 w-4 text-purple-400 mb-2" />
             <p className="text-lg font-bold text-foreground">{loading ? '...' : stats.total}</p>
-            <p className="text-xs text-muted-foreground">إجمالي العملاء</p>
+            <p className="text-xs text-muted-foreground">{bi('إجمالي العملاء', 'Total customers')}</p>
           </CardContent>
         </Card>
         <Card className="border-0 shadow-sm">
           <CardContent className="pt-4 pb-4">
             <Repeat className="h-4 w-4 text-blue-400 mb-2" />
             <p className="text-lg font-bold text-foreground">{loading ? '...' : stats.repeat}</p>
-            <p className="text-xs text-muted-foreground">عملاء متكررون</p>
+            <p className="text-xs text-muted-foreground">{bi('عملاء متكررون', 'Repeat customers')}</p>
           </CardContent>
         </Card>
         <Card className="border-0 shadow-sm">
           <CardContent className="pt-4 pb-4">
             <ShoppingCart className="h-4 w-4 text-emerald-400 mb-2" />
-            <p className="text-lg font-bold text-foreground">{loading ? '...' : `${stats.revenue.toFixed(2)} د.أ`}</p>
-            <p className="text-xs text-muted-foreground">إجمالي المبيعات</p>
+            <p className="text-lg font-bold text-foreground">{loading ? '...' : bi(`${stats.revenue.toFixed(2)} د.أ`, `${stats.revenue.toFixed(2)} JOD`)}</p>
+            <p className="text-xs text-muted-foreground">{bi('إجمالي المبيعات', 'Total sales')}</p>
           </CardContent>
         </Card>
       </div>
@@ -682,17 +711,21 @@ function CustomersTab() {
       <div className="flex gap-3 items-center flex-wrap">
         <div className="relative flex-1 max-w-xs">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="بحث بالاسم أو رقم الهاتف..." className="pr-9" />
+          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder={bi('بحث بالاسم أو رقم الهاتف...', 'Search by name or phone number...')} className="pr-9" />
         </div>
         <div className="flex-1" />
         <Button variant="outline" size="icon" onClick={load} disabled={loading}>
           <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
         </Button>
-        <Button variant="outline" size="sm" className="gap-2" disabled={loading || filtered.length === 0} onClick={() => exportToExcel('عملاء_المنصة', exportHeaders, exportRows, { sheetName: 'العملاء' })}>
+        <Button variant="outline" size="sm" className="gap-2" disabled={loading || filtered.length === 0} onClick={() => exportToExcel(bi('عملاء_المنصة', 'platform_customers'), exportHeaders, exportRows, { sheetName: bi('العملاء', 'Customers') })}>
           <Download className="h-4 w-4" />
           Excel
         </Button>
-        <Button variant="outline" size="sm" className="gap-2" disabled={loading || filtered.length === 0} onClick={() => exportToPDF('عملاء المنصة - EmpowerHub', exportHeaders, exportRows, { summary: {
+        <Button variant="outline" size="sm" className="gap-2" disabled={loading || filtered.length === 0} onClick={() => exportToPDF(bi('عملاء المنصة - EmpowerHub', 'Platform Customers - EmpowerHub'), exportHeaders, exportRows, { summary: lang === 'en' ? {
+          'Total Customers': String(stats.total),
+          'Repeat Customers': String(stats.repeat),
+          'Total Sales': `${stats.revenue.toFixed(2)} JOD`,
+        } : {
           'إجمالي العملاء': String(stats.total),
           'عملاء متكررون': String(stats.repeat),
           'إجمالي المبيعات': `${stats.revenue.toFixed(2)} د.أ`,
@@ -707,16 +740,16 @@ function CustomersTab() {
           <Table>
             <TableHeader>
               <TableRow className="border-border hover:bg-transparent">
-                <TableHead className="text-muted-foreground">العميل</TableHead>
-                <TableHead className="text-muted-foreground">الهاتف</TableHead>
-                <TableHead className="text-muted-foreground">العنوان</TableHead>
-                <TableHead className="text-muted-foreground">عدد الطلبات</TableHead>
-                <TableHead className="text-muted-foreground">إجمالي الإنفاق</TableHead>
-                <TableHead className="text-muted-foreground">آخر طلب</TableHead>
+                <TableHead className="text-muted-foreground">{bi('العميل', 'Customer')}</TableHead>
+                <TableHead className="text-muted-foreground">{bi('الهاتف', 'Phone')}</TableHead>
+                <TableHead className="text-muted-foreground">{bi('العنوان', 'Address')}</TableHead>
+                <TableHead className="text-muted-foreground">{bi('عدد الطلبات', 'Order count')}</TableHead>
+                <TableHead className="text-muted-foreground">{bi('إجمالي الإنفاق', 'Total spent')}</TableHead>
+                <TableHead className="text-muted-foreground">{bi('آخر طلب', 'Last order')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loading && <TableRow className="border-border"><TableCell colSpan={6} className="h-24 text-center text-muted-foreground">جاري التحميل...</TableCell></TableRow>}
+              {loading && <TableRow className="border-border"><TableCell colSpan={6} className="h-24 text-center text-muted-foreground">{bi('جاري التحميل...', 'Loading...')}</TableCell></TableRow>}
               {!loading && filtered.map(c => (
                 <TableRow key={c.key} className="border-border">
                   <TableCell className="text-foreground text-sm font-medium">{c.name}</TableCell>
@@ -739,14 +772,14 @@ function CustomersTab() {
                   <TableCell>
                     <Badge className={`border-0 text-xs ${c.ordersCount > 1 ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'}`}>{c.ordersCount}</Badge>
                   </TableCell>
-                  <TableCell className="text-emerald-400 text-sm font-semibold">{c.totalSpent.toFixed(2)} د.أ</TableCell>
+                  <TableCell className="text-emerald-400 text-sm font-semibold">{c.totalSpent.toFixed(2)} {bi('د.أ', 'JOD')}</TableCell>
                   <TableCell className="text-muted-foreground text-xs">
-                    {c.lastOrderAt ? new Date(c.lastOrderAt).toLocaleDateString('ar-EG') : '—'}
+                    {c.lastOrderAt ? new Date(c.lastOrderAt).toLocaleDateString(locale) : '—'}
                   </TableCell>
                 </TableRow>
               ))}
               {!loading && filtered.length === 0 && (
-                <TableRow className="border-border"><TableCell colSpan={6} className="h-24 text-center text-muted-foreground">لا يوجد عملاء بعد</TableCell></TableRow>
+                <TableRow className="border-border"><TableCell colSpan={6} className="h-24 text-center text-muted-foreground">{bi('لا يوجد عملاء بعد', 'No customers yet')}</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
@@ -757,30 +790,32 @@ function CustomersTab() {
 }
 
 export default function StoresAdminPage() {
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={dir}>
       <div>
-        <h1 className="text-2xl font-bold text-foreground">المتاجر والمنتجات</h1>
-        <p className="text-muted-foreground text-sm">إدارة متاجر المستفيدين ومنتجاتهم — يمكنك الإخفاء أو التعديل أو الحذف</p>
+        <h1 className="text-2xl font-bold text-foreground">{bi('المتاجر والمنتجات', 'Stores & Products')}</h1>
+        <p className="text-muted-foreground text-sm">{bi('إدارة متاجر المستفيدين ومنتجاتهم — يمكنك الإخفاء أو التعديل أو الحذف', 'Manage beneficiary stores and products — you can hide, edit, or delete')}</p>
       </div>
 
       <Tabs defaultValue="stores">
         <TabsList className="bg-muted rounded-xl p-1 gap-1">
           <TabsTrigger value="stores" className="rounded-lg border-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-muted-foreground hover:text-foreground gap-2">
             <Store className="h-4 w-4" />
-            المتاجر
+            {bi('المتاجر', 'Stores')}
           </TabsTrigger>
           <TabsTrigger value="products" className="rounded-lg border-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-muted-foreground hover:text-foreground gap-2">
             <Package className="h-4 w-4" />
-            المنتجات
+            {bi('المنتجات', 'Products')}
           </TabsTrigger>
           <TabsTrigger value="orders" className="rounded-lg border-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-muted-foreground hover:text-foreground gap-2">
             <ShoppingCart className="h-4 w-4" />
-            الطلبات
+            {bi('الطلبات', 'Orders')}
           </TabsTrigger>
           <TabsTrigger value="customers" className="rounded-lg border-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-muted-foreground hover:text-foreground gap-2">
             <Users className="h-4 w-4" />
-            العملاء
+            {bi('العملاء', 'Customers')}
           </TabsTrigger>
         </TabsList>
 
