@@ -26,6 +26,7 @@ import { DEFAULT_PLATFORM_SERVICES } from '@/lib/default-platform-services';
 import { SessionBookingDialog } from '@/components/session-booking-dialog';
 import { CourseEnrollDialog } from '@/components/course-enroll-dialog';
 import { useCart } from '@/components/cart-provider';
+import { useLanguage } from '@/components/language-provider';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -144,6 +145,7 @@ interface SiteConfig {
   faq?: { question: string; answer: string }[];
   header?: { navLinks: { label: string }[]; teamLabel: string; teamLinks: { label: string }[]; loginText: string; registerText: string; registerTextMobile: string };
   tourRoles?: { headline: string; ctaText?: string; benefits: string[]; stats: { label: string; value: string }[]; items: { title: string; subtitle: string }[] }[];
+  translations?: { en?: Record<string, any> };
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -518,10 +520,17 @@ const PublicSessionCard = ({ session, currencySymbol, onBook }: { session: Publi
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
+// Dot-path lookup into an admin-provided English overlay (translations.en),
+// mirroring the same accessor used in the admin site editor.
+function getPath(obj: any, path: string): any {
+  return path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), obj);
+}
+
 export default function LandingPage() {
   const { toast } = useToast();
   const { symbol: currencySymbol } = useCurrency();
   const { logoUrl: platformLogoFallback } = usePlatformBrand();
+  const { lang } = useLanguage();
   const [siteConfig, setSiteConfig] = useState<SiteConfig | null>(null);
   const [mentors, setMentors] = useState<MentorUser[]>([]);
   const [coaches, setCoaches] = useState<MentorUser[]>([]);
@@ -652,46 +661,94 @@ export default function LandingPage() {
   const sectionStyle = (key: string) => cfg?.sectionStyles?.[key] || {};
 
   // Section eyebrow/heading/subheading text — admin-editable per section key,
-  // falling back to the original copy when nothing's been set.
-  const sh = (key: string, field: 'eyebrow' | 'heading' | 'subheading', fallback: string) =>
-    (cfg?.sectionHeadings?.[key] as any)?.[field] || fallback;
+  // with an optional English overlay (cfg.translations.en), falling back to
+  // the Arabic value or the original copy when nothing's been set.
+  const sh = (key: string, field: 'eyebrow' | 'heading' | 'subheading', fallback: string) => {
+    if (lang === 'en') {
+      const en = getPath(cfg?.translations?.en, `sectionHeadings.${key}.${field}`);
+      if (en) return en;
+    }
+    return (cfg?.sectionHeadings?.[key] as any)?.[field] || fallback;
+  };
 
-  const heroTitle = cfg?.hero?.title || 'بوابتك للتمكين والنجاح';
-  const heroSubtitle = cfg?.hero?.subtitle || 'منصة متكاملة تجمع بين التدريب المتخصص، الإرشاد الشخصي، والتجارة الإلكترونية لمساعدتك على بناء مستقبلك.';
-  const heroButtons: CtaButton[] = cfg?.hero?.buttons !== undefined ? cfg.hero.buttons : [
+  // Generic English-overlay resolver for a single cfg path — returns the
+  // admin's English translation if set, else the Arabic value, else fallback.
+  const trField = (path: string, arValue: string | undefined, fallback: string) => {
+    if (lang === 'en') {
+      const en = getPath(cfg?.translations?.en, path);
+      if (en) return en;
+    }
+    return arValue || fallback;
+  };
+
+  const heroTitle = trField('hero.title', cfg?.hero?.title, 'بوابتك للتمكين والنجاح');
+  const heroSubtitle = trField('hero.subtitle', cfg?.hero?.subtitle, 'منصة متكاملة تجمع بين التدريب المتخصص، الإرشاد الشخصي، والتجارة الإلكترونية لمساعدتك على بناء مستقبلك.');
+  const heroButtonsBase: CtaButton[] = cfg?.hero?.buttons !== undefined ? cfg.hero.buttons : [
     { text: cfg?.hero?.ctaText || 'ابدأ رحلتك مجاناً', link: '/register', style: 'primary' },
     { text: cfg?.hero?.ctaSecondaryText || 'كيف تعمل المنصة', link: '#roles', style: 'outline' },
   ];
+  const heroButtons: CtaButton[] = heroButtonsBase.map((btn, i) => ({
+    ...btn,
+    text: trField(`hero.buttons.${i}.text`, undefined, btn.text),
+  }));
 
-  const statsData = cfg?.stats?.length ? cfg.stats : [
+  const statsDataAr = cfg?.stats?.length ? cfg.stats : [
     { label: 'مستفيد نشط', value: '2,500+', icon: 'Users' },
     { label: 'دورة تدريبية', value: '150+', icon: 'BookOpen' },
     { label: 'مرشد ومدرب', value: '80+', icon: 'GraduationCap' },
     { label: 'نسبة الرضا', value: '95%', icon: 'Award' },
   ];
+  const statsData = statsDataAr.map((s, i) => ({
+    ...s,
+    label: trField(`stats.${i}.label`, undefined, s.label),
+    value: trField(`stats.${i}.value`, undefined, s.value),
+  }));
 
-  const testimonialsData = cfg?.testimonials?.length ? cfg.testimonials : [
+  const testimonialsDataAr = cfg?.testimonials?.length ? cfg.testimonials : [
     { name: 'سارة أحمد', role: 'مستفيدة - رائدة أعمال', text: 'بفضل EmpowerHub، تمكنت من إطلاق متجري الإلكتروني وتحقيق أول ألف دينار خلال شهرين فقط. الدعم والتدريب كانا استثنائيين!', stars: 5 },
     { name: 'محمد الخالد', role: 'مدرب - خبير تسويق رقمي', text: 'المنصة أتاحت لي الفرصة للوصول إلى مئات المستفيدين ومشاركتهم خبرتي. الأدوات سهلة الاستخدام والدعم الفني ممتاز.', stars: 5 },
     { name: 'منظمة بناء المستقبل', role: 'منظمة غير ربحية', text: 'ساعدتنا المنصة في إدارة 200 مستفيد بكل احترافية. التقارير التفصيلية مكّنتنا من قياس أثر برامجنا بشكل دقيق.', stars: 5 },
   ];
+  const testimonialsData = testimonialsDataAr.map((t, i) => ({
+    ...t,
+    name: trField(`testimonials.${i}.name`, undefined, t.name),
+    role: trField(`testimonials.${i}.role`, undefined, t.role),
+    text: trField(`testimonials.${i}.text`, undefined, t.text),
+  }));
 
 
-  // Per-role tour content — admin-editable via cfg.tourRoles[index], falling
-  // back to the original copy when nothing's been set for that role.
+  // Per-role tour content — admin-editable via cfg.tourRoles[index], with an
+  // optional English overlay (cfg.translations.en.tourRoles), falling back
+  // to the Arabic value or the original copy when nothing's been set.
   const tr = (i: number) => cfg?.tourRoles?.[i];
-  const trBenefits = (i: number, fallback: string[]) =>
-    tr(i)?.benefits?.length ? tr(i)!.benefits : fallback;
-  const trStats = (i: number, fallback: { label: string; value: string }[]) =>
-    tr(i)?.stats?.length ? tr(i)!.stats : fallback;
+  const trEn = (i: number) => getPath(cfg?.translations?.en, `tourRoles.${i}`);
+  const trField2 = (i: number, path: string, arValue: string | undefined, fallback: string) => {
+    if (lang === 'en') {
+      const en = getPath(trEn(i), path);
+      if (en) return en;
+    }
+    return arValue || fallback;
+  };
+  const trBenefits = (i: number, fallback: string[]) => {
+    const base = tr(i)?.benefits?.length ? tr(i)!.benefits : fallback;
+    return base.map((b, bi) => trField2(i, `benefits.${bi}`, undefined, b));
+  };
+  const trStats = (i: number, fallback: { label: string; value: string }[]) => {
+    const base = tr(i)?.stats?.length ? tr(i)!.stats : fallback;
+    return base.map((s, si) => ({
+      label: trField2(i, `stats.${si}.label`, undefined, s.label),
+      value: trField2(i, `stats.${si}.value`, undefined, s.value),
+    }));
+  };
   const trItem = (i: number, ii: number, field: 'title' | 'subtitle', fallback: string) =>
-    tr(i)?.items?.[ii]?.[field] || fallback;
+    trField2(i, `items.${ii}.${field}`, tr(i)?.items?.[ii]?.[field], fallback);
+  const trLabel = (arLabel: string, enLabel: string) => (lang === 'en' ? enLabel : arLabel);
 
   const tourRoles = [
     {
-      key: 'organization', label: 'المنظمة', icon: Building2, path: 'organization-dashboard', link: '/register?role=organization',
-      cta: tr(0)?.ctaText || undefined,
-      headline: tr(0)?.headline || 'أدر برامج التمكين بالكامل من مكان واحد',
+      key: 'organization', label: trLabel('المنظمة', 'Organizations'), icon: Building2, path: 'organization-dashboard', link: '/register?role=organization',
+      cta: trField2(0, 'ctaText', tr(0)?.ctaText, '') || undefined,
+      headline: trField2(0, 'headline', tr(0)?.headline, 'أدر برامج التمكين بالكامل من مكان واحد'),
       benefits: trBenefits(0, [
         'إضافة وإدارة المستفيدين والمرشدين والمدربين بسهولة',
         'تتبع تقدم كل مستفيد بتقارير وتحليلات تفصيلية',
@@ -706,9 +763,9 @@ export default function LandingPage() {
       ],
     },
     {
-      key: 'mentor', label: 'المرشد', icon: Users, path: 'mentor-dashboard', link: '/register?role=mentor',
-      cta: tr(1)?.ctaText || undefined,
-      headline: tr(1)?.headline || 'قدّم إرشادك وشاهد أثره ينعكس مباشرة',
+      key: 'mentor', label: trLabel('المرشد', 'Mentors'), icon: Users, path: 'mentor-dashboard', link: '/register?role=mentor',
+      cta: trField2(1, 'ctaText', tr(1)?.ctaText, '') || undefined,
+      headline: trField2(1, 'headline', tr(1)?.headline, 'قدّم إرشادك وشاهد أثره ينعكس مباشرة'),
       benefits: trBenefits(1, [
         'جدولة جلسات إرشاد فردية مع من تختار مرافقتهم',
         'متابعة تقدم كل مستفيد تشرف عليه في مكان واحد',
@@ -723,9 +780,9 @@ export default function LandingPage() {
       ],
     },
     {
-      key: 'coach', label: 'المدرب', icon: GraduationCap, path: 'coach-dashboard', link: '/register?role=coach',
-      cta: tr(2)?.ctaText || undefined,
-      headline: tr(2)?.headline || 'حوّل خبرتك إلى دورات ودخل مستمر',
+      key: 'coach', label: trLabel('المدرب', 'Coaches'), icon: GraduationCap, path: 'coach-dashboard', link: '/register?role=coach',
+      cta: trField2(2, 'ctaText', tr(2)?.ctaText, '') || undefined,
+      headline: trField2(2, 'headline', tr(2)?.headline, 'حوّل خبرتك إلى دورات ودخل مستمر'),
       benefits: trBenefits(2, [
         'أنشئ دوراتك التدريبية وانشرها لآلاف المستفيدين',
         'قدّم جلسات مباشرة وتابع التسجيل والحضور',
@@ -740,9 +797,9 @@ export default function LandingPage() {
       ],
     },
     {
-      key: 'beneficiary', label: 'المستفيد', icon: BookOpen, path: 'beneficiary-dashboard', link: '/register?role=beneficiary',
-      cta: tr(3)?.ctaText || undefined,
-      headline: tr(3)?.headline || 'تعلّم، تدرّب، وابنِ مشروعك الخاص',
+      key: 'beneficiary', label: trLabel('المستفيد', 'Beneficiaries'), icon: BookOpen, path: 'beneficiary-dashboard', link: '/register?role=beneficiary',
+      cta: trField2(3, 'ctaText', tr(3)?.ctaText, '') || undefined,
+      headline: trField2(3, 'headline', tr(3)?.headline, 'تعلّم، تدرّب، وابنِ مشروعك الخاص'),
       benefits: trBenefits(3, [
         'دورات تدريبية متخصصة تناسب مسارك المهني',
         'جلسات إرشاد فردية مع خبراء في مجالك',
@@ -757,9 +814,9 @@ export default function LandingPage() {
       ],
     },
     {
-      key: 'market', label: 'المتجر', icon: Store, path: 'market', link: '/market',
-      cta: tr(4)?.ctaText || 'تصفح المتجر',
-      headline: tr(4)?.headline || 'تسوّق وبِع داخل مجتمع واحد',
+      key: 'market', label: trLabel('المتجر', 'Marketplace'), icon: Store, path: 'market', link: '/market',
+      cta: trField2(4, 'ctaText', tr(4)?.ctaText, 'تصفح المتجر'),
+      headline: trField2(4, 'headline', tr(4)?.headline, 'تسوّق وبِع داخل مجتمع واحد'),
       benefits: trBenefits(4, [
         'تصفح منتجات وخدمات حقيقية من رواد أعمال في مجتمعنا',
         'افتح متجرك الخاص وابدأ البيع مباشرة من لوحة تحكمك',
@@ -775,16 +832,25 @@ export default function LandingPage() {
     },
   ];
 
-  const ctaBanner = cfg?.ctaBanner ?? {
+  const ctaBannerAr = cfg?.ctaBanner ?? {
     title: 'جاهز للبدء؟ انضم إلى آلاف المستفيدين',
     subtitle: 'سجّل مجاناً اليوم وابدأ رحلتك نحو التمكين والنجاح مع EmpowerHub',
     primaryText: 'ابدأ مجاناً الآن',
     secondaryText: 'تجربة المنصة أولاً',
   };
-  const ctaButtons: CtaButton[] = cfg?.ctaBanner?.buttons !== undefined ? cfg.ctaBanner.buttons : [
-    { text: ctaBanner.primaryText || 'ابدأ مجاناً الآن', link: '/register', style: 'primary' },
-    { text: ctaBanner.secondaryText || 'تجربة المنصة أولاً', link: '/try-roles', style: 'outline' },
+  const ctaBanner = {
+    ...ctaBannerAr,
+    title: trField('ctaBanner.title', ctaBannerAr.title, 'جاهز للبدء؟ انضم إلى آلاف المستفيدين'),
+    subtitle: trField('ctaBanner.subtitle', ctaBannerAr.subtitle, 'سجّل مجاناً اليوم وابدأ رحلتك نحو التمكين والنجاح مع EmpowerHub'),
+  };
+  const ctaButtonsBase: CtaButton[] = cfg?.ctaBanner?.buttons !== undefined ? cfg.ctaBanner.buttons : [
+    { text: ctaBannerAr.primaryText || 'ابدأ مجاناً الآن', link: '/register', style: 'primary' },
+    { text: ctaBannerAr.secondaryText || 'تجربة المنصة أولاً', link: '/try-roles', style: 'outline' },
   ];
+  const ctaButtons: CtaButton[] = ctaButtonsBase.map((btn, i) => ({
+    ...btn,
+    text: trField(`ctaBanner.buttons.${i}.text`, undefined, btn.text),
+  }));
 
   const opportunitiesData = cfg?.opportunities?.length ? cfg.opportunities : [
     { title: 'مشاريع منزلية ناجحة', description: 'أطلق مشروعك من المنزل وابنِ متجرك الإلكتروني مع دعم متكامل من الفكرة حتى أول عملية بيع ناجحة.', icon: 'Store', badge: 'جديد', color: 'bg-amber-500', link: '/register' },
@@ -802,11 +868,29 @@ export default function LandingPage() {
     phone: '+966 XX XXX XXXX', whatsapp: '+966 XX XXX XXXX',
     whatsappLink: 'https://wa.me/966XXXXXXXXX', email: 'info@empowerhub.com',
   };
-  const footerData = cfg?.footer ?? {
+  const footerDataAr = cfg?.footer ?? {
     description: 'منصة متكاملة للتمكين الرقمي تجمع التدريب، الإرشاد، والتجارة الإلكترونية في مكان واحد.',
     email: 'info@empowerhub.com', phone: '', twitter: '', linkedin: '', instagram: '',
     copyright: '© 2024 EmpowerHub. جميع الحقوق محفوظة.',
   };
+  // In English mode, prefer the admin's English overlay per field; fields
+  // with no English translation fall back to the Arabic value (SiteFooter
+  // then falls back further to its own generic English label where one
+  // exists, e.g. newsletter titles).
+  const footerData = lang === 'en'
+    ? {
+        ...footerDataAr,
+        description: getPath(cfg?.translations?.en, 'footer.description') || footerDataAr.description,
+        copyright: getPath(cfg?.translations?.en, 'footer.copyright') || footerDataAr.copyright,
+        newsletterTitle: getPath(cfg?.translations?.en, 'footer.newsletterTitle') || (footerDataAr as any).newsletterTitle,
+        newsletterPlaceholder: getPath(cfg?.translations?.en, 'footer.newsletterPlaceholder') || (footerDataAr as any).newsletterPlaceholder,
+        newsletterButton: getPath(cfg?.translations?.en, 'footer.newsletterButton') || (footerDataAr as any).newsletterButton,
+        quickLinksTitle: getPath(cfg?.translations?.en, 'footer.quickLinksTitle') || (footerDataAr as any).quickLinksTitle,
+        roleLinksTitle: getPath(cfg?.translations?.en, 'footer.roleLinksTitle') || (footerDataAr as any).roleLinksTitle,
+        companyLinksTitle: getPath(cfg?.translations?.en, 'footer.companyLinksTitle') || (footerDataAr as any).companyLinksTitle,
+        legalLinksTitle: getPath(cfg?.translations?.en, 'footer.legalLinksTitle') || (footerDataAr as any).legalLinksTitle,
+      }
+    : footerDataAr;
 
   // Palette applied by position so admin-edited feature lists still get
   // the same varied per-card accent colors as the built-in default.
@@ -824,10 +908,10 @@ export default function LandingPage() {
     .map((f: any, i: number) => ({
       icon: getDynamicIcon(f.icon),
       color: FEATURE_COLORS[i % FEATURE_COLORS.length],
-      title: f.title,
-      description: f.description,
+      title: trField(`features.${i}.title`, undefined, f.title),
+      description: trField(`features.${i}.description`, undefined, f.description),
       link: f.link || '',
-      linkLabel: f.linkLabel || '',
+      linkLabel: trField(`features.${i}.linkLabel`, undefined, f.linkLabel || ''),
     }));
 
   const logoSrc = cfg?.logoUrl || platformLogoFallback;
@@ -872,7 +956,7 @@ export default function LandingPage() {
               {/* Tagline pill */}
               <div className="animate-fade-in-up inline-flex items-center gap-2 text-xs font-medium text-white/80 border border-white/15 rounded-full px-3.5 py-1.5 mb-6 sm:mb-8 bg-white/10 backdrop-blur-sm">
                 <Sparkles className="h-3 w-3 text-white shrink-0" />
-                <span className="truncate">{cfg?.tagline || 'منصة التمكين الرقمي الشاملة'}</span>
+                <span className="truncate">{trField('tagline', cfg?.tagline, 'منصة التمكين الرقمي الشاملة')}</span>
               </div>
 
               {/* Headline */}
@@ -909,7 +993,10 @@ export default function LandingPage() {
 
               {/* Trust strip */}
               <div className="animate-fade-in-up delay-400 flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs sm:text-sm text-white/60 mb-14 sm:mb-16">
-                {['مجاني تماماً للبدء', 'لا يتطلب بطاقة ائتمان', 'دعم باللغة العربية'].map((t, i) => (
+                {(lang === 'en'
+                  ? ['Completely free to start', 'No credit card required', 'Arabic-first support']
+                  : ['مجاني تماماً للبدء', 'لا يتطلب بطاقة ائتمان', 'دعم باللغة العربية']
+                ).map((t, i) => (
                   <div key={i} className="flex items-center gap-1.5">
                     <CheckCircle className="h-3.5 w-3.5 text-white shrink-0" />
                     <span>{t}</span>
@@ -1140,13 +1227,13 @@ export default function LandingPage() {
             <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-16">
               <p className="inline-flex items-center gap-2 text-xs font-semibold text-white/50 mb-4">
                 <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                {cfg?.aiSpotlight?.eyebrow || 'مدعوم بالذكاء الاصطناعي'}
+                {trField('aiSpotlight.eyebrow', cfg?.aiSpotlight?.eyebrow, 'مدعوم بالذكاء الاصطناعي')}
               </p>
               <h2 className="text-3xl sm:text-4xl md:text-[2.75rem] font-extrabold tracking-tight leading-[1.1] mb-4 text-balance">
-                <span className="text-white">{cfg?.aiSpotlight?.heading || 'توصيات ذكية تسبقك خطوة.'}</span>
+                <span className="text-white">{trField('aiSpotlight.heading', cfg?.aiSpotlight?.heading, 'توصيات ذكية تسبقك خطوة.')}</span>
               </h2>
               <p className="text-white/60 text-sm sm:text-base leading-relaxed">
-                {cfg?.aiSpotlight?.subheading || 'يحلل EmpowerHub تقدمك وأهدافك ليقترح عليك الدورة، المرشد، أو الفرصة التالية — بدل أن تبحث عنها بنفسك.'}
+                {trField('aiSpotlight.subheading', cfg?.aiSpotlight?.subheading, 'يحلل EmpowerHub تقدمك وأهدافك ليقترح عليك الدورة، المرشد، أو الفرصة التالية — بدل أن تبحث عنها بنفسك.')}
               </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-4xl mx-auto">
@@ -1154,15 +1241,15 @@ export default function LandingPage() {
                 <div className="h-10 w-10 rounded-xl bg-primary/20 flex items-center justify-center mb-4">
                   <Sparkles className="h-5 w-5 text-primary" />
                 </div>
-                <h3 className="text-base font-bold text-white mb-2">{cfg?.aiSpotlight?.cards?.[0]?.title || 'مسار تعلّم مخصص'}</h3>
-                <p className="text-sm text-white/60 leading-relaxed">{cfg?.aiSpotlight?.cards?.[0]?.description || 'يقترح عليك الدورات والجلسات الأنسب لهدفك ومستواك الحالي، ويحدّثها كلما تقدمت.'}</p>
+                <h3 className="text-base font-bold text-white mb-2">{trField('aiSpotlight.cards.0.title', cfg?.aiSpotlight?.cards?.[0]?.title, 'مسار تعلّم مخصص')}</h3>
+                <p className="text-sm text-white/60 leading-relaxed">{trField('aiSpotlight.cards.0.description', cfg?.aiSpotlight?.cards?.[0]?.description, 'يقترح عليك الدورات والجلسات الأنسب لهدفك ومستواك الحالي، ويحدّثها كلما تقدمت.')}</p>
               </div>
               <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 sm:p-7">
                 <div className="h-10 w-10 rounded-xl bg-primary/20 flex items-center justify-center mb-4">
                   <BarChart3 className="h-5 w-5 text-primary" />
                 </div>
-                <h3 className="text-base font-bold text-white mb-2">{cfg?.aiSpotlight?.cards?.[1]?.title || 'تحليلات تقدم واضحة'}</h3>
-                <p className="text-sm text-white/60 leading-relaxed">{cfg?.aiSpotlight?.cards?.[1]?.description || 'تقارير مرئية تُظهر ما أنجزته وما تحتاج التركيز عليه بعد ذلك — لا أرقام مبعثرة.'}</p>
+                <h3 className="text-base font-bold text-white mb-2">{trField('aiSpotlight.cards.1.title', cfg?.aiSpotlight?.cards?.[1]?.title, 'تحليلات تقدم واضحة')}</h3>
+                <p className="text-sm text-white/60 leading-relaxed">{trField('aiSpotlight.cards.1.description', cfg?.aiSpotlight?.cards?.[1]?.description, 'تقارير مرئية تُظهر ما أنجزته وما تحتاج التركيز عليه بعد ذلك — لا أرقام مبعثرة.')}</p>
               </div>
             </div>
           </div>
@@ -1887,12 +1974,15 @@ export default function LandingPage() {
               </div>
               <p className="inline-flex items-center justify-center gap-2 text-xs font-semibold text-muted-foreground mb-3">
                 <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                الأسئلة الشائعة
+                {lang === 'en' ? 'FAQ' : 'الأسئلة الشائعة'}
               </p>
-              <h2 className="text-3xl sm:text-4xl md:text-[2.75rem] font-extrabold tracking-tight text-foreground text-balance">كل ما تحتاج معرفته</h2>
+              <h2 className="text-3xl sm:text-4xl md:text-[2.75rem] font-extrabold tracking-tight text-foreground text-balance">{lang === 'en' ? 'Everything you need to know' : 'كل ما تحتاج معرفته'}</h2>
             </div>
             {(() => {
-              const faqItems = cfg?.faq?.length ? cfg.faq.map(f => ({ q: f.question, a: f.answer })) : [
+              const faqItems = cfg?.faq?.length ? cfg.faq.map((f, i) => ({
+                q: trField(`faq.${i}.question`, undefined, f.question),
+                a: trField(`faq.${i}.answer`, undefined, f.answer),
+              })) : [
                 {
                   q: 'هل يمكنني تجربة المنصة مجاناً؟',
                   a: 'نعم، يمكنك إنشاء حساب والبدء فوراً بدون بطاقة ائتمان. المنظمات التي تختار خطة مدفوعة تحصل على فترة تجريبية كاملة المزايا قبل تفعيل الاشتراك.',

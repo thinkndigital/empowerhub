@@ -70,6 +70,32 @@ interface SiteConfig {
     stats: { label: string; value: string }[];
     items: { title: string; subtitle: string }[];
   }[];
+  translations: { en: Record<string, any> };
+}
+
+// Generic dot-path get/set used to route the same tab UIs at either the
+// Arabic (top-level) or English (translations.en) content tree, without
+// duplicating every input for each language.
+function getPath(obj: any, path: string): any {
+  return path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), obj);
+}
+function setPath(obj: any, path: string, value: any): any {
+  const keys = path.split('.');
+  const root: any = Array.isArray(obj) ? [...obj] : { ...(obj || {}) };
+  let cur: any = root;
+  for (let i = 0; i < keys.length - 1; i++) {
+    const k = keys[i];
+    const childShouldBeArray = /^\d+$/.test(keys[i + 1]);
+    const existing = cur[k];
+    if (childShouldBeArray) {
+      cur[k] = Array.isArray(existing) ? [...existing] : [];
+    } else {
+      cur[k] = existing && typeof existing === 'object' && !Array.isArray(existing) ? { ...existing } : {};
+    }
+    cur = cur[k];
+  }
+  cur[keys[keys.length - 1]] = value;
+  return root;
 }
 
 const HEADER_NAV_LABELS = ['كيف تعمل', 'الخدمات', 'الدورات', 'جلسات مباشرة', 'المقالات', 'الفرص', 'المتجر'];
@@ -135,6 +161,7 @@ const defaultConfig: SiteConfig = {
   sectionHeadings: Object.fromEntries(SECTION_HEADING_KEYS.map(s => [s.key, {}])),
   aiSpotlight: { eyebrow: '', heading: '', subheading: '', cards: [{ title: '', description: '' }, { title: '', description: '' }] },
   faq: [],
+  translations: { en: {} },
   header: {
     navLinks: HEADER_NAV_LABELS.map(label => ({ label })),
     teamLabel: 'فريقنا',
@@ -227,14 +254,39 @@ const defaultConfig: SiteConfig = {
   ],
 };
 
-function SaveBar({ onSave, saving, saved }: { onSave: () => void; saving: boolean; saved: boolean }) {
+function SaveBar({ onSave, saving, saved, editLang, setEditLang }: {
+  onSave: () => void; saving: boolean; saved: boolean;
+  editLang: 'ar' | 'en'; setEditLang: (l: 'ar' | 'en') => void;
+}) {
   return (
-    <div className="sticky top-14 z-20 bg-background/95 backdrop-blur border-b border-border px-4 py-3 flex items-center justify-between">
-      <Button onClick={onSave} disabled={saving} className={`gap-2 ${saved ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-primary hover:bg-primary-hover'}`}>
-        <Save className="h-4 w-4" />
-        {saving ? 'جاري الحفظ...' : saved ? 'تم الحفظ ✓' : 'حفظ جميع التغييرات'}
-      </Button>
-      <p className="text-muted-foreground text-sm">تعديل محتوى الموقع</p>
+    <div className="sticky top-14 z-20 bg-background/95 backdrop-blur border-b border-border px-4 py-3 space-y-2">
+      <div className="flex items-center justify-between">
+        <Button onClick={onSave} disabled={saving} className={`gap-2 ${saved ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-primary hover:bg-primary-hover'}`}>
+          <Save className="h-4 w-4" />
+          {saving ? 'جاري الحفظ...' : saved ? 'تم الحفظ ✓' : 'حفظ جميع التغييرات'}
+        </Button>
+        <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
+          <button
+            type="button"
+            onClick={() => setEditLang('ar')}
+            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${editLang === 'ar' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+          >
+            المحتوى العربي
+          </button>
+          <button
+            type="button"
+            onClick={() => setEditLang('en')}
+            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${editLang === 'en' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+          >
+            English content
+          </button>
+        </div>
+      </div>
+      {editLang === 'en' && (
+        <p className="text-xs text-amber-600 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
+          تعديل المحتوى الإنجليزي — الحقول الفارغة ستعرض النص العربي حتى تتم ترجمتها. الأزرار "إضافة/حذف" متاحة فقط بوضع المحتوى العربي لأنه يحدد بنية القوائم.
+        </p>
+      )}
     </div>
   );
 }
@@ -330,19 +382,22 @@ function SectionStyleFields({ config, sectionKey, setSectionStyle, withIcon = tr
   );
 }
 
-function ButtonsEditor({ buttons, onAdd, onUpdate, onRemove }: {
+function ButtonsEditor({ buttons, onAdd, onUpdate, onRemove, readOnlyStructure }: {
   buttons: CtaButton[];
   onAdd: () => void;
   onUpdate: (i: number, k: keyof CtaButton, v: string) => void;
   onRemove: (i: number) => void;
+  readOnlyStructure?: boolean;
 }) {
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <Label>الأزرار</Label>
-        <Button type="button" size="sm" variant="outline" onClick={onAdd} className="gap-1 h-7 text-xs">
-          <Plus className="h-3 w-3" />إضافة زر
-        </Button>
+        <Label>الأزرار{readOnlyStructure ? ' — نص الزر بالإنجليزي فقط' : ''}</Label>
+        {!readOnlyStructure && (
+          <Button type="button" size="sm" variant="outline" onClick={onAdd} className="gap-1 h-7 text-xs">
+            <Plus className="h-3 w-3" />إضافة زر
+          </Button>
+        )}
       </div>
       {buttons.length === 0 && (
         <p className="text-muted-foreground text-xs py-2">لا توجد أزرار — القسم سيظهر بدون أزرار.</p>
@@ -351,18 +406,22 @@ function ButtonsEditor({ buttons, onAdd, onUpdate, onRemove }: {
         {buttons.map((btn, i) => (
           <div key={i} className="flex flex-col sm:flex-row gap-2 items-start sm:items-center p-2.5 rounded-lg border border-border bg-muted/30">
             <Input value={btn.text} onChange={e => onUpdate(i, 'text', e.target.value)} placeholder="نص الزر" className="h-8 text-sm flex-1" />
-            <Input value={btn.link} onChange={e => onUpdate(i, 'link', e.target.value)} placeholder="/register" dir="ltr" className="h-8 text-sm flex-1 font-mono" />
-            <select
-              value={btn.style}
-              onChange={e => onUpdate(i, 'style', e.target.value)}
-              className="h-8 text-sm border border-border rounded-md bg-background px-2 shrink-0"
-            >
-              <option value="primary">تعبئة</option>
-              <option value="outline">إطار</option>
-            </select>
-            <Button type="button" size="sm" variant="ghost" onClick={() => onRemove(i)} className="h-8 w-8 p-0 text-muted-foreground hover:text-red-400 shrink-0">
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
+            {!readOnlyStructure && (
+              <>
+                <Input value={btn.link} onChange={e => onUpdate(i, 'link', e.target.value)} placeholder="/register" dir="ltr" className="h-8 text-sm flex-1 font-mono" />
+                <select
+                  value={btn.style}
+                  onChange={e => onUpdate(i, 'style', e.target.value)}
+                  className="h-8 text-sm border border-border rounded-md bg-background px-2 shrink-0"
+                >
+                  <option value="primary">تعبئة</option>
+                  <option value="outline">إطار</option>
+                </select>
+                <Button type="button" size="sm" variant="ghost" onClick={() => onRemove(i)} className="h-8 w-8 p-0 text-muted-foreground hover:text-red-400 shrink-0">
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </>
+            )}
           </div>
         ))}
       </div>
@@ -375,6 +434,22 @@ export default function SiteEditorPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [editLang, setEditLang] = useState<'ar' | 'en'>('ar');
+
+  // Generic content accessors — route reads/writes to either the Arabic
+  // (top-level) or English (translations.en) content tree depending on
+  // editLang, so the same tab UI can edit both languages.
+  const cv = (path: string, fallback: any = '') => {
+    const src = editLang === 'ar' ? config : (config.translations?.en || {});
+    const v = getPath(src, path);
+    return v ?? fallback;
+  };
+  const uc = (path: string, value: any) => {
+    setConfig(c => {
+      if (editLang === 'ar') return setPath(c, path, value);
+      return { ...c, translations: { ...c.translations, en: setPath(c.translations?.en || {}, path, value) } };
+    });
+  };
 
   // Live-preview brand color in the admin panel itself
   useEffect(() => {
@@ -426,6 +501,7 @@ export default function SiteEditorPage() {
             teamLinks: d.config.header?.teamLinks?.length ? d.config.header.teamLinks : defaultConfig.header.teamLinks,
           },
           tourRoles: d.config.tourRoles?.length === defaultConfig.tourRoles.length ? d.config.tourRoles : defaultConfig.tourRoles,
+          translations: { en: d.config.translations?.en || {} },
         }));
       }
       setLoading(false);
@@ -575,7 +651,7 @@ export default function SiteEditorPage() {
         <p className="text-muted-foreground text-sm">تحكم كامل في محتوى وتصميم الصفحة الرئيسية — التغييرات تظهر فوراً بعد الحفظ</p>
       </div>
 
-      <SaveBar onSave={save} saving={saving} saved={saved} />
+      <SaveBar onSave={save} saving={saving} saved={saved} editLang={editLang} setEditLang={setEditLang} />
 
       <div className="pt-4">
         <Tabs defaultValue="identity">
@@ -616,7 +692,7 @@ export default function SiteEditorPage() {
                   </div>
                   <div className="space-y-2">
                     <Label>الشعار النصي (tagline)</Label>
-                    <Input value={config.tagline} onChange={e => setConfig(c => ({ ...c, tagline: e.target.value }))} placeholder="منصة التمكين الرقمي" />
+                    <Input value={cv('tagline')} onChange={e => uc('tagline', e.target.value)} placeholder="منصة التمكين الرقمي" />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -736,34 +812,39 @@ export default function SiteEditorPage() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label>العنوان الرئيسي</Label>
-                  <Input value={config.hero.title} onChange={e => setHero('title', e.target.value)} placeholder="بوابتك للتمكين والنجاح" />
+                  <Input value={cv('hero.title')} onChange={e => uc('hero.title', e.target.value)} placeholder="بوابتك للتمكين والنجاح" />
                 </div>
                 <div className="space-y-2">
                   <Label>العنوان الفرعي</Label>
-                  <Textarea value={config.hero.subtitle} onChange={e => setHero('subtitle', e.target.value)} rows={3} className="resize-none" placeholder="وصف مختصر..." />
+                  <Textarea value={cv('hero.subtitle')} onChange={e => uc('hero.subtitle', e.target.value)} rows={3} className="resize-none" placeholder="وصف مختصر..." />
                 </div>
                 <ButtonsEditor
-                  buttons={config.hero.buttons}
+                  buttons={editLang === 'ar' ? config.hero.buttons : (cv('hero.buttons', null) || config.hero.buttons.map(b => ({ ...b, text: '' })))}
                   onAdd={() => addButton('hero')}
-                  onUpdate={(i, k, v) => updateButton('hero', i, k, v)}
+                  onUpdate={(i, k, v) => uc(`hero.buttons.${i}.${k}`, v)}
                   onRemove={i => removeButton('hero', i)}
+                  readOnlyStructure={editLang === 'en'}
                 />
-                <ImageUploadField label="صورة الخلفية (اختياري)" value={config.hero.backgroundImage} onChange={url => setHero('backgroundImage', url)} storagePath="site/hero" />
-                <SectionStyleFields config={config} sectionKey="hero" setSectionStyle={setSectionStyle} withIcon={false} />
+                {editLang === 'ar' && (
+                  <>
+                    <ImageUploadField label="صورة الخلفية (اختياري)" value={config.hero.backgroundImage} onChange={url => setHero('backgroundImage', url)} storagePath="site/hero" />
+                    <SectionStyleFields config={config} sectionKey="hero" setSectionStyle={setSectionStyle} withIcon={false} />
+                  </>
+                )}
                 <div className="rounded-xl overflow-hidden border border-border">
                   <div
                     className="p-8 text-center bg-gradient-to-br from-primary/20 to-purple-900/30"
                     style={config.hero.backgroundImage ? { backgroundImage: `url(${config.hero.backgroundImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}
                   >
-                    <h2 className="text-foreground text-xl font-bold mb-2">{config.hero.title || 'العنوان الرئيسي'}</h2>
-                    <p className="text-foreground/90 text-sm mb-4 whitespace-pre-line">{config.hero.subtitle || 'الوصف...'}</p>
+                    <h2 className="text-foreground text-xl font-bold mb-2">{cv('hero.title') || 'العنوان الرئيسي'}</h2>
+                    <p className="text-foreground/90 text-sm mb-4 whitespace-pre-line">{cv('hero.subtitle') || 'الوصف...'}</p>
                     <div className="flex gap-2 justify-center flex-wrap">
                       {config.hero.buttons.map((btn, i) => (
                         <span
                           key={i}
                           className={`px-4 py-1.5 rounded-lg text-sm ${btn.style === 'outline' ? 'border border-border text-foreground' : 'bg-primary text-primary-foreground'}`}
                         >
-                          {btn.text}
+                          {cv(`hero.buttons.${i}.text`) || btn.text}
                         </span>
                       ))}
                     </div>
@@ -837,7 +918,7 @@ export default function SiteEditorPage() {
             <Card className="border-0 shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-foreground text-base">الإحصائيات</CardTitle>
-                <Button size="sm" onClick={addStat} className="gap-1"><Plus className="h-3.5 w-3.5" />إضافة</Button>
+                {editLang === 'ar' && <Button size="sm" onClick={addStat} className="gap-1"><Plus className="h-3.5 w-3.5" />إضافة</Button>}
               </CardHeader>
               <CardContent className="space-y-3">
                 {config.stats.length === 0 ? (
@@ -847,31 +928,35 @@ export default function SiteEditorPage() {
                     <div className="flex-1 grid grid-cols-1 sm:grid-cols-4 gap-2">
                       <div>
                         <Label className="text-xs text-muted-foreground">الرقم/القيمة</Label>
-                        <Input value={stat.value} onChange={e => updateStat(i, 'value', e.target.value)} placeholder="500+" className="mt-1 h-8 text-sm" />
+                        <Input value={cv(`stats.${i}.value`)} onChange={e => uc(`stats.${i}.value`, e.target.value)} placeholder={stat.value || '500+'} className="mt-1 h-8 text-sm" />
                       </div>
                       <div className="col-span-2">
                         <Label className="text-xs text-muted-foreground">التسمية</Label>
-                        <Input value={stat.label} onChange={e => updateStat(i, 'label', e.target.value)} placeholder="مستفيد نشط" className="mt-1 h-8 text-sm" />
+                        <Input value={cv(`stats.${i}.label`)} onChange={e => uc(`stats.${i}.label`, e.target.value)} placeholder={stat.label || 'مستفيد نشط'} className="mt-1 h-8 text-sm" />
                       </div>
-                      <div>
-                        <Label className="text-xs text-muted-foreground">الأيقونة</Label>
-                        <Input value={stat.icon} onChange={e => updateStat(i, 'icon', e.target.value)} placeholder="Users" className="mt-1 h-8 text-sm" dir="ltr" />
-                      </div>
+                      {editLang === 'ar' && (
+                        <div>
+                          <Label className="text-xs text-muted-foreground">الأيقونة</Label>
+                          <Input value={stat.icon} onChange={e => updateStat(i, 'icon', e.target.value)} placeholder="Users" className="mt-1 h-8 text-sm" dir="ltr" />
+                        </div>
+                      )}
                     </div>
-                    <Button size="sm" variant="ghost" onClick={() => removeStat(i)} className="h-8 w-8 p-0 text-muted-foreground hover:text-red-400 mt-4 flex-shrink-0">
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                    {editLang === 'ar' && (
+                      <Button size="sm" variant="ghost" onClick={() => removeStat(i)} className="h-8 w-8 p-0 text-muted-foreground hover:text-red-400 mt-4 flex-shrink-0">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
                   </div>
                 ))}
-                <SectionStyleFields config={config} sectionKey="stats" setSectionStyle={setSectionStyle} />
+                {editLang === 'ar' && <SectionStyleFields config={config} sectionKey="stats" setSectionStyle={setSectionStyle} />}
                 {config.stats.length > 0 && (
                   <div className="mt-4 p-4 bg-muted/40 rounded-xl border border-border">
                     <p className="text-muted-foreground text-xs mb-3">معاينة:</p>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                       {config.stats.map((s, i) => (
                         <div key={i} className="text-center">
-                          <p className="text-foreground text-2xl font-bold">{s.value}</p>
-                          <p className="text-muted-foreground text-xs mt-1">{s.label}</p>
+                          <p className="text-foreground text-2xl font-bold">{cv(`stats.${i}.value`) || s.value}</p>
+                          <p className="text-muted-foreground text-xs mt-1">{cv(`stats.${i}.label`) || s.label}</p>
                         </div>
                       ))}
                     </div>
@@ -886,14 +971,16 @@ export default function SiteEditorPage() {
             <Card className="border-0 shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-foreground text-base">بطاقات المميزات</CardTitle>
-                <div className="flex items-center gap-2">
-                  {config.features.length > 0 && (
-                    <Button size="sm" variant="outline" onClick={resetFeatures} className="gap-1">
-                      <RotateCcw className="h-3.5 w-3.5" />استعادة الافتراضي
-                    </Button>
-                  )}
-                  <Button size="sm" onClick={addFeature} className="gap-1"><Plus className="h-3.5 w-3.5" />إضافة ميزة</Button>
-                </div>
+                {editLang === 'ar' && (
+                  <div className="flex items-center gap-2">
+                    {config.features.length > 0 && (
+                      <Button size="sm" variant="outline" onClick={resetFeatures} className="gap-1">
+                        <RotateCcw className="h-3.5 w-3.5" />استعادة الافتراضي
+                      </Button>
+                    )}
+                    <Button size="sm" onClick={addFeature} className="gap-1"><Plus className="h-3.5 w-3.5" />إضافة ميزة</Button>
+                  </div>
+                )}
               </CardHeader>
               <CardContent className="space-y-3">
                 {config.features.length === 0 ? (
@@ -904,37 +991,43 @@ export default function SiteEditorPage() {
                   <div key={i} className="p-3 bg-muted/40 rounded-xl border border-border space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground text-xs font-medium">ميزة {i + 1}</span>
-                      <Button size="sm" variant="ghost" onClick={() => removeFeature(i)} className="h-7 w-7 p-0 text-muted-foreground hover:text-red-400">
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                      {editLang === 'ar' && (
+                        <Button size="sm" variant="ghost" onClick={() => removeFeature(i)} className="h-7 w-7 p-0 text-muted-foreground hover:text-red-400">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <div>
                         <Label className="text-xs text-muted-foreground">العنوان</Label>
-                        <Input value={feat.title} onChange={e => updateFeature(i, 'title', e.target.value)} placeholder="عنوان الميزة" className="mt-1 h-8 text-sm" />
+                        <Input value={cv(`features.${i}.title`)} onChange={e => uc(`features.${i}.title`, e.target.value)} placeholder={feat.title || 'عنوان الميزة'} className="mt-1 h-8 text-sm" />
                       </div>
-                      <div>
-                        <Label className="text-xs text-muted-foreground">الأيقونة (اختياري)</Label>
-                        <Input value={feat.icon} onChange={e => updateFeature(i, 'icon', e.target.value)} placeholder="BookOpen" className="mt-1 h-8 text-sm" dir="ltr" />
-                      </div>
+                      {editLang === 'ar' && (
+                        <div>
+                          <Label className="text-xs text-muted-foreground">الأيقونة (اختياري)</Label>
+                          <Input value={feat.icon} onChange={e => updateFeature(i, 'icon', e.target.value)} placeholder="BookOpen" className="mt-1 h-8 text-sm" dir="ltr" />
+                        </div>
+                      )}
                     </div>
                     <div>
                       <Label className="text-xs text-muted-foreground">الوصف</Label>
-                      <Input value={feat.description} onChange={e => updateFeature(i, 'description', e.target.value)} placeholder="وصف الميزة..." className="mt-1 h-8 text-sm" />
+                      <Input value={cv(`features.${i}.description`)} onChange={e => uc(`features.${i}.description`, e.target.value)} placeholder={feat.description || 'وصف الميزة...'} className="mt-1 h-8 text-sm" />
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <div>
-                        <Label className="text-xs text-muted-foreground">رابط الزر (اختياري)</Label>
-                        <Input value={feat.link || ''} onChange={e => updateFeature(i, 'link', e.target.value)} placeholder="/market" className="mt-1 h-8 text-sm" dir="ltr" />
-                      </div>
+                      {editLang === 'ar' && (
+                        <div>
+                          <Label className="text-xs text-muted-foreground">رابط الزر (اختياري)</Label>
+                          <Input value={feat.link || ''} onChange={e => updateFeature(i, 'link', e.target.value)} placeholder="/market" className="mt-1 h-8 text-sm" dir="ltr" />
+                        </div>
+                      )}
                       <div>
                         <Label className="text-xs text-muted-foreground">نص الزر (اختياري)</Label>
-                        <Input value={feat.linkLabel || ''} onChange={e => updateFeature(i, 'linkLabel', e.target.value)} placeholder="تسوق الآن" className="mt-1 h-8 text-sm" />
+                        <Input value={cv(`features.${i}.linkLabel`)} onChange={e => uc(`features.${i}.linkLabel`, e.target.value)} placeholder={feat.linkLabel || 'تسوق الآن'} className="mt-1 h-8 text-sm" />
                       </div>
                     </div>
                   </div>
                 ))}
-                <SectionStyleFields config={config} sectionKey="features" setSectionStyle={setSectionStyle} />
+                {editLang === 'ar' && <SectionStyleFields config={config} sectionKey="features" setSectionStyle={setSectionStyle} />}
               </CardContent>
             </Card>
           </TabsContent>
@@ -953,18 +1046,18 @@ export default function SiteEditorPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="space-y-1.5">
                         <Label className="text-xs">العنوان الرئيسي</Label>
-                        <Input value={role.headline} onChange={e => setTourRoleField(i, 'headline', e.target.value)} />
+                        <Input value={cv(`tourRoles.${i}.headline`)} onChange={e => uc(`tourRoles.${i}.headline`, e.target.value)} placeholder={editLang === 'en' ? role.headline : undefined} />
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs">نص زر الدعوة {i === 4 ? '' : '(فارغ = "ابدأ كـ' + TOUR_ROLE_LABELS[i] + '")'}</Label>
-                        <Input value={role.ctaText} onChange={e => setTourRoleField(i, 'ctaText', e.target.value)} />
+                        <Input value={cv(`tourRoles.${i}.ctaText`)} onChange={e => uc(`tourRoles.${i}.ctaText`, e.target.value)} placeholder={editLang === 'en' ? role.ctaText : undefined} />
                       </div>
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-xs">المزايا (٤)</Label>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {role.benefits.map((b, bi) => (
-                          <Input key={bi} value={b} onChange={e => setTourRoleBenefit(i, bi, e.target.value)} />
+                          <Input key={bi} value={cv(`tourRoles.${i}.benefits.${bi}`)} onChange={e => uc(`tourRoles.${i}.benefits.${bi}`, e.target.value)} placeholder={editLang === 'en' ? b : undefined} />
                         ))}
                       </div>
                     </div>
@@ -973,8 +1066,8 @@ export default function SiteEditorPage() {
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                         {role.stats.map((s, si) => (
                           <div key={si} className="flex gap-1.5">
-                            <Input value={s.value} onChange={e => setTourRoleStat(i, si, 'value', e.target.value)} placeholder="القيمة" className="w-16" />
-                            <Input value={s.label} onChange={e => setTourRoleStat(i, si, 'label', e.target.value)} placeholder="التسمية" className="flex-1" />
+                            <Input value={cv(`tourRoles.${i}.stats.${si}.value`)} onChange={e => uc(`tourRoles.${i}.stats.${si}.value`, e.target.value)} placeholder={editLang === 'en' ? s.value : 'القيمة'} className="w-16" />
+                            <Input value={cv(`tourRoles.${i}.stats.${si}.label`)} onChange={e => uc(`tourRoles.${i}.stats.${si}.label`, e.target.value)} placeholder={editLang === 'en' ? s.label : 'التسمية'} className="flex-1" />
                           </div>
                         ))}
                       </div>
@@ -984,8 +1077,8 @@ export default function SiteEditorPage() {
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                         {role.items.map((it, ii) => (
                           <div key={ii} className="space-y-1">
-                            <Input value={it.title} onChange={e => setTourRoleItem(i, ii, 'title', e.target.value)} placeholder="العنوان" />
-                            <Input value={it.subtitle} onChange={e => setTourRoleItem(i, ii, 'subtitle', e.target.value)} placeholder="الوصف الفرعي" />
+                            <Input value={cv(`tourRoles.${i}.items.${ii}.title`)} onChange={e => uc(`tourRoles.${i}.items.${ii}.title`, e.target.value)} placeholder={editLang === 'en' ? it.title : 'العنوان'} />
+                            <Input value={cv(`tourRoles.${i}.items.${ii}.subtitle`)} onChange={e => uc(`tourRoles.${i}.items.${ii}.subtitle`, e.target.value)} placeholder={editLang === 'en' ? it.subtitle : 'الوصف الفرعي'} />
                           </div>
                         ))}
                       </div>
@@ -1001,7 +1094,7 @@ export default function SiteEditorPage() {
             <Card className="border-0 shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-foreground text-base">آراء المستخدمين (Testimonials)</CardTitle>
-                <Button size="sm" onClick={addTestimonial} className="gap-1"><Plus className="h-3.5 w-3.5" />إضافة رأي</Button>
+                {editLang === 'ar' && <Button size="sm" onClick={addTestimonial} className="gap-1"><Plus className="h-3.5 w-3.5" />إضافة رأي</Button>}
               </CardHeader>
               <CardContent className="space-y-3">
                 {config.testimonials.length === 0 ? (
@@ -1010,39 +1103,43 @@ export default function SiteEditorPage() {
                   <div key={i} className="p-3 bg-muted/40 rounded-xl border border-border space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground text-xs font-medium">رأي {i + 1}</span>
-                      <Button size="sm" variant="ghost" onClick={() => removeTestimonial(i)} className="h-7 w-7 p-0 text-muted-foreground hover:text-red-400">
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                      {editLang === 'ar' && (
+                        <Button size="sm" variant="ghost" onClick={() => removeTestimonial(i)} className="h-7 w-7 p-0 text-muted-foreground hover:text-red-400">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
                         <Label className="text-xs text-muted-foreground">الاسم</Label>
-                        <Input value={t.name} onChange={e => updateTestimonial(i, 'name', e.target.value)} placeholder="اسم المستخدم" className="mt-1 h-8 text-sm" />
+                        <Input value={cv(`testimonials.${i}.name`)} onChange={e => uc(`testimonials.${i}.name`, e.target.value)} placeholder={t.name || 'اسم المستخدم'} className="mt-1 h-8 text-sm" />
                       </div>
                       <div>
                         <Label className="text-xs text-muted-foreground">الدور/المسمى</Label>
-                        <Input value={t.role} onChange={e => updateTestimonial(i, 'role', e.target.value)} placeholder="مستفيد - رائد أعمال" className="mt-1 h-8 text-sm" />
+                        <Input value={cv(`testimonials.${i}.role`)} onChange={e => uc(`testimonials.${i}.role`, e.target.value)} placeholder={t.role || 'مستفيد - رائد أعمال'} className="mt-1 h-8 text-sm" />
                       </div>
                     </div>
                     <div>
                       <Label className="text-xs text-muted-foreground">نص الرأي</Label>
-                      <Textarea value={t.text} onChange={e => updateTestimonial(i, 'text', e.target.value)} placeholder="ماذا قال المستخدم..." rows={3} className="mt-1 text-sm resize-none" />
+                      <Textarea value={cv(`testimonials.${i}.text`)} onChange={e => uc(`testimonials.${i}.text`, e.target.value)} placeholder={t.text || 'ماذا قال المستخدم...'} rows={3} className="mt-1 text-sm resize-none" />
                     </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">التقييم (1-5 نجوم)</Label>
-                      <div className="flex gap-2 mt-1">
-                        {[1, 2, 3, 4, 5].map(n => (
-                          <button
-                            key={n}
-                            type="button"
-                            onClick={() => updateTestimonial(i, 'stars', n)}
-                            className={`h-8 w-8 rounded-lg flex items-center justify-center transition-all ${t.stars >= n ? 'bg-amber-500/20 text-amber-400' : 'bg-muted text-muted-foreground'}`}
-                          >
-                            <Star className="h-4 w-4 fill-current" />
-                          </button>
-                        ))}
+                    {editLang === 'ar' && (
+                      <div>
+                        <Label className="text-xs text-muted-foreground">التقييم (1-5 نجوم)</Label>
+                        <div className="flex gap-2 mt-1">
+                          {[1, 2, 3, 4, 5].map(n => (
+                            <button
+                              key={n}
+                              type="button"
+                              onClick={() => updateTestimonial(i, 'stars', n)}
+                              className={`h-8 w-8 rounded-lg flex items-center justify-center transition-all ${t.stars >= n ? 'bg-amber-500/20 text-amber-400' : 'bg-muted text-muted-foreground'}`}
+                            >
+                              <Star className="h-4 w-4 fill-current" />
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 ))}
               </CardContent>
@@ -1082,33 +1179,36 @@ export default function SiteEditorPage() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label>العنوان الرئيسي</Label>
-                  <Input value={config.ctaBanner.title} onChange={e => setBanner('title', e.target.value)} placeholder="جاهز للبدء؟ انضم إلى آلاف المستفيدين" />
+                  <Input value={cv('ctaBanner.title')} onChange={e => uc('ctaBanner.title', e.target.value)} placeholder={editLang === 'en' ? config.ctaBanner.title : 'جاهز للبدء؟ انضم إلى آلاف المستفيدين'} />
                 </div>
                 <div className="space-y-2">
                   <Label>العنوان الفرعي</Label>
-                  <Textarea value={config.ctaBanner.subtitle} onChange={e => setBanner('subtitle', e.target.value)} rows={2} className="resize-none" placeholder="سجّل مجاناً اليوم..." />
+                  <Textarea value={cv('ctaBanner.subtitle')} onChange={e => uc('ctaBanner.subtitle', e.target.value)} rows={2} className="resize-none" placeholder={editLang === 'en' ? config.ctaBanner.subtitle : 'سجّل مجاناً اليوم...'} />
                 </div>
                 <ButtonsEditor
-                  buttons={config.ctaBanner.buttons}
+                  buttons={editLang === 'ar' ? config.ctaBanner.buttons : (cv('ctaBanner.buttons', null) || config.ctaBanner.buttons.map(b => ({ ...b, text: '' })))}
                   onAdd={() => addButton('ctaBanner')}
-                  onUpdate={(i, k, v) => updateButton('ctaBanner', i, k, v)}
+                  onUpdate={(i, k, v) => uc(`ctaBanner.buttons.${i}.${k}`, v)}
                   onRemove={i => removeButton('ctaBanner', i)}
+                  readOnlyStructure={editLang === 'en'}
                 />
-                <ColorField
-                  label="لون خلفية البانر"
-                  value={config.ctaBanner.backgroundColor}
-                  defaultSwatch="#111827"
-                  onChange={v => setBanner('backgroundColor', v)}
-                  hint="فارغ = التصميم الافتراضي (خلفية داكنة تتبع الثيم)"
-                />
+                {editLang === 'ar' && (
+                  <ColorField
+                    label="لون خلفية البانر"
+                    value={config.ctaBanner.backgroundColor}
+                    defaultSwatch="#111827"
+                    onChange={v => setBanner('backgroundColor', v)}
+                    hint="فارغ = التصميم الافتراضي (خلفية داكنة تتبع الثيم)"
+                  />
+                )}
                 {/* Preview — matches the real banner's default vs. custom-color behavior */}
                 <div className="rounded-xl overflow-hidden border border-border">
                   <div
                     className={`p-8 text-center ${config.ctaBanner.backgroundColor ? 'text-white' : 'bg-foreground text-background'}`}
                     style={config.ctaBanner.backgroundColor ? { backgroundColor: config.ctaBanner.backgroundColor } : undefined}
                   >
-                    <h2 className="text-xl font-bold mb-2">{config.ctaBanner.title || 'العنوان...'}</h2>
-                    <p className={`text-sm mb-4 ${config.ctaBanner.backgroundColor ? 'text-white/70' : 'text-background/60'}`}>{config.ctaBanner.subtitle || 'الوصف...'}</p>
+                    <h2 className="text-xl font-bold mb-2">{cv('ctaBanner.title') || 'العنوان...'}</h2>
+                    <p className={`text-sm mb-4 ${config.ctaBanner.backgroundColor ? 'text-white/70' : 'text-background/60'}`}>{cv('ctaBanner.subtitle') || 'الوصف...'}</p>
                     <div className="flex gap-2 justify-center flex-wrap">
                       {config.ctaBanner.buttons.map((btn, i) => (
                         <span
@@ -1119,7 +1219,7 @@ export default function SiteEditorPage() {
                               : 'bg-secondary text-foreground font-bold'
                           }`}
                         >
-                          {btn.text}
+                          {cv(`ctaBanner.buttons.${i}.text`) || btn.text}
                         </span>
                       ))}
                     </div>
@@ -1179,48 +1279,50 @@ export default function SiteEditorPage() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label>وصف الفوتر</Label>
-                  <Textarea value={config.footer.description} onChange={e => setFooter('description', e.target.value)} rows={2} className="resize-none" placeholder="وصف قصير للمنصة..." />
+                  <Textarea value={cv('footer.description')} onChange={e => uc('footer.description', e.target.value)} rows={2} className="resize-none" placeholder={editLang === 'en' ? config.footer.description : 'وصف قصير للمنصة...'} />
                 </div>
                 <div className="space-y-2">
                   <Label>نص حقوق النشر</Label>
-                  <Input value={config.footer.copyright} onChange={e => setFooter('copyright', e.target.value)} placeholder="© 2024 EmpowerHub. جميع الحقوق محفوظة." />
+                  <Input value={cv('footer.copyright')} onChange={e => uc('footer.copyright', e.target.value)} placeholder={editLang === 'en' ? config.footer.copyright : '© 2024 EmpowerHub. جميع الحقوق محفوظة.'} />
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label>البريد الإلكتروني</Label>
-                    <Input value={config.footer.email} onChange={e => setFooter('email', e.target.value)} placeholder="info@empowerhub.com" dir="ltr" />
+                {editLang === 'ar' && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label>البريد الإلكتروني</Label>
+                      <Input value={config.footer.email} onChange={e => setFooter('email', e.target.value)} placeholder="info@empowerhub.com" dir="ltr" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>رقم الهاتف</Label>
+                      <Input value={config.footer.phone} onChange={e => setFooter('phone', e.target.value)} placeholder="+966..." dir="ltr" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>تويتر / X</Label>
+                      <Input value={config.footer.twitter} onChange={e => setFooter('twitter', e.target.value)} placeholder="https://twitter.com/..." dir="ltr" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>LinkedIn</Label>
+                      <Input value={config.footer.linkedin} onChange={e => setFooter('linkedin', e.target.value)} placeholder="https://linkedin.com/..." dir="ltr" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Instagram</Label>
+                      <Input value={config.footer.instagram} onChange={e => setFooter('instagram', e.target.value)} placeholder="https://instagram.com/..." dir="ltr" />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label>رقم الهاتف</Label>
-                    <Input value={config.footer.phone} onChange={e => setFooter('phone', e.target.value)} placeholder="+966..." dir="ltr" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>تويتر / X</Label>
-                    <Input value={config.footer.twitter} onChange={e => setFooter('twitter', e.target.value)} placeholder="https://twitter.com/..." dir="ltr" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>LinkedIn</Label>
-                    <Input value={config.footer.linkedin} onChange={e => setFooter('linkedin', e.target.value)} placeholder="https://linkedin.com/..." dir="ltr" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Instagram</Label>
-                    <Input value={config.footer.instagram} onChange={e => setFooter('instagram', e.target.value)} placeholder="https://instagram.com/..." dir="ltr" />
-                  </div>
-                </div>
+                )}
                 <div className="pt-2 border-t border-border space-y-4">
                   <p className="text-sm font-medium text-foreground">شريط الاشتراك بالنشرة</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-2">
                       <Label>عنوان شريط الاشتراك</Label>
-                      <Input value={config.footer.newsletterTitle} onChange={e => setFooter('newsletterTitle', e.target.value)} placeholder="انضم لمجتمع EmpowerHub الآن" />
+                      <Input value={cv('footer.newsletterTitle')} onChange={e => uc('footer.newsletterTitle', e.target.value)} placeholder="انضم لمجتمع EmpowerHub الآن" />
                     </div>
                     <div className="space-y-2">
                       <Label>نص حقل البريد</Label>
-                      <Input value={config.footer.newsletterPlaceholder} onChange={e => setFooter('newsletterPlaceholder', e.target.value)} placeholder="بريدك الإلكتروني" />
+                      <Input value={cv('footer.newsletterPlaceholder')} onChange={e => uc('footer.newsletterPlaceholder', e.target.value)} placeholder="بريدك الإلكتروني" />
                     </div>
                     <div className="space-y-2">
                       <Label>نص زر الاشتراك</Label>
-                      <Input value={config.footer.newsletterButton} onChange={e => setFooter('newsletterButton', e.target.value)} placeholder="اشترك" />
+                      <Input value={cv('footer.newsletterButton')} onChange={e => uc('footer.newsletterButton', e.target.value)} placeholder="اشترك" />
                     </div>
                   </div>
                 </div>
@@ -1229,19 +1331,19 @@ export default function SiteEditorPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-2">
                       <Label>عمود الروابط السريعة</Label>
-                      <Input value={config.footer.quickLinksTitle} onChange={e => setFooter('quickLinksTitle', e.target.value)} placeholder="روابط سريعة" />
+                      <Input value={cv('footer.quickLinksTitle')} onChange={e => uc('footer.quickLinksTitle', e.target.value)} placeholder="روابط سريعة" />
                     </div>
                     <div className="space-y-2">
                       <Label>عمود "ابدأ كـ"</Label>
-                      <Input value={config.footer.roleLinksTitle} onChange={e => setFooter('roleLinksTitle', e.target.value)} placeholder="ابدأ كـ" />
+                      <Input value={cv('footer.roleLinksTitle')} onChange={e => uc('footer.roleLinksTitle', e.target.value)} placeholder="ابدأ كـ" />
                     </div>
                     <div className="space-y-2">
                       <Label>عمود الشركة</Label>
-                      <Input value={config.footer.companyLinksTitle} onChange={e => setFooter('companyLinksTitle', e.target.value)} placeholder="الشركة" />
+                      <Input value={cv('footer.companyLinksTitle')} onChange={e => uc('footer.companyLinksTitle', e.target.value)} placeholder="الشركة" />
                     </div>
                     <div className="space-y-2">
                       <Label>عمود قانوني</Label>
-                      <Input value={config.footer.legalLinksTitle} onChange={e => setFooter('legalLinksTitle', e.target.value)} placeholder="قانوني" />
+                      <Input value={cv('footer.legalLinksTitle')} onChange={e => uc('footer.legalLinksTitle', e.target.value)} placeholder="قانوني" />
                     </div>
                   </div>
                 </div>
@@ -1264,25 +1366,25 @@ export default function SiteEditorPage() {
                       <div className="space-y-1.5">
                         <Label className="text-xs">النص التمهيدي</Label>
                         <Input
-                          value={config.sectionHeadings[s.key]?.eyebrow || ''}
-                          onChange={e => setSectionHeading(s.key, 'eyebrow', e.target.value)}
-                          placeholder="افتراضي"
+                          value={cv(`sectionHeadings.${s.key}.eyebrow`)}
+                          onChange={e => uc(`sectionHeadings.${s.key}.eyebrow`, e.target.value)}
+                          placeholder={editLang === 'en' ? (config.sectionHeadings[s.key]?.eyebrow || 'Default') : 'افتراضي'}
                         />
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs">العنوان</Label>
                         <Input
-                          value={config.sectionHeadings[s.key]?.heading || ''}
-                          onChange={e => setSectionHeading(s.key, 'heading', e.target.value)}
-                          placeholder="افتراضي"
+                          value={cv(`sectionHeadings.${s.key}.heading`)}
+                          onChange={e => uc(`sectionHeadings.${s.key}.heading`, e.target.value)}
+                          placeholder={editLang === 'en' ? (config.sectionHeadings[s.key]?.heading || 'Default') : 'افتراضي'}
                         />
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs">الوصف الفرعي</Label>
                         <Input
-                          value={config.sectionHeadings[s.key]?.subheading || ''}
-                          onChange={e => setSectionHeading(s.key, 'subheading', e.target.value)}
-                          placeholder="افتراضي"
+                          value={cv(`sectionHeadings.${s.key}.subheading`)}
+                          onChange={e => uc(`sectionHeadings.${s.key}.subheading`, e.target.value)}
+                          placeholder={editLang === 'en' ? (config.sectionHeadings[s.key]?.subheading || 'Default') : 'افتراضي'}
                         />
                       </div>
                     </div>
@@ -1300,24 +1402,24 @@ export default function SiteEditorPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>النص التمهيدي</Label>
-                    <Input value={config.aiSpotlight.eyebrow} onChange={e => setAISpotlight('eyebrow', e.target.value)} placeholder="مدعوم بالذكاء الاصطناعي" />
+                    <Input value={cv('aiSpotlight.eyebrow')} onChange={e => uc('aiSpotlight.eyebrow', e.target.value)} placeholder={editLang === 'en' ? config.aiSpotlight.eyebrow : 'مدعوم بالذكاء الاصطناعي'} />
                   </div>
                   <div className="space-y-2">
                     <Label>العنوان</Label>
-                    <Input value={config.aiSpotlight.heading} onChange={e => setAISpotlight('heading', e.target.value)} placeholder="توصيات ذكية تسبقك خطوة." />
+                    <Input value={cv('aiSpotlight.heading')} onChange={e => uc('aiSpotlight.heading', e.target.value)} placeholder={editLang === 'en' ? config.aiSpotlight.heading : 'توصيات ذكية تسبقك خطوة.'} />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label>الوصف الفرعي</Label>
-                  <Textarea value={config.aiSpotlight.subheading} onChange={e => setAISpotlight('subheading', e.target.value)} rows={2} className="resize-none" />
+                  <Textarea value={cv('aiSpotlight.subheading')} onChange={e => uc('aiSpotlight.subheading', e.target.value)} rows={2} className="resize-none" placeholder={editLang === 'en' ? config.aiSpotlight.subheading : undefined} />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {config.aiSpotlight.cards.map((card, i) => (
                     <div key={i} className="p-3 rounded-xl border border-border bg-muted/30 space-y-2">
                       <Label className="text-xs">بطاقة {i + 1} — العنوان</Label>
-                      <Input value={card.title} onChange={e => updateAISpotlightCard(i, 'title', e.target.value)} />
+                      <Input value={cv(`aiSpotlight.cards.${i}.title`)} onChange={e => uc(`aiSpotlight.cards.${i}.title`, e.target.value)} placeholder={editLang === 'en' ? card.title : undefined} />
                       <Label className="text-xs">بطاقة {i + 1} — الوصف</Label>
-                      <Textarea value={card.description} onChange={e => updateAISpotlightCard(i, 'description', e.target.value)} rows={2} className="resize-none" />
+                      <Textarea value={cv(`aiSpotlight.cards.${i}.description`)} onChange={e => uc(`aiSpotlight.cards.${i}.description`, e.target.value)} rows={2} className="resize-none" placeholder={editLang === 'en' ? card.description : undefined} />
                     </div>
                   ))}
                 </div>
@@ -1331,9 +1433,11 @@ export default function SiteEditorPage() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-foreground text-base">الأسئلة الشائعة</CardTitle>
-                  <Button type="button" size="sm" variant="outline" onClick={addFaq} className="gap-1">
-                    <Plus className="h-4 w-4" />إضافة سؤال
-                  </Button>
+                  {editLang === 'ar' && (
+                    <Button type="button" size="sm" variant="outline" onClick={addFaq} className="gap-1">
+                      <Plus className="h-4 w-4" />إضافة سؤال
+                    </Button>
+                  )}
                 </div>
                 <p className="text-muted-foreground text-xs">اتركها فارغة لاستخدام الأسئلة الافتراضية</p>
               </CardHeader>
@@ -1345,13 +1449,15 @@ export default function SiteEditorPage() {
                   <div key={i} className="p-4 bg-muted/40 rounded-xl border border-border space-y-2">
                     <div className="flex items-center justify-between">
                       <Label className="text-xs">السؤال</Label>
-                      <Button type="button" size="sm" variant="ghost" onClick={() => removeFaq(i)} className="h-7 w-7 p-0 text-muted-foreground hover:text-red-400">
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                      {editLang === 'ar' && (
+                        <Button type="button" size="sm" variant="ghost" onClick={() => removeFaq(i)} className="h-7 w-7 p-0 text-muted-foreground hover:text-red-400">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
                     </div>
-                    <Input value={item.question} onChange={e => updateFaq(i, 'question', e.target.value)} placeholder="نص السؤال" />
+                    <Input value={cv(`faq.${i}.question`)} onChange={e => uc(`faq.${i}.question`, e.target.value)} placeholder={editLang === 'en' ? item.question : 'نص السؤال'} />
                     <Label className="text-xs">الإجابة</Label>
-                    <Textarea value={item.answer} onChange={e => updateFaq(i, 'answer', e.target.value)} rows={2} className="resize-none" placeholder="نص الإجابة" />
+                    <Textarea value={cv(`faq.${i}.answer`)} onChange={e => uc(`faq.${i}.answer`, e.target.value)} rows={2} className="resize-none" placeholder={editLang === 'en' ? item.answer : 'نص الإجابة'} />
                   </div>
                 ))}
               </CardContent>

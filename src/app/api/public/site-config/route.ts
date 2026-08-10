@@ -275,6 +275,7 @@ export async function GET() {
       roles: data?.roles ?? defaultConfig.roles,
       faq: data?.faq ?? defaultConfig.faq,
       tourRoles: data?.tourRoles?.length === defaultConfig.tourRoles.length ? data.tourRoles : defaultConfig.tourRoles,
+      translations: { en: data?.translations?.en || {} },
     };
     return NextResponse.json({ config });
   } catch {
