@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ClipboardCheck, CheckCircle2, Clock, Star, User } from "lucide-react";
+import { useLanguage } from "@/components/language-provider";
 
 type QuestionType = 'text' | 'rating' | 'choice';
 
@@ -27,6 +28,8 @@ interface Assessment {
 export default function CoachAssessmentsPage() {
   const { user: authUser, userProfile } = useUser();
   const { toast } = useToast();
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [loading, setLoading] = useState(true);
   const [fillOpen, setFillOpen] = useState(false);
@@ -60,7 +63,7 @@ export default function CoachAssessmentsPage() {
   const handleSubmit = async () => {
     if (!authUser || !active) return;
     const missing = active.questions.filter(q => q.required && !answers[q.id]);
-    if (missing.length) { toast({ variant: 'destructive', title: 'أكمل الأسئلة المطلوبة' }); return; }
+    if (missing.length) { toast({ variant: 'destructive', title: bi('أكمل الأسئلة المطلوبة', 'Complete the required questions') }); return; }
     setSubmitting(true);
     try {
       const token = await authUser.getIdToken();
@@ -71,11 +74,11 @@ export default function CoachAssessmentsPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      toast({ title: 'تم إرسال إجاباتك بنجاح' });
+      toast({ title: bi('تم إرسال إجاباتك بنجاح', 'Your answers have been submitted successfully') });
       setFillOpen(false);
       fetchAssessments();
     } catch (e: any) {
-      toast({ variant: 'destructive', title: 'خطأ', description: e.message });
+      toast({ variant: 'destructive', title: bi('خطأ', 'Error'), description: e.message });
     } finally { setSubmitting(false); }
   };
 
@@ -83,10 +86,10 @@ export default function CoachAssessmentsPage() {
   const completed = assessments.filter(a => a.submitted);
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={dir}>
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">نماذج التقييم</h1>
-        <p className="text-sm text-muted-foreground mt-1">النماذج المرسلة إليك من المنظمة لتقييم المستفيدين</p>
+        <h1 className="text-2xl font-bold tracking-tight">{bi('نماذج التقييم', 'Assessment Forms')}</h1>
+        <p className="text-sm text-muted-foreground mt-1">{bi('النماذج المرسلة إليك من المنظمة لتقييم المستفيدين', 'Forms sent to you by the organization to assess beneficiaries')}</p>
       </div>
 
       {loading ? (
@@ -95,7 +98,7 @@ export default function CoachAssessmentsPage() {
         <Card className="border-dashed border-2">
           <CardContent className="py-16 flex flex-col items-center gap-3 text-center">
             <ClipboardCheck className="h-12 w-12 text-muted-foreground/30" />
-            <p className="font-medium text-muted-foreground">لا توجد نماذج حالياً</p>
+            <p className="font-medium text-muted-foreground">{bi('لا توجد نماذج حالياً', 'No forms currently available')}</p>
           </CardContent>
         </Card>
       ) : (
@@ -103,7 +106,7 @@ export default function CoachAssessmentsPage() {
           {pending.length > 0 && (
             <div className="space-y-3">
               <h2 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
-                <Clock className="h-4 w-4 text-amber-500"/>بانتظار إجابتك ({pending.length})
+                <Clock className="h-4 w-4 text-amber-500"/>{bi('بانتظار إجابتك', 'Awaiting your response')} ({pending.length})
               </h2>
               <div className="grid gap-4 md:grid-cols-2">
                 {pending.map(a => (
@@ -122,9 +125,9 @@ export default function CoachAssessmentsPage() {
                     </CardHeader>
                     <CardContent className="pt-0 space-y-2">
                       {a.description && <p className="text-xs text-muted-foreground line-clamp-2">{a.description}</p>}
-                      <p className="text-xs text-muted-foreground">{a.questions.length} سؤال</p>
+                      <p className="text-xs text-muted-foreground">{a.questions.length} {bi('سؤال', 'questions')}</p>
                       <Button size="sm" className="h-8 gap-1.5 text-xs mt-1" style={{background:a.orgColor||undefined}} onClick={()=>open(a)}>
-                        <ClipboardCheck className="h-3.5 w-3.5"/>أجب على النموذج
+                        <ClipboardCheck className="h-3.5 w-3.5"/>{bi('أجب على النموذج', 'Answer the form')}
                       </Button>
                     </CardContent>
                   </Card>
@@ -135,7 +138,7 @@ export default function CoachAssessmentsPage() {
           {completed.length > 0 && (
             <div className="space-y-3">
               <h2 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-emerald-500"/>مكتملة ({completed.length})
+                <CheckCircle2 className="h-4 w-4 text-emerald-500"/>{bi('مكتملة', 'Completed')} ({completed.length})
               </h2>
               <div className="grid gap-4 md:grid-cols-2">
                 {completed.map(a => (
@@ -151,7 +154,7 @@ export default function CoachAssessmentsPage() {
                           <CardTitle className="text-sm leading-snug">{a.title}</CardTitle>
                         </div>
                         <Badge variant="outline" className="text-[10px] text-emerald-600 border-emerald-200 bg-emerald-50 shrink-0">
-                          <CheckCircle2 className="h-3 w-3 ml-1"/>مكتمل
+                          <CheckCircle2 className="h-3 w-3 ml-1"/>{bi('مكتمل', 'Completed')}
                         </Badge>
                       </div>
                     </CardHeader>
@@ -165,7 +168,7 @@ export default function CoachAssessmentsPage() {
 
       {active && (
         <Dialog open={fillOpen} onOpenChange={setFillOpen}>
-          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto p-0" dir="rtl">
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto p-0" dir={dir}>
             <div className="px-6 py-5 flex items-center gap-3"
               style={{background:active.orgColor?`${active.orgColor}18`:'hsl(var(--primary)/0.08)',borderBottom:`3px solid ${active.orgColor||'hsl(var(--primary))'}`}}>
               {active.orgLogo
@@ -183,24 +186,24 @@ export default function CoachAssessmentsPage() {
               {/* Personal info — pre-filled, editable */}
               <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-3">
                 <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
-                  <User className="h-3.5 w-3.5" />معلوماتك الشخصية
+                  <User className="h-3.5 w-3.5" />{bi('معلوماتك الشخصية', 'Your personal information')}
                 </p>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <Label className="text-xs">الاسم الكامل</Label>
-                    <Input value={info.name} onChange={e => setInfo(p => ({ ...p, name: e.target.value }))} placeholder="الاسم" className="h-8 text-sm bg-background" />
+                    <Label className="text-xs">{bi('الاسم الكامل', 'Full Name')}</Label>
+                    <Input value={info.name} onChange={e => setInfo(p => ({ ...p, name: e.target.value }))} placeholder={bi("الاسم", "Name")} className="h-8 text-sm bg-background" />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs">التخصص / المجال</Label>
-                    <Input value={info.specialization} onChange={e => setInfo(p => ({ ...p, specialization: e.target.value }))} placeholder="التخصص" className="h-8 text-sm bg-background" />
+                    <Label className="text-xs">{bi('التخصص / المجال', 'Specialization / Field')}</Label>
+                    <Input value={info.specialization} onChange={e => setInfo(p => ({ ...p, specialization: e.target.value }))} placeholder={bi("التخصص", "Specialization")} className="h-8 text-sm bg-background" />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs">رقم الجوال</Label>
+                    <Label className="text-xs">{bi('رقم الجوال', 'Mobile Number')}</Label>
                     <Input value={info.phone} onChange={e => setInfo(p => ({ ...p, phone: e.target.value }))} placeholder="05xxxxxxxx" dir="ltr" className="h-8 text-sm bg-background" />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs">العنوان</Label>
-                    <Input value={info.address} onChange={e => setInfo(p => ({ ...p, address: e.target.value }))} placeholder="المدينة / المنطقة" className="h-8 text-sm bg-background" />
+                    <Label className="text-xs">{bi('العنوان', 'Address')}</Label>
+                    <Input value={info.address} onChange={e => setInfo(p => ({ ...p, address: e.target.value }))} placeholder={bi("المدينة / المنطقة", "City / Region")} className="h-8 text-sm bg-background" />
                   </div>
                 </div>
               </div>
@@ -208,7 +211,7 @@ export default function CoachAssessmentsPage() {
               {active.questions.map((q, idx) => (
                 <div key={q.id} className="space-y-2.5">
                   <p className="text-sm font-medium">{idx+1}. {q.text}{q.required&&<span className="text-destructive mr-1">*</span>}</p>
-                  {q.type==='text'&&<Textarea rows={3} placeholder="اكتب إجابتك..." value={(answers[q.id]as string)||''} onChange={e=>setAnswers(p=>({...p,[q.id]:e.target.value}))} className="resize-none"/>}
+                  {q.type==='text'&&<Textarea rows={3} placeholder={bi("اكتب إجابتك...", "Write your answer...")} value={(answers[q.id]as string)||''} onChange={e=>setAnswers(p=>({...p,[q.id]:e.target.value}))} className="resize-none"/>}
                   {q.type==='rating'&&(
                     <div className="flex gap-2">
                       {[1,2,3,4,5].map(n=>(
@@ -235,9 +238,9 @@ export default function CoachAssessmentsPage() {
               ))}
             </div>
             <DialogFooter className="px-6 pb-6 pt-2 gap-2">
-              <Button variant="ghost" onClick={()=>setFillOpen(false)}>إلغاء</Button>
+              <Button variant="ghost" onClick={()=>setFillOpen(false)}>{bi('إلغاء', 'Cancel')}</Button>
               <Button onClick={handleSubmit} disabled={submitting} style={{background:active.orgColor||undefined}} className="gap-2">
-                <CheckCircle2 className="h-4 w-4"/>{submitting?'جاري الإرسال...':'إرسال الإجابات'}
+                <CheckCircle2 className="h-4 w-4"/>{submitting?bi('جاري الإرسال...', 'Submitting...'):bi('إرسال الإجابات', 'Submit Answers')}
               </Button>
             </DialogFooter>
           </DialogContent>

@@ -16,6 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { uploadFile as uploadToStorage } from '@/lib/upload-file';
+import { useLanguage } from '@/components/language-provider';
 
 const mentorProfileSchema = z.object({
   name: z.string().min(2, { message: 'يجب أن يكون الاسم حرفين على الأقل.' }),
@@ -59,6 +60,8 @@ type MentorProfile = {
 
 export default function CoachSettingsPage() {
   const { toast } = useToast();
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const { user: authUser } = useUser();
   const [profile, setProfile] = useState<MentorProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -138,9 +141,9 @@ export default function CoachSettingsPage() {
         body: JSON.stringify({ avatarUrl: downloadUrl }),
       });
       setProfile(prev => prev ? { ...prev, avatarUrl: downloadUrl } : prev);
-      toast({ title: 'تم تحديث الصورة الشخصية', description: 'تم رفع صورتك الشخصية بنجاح.' });
+      toast({ title: bi('تم تحديث الصورة الشخصية', 'Profile picture updated'), description: bi('تم رفع صورتك الشخصية بنجاح.', 'Your profile picture has been uploaded successfully.') });
     } catch (err: any) {
-      toast({ variant: 'destructive', title: 'خطأ!', description: err?.message || 'فشل رفع الصورة الشخصية.' });
+      toast({ variant: 'destructive', title: bi('خطأ!', 'Error!'), description: err?.message || bi('فشل رفع الصورة الشخصية.', 'Failed to upload profile picture.') });
       setAvatarPreview(null);
     } finally {
       setAvatarUploading(false);
@@ -152,8 +155,8 @@ export default function CoachSettingsPage() {
     try {
       const token = await authUser.getIdToken();
       await fetch('/api/user/profile', { method: 'PUT', headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify(values) });
-      toast({ title: 'تم حفظ الملف الشخصي', description: 'تم تحديث معلوماتك بنجاح.' });
-    } catch { toast({ variant: 'destructive', title: 'خطأ!', description: 'فشلت عملية الحفظ.' }); }
+      toast({ title: bi('تم حفظ الملف الشخصي', 'Profile saved'), description: bi('تم تحديث معلوماتك بنجاح.', 'Your information has been updated successfully.') });
+    } catch { toast({ variant: 'destructive', title: bi('خطأ!', 'Error!'), description: bi('فشلت عملية الحفظ.', 'The save operation failed.') }); }
   }
 
   async function onSubmitPayout(values: PayoutInfo) {
@@ -161,18 +164,18 @@ export default function CoachSettingsPage() {
     try {
       const token = await authUser.getIdToken();
       await fetch('/api/user/profile', { method: 'PUT', headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify({ wallet: { payoutInfo: values } }) });
-      toast({ title: 'تم حفظ الإعدادات', description: 'تم تحديث معلومات الدفع بنجاح.' });
-    } catch { toast({ variant: 'destructive', title: 'خطأ!', description: 'فشلت عملية الحفظ.' }); }
+      toast({ title: bi('تم حفظ الإعدادات', 'Settings saved'), description: bi('تم تحديث معلومات الدفع بنجاح.', 'Payment information has been updated successfully.') });
+    } catch { toast({ variant: 'destructive', title: bi('خطأ!', 'Error!'), description: bi('فشلت عملية الحفظ.', 'The save operation failed.') }); }
   }
 
   const currentAvatarUrl = avatarPreview || profile?.avatarUrl;
   const avatarInitial = profile?.name?.charAt(0) || '؟';
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={dir}>
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">إعدادات الملف الشخصي والمحفظة</h1>
-        <p className="text-sm text-muted-foreground">إدارة معلوماتك المهنية وتفاصيل الدفع.</p>
+        <h1 className="text-2xl font-bold tracking-tight">{bi('إعدادات الملف الشخصي والمحفظة', 'Profile & Wallet Settings')}</h1>
+        <p className="text-sm text-muted-foreground">{bi('إدارة معلوماتك المهنية وتفاصيل الدفع.', 'Manage your professional information and payment details.')}</p>
       </div>
 
       {/* Professional Profile */}
@@ -180,8 +183,8 @@ export default function CoachSettingsPage() {
         <form onSubmit={profileForm.handleSubmit(onSubmitProfile)} className="space-y-6">
           <Card className="border-0 shadow-sm">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><User className="h-5 w-5" /> المعلومات الشخصية</CardTitle>
-              <CardDescription>معلوماتك المعروضة للمستفيدين على المنصة</CardDescription>
+              <CardTitle className="flex items-center gap-2"><User className="h-5 w-5" /> {bi('المعلومات الشخصية', 'Personal Information')}</CardTitle>
+              <CardDescription>{bi('معلوماتك المعروضة للمستفيدين على المنصة', 'Your information shown to beneficiaries on the platform')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {loading ? <Skeleton className="h-10 w-full" /> : (
@@ -200,7 +203,7 @@ export default function CoachSettingsPage() {
                       )}
                     </div>
                     <div>
-                      <p className="text-sm font-medium mb-2">الصورة الشخصية</p>
+                      <p className="text-sm font-medium mb-2">{bi('الصورة الشخصية', 'Profile Picture')}</p>
                       <Button
                         type="button"
                         variant="outline"
@@ -209,7 +212,7 @@ export default function CoachSettingsPage() {
                         disabled={avatarUploading}
                       >
                         <Camera className="ml-2 h-4 w-4" />
-                        تغيير الصورة
+                        {bi('تغيير الصورة', 'Change Picture')}
                       </Button>
                       <input
                         ref={fileInputRef}
@@ -218,35 +221,35 @@ export default function CoachSettingsPage() {
                         className="hidden"
                         onChange={handleAvatarChange}
                       />
-                      <p className="text-xs text-muted-foreground mt-1">PNG، JPG حتى 5MB</p>
+                      <p className="text-xs text-muted-foreground mt-1">{bi('PNG، JPG حتى 5MB', 'PNG, JPG up to 5MB')}</p>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField control={profileForm.control} name="name" render={({ field }) => (
-                      <FormItem><FormLabel>الاسم الكامل</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                      <FormItem><FormLabel>{bi('الاسم الكامل', 'Full Name')}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={profileForm.control} name="phone" render={({ field }) => (
-                      <FormItem><FormLabel>رقم الهاتف</FormLabel><FormControl><Input dir="ltr" placeholder="+966 5..." {...field} /></FormControl><FormMessage /></FormItem>
+                      <FormItem><FormLabel>{bi('رقم الهاتف', 'Phone Number')}</FormLabel><FormControl><Input dir="ltr" placeholder="+966 5..." {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={profileForm.control} name="yearsOfExperience" render={({ field }) => (
-                      <FormItem><FormLabel>سنوات الخبرة</FormLabel><FormControl><Input type="number" min={0} {...field} /></FormControl><FormMessage /></FormItem>
+                      <FormItem><FormLabel>{bi('سنوات الخبرة', 'Years of Experience')}</FormLabel><FormControl><Input type="number" min={0} {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={profileForm.control} name="linkedIn" render={({ field }) => (
-                      <FormItem><FormLabel>رابط LinkedIn</FormLabel><FormControl><Input dir="ltr" placeholder="https://linkedin.com/in/..." {...field} /></FormControl><FormMessage /></FormItem>
+                      <FormItem><FormLabel>{bi('رابط LinkedIn', 'LinkedIn URL')}</FormLabel><FormControl><Input dir="ltr" placeholder="https://linkedin.com/in/..." {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={profileForm.control} name="website" render={({ field }) => (
-                      <FormItem><FormLabel>الموقع الشخصي</FormLabel><FormControl><Input dir="ltr" placeholder="https://..." {...field} /></FormControl><FormMessage /></FormItem>
+                      <FormItem><FormLabel>{bi('الموقع الشخصي', 'Personal Website')}</FormLabel><FormControl><Input dir="ltr" placeholder="https://..." {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={profileForm.control} name="twitter" render={({ field }) => (
-                      <FormItem><FormLabel>حساب X / Twitter</FormLabel><FormControl><Input dir="ltr" placeholder="https://x.com/..." {...field} /></FormControl><FormMessage /></FormItem>
+                      <FormItem><FormLabel>{bi('حساب X / Twitter', 'X / Twitter Account')}</FormLabel><FormControl><Input dir="ltr" placeholder="https://x.com/..." {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
                     <FormField control={profileForm.control} name="instagram" render={({ field }) => (
-                      <FormItem><FormLabel>حساب Instagram</FormLabel><FormControl><Input dir="ltr" placeholder="https://instagram.com/..." {...field} /></FormControl><FormMessage /></FormItem>
+                      <FormItem><FormLabel>{bi('حساب Instagram', 'Instagram Account')}</FormLabel><FormControl><Input dir="ltr" placeholder="https://instagram.com/..." {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
                   </div>
                   <FormField control={profileForm.control} name="bio" render={({ field }) => (
-                    <FormItem><FormLabel>نبذة شخصية / السيرة الذاتية</FormLabel><FormControl><Textarea rows={4} placeholder="اكتب نبذة مختصرة عن خبراتك ومسيرتك المهنية..." {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>{bi('نبذة شخصية / السيرة الذاتية', 'Bio / CV')}</FormLabel><FormControl><Textarea rows={4} placeholder={bi("اكتب نبذة مختصرة عن خبراتك ومسيرتك المهنية...", "Write a brief note about your experience and professional journey...")} {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
                 </>
               )}
@@ -255,22 +258,22 @@ export default function CoachSettingsPage() {
 
           <Card className="border-0 shadow-sm">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><BookOpen className="h-5 w-5" /> التخصصات والشهادات</CardTitle>
+              <CardTitle className="flex items-center gap-2"><BookOpen className="h-5 w-5" /> {bi('التخصصات والشهادات', 'Specializations & Certifications')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {loading ? <Skeleton className="h-10 w-full" /> : (
                 <>
                   <FormField control={profileForm.control} name="specializations" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>التخصصات (افصل بينها بفاصلة)</FormLabel>
-                      <FormControl><Input placeholder="مثال: ريادة الأعمال، تسويق رقمي، تطوير المهارات..." {...field} /></FormControl>
+                      <FormLabel>{bi('التخصصات (افصل بينها بفاصلة)', 'Specializations (comma-separated)')}</FormLabel>
+                      <FormControl><Input placeholder={bi("مثال: ريادة الأعمال، تسويق رقمي، تطوير المهارات...", "e.g. Entrepreneurship, Digital Marketing, Skill Development...")} {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )} />
                   <FormField control={profileForm.control} name="certifications" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>الشهادات والمؤهلات</FormLabel>
-                      <FormControl><Textarea rows={3} placeholder="أدخل شهاداتك ومؤهلاتك المهنية..." {...field} /></FormControl>
+                      <FormLabel>{bi('الشهادات والمؤهلات', 'Certifications & Qualifications')}</FormLabel>
+                      <FormControl><Textarea rows={3} placeholder={bi("أدخل شهاداتك ومؤهلاتك المهنية...", "Enter your certifications and professional qualifications...")} {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )} />
@@ -281,7 +284,7 @@ export default function CoachSettingsPage() {
 
           <Button type="submit">
             <Save className="ml-2 h-4 w-4" />
-            حفظ الملف الشخصي
+            {bi('حفظ الملف الشخصي', 'Save Profile')}
           </Button>
         </form>
       </Form>
@@ -291,14 +294,14 @@ export default function CoachSettingsPage() {
       {/* Wallet */}
       <Card className="border-0 shadow-sm">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Wallet className="h-5 w-5" /> رصيد الأرباح</CardTitle>
-          <CardDescription>إجمالي أرباحك من جلسات الإرشاد.</CardDescription>
+          <CardTitle className="flex items-center gap-2"><Wallet className="h-5 w-5" /> {bi('رصيد الأرباح', 'Earnings Balance')}</CardTitle>
+          <CardDescription>{bi('إجمالي أرباحك من جلسات الإرشاد.', 'Your total earnings from coaching sessions.')}</CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? <Skeleton className="h-10 w-32" /> :
-            <p className="text-3xl font-bold">{(profile?.wallet?.balance || 0).toFixed(2)} د.أ</p>
+            <p className="text-3xl font-bold">{(profile?.wallet?.balance || 0).toFixed(2)} {bi('د.أ', 'JOD')}</p>
           }
-          <p className="text-xs text-muted-foreground mt-1">سيتم تحويل الرصيد إلى حسابك البنكي في بداية كل شهر.</p>
+          <p className="text-xs text-muted-foreground mt-1">{bi('سيتم تحويل الرصيد إلى حسابك البنكي في بداية كل شهر.', 'The balance will be transferred to your bank account at the beginning of each month.')}</p>
         </CardContent>
       </Card>
 
@@ -306,28 +309,28 @@ export default function CoachSettingsPage() {
         <form onSubmit={payoutForm.handleSubmit(onSubmitPayout)} className="space-y-8">
           <Card className="border-0 shadow-sm">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><Banknote className="h-5 w-5" /> معلومات الدفع</CardTitle>
-              <CardDescription>أدخل معلومات حسابك البنكي لاستلام أرباحك.</CardDescription>
+              <CardTitle className="flex items-center gap-2"><Banknote className="h-5 w-5" /> {bi('معلومات الدفع', 'Payment Information')}</CardTitle>
+              <CardDescription>{bi('أدخل معلومات حسابك البنكي لاستلام أرباحك.', 'Enter your bank account information to receive your earnings.')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <FormField control={payoutForm.control} name="accountHolderName" render={({ field }) => (
-                <FormItem><FormLabel>اسم صاحب الحساب</FormLabel><FormControl><Input placeholder="الاسم كما هو مسجل في البنك" {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>{bi('اسم صاحب الحساب', 'Account Holder Name')}</FormLabel><FormControl><Input placeholder={bi("الاسم كما هو مسجل في البنك", "Name as registered with the bank")} {...field} /></FormControl><FormMessage /></FormItem>
               )} />
               <FormField control={payoutForm.control} name="iban" render={({ field }) => (
-                <FormItem><FormLabel>رقم IBAN</FormLabel><FormControl><Input dir="ltr" placeholder="JOXX XXXX XXXX XXXX XXXX XXXX XX" {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>{bi('رقم IBAN', 'IBAN Number')}</FormLabel><FormControl><Input dir="ltr" placeholder="JOXX XXXX XXXX XXXX XXXX XXXX XX" {...field} /></FormControl><FormMessage /></FormItem>
               )} />
               <FormField control={payoutForm.control} name="bankName" render={({ field }) => (
-                <FormItem><FormLabel>اسم البنك</FormLabel><FormControl><Input placeholder="اسم البنك" {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>{bi('اسم البنك', 'Bank Name')}</FormLabel><FormControl><Input placeholder={bi("اسم البنك", "Bank name")} {...field} /></FormControl><FormMessage /></FormItem>
               )} />
               <FormField control={payoutForm.control} name="address" render={({ field }) => (
-                <FormItem><FormLabel>عنوان الفرع</FormLabel><FormControl><Input placeholder="عنوان فرع البنك" {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>{bi('عنوان الفرع', 'Branch Address')}</FormLabel><FormControl><Input placeholder={bi("عنوان فرع البنك", "Bank branch address")} {...field} /></FormControl><FormMessage /></FormItem>
               )} />
             </CardContent>
           </Card>
 
           <Button type="submit">
             <Save className="ml-2 h-4 w-4" />
-            حفظ معلومات الدفع
+            {bi('حفظ معلومات الدفع', 'Save Payment Information')}
           </Button>
         </form>
       </Form>

@@ -11,6 +11,7 @@ import { Progress } from "@/components/ui/progress";
 import { StatusBadge } from "@/components/status-badge";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/components/language-provider";
 
 type Course = { id: string; title?: string; enrolledCount?: number; completionRate?: number; status?: string };
 type Beneficiary = { id: string; name?: string; progress?: number };
@@ -26,6 +27,8 @@ const progressColor = (v: number) =>
   v >= 70 ? "[&>div]:bg-emerald-500" : v >= 30 ? "[&>div]:bg-amber-500" : "[&>div]:bg-primary";
 
 export default function CoachDashboardPage() {
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const { user: authUser } = useUser();
   const [myBeneficiaries, setMyBeneficiaries] = useState<Beneficiary[] | null>(null);
   const [benefLoading, setBenefLoading] = useState(true);
@@ -99,21 +102,21 @@ export default function CoachDashboardPage() {
   }, [courses, sessions]);
 
   const statItems = [
-    { title: "إجمالي المسجلين",     value: String(stats.totalEnrolled),    sub: "في جميع دوراتك",    icon: <Users />,       loading: coursesLoading },
-    { title: "الجلسات القادمة",     value: String(stats.upcomingSessions), sub: "جلسة مجدولة",        icon: <CalendarDays />, loading: sessLoading },
-    { title: "متوسط معدل الإكمال", value: `${stats.avgCompletion}%`,       sub: "لكل الدورات",        icon: <CheckCircle />, loading: coursesLoading },
-    { title: "إجمالي الأرباح",     value: `${(earnings?.remaining ?? 0).toFixed(2)} د.أ`, sub: "الرصيد المتاح",  icon: <DollarSign />,  loading: earningsLoading },
+    { title: bi("إجمالي المسجلين", "Total Enrolled"),     value: String(stats.totalEnrolled),    sub: bi("في جميع دوراتك", "across all your courses"),    icon: <Users />,       loading: coursesLoading },
+    { title: bi("الجلسات القادمة", "Upcoming Sessions"),     value: String(stats.upcomingSessions), sub: bi("جلسة مجدولة", "scheduled session"),        icon: <CalendarDays />, loading: sessLoading },
+    { title: bi("متوسط معدل الإكمال", "Avg. Completion Rate"), value: `${stats.avgCompletion}%`,       sub: bi("لكل الدورات", "across all courses"),        icon: <CheckCircle />, loading: coursesLoading },
+    { title: bi("إجمالي الأرباح", "Total Earnings"),     value: `${(earnings?.remaining ?? 0).toFixed(2)} ${bi("د.أ", "JOD")}`, sub: bi("الرصيد المتاح", "available balance"),  icon: <DollarSign />,  loading: earningsLoading },
   ];
 
   return (
-    <div className="space-y-6 animate-fade-in-up" dir="rtl">
+    <div className="space-y-6 animate-fade-in-up" dir={dir}>
       {/* ── Page header ── */}
       <div className="page-header">
         <div>
-          <h1 className="page-title">لوحة تحكم المدرب</h1>
-          <p className="page-subtitle">أدواتك لإنشاء محتوى تعليمي مؤثر ومتابعة أداء الطلاب</p>
+          <h1 className="page-title">{bi("لوحة تحكم المدرب", "Coach Dashboard")}</h1>
+          <p className="page-subtitle">{bi("أدواتك لإنشاء محتوى تعليمي مؤثر ومتابعة أداء الطلاب", "Your tools for creating impactful learning content and tracking student performance")}</p>
         </div>
-        <Badge className="bg-primary/10 text-primary border-primary/20 w-fit h-fit">مدرب معتمد</Badge>
+        <Badge className="bg-primary/10 text-primary border-primary/20 w-fit h-fit">{bi("مدرب معتمد", "Certified Coach")}</Badge>
       </div>
 
       {/* ── KPI Cards ── */}
@@ -147,12 +150,12 @@ export default function CoachDashboardPage() {
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>دوراتي التدريبية</CardTitle>
-                <CardDescription className="mt-1">أداء كل دورة ومعدل الإكمال</CardDescription>
+                <CardTitle>{bi("دوراتي التدريبية", "My Courses")}</CardTitle>
+                <CardDescription className="mt-1">{bi("أداء كل دورة ومعدل الإكمال", "Performance and completion rate for each course")}</CardDescription>
               </div>
               <Button size="sm" asChild>
                 <Link href="/coach-dashboard/courses">
-                  <PlusCircle className="h-4 w-4 ml-1.5" />دورة جديدة
+                  <PlusCircle className="h-4 w-4 ml-1.5" />{bi("دورة جديدة", "New Course")}
                 </Link>
               </Button>
             </div>
@@ -167,10 +170,10 @@ export default function CoachDashboardPage() {
             {!coursesLoading && courses.length === 0 && (
               <div className="empty-state">
                 <div className="empty-state-icon"><BookOpen className="h-6 w-6" /></div>
-                <p className="empty-state-title">لا توجد دورات بعد</p>
-                <p className="empty-state-desc">أنشئ دورتك الأولى وابدأ في تعليم المستفيدين</p>
+                <p className="empty-state-title">{bi("لا توجد دورات بعد", "No courses yet")}</p>
+                <p className="empty-state-desc">{bi("أنشئ دورتك الأولى وابدأ في تعليم المستفيدين", "Create your first course and start teaching beneficiaries")}</p>
                 <Button size="sm" asChild className="mt-2">
-                  <Link href="/coach-dashboard/courses">إضافة دورة</Link>
+                  <Link href="/coach-dashboard/courses">{bi("إضافة دورة", "Add Course")}</Link>
                 </Button>
               </div>
             )}
@@ -181,14 +184,14 @@ export default function CoachDashboardPage() {
                     <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
                       <BookOpen className="h-4 w-4 text-primary" />
                     </div>
-                    <p className="font-medium text-sm truncate">{course.title || 'دورة بدون عنوان'}</p>
+                    <p className="font-medium text-sm truncate">{course.title || bi('دورة بدون عنوان', 'Untitled course')}</p>
                   </div>
                   <StatusBadge status={course.status || 'draft'} />
                 </div>
                 <div className="space-y-1.5 pr-12">
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>{course.enrolledCount || 0} مسجل</span>
-                    <span className="font-semibold">{course.completionRate || 0}% إكمال</span>
+                    <span>{course.enrolledCount || 0} {bi("مسجل", "enrolled")}</span>
+                    <span className="font-semibold">{course.completionRate || 0}% {bi("إكمال", "complete")}</span>
                   </div>
                   <Progress value={course.completionRate || 0} className={cn("h-2 rounded-full", progressColor(course.completionRate || 0))} />
                 </div>
@@ -202,7 +205,7 @@ export default function CoachDashboardPage() {
           {/* Beneficiaries */}
           <Card className="border-0 shadow-sm">
             <CardHeader className="pb-3">
-              <CardTitle>مستفيدوني</CardTitle>
+              <CardTitle>{bi("مستفيدوني", "My Beneficiaries")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {benefLoading && [...Array(3)].map((_, i) => (
@@ -217,7 +220,7 @@ export default function CoachDashboardPage() {
               {!benefLoading && (!myBeneficiaries || myBeneficiaries.length === 0) && (
                 <div className="empty-state py-8">
                   <div className="empty-state-icon h-10 w-10"><Users className="h-5 w-5" /></div>
-                  <p className="empty-state-title text-sm">لا يوجد مستفيدون</p>
+                  <p className="empty-state-title text-sm">{bi("لا يوجد مستفيدون", "No beneficiaries")}</p>
                 </div>
               )}
               {!benefLoading && (myBeneficiaries || []).slice(0, 4).map((b) => (
@@ -226,7 +229,7 @@ export default function CoachDashboardPage() {
                     <span className="text-xs font-bold text-primary">{(b.name || '?')[0]}</span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{b.name || 'بلا اسم'}</p>
+                    <p className="text-sm font-medium truncate">{b.name || bi('بلا اسم', 'Unnamed')}</p>
                     <div className="flex items-center gap-2 mt-1">
                       <Progress value={b.progress || 0} className={cn("h-1.5 flex-1", progressColor(b.progress || 0))} />
                       <span className="text-xs text-muted-foreground shrink-0 tabular-nums">{b.progress || 0}%</span>
@@ -239,13 +242,13 @@ export default function CoachDashboardPage() {
 
           {/* Performance summary */}
           <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-3"><CardTitle>ملخص الأداء</CardTitle></CardHeader>
+            <CardHeader className="pb-3"><CardTitle>{bi("ملخص الأداء", "Performance Summary")}</CardTitle></CardHeader>
             <CardContent className="space-y-0.5">
               {[
-                { label: "إجمالي الدورات",   value: courses.length,                                         icon: <BookOpen className="h-4 w-4 text-primary" />,      loading: coursesLoading },
-                { label: "دورات منشورة",     value: stats.publishedCourses,                                 icon: <PlayCircle className="h-4 w-4 text-sky-500" />,    loading: coursesLoading },
-                { label: "إجمالي الجلسات",  value: sessions.length,                                        icon: <CalendarDays className="h-4 w-4 text-amber-500" />, loading: sessLoading },
-                { label: "الجلسات المكتملة", value: sessions.filter(s => s.status === 'completed').length, icon: <Activity className="h-4 w-4 text-purple-500" />,   loading: sessLoading },
+                { label: bi("إجمالي الدورات", "Total Courses"),   value: courses.length,                                         icon: <BookOpen className="h-4 w-4 text-primary" />,      loading: coursesLoading },
+                { label: bi("دورات منشورة", "Published Courses"),     value: stats.publishedCourses,                                 icon: <PlayCircle className="h-4 w-4 text-sky-500" />,    loading: coursesLoading },
+                { label: bi("إجمالي الجلسات", "Total Sessions"),  value: sessions.length,                                        icon: <CalendarDays className="h-4 w-4 text-amber-500" />, loading: sessLoading },
+                { label: bi("الجلسات المكتملة", "Completed Sessions"), value: sessions.filter(s => s.status === 'completed').length, icon: <Activity className="h-4 w-4 text-purple-500" />,   loading: sessLoading },
               ].map((item, i) => (
                 <div key={i} className="flex items-center justify-between py-2.5 border-b border-border/50 last:border-0">
                   <div className="flex items-center gap-2.5 text-sm">
@@ -260,13 +263,13 @@ export default function CoachDashboardPage() {
 
           {/* Quick actions */}
           <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-3"><CardTitle>إجراءات سريعة</CardTitle></CardHeader>
+            <CardHeader className="pb-3"><CardTitle>{bi("إجراءات سريعة", "Quick Actions")}</CardTitle></CardHeader>
             <CardContent className="grid grid-cols-2 gap-2">
               {[
-                { href: "/coach-dashboard/courses",   icon: <BookOpen className="h-4 w-4" />,     label: "الدورات",   color: "text-primary bg-primary/10" },
-                { href: "/coach-dashboard/sessions",  icon: <CalendarDays className="h-4 w-4" />, label: "الجلسات",  color: "text-sky-500 bg-sky-500/10" },
-                { href: "/coach-dashboard/analytics", icon: <BarChart3 className="h-4 w-4" />,    label: "التحليلات", color: "text-purple-500 bg-purple-500/10" },
-                { href: "/coach-dashboard/messages",  icon: <MessageSquare className="h-4 w-4" />,label: "الرسائل",  color: "text-amber-500 bg-amber-500/10" },
+                { href: "/coach-dashboard/courses",   icon: <BookOpen className="h-4 w-4" />,     label: bi("الدورات", "Courses"),   color: "text-primary bg-primary/10" },
+                { href: "/coach-dashboard/sessions",  icon: <CalendarDays className="h-4 w-4" />, label: bi("الجلسات", "Sessions"),  color: "text-sky-500 bg-sky-500/10" },
+                { href: "/coach-dashboard/analytics", icon: <BarChart3 className="h-4 w-4" />,    label: bi("التحليلات", "Analytics"), color: "text-purple-500 bg-purple-500/10" },
+                { href: "/coach-dashboard/messages",  icon: <MessageSquare className="h-4 w-4" />,label: bi("الرسائل", "Messages"),  color: "text-amber-500 bg-amber-500/10" },
               ].map(item => (
                 <Link key={item.href} href={item.href} className="quick-action-card">
                   <span className={cn("h-9 w-9 rounded-xl flex items-center justify-center", item.color)}>

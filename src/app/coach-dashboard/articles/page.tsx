@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { uploadFile } from "@/lib/upload-file";
+import { useLanguage } from "@/components/language-provider";
 
 interface Article {
   id: string;
@@ -46,6 +47,9 @@ const emptyForm = {
 export default function CoachArticlesPage() {
   const { user } = useUser();
   const { toast } = useToast();
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
+  const locale = lang === 'en' ? 'en-US' : 'ar-SA';
 
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,11 +70,11 @@ export default function CoachArticlesPage() {
       const json = await res.json();
       setArticles(json.articles || []);
     } catch {
-      toast({ variant: 'destructive', title: 'خطأ', description: 'فشل تحميل المقالات' });
+      toast({ variant: 'destructive', title: bi('خطأ', 'Error'), description: bi('فشل تحميل المقالات', 'Failed to load articles') });
     } finally {
       setLoading(false);
     }
-  }, [user, toast]);
+  }, [user, toast, lang]);
 
   useEffect(() => { fetchArticles(); }, [fetchArticles]);
 
@@ -102,7 +106,7 @@ export default function CoachArticlesPage() {
       const url = await uploadFile(file, 'articles', token);
       setForm(f => ({ ...f, coverImageUrl: url }));
     } catch (err: any) {
-      toast({ variant: 'destructive', title: 'خطأ', description: err.message || 'فشل رفع الصورة' });
+      toast({ variant: 'destructive', title: bi('خطأ', 'Error'), description: err.message || bi('فشل رفع الصورة', 'Failed to upload image') });
     } finally {
       setUploadingCover(false);
     }
@@ -112,7 +116,7 @@ export default function CoachArticlesPage() {
     e.preventDefault();
     if (!user) return;
     if (!form.title || !form.content) {
-      toast({ variant: 'destructive', title: 'خطأ', description: 'العنوان والمحتوى مطلوبان' });
+      toast({ variant: 'destructive', title: bi('خطأ', 'Error'), description: bi('العنوان والمحتوى مطلوبان', 'Title and content are required') });
       return;
     }
     setSubmitting(true);
@@ -127,13 +131,13 @@ export default function CoachArticlesPage() {
       });
       if (!res.ok) {
         const json = await res.json();
-        throw new Error(json.error || 'خطأ');
+        throw new Error(json.error || bi('خطأ', 'Error'));
       }
-      toast({ title: editingId ? 'تم التحديث' : 'تم الإنشاء', description: editingId ? 'تم تحديث المقال بنجاح' : 'تم إنشاء المقال بنجاح' });
+      toast({ title: editingId ? bi('تم التحديث', 'Updated') : bi('تم الإنشاء', 'Created'), description: editingId ? bi('تم تحديث المقال بنجاح', 'The article was updated successfully') : bi('تم إنشاء المقال بنجاح', 'The article was created successfully') });
       setDialogOpen(false);
       fetchArticles();
     } catch (err: any) {
-      toast({ variant: 'destructive', title: 'خطأ', description: err.message });
+      toast({ variant: 'destructive', title: bi('خطأ', 'Error'), description: err.message });
     } finally {
       setSubmitting(false);
     }
@@ -148,11 +152,11 @@ export default function CoachArticlesPage() {
         method: 'DELETE',
         headers: { authorization: `Bearer ${token}` },
       });
-      toast({ title: 'تم الحذف', description: 'تم حذف المقال بنجاح' });
+      toast({ title: bi('تم الحذف', 'Deleted'), description: bi('تم حذف المقال بنجاح', 'The article was deleted successfully') });
       setDeleteId(null);
       fetchArticles();
     } catch {
-      toast({ variant: 'destructive', title: 'خطأ', description: 'فشل حذف المقال' });
+      toast({ variant: 'destructive', title: bi('خطأ', 'Error'), description: bi('فشل حذف المقال', 'Failed to delete article') });
     } finally {
       setDeleting(false);
     }
@@ -164,29 +168,29 @@ export default function CoachArticlesPage() {
 
   function formatDate(d: string | null) {
     if (!d) return '';
-    return new Date(d).toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' });
+    return new Date(d).toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' });
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir={dir}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">المقالات</h1>
-          <p className="text-muted-foreground text-sm mt-1">اكتب وانشر مقالاتك للمستفيدين والزوار</p>
+          <h1 className="text-2xl font-bold tracking-tight">{bi('المقالات', 'Articles')}</h1>
+          <p className="text-muted-foreground text-sm mt-1">{bi('اكتب وانشر مقالاتك للمستفيدين والزوار', 'Write and publish your articles for beneficiaries and visitors')}</p>
         </div>
         <Button onClick={openCreate} className="gap-2">
           <PlusCircle className="h-4 w-4" />
-          مقال جديد
+          {bi('مقال جديد', 'New Article')}
         </Button>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
-          { label: 'إجمالي المقالات', value: total, icon: FileText },
-          { label: 'منشور', value: published, icon: Globe },
-          { label: 'مسودات', value: drafts, icon: FileEdit },
+          { label: bi('إجمالي المقالات', 'Total Articles'), value: total, icon: FileText },
+          { label: bi('منشور', 'Published'), value: published, icon: Globe },
+          { label: bi('مسودات', 'Drafts'), value: drafts, icon: FileEdit },
         ].map(stat => (
           <div key={stat.label} className="rounded-xl border border-border bg-card p-4 flex items-center gap-3">
             <div className="bg-muted rounded-lg p-2 shrink-0">
@@ -208,8 +212,8 @@ export default function CoachArticlesPage() {
       ) : articles.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
           <FileText className="h-12 w-12 mb-3 opacity-30" />
-          <p className="text-lg font-medium">لا توجد مقالات بعد</p>
-          <p className="text-sm mt-1">ابدأ بكتابة مقالك الأول</p>
+          <p className="text-lg font-medium">{bi('لا توجد مقالات بعد', 'No articles yet')}</p>
+          <p className="text-sm mt-1">{bi('ابدأ بكتابة مقالك الأول', 'Start writing your first article')}</p>
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -229,7 +233,7 @@ export default function CoachArticlesPage() {
                 <div className="flex items-start justify-between gap-2">
                   <h3 className="font-semibold line-clamp-2 flex-1">{article.title}</h3>
                   <Badge variant={article.status === 'published' ? 'default' : 'secondary'} className="shrink-0">
-                    {article.status === 'published' ? 'منشور' : 'مسودة'}
+                    {article.status === 'published' ? bi('منشور', 'Published') : bi('مسودة', 'Draft')}
                   </Badge>
                 </div>
                 {article.excerpt && (
@@ -238,7 +242,7 @@ export default function CoachArticlesPage() {
                 <div className="flex items-center gap-3 text-muted-foreground text-xs">
                   <span className="flex items-center gap-1">
                     <Clock className="h-3 w-3" />
-                    {article.readTime} دقيقة قراءة
+                    {article.readTime} {bi('دقيقة قراءة', 'min read')}
                   </span>
                   {article.createdAt && (
                     <span>{formatDate(article.createdAt)}</span>
@@ -261,7 +265,7 @@ export default function CoachArticlesPage() {
                     onClick={() => openEdit(article)}
                   >
                     <Edit2 className="h-3.5 w-3.5 ml-1.5" />
-                    تعديل
+                    {bi('تعديل', 'Edit')}
                   </Button>
                   <Button
                     variant="outline"
@@ -280,44 +284,44 @@ export default function CoachArticlesPage() {
 
       {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent dir="rtl" className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent dir={dir} className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingId ? 'تعديل المقال' : 'إنشاء مقال جديد'}</DialogTitle>
+            <DialogTitle>{editingId ? bi('تعديل المقال', 'Edit Article') : bi('إنشاء مقال جديد', 'Create New Article')}</DialogTitle>
           </DialogHeader>
           <form id="article-form-coach" onSubmit={handleSubmit} className="space-y-4 py-2">
             <div className="space-y-1.5">
-              <Label htmlFor="title-c">العنوان *</Label>
+              <Label htmlFor="title-c">{bi('العنوان *', 'Title *')}</Label>
               <Input
                 id="title-c"
                 value={form.title}
                 onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
-                placeholder="عنوان المقال"
+                placeholder={bi("عنوان المقال", "Article title")}
                 required
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="excerpt-c">المقتطف</Label>
+              <Label htmlFor="excerpt-c">{bi('المقتطف', 'Excerpt')}</Label>
               <Textarea
                 id="excerpt-c"
                 value={form.excerpt}
                 onChange={e => setForm(f => ({ ...f, excerpt: e.target.value }))}
-                placeholder="وصف مختصر للمقال..."
+                placeholder={bi("وصف مختصر للمقال...", "A brief description of the article...")}
                 rows={3}
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="content-c">المحتوى *</Label>
+              <Label htmlFor="content-c">{bi('المحتوى *', 'Content *')}</Label>
               <Textarea
                 id="content-c"
                 value={form.content}
                 onChange={e => setForm(f => ({ ...f, content: e.target.value }))}
-                placeholder="اكتب محتوى المقال هنا..."
+                placeholder={bi("اكتب محتوى المقال هنا...", "Write the article content here...")}
                 rows={12}
                 required
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="coverImageUrl-c">صورة الغلاف</Label>
+              <Label htmlFor="coverImageUrl-c">{bi('صورة الغلاف', 'Cover Image')}</Label>
               <div className="flex gap-2 items-center">
                 <Input
                   id="coverImageUrl-c"
@@ -343,16 +347,16 @@ export default function CoachArticlesPage() {
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="tags-c">الوسوم (مفصولة بفاصلة)</Label>
+              <Label htmlFor="tags-c">{bi('الوسوم (مفصولة بفاصلة)', 'Tags (comma-separated)')}</Label>
               <Input
                 id="tags-c"
                 value={form.tags}
                 onChange={e => setForm(f => ({ ...f, tags: e.target.value }))}
-                placeholder="تطوير ذاتي، ريادة أعمال، مهارات"
+                placeholder={bi("تطوير ذاتي، ريادة أعمال، مهارات", "Self-development, entrepreneurship, skills")}
               />
             </div>
             <div className="space-y-1.5">
-              <Label>الحالة</Label>
+              <Label>{bi('الحالة', 'Status')}</Label>
               <Select
                 value={form.status}
                 onValueChange={(v) => setForm(f => ({ ...f, status: v as 'draft' | 'published' }))}
@@ -361,18 +365,18 @@ export default function CoachArticlesPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="draft">مسودة</SelectItem>
-                  <SelectItem value="published">منشور</SelectItem>
+                  <SelectItem value="draft">{bi('مسودة', 'Draft')}</SelectItem>
+                  <SelectItem value="published">{bi('منشور', 'Published')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </form>
           <DialogFooter className="gap-2">
             <Button variant="ghost" onClick={() => setDialogOpen(false)} disabled={submitting}>
-              إلغاء
+              {bi('إلغاء', 'Cancel')}
             </Button>
             <Button type="submit" form="article-form-coach" disabled={submitting}>
-              {submitting ? 'جاري الحفظ...' : editingId ? 'حفظ التغييرات' : 'إنشاء المقال'}
+              {submitting ? bi('جاري الحفظ...', 'Saving...') : editingId ? bi('حفظ التغييرات', 'Save Changes') : bi('إنشاء المقال', 'Create Article')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -380,17 +384,17 @@ export default function CoachArticlesPage() {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
-        <DialogContent dir="rtl" className="sm:max-w-md">
+        <DialogContent dir={dir} className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>حذف المقال</DialogTitle>
+            <DialogTitle>{bi('حذف المقال', 'Delete Article')}</DialogTitle>
           </DialogHeader>
-          <p className="text-muted-foreground text-sm">هل أنت متأكد من حذف هذا المقال؟ لا يمكن التراجع عن هذا الإجراء.</p>
+          <p className="text-muted-foreground text-sm">{bi('هل أنت متأكد من حذف هذا المقال؟ لا يمكن التراجع عن هذا الإجراء.', 'Are you sure you want to delete this article? This action cannot be undone.')}</p>
           <DialogFooter className="gap-2">
             <Button variant="ghost" onClick={() => setDeleteId(null)} disabled={deleting}>
-              إلغاء
+              {bi('إلغاء', 'Cancel')}
             </Button>
             <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
-              {deleting ? 'جاري الحذف...' : 'حذف'}
+              {deleting ? bi('جاري الحذف...', 'Deleting...') : bi('حذف', 'Delete')}
             </Button>
           </DialogFooter>
         </DialogContent>

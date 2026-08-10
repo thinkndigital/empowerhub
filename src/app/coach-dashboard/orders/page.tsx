@@ -23,6 +23,7 @@ import {
   Wallet, Banknote, RefreshCw,
 } from "lucide-react";
 import { exportToExcel, exportToPDF } from "@/lib/export-utils";
+import { useLanguage } from "@/components/language-provider";
 
 type Order = {
   id: string;
@@ -66,6 +67,12 @@ const sessionStatusLabel: Record<string, { label: string; className: string }> =
   cancelled: { label: 'ملغاة', className: 'bg-red-100 text-red-700' },
 };
 
+const sessionStatusLabelEn: Record<string, { label: string; className: string }> = {
+  completed: { label: 'Completed', className: 'bg-emerald-100 text-emerald-700' },
+  scheduled: { label: 'Scheduled', className: 'bg-amber-100 text-amber-700' },
+  cancelled: { label: 'Cancelled', className: 'bg-red-100 text-red-700' },
+};
+
 interface Payout {
   id: string;
   amount: number;
@@ -90,6 +97,12 @@ const statusLabel: Record<string, { label: string; className: string }> = {
   rejected:  { label: 'مرفوض', className: 'bg-red-100 text-red-700 border-red-200' },
 };
 
+const statusLabelEn: Record<string, { label: string; className: string }> = {
+  pending:   { label: 'Pending', className: 'bg-amber-100 text-amber-700 border-amber-200' },
+  confirmed: { label: 'Confirmed', className: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
+  rejected:  { label: 'Rejected', className: 'bg-red-100 text-red-700 border-red-200' },
+};
+
 const payMethodLabel: Record<string, string> = {
   cod: 'الدفع عند التأكيد',
   moyasar: 'موياسر',
@@ -101,10 +114,24 @@ const payMethodLabel: Record<string, string> = {
   tabby: 'تابي',
 };
 
-function buildWhatsAppLink(phone: string, name: string, courseTitle: string, courseUrl: string) {
+const payMethodLabelEn: Record<string, string> = {
+  cod: 'Cash on confirmation',
+  moyasar: 'Moyasar',
+  stripe: 'Stripe',
+  paypal: 'PayPal',
+  paytabs: 'PayTabs',
+  hyperpay: 'HyperPay',
+  tamara: 'Tamara',
+  tabby: 'Tabby',
+};
+
+function buildWhatsAppLink(phone: string, name: string, courseTitle: string, courseUrl: string, bi: (ar: string, en: string) => string) {
   const cleaned = phone.replace(/\s+/g, '').replace(/^00/, '+');
   const msg = encodeURIComponent(
-    `مرحباً ${name}،\n\nتم تأكيد اشتراكك في دورة "${courseTitle}".\n\nرابط الدورة:\n${courseUrl}\n\nأهلاً وسهلاً بك!`
+    bi(
+      `مرحباً ${name}،\n\nتم تأكيد اشتراكك في دورة "${courseTitle}".\n\nرابط الدورة:\n${courseUrl}\n\nأهلاً وسهلاً بك!`,
+      `Hello ${name},\n\nYour enrollment in the course "${courseTitle}" has been confirmed.\n\nCourse link:\n${courseUrl}\n\nWelcome!`
+    )
   );
   return `https://wa.me/${cleaned.replace('+', '')}?text=${msg}`;
 }
@@ -112,6 +139,10 @@ function buildWhatsAppLink(phone: string, name: string, courseTitle: string, cou
 export default function CoachOrdersPage() {
   const { user: authUser } = useUser();
   const { toast } = useToast();
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
+  const locale = lang === 'en' ? 'en-US' : 'ar-EG';
+  const tSessionStatus = lang === 'en' ? sessionStatusLabelEn : sessionStatusLabel;
   const { symbol: currencySymbol } = useCurrency();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -175,19 +206,19 @@ export default function CoachOrdersPage() {
         body: JSON.stringify({ orderId, status }),
       });
       const data = await res.json();
-      if (!data.ok) throw new Error(data.error || 'فشل التحديث');
+      if (!data.ok) throw new Error(data.error || bi('فشل التحديث', 'Update failed'));
       setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
       if (status === 'confirmed') {
         if (data.isGuest) {
           setGuestAlert(data as ConfirmResult);
         } else {
-          toast({ title: 'تم تأكيد الطلب', description: 'تم إرسال إشعار للمشترك برابط الدورة.' });
+          toast({ title: bi('تم تأكيد الطلب', 'Order confirmed'), description: bi('تم إرسال إشعار للمشترك برابط الدورة.', 'A notification with the course link has been sent to the buyer.') });
         }
       } else {
-        toast({ title: 'تم رفض الطلب' });
+        toast({ title: bi('تم رفض الطلب', 'Order rejected') });
       }
     } catch (e: any) {
-      toast({ variant: 'destructive', title: 'خطأ', description: e.message });
+      toast({ variant: 'destructive', title: bi('خطأ', 'Error'), description: e.message });
     } finally {
       setUpdating(null);
     }
@@ -195,14 +226,16 @@ export default function CoachOrdersPage() {
 
   const exportStatusLabel = (o: FinancialOrder) =>
     o.type === 'session'
-      ? (sessionStatusLabel[o.status]?.label ?? o.status)
-      : o.status === 'confirmed' ? 'مؤكد' : o.status === 'pending' ? 'قيد الانتظار' : o.status === 'rejected' ? 'مرفوض' : o.status;
+      ? (tSessionStatus[o.status]?.label ?? o.status)
+      : o.status === 'confirmed' ? bi('مؤكد', 'Confirmed') : o.status === 'pending' ? bi('قيد الانتظار', 'Pending') : o.status === 'rejected' ? bi('مرفوض', 'Rejected') : o.status;
 
   const handleExportCSV = () => {
-    const headers = ["النوع", "التاريخ", "البند", "المنظمة", "المبلغ الإجمالي", "الخصم", "صافي المستحق", "الحالة"];
+    const headers = lang === 'en'
+      ? ["Type", "Date", "Item", "Organization", "Total Amount", "Deduction", "Net Due", "Status"]
+      : ["النوع", "التاريخ", "البند", "المنظمة", "المبلغ الإجمالي", "الخصم", "صافي المستحق", "الحالة"];
     const rows = financialOrders.map(o => [
-      o.type === 'session' ? 'جلسة' : 'دورة',
-      o.createdAt ? new Date(o.createdAt).toLocaleDateString('ar-EG') : '',
+      o.type === 'session' ? bi('جلسة', 'Session') : bi('دورة', 'Course'),
+      o.createdAt ? new Date(o.createdAt).toLocaleDateString(locale) : '',
       o.courseName || o.productName || '',
       o.organizationName || '',
       o.totalAmount,
@@ -210,14 +243,16 @@ export default function CoachOrdersPage() {
       o.netAmount,
       exportStatusLabel(o),
     ]);
-    exportToExcel('كشف_مالي', headers, rows);
+    exportToExcel(bi('كشف_مالي', 'financial_statement'), headers, rows);
   };
 
   const handleExportPDF = () => {
-    const headers = ["النوع", "التاريخ", "البند", "المنظمة", "الإجمالي", "الخصم", "الصافي", "الحالة"];
+    const headers = lang === 'en'
+      ? ["Type", "Date", "Item", "Organization", "Total", "Deduction", "Net", "Status"]
+      : ["النوع", "التاريخ", "البند", "المنظمة", "الإجمالي", "الخصم", "الصافي", "الحالة"];
     const rows = financialOrders.map(o => [
-      o.type === 'session' ? 'جلسة' : 'دورة',
-      o.createdAt ? new Date(o.createdAt).toLocaleDateString('ar-EG') : '',
+      o.type === 'session' ? bi('جلسة', 'Session') : bi('دورة', 'Course'),
+      o.createdAt ? new Date(o.createdAt).toLocaleDateString(locale) : '',
       o.courseName || o.productName || '',
       o.organizationName || '',
       `${o.totalAmount} ${currencySymbol}`,
@@ -225,12 +260,12 @@ export default function CoachOrdersPage() {
       `${o.netAmount} ${currencySymbol}`,
       exportStatusLabel(o),
     ]);
-    exportToPDF('الكشف المالي', headers, rows, summary ? { summary: {
-      'إجمالي المبيعات والجلسات': `${summary.totalGross.toFixed(2)} ${currencySymbol}`,
-      'إجمالي الخصومات': `${summary.totalCommission.toFixed(2)} ${currencySymbol}`,
-      'صافي المستحق': `${summary.totalNet.toFixed(2)} ${currencySymbol}`,
-      'تم استلامه': `${summary.totalPaid.toFixed(2)} ${currencySymbol}`,
-      'الرصيد المتبقي': `${summary.remaining.toFixed(2)} ${currencySymbol}`,
+    exportToPDF(bi('الكشف المالي', 'Financial Statement'), headers, rows, summary ? { summary: {
+      [bi('إجمالي المبيعات والجلسات', 'Total sales & sessions')]: `${summary.totalGross.toFixed(2)} ${currencySymbol}`,
+      [bi('إجمالي الخصومات', 'Total deductions')]: `${summary.totalCommission.toFixed(2)} ${currencySymbol}`,
+      [bi('صافي المستحق', 'Net due')]: `${summary.totalNet.toFixed(2)} ${currencySymbol}`,
+      [bi('تم استلامه', 'Received')]: `${summary.totalPaid.toFixed(2)} ${currencySymbol}`,
+      [bi('الرصيد المتبقي', 'Remaining balance')]: `${summary.remaining.toFixed(2)} ${currencySymbol}`,
     } } : undefined);
   };
 
@@ -238,16 +273,16 @@ export default function CoachOrdersPage() {
   const others  = orders.filter(o => o.status !== 'pending');
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={dir}>
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">طلبات الدورات</h1>
-        <p className="text-muted-foreground text-sm mt-1">طلبات الاشتراك في دوراتك التدريبية</p>
+        <h1 className="text-2xl font-bold tracking-tight">{bi('طلبات الدورات', 'Course Orders')}</h1>
+        <p className="text-muted-foreground text-sm mt-1">{bi('طلبات الاشتراك في دوراتك التدريبية', 'Enrollment requests for your training courses')}</p>
       </div>
 
       <Tabs value={activeTab} onValueChange={v => setActiveTab(v as 'orders' | 'financial')}>
         <TabsList className="mb-4">
-          <TabsTrigger value="orders">طلباتي</TabsTrigger>
-          <TabsTrigger value="financial">الكشف المالي</TabsTrigger>
+          <TabsTrigger value="orders">{bi('طلباتي', 'My Orders')}</TabsTrigger>
+          <TabsTrigger value="financial">{bi('الكشف المالي', 'Financial Statement')}</TabsTrigger>
         </TabsList>
 
         {/* ===== ORDERS TAB ===== */}
@@ -258,9 +293,9 @@ export default function CoachOrdersPage() {
               <CardContent className="pt-4 pb-4">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                   <div className="flex-1">
-                    <p className="font-semibold text-sm text-emerald-800">تم تأكيد الطلب ✓</p>
+                    <p className="font-semibold text-sm text-emerald-800">{bi('تم تأكيد الطلب ✓', 'Order confirmed ✓')}</p>
                     <p className="text-xs text-emerald-700 mt-0.5">
-                      هذا المشترك زائر (غير مسجّل). أرسل له رابط الدورة عبر واتساب.
+                      {bi('هذا المشترك زائر (غير مسجّل). أرسل له رابط الدورة عبر واتساب.', 'This buyer is a guest (not registered). Send them the course link via WhatsApp.')}
                     </p>
                     <p className="text-xs text-emerald-600 mt-1 font-mono break-all">{guestAlert.courseUrl}</p>
                   </div>
@@ -270,11 +305,11 @@ export default function CoachOrdersPage() {
                       className="bg-[#25D366] hover:bg-[#1ebe5d] text-white gap-1"
                       onClick={() => window.open(buildWhatsAppLink(
                         guestAlert.buyerPhone, guestAlert.buyerName,
-                        guestAlert.courseTitle, guestAlert.courseUrl
+                        guestAlert.courseTitle, guestAlert.courseUrl, bi
                       ), '_blank')}
                     >
                       <MessageCircle className="h-3.5 w-3.5" />
-                      إرسال واتساب
+                      {bi('إرسال واتساب', 'Send WhatsApp')}
                     </Button>
                     <Button
                       size="sm"
@@ -282,13 +317,13 @@ export default function CoachOrdersPage() {
                       className="gap-1"
                       onClick={() => {
                         navigator.clipboard.writeText(guestAlert.courseUrl);
-                        toast({ title: 'تم نسخ الرابط' });
+                        toast({ title: bi('تم نسخ الرابط', 'Link copied') });
                       }}
                     >
                       <Copy className="h-3.5 w-3.5" />
-                      نسخ الرابط
+                      {bi('نسخ الرابط', 'Copy Link')}
                     </Button>
-                    <Button size="sm" variant="ghost" onClick={() => setGuestAlert(null)}>إغلاق</Button>
+                    <Button size="sm" variant="ghost" onClick={() => setGuestAlert(null)}>{bi('إغلاق', 'Close')}</Button>
                   </div>
                 </div>
               </CardContent>
@@ -298,10 +333,10 @@ export default function CoachOrdersPage() {
           {/* Summary */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
-              { label: 'إجمالي الطلبات', value: orders.length, color: 'bg-primary/10 text-primary' },
-              { label: 'قيد الانتظار', value: pending.length, color: 'bg-amber-100 text-amber-700' },
-              { label: 'مؤكدة', value: orders.filter(o => o.status === 'confirmed').length, color: 'bg-emerald-100 text-emerald-700' },
-              { label: 'مرفوضة', value: orders.filter(o => o.status === 'rejected').length, color: 'bg-red-100 text-red-700' },
+              { label: bi('إجمالي الطلبات', 'Total Orders'), value: orders.length, color: 'bg-primary/10 text-primary' },
+              { label: bi('قيد الانتظار', 'Pending'), value: pending.length, color: 'bg-amber-100 text-amber-700' },
+              { label: bi('مؤكدة', 'Confirmed'), value: orders.filter(o => o.status === 'confirmed').length, color: 'bg-emerald-100 text-emerald-700' },
+              { label: bi('مرفوضة', 'Rejected'), value: orders.filter(o => o.status === 'rejected').length, color: 'bg-red-100 text-red-700' },
             ].map((s, i) => (
               <Card key={i} className="border-0 shadow-sm">
                 <CardContent className="pt-4 pb-4">
@@ -317,7 +352,7 @@ export default function CoachOrdersPage() {
             <div>
               <h2 className="text-base font-semibold mb-3 flex items-center gap-2">
                 <Clock className="h-4 w-4 text-amber-500" />
-                تحتاج إلى تأكيد ({pending.length})
+                {bi('تحتاج إلى تأكيد', 'Needs Confirmation')} ({pending.length})
               </h2>
               <div className="space-y-3">
                 {pending.map(order => (
@@ -336,7 +371,7 @@ export default function CoachOrdersPage() {
           {/* All other orders */}
           <div>
             {!loading && pending.length > 0 && others.length > 0 && (
-              <h2 className="text-base font-semibold mb-3">السجل</h2>
+              <h2 className="text-base font-semibold mb-3">{bi('السجل', 'History')}</h2>
             )}
             {loading ? (
               <div className="space-y-3">
@@ -346,8 +381,8 @@ export default function CoachOrdersPage() {
               <Card className="border-0 shadow-sm">
                 <CardContent className="py-16 flex flex-col items-center gap-3 text-center">
                   <ShoppingBag className="h-12 w-12 text-muted-foreground/40" />
-                  <p className="text-muted-foreground">لا توجد طلبات بعد</p>
-                  <p className="text-xs text-muted-foreground">ستظهر هنا طلبات الاشتراك في دوراتك</p>
+                  <p className="text-muted-foreground">{bi('لا توجد طلبات بعد', 'No orders yet')}</p>
+                  <p className="text-xs text-muted-foreground">{bi('ستظهر هنا طلبات الاشتراك في دوراتك', 'Enrollment requests for your courses will appear here')}</p>
                 </CardContent>
               </Card>
             ) : (
@@ -364,23 +399,23 @@ export default function CoachOrdersPage() {
         <TabsContent value="financial" className="space-y-6">
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
-              <h2 className="text-lg font-semibold">كشف مالي</h2>
+              <h2 className="text-lg font-semibold">{bi('كشف مالي', 'Financial Statement')}</h2>
               <p className="text-xs text-muted-foreground">
-                عمولة EmpowerHub على مبيعات الدورات: {commissionRate}% — بالإضافة لمستحقات الجلسات التدريبية حسب سعر الساعة ونسبة المنظمة
+                {bi(`عمولة EmpowerHub على مبيعات الدورات: ${commissionRate}% — بالإضافة لمستحقات الجلسات التدريبية حسب سعر الساعة ونسبة المنظمة`, `EmpowerHub's commission on course sales: ${commissionRate}% — plus coaching session earnings based on hourly rate and organization share`)}
               </p>
             </div>
             <div className="flex gap-2 flex-wrap">
               <Button variant="outline" size="sm" onClick={loadFinancial} disabled={financialLoading} className="gap-2">
                 <RefreshCw className={`h-4 w-4 ${financialLoading ? 'animate-spin' : ''}`} />
-                تحديث
+                {bi('تحديث', 'Refresh')}
               </Button>
               <Button variant="outline" size="sm" onClick={handleExportCSV} className="gap-2">
                 <Download className="h-4 w-4" />
-                تنزيل Excel
+                {bi('تنزيل Excel', 'Download Excel')}
               </Button>
               <Button variant="outline" size="sm" onClick={handleExportPDF} className="gap-2">
                 <Printer className="h-4 w-4" />
-                طباعة/PDF
+                {bi('طباعة/PDF', 'Print/PDF')}
               </Button>
             </div>
           </div>
@@ -388,11 +423,11 @@ export default function CoachOrdersPage() {
           {/* Financial Summary Cards */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {[
-              { label: 'إجمالي المبيعات والجلسات', value: summary ? `${summary.totalGross.toFixed(2)} ${currencySymbol}` : '...', icon: TrendingUp, color: 'text-blue-500' },
-              { label: 'إجمالي الخصومات', value: summary ? `${summary.totalCommission.toFixed(2)} ${currencySymbol}` : '...', icon: DollarSign, color: 'text-amber-500' },
-              { label: 'صافي المستحق', value: summary ? `${summary.totalNet.toFixed(2)} ${currencySymbol}` : '...', icon: Wallet, color: 'text-emerald-500' },
-              { label: 'تم استلامه', value: summary ? `${summary.totalPaid.toFixed(2)} ${currencySymbol}` : '...', icon: CheckCircle, color: 'text-emerald-600' },
-              { label: 'الرصيد المتبقي', value: summary ? `${summary.remaining.toFixed(2)} ${currencySymbol}` : '...', icon: Banknote, color: 'text-red-500' },
+              { label: bi('إجمالي المبيعات والجلسات', 'Total sales & sessions'), value: summary ? `${summary.totalGross.toFixed(2)} ${currencySymbol}` : '...', icon: TrendingUp, color: 'text-blue-500' },
+              { label: bi('إجمالي الخصومات', 'Total deductions'), value: summary ? `${summary.totalCommission.toFixed(2)} ${currencySymbol}` : '...', icon: DollarSign, color: 'text-amber-500' },
+              { label: bi('صافي المستحق', 'Net due'), value: summary ? `${summary.totalNet.toFixed(2)} ${currencySymbol}` : '...', icon: Wallet, color: 'text-emerald-500' },
+              { label: bi('تم استلامه', 'Received'), value: summary ? `${summary.totalPaid.toFixed(2)} ${currencySymbol}` : '...', icon: CheckCircle, color: 'text-emerald-600' },
+              { label: bi('الرصيد المتبقي', 'Remaining balance'), value: summary ? `${summary.remaining.toFixed(2)} ${currencySymbol}` : '...', icon: Banknote, color: 'text-red-500' },
             ].map((s, i) => (
               <Card key={i} className="border-0 shadow-sm">
                 <CardContent className="pt-4 pb-4">
@@ -407,53 +442,53 @@ export default function CoachOrdersPage() {
           {/* Financial Orders Table */}
           <Card className="border-0 shadow-sm">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">تفاصيل المستحقات</CardTitle>
+              <CardTitle className="text-base">{bi('تفاصيل المستحقات', 'Earnings Details')}</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               {financialLoading ? (
-                <div className="py-12 text-center text-muted-foreground">جاري التحميل...</div>
+                <div className="py-12 text-center text-muted-foreground">{bi('جاري التحميل...', 'Loading...')}</div>
               ) : financialOrders.length === 0 ? (
                 <div className="py-12 text-center text-muted-foreground">
                   <ShoppingBag className="h-10 w-10 mx-auto mb-3 opacity-20" />
-                  <p className="text-sm">لا توجد طلبات أو جلسات مالية بعد</p>
+                  <p className="text-sm">{bi('لا توجد طلبات أو جلسات مالية بعد', 'No financial orders or sessions yet')}</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="text-right">النوع</TableHead>
-                        <TableHead className="text-right">التاريخ</TableHead>
-                        <TableHead className="text-right">البند</TableHead>
-                        <TableHead className="text-right">المنظمة</TableHead>
-                        <TableHead className="text-right">المبلغ الإجمالي</TableHead>
-                        <TableHead className="text-right">الخصم</TableHead>
-                        <TableHead className="text-right">صافي المستحق</TableHead>
-                        <TableHead className="text-right">الحالة</TableHead>
+                        <TableHead className="text-right">{bi('النوع', 'Type')}</TableHead>
+                        <TableHead className="text-right">{bi('التاريخ', 'Date')}</TableHead>
+                        <TableHead className="text-right">{bi('البند', 'Item')}</TableHead>
+                        <TableHead className="text-right">{bi('المنظمة', 'Organization')}</TableHead>
+                        <TableHead className="text-right">{bi('المبلغ الإجمالي', 'Total Amount')}</TableHead>
+                        <TableHead className="text-right">{bi('الخصم', 'Deduction')}</TableHead>
+                        <TableHead className="text-right">{bi('صافي المستحق', 'Net Due')}</TableHead>
+                        <TableHead className="text-right">{bi('الحالة', 'Status')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {financialOrders.map(order => {
                         const isSession = order.type === 'session';
                         const st = isSession
-                          ? (sessionStatusLabel[order.status] ?? { label: order.status, className: 'bg-muted text-muted-foreground' })
+                          ? (tSessionStatus[order.status] ?? { label: order.status, className: 'bg-muted text-muted-foreground' })
                           : order.status === 'confirmed'
-                          ? { label: 'مؤكد', className: 'bg-emerald-100 text-emerald-700' }
+                          ? { label: bi('مؤكد', 'Confirmed'), className: 'bg-emerald-100 text-emerald-700' }
                           : order.status === 'pending'
-                          ? { label: 'قيد الانتظار', className: 'bg-amber-100 text-amber-700' }
-                          : { label: 'مرفوض', className: 'bg-red-100 text-red-700' };
+                          ? { label: bi('قيد الانتظار', 'Pending'), className: 'bg-amber-100 text-amber-700' }
+                          : { label: bi('مرفوض', 'Rejected'), className: 'bg-red-100 text-red-700' };
                         return (
                           <TableRow key={order.id}>
                             <TableCell>
-                              <Badge variant="outline" className="text-xs">{isSession ? 'جلسة' : 'دورة'}</Badge>
+                              <Badge variant="outline" className="text-xs">{isSession ? bi('جلسة', 'Session') : bi('دورة', 'Course')}</Badge>
                             </TableCell>
                             <TableCell className="text-xs text-muted-foreground">
-                              {order.createdAt ? new Date(order.createdAt).toLocaleDateString('ar-EG') : '—'}
+                              {order.createdAt ? new Date(order.createdAt).toLocaleDateString(locale) : '—'}
                             </TableCell>
                             <TableCell className="text-sm font-medium">
                               {order.courseName || order.productName || '—'}
                               {isSession && order.hours != null && (
-                                <span className="text-xs text-muted-foreground mr-1">({order.hours} ساعة)</span>
+                                <span className="text-xs text-muted-foreground mr-1">({order.hours} {bi('ساعة', 'hours')})</span>
                               )}
                             </TableCell>
                             <TableCell className="text-xs text-muted-foreground">{order.organizationName || '—'}</TableCell>
@@ -476,33 +511,33 @@ export default function CoachOrdersPage() {
           {/* Payouts History */}
           <Card className="border-0 shadow-sm">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">التحويلات من EmpowerHub</CardTitle>
+              <CardTitle className="text-base">{bi('التحويلات من EmpowerHub', 'Transfers from EmpowerHub')}</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               {financialLoading ? (
-                <div className="py-8 text-center text-muted-foreground">جاري التحميل...</div>
+                <div className="py-8 text-center text-muted-foreground">{bi('جاري التحميل...', 'Loading...')}</div>
               ) : payouts.length === 0 ? (
                 <div className="py-10 text-center text-muted-foreground">
-                  <p className="text-sm">لم يتم استلام أي تحويلات بعد</p>
+                  <p className="text-sm">{bi('لم يتم استلام أي تحويلات بعد', 'No transfers received yet')}</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="text-right">التاريخ</TableHead>
-                        <TableHead className="text-right">المبلغ</TableHead>
-                        <TableHead className="text-right">مرجع التحويل</TableHead>
-                        <TableHead className="text-right">ملاحظات</TableHead>
-                        <TableHead className="text-right">الحالة</TableHead>
-                        <TableHead className="text-right">تاريخ الدفع</TableHead>
+                        <TableHead className="text-right">{bi('التاريخ', 'Date')}</TableHead>
+                        <TableHead className="text-right">{bi('المبلغ', 'Amount')}</TableHead>
+                        <TableHead className="text-right">{bi('مرجع التحويل', 'Transfer Reference')}</TableHead>
+                        <TableHead className="text-right">{bi('ملاحظات', 'Notes')}</TableHead>
+                        <TableHead className="text-right">{bi('الحالة', 'Status')}</TableHead>
+                        <TableHead className="text-right">{bi('تاريخ الدفع', 'Payment Date')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {payouts.map(payout => (
                         <TableRow key={payout.id}>
                           <TableCell className="text-xs text-muted-foreground">
-                            {payout.createdAt ? new Date(payout.createdAt).toLocaleDateString('ar-EG') : '—'}
+                            {payout.createdAt ? new Date(payout.createdAt).toLocaleDateString(locale) : '—'}
                           </TableCell>
                           <TableCell className="font-bold text-emerald-600">{payout.amount.toFixed(2)} {currencySymbol}</TableCell>
                           <TableCell className="text-xs font-mono text-muted-foreground">{payout.transferReference || '—'}</TableCell>
@@ -513,11 +548,11 @@ export default function CoachOrdersPage() {
                                 ? 'bg-emerald-100 text-emerald-700'
                                 : 'bg-amber-100 text-amber-700'
                             }`}>
-                              {payout.status === 'paid' ? 'تم الدفع' : 'معلق'}
+                              {payout.status === 'paid' ? bi('تم الدفع', 'Paid') : bi('معلق', 'Pending')}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-xs text-muted-foreground">
-                            {payout.paidAt ? new Date(payout.paidAt).toLocaleDateString('ar-EG') : '—'}
+                            {payout.paidAt ? new Date(payout.paidAt).toLocaleDateString(locale) : '—'}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -541,8 +576,12 @@ function OrderCard({
   onReject?: () => void;
   updating?: boolean;
 }) {
-  const st = statusLabel[order.status] ?? { label: order.status, className: 'bg-muted text-muted-foreground' };
-  const date = order.createdAt ? new Date(order.createdAt).toLocaleDateString('ar-EG') : '';
+  const { lang } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
+  const tStatus = lang === 'en' ? statusLabelEn : statusLabel;
+  const tPayMethod = lang === 'en' ? payMethodLabelEn : payMethodLabel;
+  const st = tStatus[order.status] ?? { label: order.status, className: 'bg-muted text-muted-foreground' };
+  const date = order.createdAt ? new Date(order.createdAt).toLocaleDateString(lang === 'en' ? 'en-US' : 'ar-EG') : '';
 
   return (
     <Card className="border-0 shadow-sm">
@@ -550,17 +589,17 @@ function OrderCard({
         <div className="flex flex-col sm:flex-row sm:items-start gap-3">
           <div className="flex-1 min-w-0 space-y-1.5">
             <div className="flex items-center gap-2 flex-wrap">
-              <p className="font-semibold text-sm">{order.courseName || 'دورة'}</p>
+              <p className="font-semibold text-sm">{order.courseName || bi('دورة', 'Course')}</p>
               <Badge className={`text-xs border ${st.className}`}>{st.label}</Badge>
             </div>
             <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
               <span className="flex items-center gap-1"><User className="h-3 w-3" />{order.buyerName}</span>
               <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{order.buyerPhone}</span>
-              <span>{payMethodLabel[order.paymentMethod] || order.paymentMethod}</span>
+              <span>{tPayMethod[order.paymentMethod] || order.paymentMethod}</span>
               {date && <span>{date}</span>}
             </div>
             {order.amount > 0 && (
-              <p className="text-sm font-bold text-primary">{order.amount} د.أ</p>
+              <p className="text-sm font-bold text-primary">{order.amount} {bi('د.أ', 'JOD')}</p>
             )}
           </div>
           {order.status === 'pending' && onConfirm && onReject && (
@@ -572,7 +611,7 @@ function OrderCard({
                 className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1"
               >
                 <CheckCircle className="h-3.5 w-3.5" />
-                {updating ? 'جاري...' : 'تأكيد'}
+                {updating ? bi('جاري...', 'Processing...') : bi('تأكيد', 'Confirm')}
               </Button>
               <Button
                 size="sm"
@@ -582,7 +621,7 @@ function OrderCard({
                 className="text-red-600 border-red-200 hover:bg-red-50 gap-1"
               >
                 <XCircle className="h-3.5 w-3.5" />
-                رفض
+                {bi('رفض', 'Reject')}
               </Button>
             </div>
           )}

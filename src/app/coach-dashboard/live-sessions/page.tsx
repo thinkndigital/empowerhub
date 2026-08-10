@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { uploadFile } from "@/lib/upload-file";
+import { useLanguage } from "@/components/language-provider";
 
 interface LiveSession {
   id: string;
@@ -64,6 +65,8 @@ const emptyForm = {
 export default function CoachLiveSessionsPage() {
   const { user } = useUser();
   const { toast } = useToast();
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
 
   const [sessions, setSessions] = useState<LiveSession[]>([]);
   const [loading, setLoading] = useState(true);
@@ -87,11 +90,11 @@ export default function CoachLiveSessionsPage() {
       const json = await res.json();
       setSessions(json.sessions || []);
     } catch {
-      toast({ variant: 'destructive', title: 'خطأ', description: 'فشل تحميل الجلسات المباشرة' });
+      toast({ variant: 'destructive', title: bi('خطأ', 'Error'), description: bi('فشل تحميل الجلسات المباشرة', 'Failed to load live sessions') });
     } finally {
       setLoading(false);
     }
-  }, [user, toast]);
+  }, [user, toast, lang]);
 
   useEffect(() => { fetchSessions(); }, [fetchSessions]);
 
@@ -127,7 +130,7 @@ export default function CoachLiveSessionsPage() {
       const json = await res.json();
       setRegistrations(json.registrations || []);
     } catch {
-      toast({ variant: 'destructive', title: 'خطأ', description: 'فشل تحميل المسجلين' });
+      toast({ variant: 'destructive', title: bi('خطأ', 'Error'), description: bi('فشل تحميل المسجلين', 'Failed to load registrations') });
     } finally {
       setLoadingRegs(false);
     }
@@ -142,7 +145,7 @@ export default function CoachLiveSessionsPage() {
       const url = await uploadFile(file, 'live-sessions', token);
       setForm(f => ({ ...f, coverImageUrl: url }));
     } catch (err: any) {
-      toast({ variant: 'destructive', title: 'خطأ', description: err.message || 'فشل رفع الصورة' });
+      toast({ variant: 'destructive', title: bi('خطأ', 'Error'), description: err.message || bi('فشل رفع الصورة', 'Failed to upload image') });
     } finally {
       setUploadingCover(false);
     }
@@ -152,7 +155,7 @@ export default function CoachLiveSessionsPage() {
     e.preventDefault();
     if (!user) return;
     if (!form.title || !form.date) {
-      toast({ variant: 'destructive', title: 'خطأ', description: 'العنوان والتاريخ مطلوبان' });
+      toast({ variant: 'destructive', title: bi('خطأ', 'Error'), description: bi('العنوان والتاريخ مطلوبان', 'Title and date are required') });
       return;
     }
     setSubmitting(true);
@@ -177,13 +180,16 @@ export default function CoachLiveSessionsPage() {
       });
       if (!res.ok) {
         const json = await res.json();
-        throw new Error(json.error || 'خطأ');
+        throw new Error(json.error || bi('خطأ', 'Error'));
       }
-      toast({ title: editingId ? 'تم التحديث' : 'تم الإنشاء', description: editingId ? 'تم تحديث الجلسة بنجاح' : 'تم إنشاء الجلسة بنجاح' });
+      toast({
+        title: editingId ? bi('تم التحديث', 'Updated') : bi('تم الإنشاء', 'Created'),
+        description: editingId ? bi('تم تحديث الجلسة بنجاح', 'Session updated successfully') : bi('تم إنشاء الجلسة بنجاح', 'Session created successfully'),
+      });
       setDialogOpen(false);
       fetchSessions();
     } catch (err: any) {
-      toast({ variant: 'destructive', title: 'خطأ', description: err.message });
+      toast({ variant: 'destructive', title: bi('خطأ', 'Error'), description: err.message });
     } finally {
       setSubmitting(false);
     }
@@ -198,11 +204,11 @@ export default function CoachLiveSessionsPage() {
         method: 'DELETE',
         headers: { authorization: `Bearer ${token}` },
       });
-      toast({ title: 'تم الحذف', description: 'تم حذف الجلسة بنجاح' });
+      toast({ title: bi('تم الحذف', 'Deleted'), description: bi('تم حذف الجلسة بنجاح', 'Session deleted successfully') });
       setDeleteId(null);
       fetchSessions();
     } catch {
-      toast({ variant: 'destructive', title: 'خطأ', description: 'فشل حذف الجلسة' });
+      toast({ variant: 'destructive', title: bi('خطأ', 'Error'), description: bi('فشل حذف الجلسة', 'Failed to delete session') });
     } finally {
       setDeleting(false);
     }
@@ -212,9 +218,11 @@ export default function CoachLiveSessionsPage() {
   const published = sessions.filter(s => s.status === 'published').length;
   const totalRegs = sessions.reduce((acc, s) => acc + (s.registrationsCount || 0), 0);
 
+  const dateLocale = lang === 'en' ? 'en-US' : 'ar-SA';
+
   function formatDate(d: string | null) {
     if (!d) return '';
-    return new Date(d).toLocaleString('ar-SA', {
+    return new Date(d).toLocaleString(dateLocale, {
       year: 'numeric', month: 'short', day: 'numeric',
       hour: '2-digit', minute: '2-digit',
     });
@@ -222,29 +230,29 @@ export default function CoachLiveSessionsPage() {
 
   function formatRegDate(d: string | null) {
     if (!d) return '';
-    return new Date(d).toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' });
+    return new Date(d).toLocaleDateString(dateLocale, { year: 'numeric', month: 'short', day: 'numeric' });
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir={dir}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">الجلسات المباشرة</h1>
-          <p className="text-muted-foreground text-sm mt-1">أنشئ وأدر جلساتك المباشرة المجدولة</p>
+          <h1 className="text-2xl font-bold tracking-tight">{bi('الجلسات المباشرة', 'Live Sessions')}</h1>
+          <p className="text-muted-foreground text-sm mt-1">{bi('أنشئ وأدر جلساتك المباشرة المجدولة', 'Create and manage your scheduled live sessions')}</p>
         </div>
         <Button onClick={openCreate} className="gap-2">
           <PlusCircle className="h-4 w-4" />
-          جلسة جديدة
+          {bi('جلسة جديدة', 'New Session')}
         </Button>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
-          { label: 'إجمالي الجلسات', value: total, icon: Video },
-          { label: 'منشور', value: published, icon: Globe },
-          { label: 'إجمالي المسجلين', value: totalRegs, icon: Users },
+          { label: bi('إجمالي الجلسات', 'Total Sessions'), value: total, icon: Video },
+          { label: bi('منشور', 'Published'), value: published, icon: Globe },
+          { label: bi('إجمالي المسجلين', 'Total Registrations'), value: totalRegs, icon: Users },
         ].map(stat => (
           <div key={stat.label} className="rounded-xl border border-border bg-card p-4 flex items-center gap-3">
             <div className="bg-muted rounded-lg p-2 shrink-0">
@@ -266,8 +274,8 @@ export default function CoachLiveSessionsPage() {
       ) : sessions.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
           <Video className="h-12 w-12 mb-3 opacity-30" />
-          <p className="text-lg font-medium">لا توجد جلسات مباشرة بعد</p>
-          <p className="text-sm mt-1">ابدأ بإنشاء جلستك الأولى</p>
+          <p className="text-lg font-medium">{bi('لا توجد جلسات مباشرة بعد', 'No live sessions yet')}</p>
+          <p className="text-sm mt-1">{bi('ابدأ بإنشاء جلستك الأولى', 'Start by creating your first session')}</p>
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -287,7 +295,7 @@ export default function CoachLiveSessionsPage() {
                 <div className="flex items-start justify-between gap-2">
                   <h3 className="font-semibold line-clamp-2 flex-1">{session.title}</h3>
                   <Badge variant={session.status === 'published' ? 'default' : 'secondary'} className="shrink-0">
-                    {session.status === 'published' ? 'منشور' : 'مسودة'}
+                    {session.status === 'published' ? bi('منشور', 'Published') : bi('مسودة', 'Draft')}
                   </Badge>
                 </div>
                 {session.description && (
@@ -302,16 +310,16 @@ export default function CoachLiveSessionsPage() {
                   )}
                   <span className="flex items-center gap-1">
                     <Clock className="h-3 w-3" />
-                    {session.duration} دقيقة
+                    {bi(`${session.duration} دقيقة`, `${session.duration} min`)}
                   </span>
                   <span className="flex items-center gap-1">
                     <Users className="h-3 w-3" />
-                    {session.registrationsCount} مسجل
+                    {bi(`${session.registrationsCount} مسجل`, `${session.registrationsCount} registered`)}
                     {session.maxParticipants ? ` / ${session.maxParticipants}` : ''}
                   </span>
                   <span className="flex items-center gap-1 font-medium text-foreground">
                     <DollarSign className="h-3 w-3" />
-                    {session.price > 0 ? `${session.price} د.أ` : 'مجاني'}
+                    {session.price > 0 ? bi(`${session.price} د.أ`, `${session.price} JOD`) : bi('مجاني', 'Free')}
                   </span>
                 </div>
                 <div className="flex gap-2 pt-1">
@@ -322,7 +330,7 @@ export default function CoachLiveSessionsPage() {
                     onClick={() => openEdit(session)}
                   >
                     <Edit2 className="h-3.5 w-3.5 ml-1.5" />
-                    تعديل
+                    {bi('تعديل', 'Edit')}
                   </Button>
                   <Button
                     variant="outline"
@@ -331,7 +339,7 @@ export default function CoachLiveSessionsPage() {
                     onClick={() => openRegistrations(session)}
                   >
                     <Users className="h-3.5 w-3.5 ml-1.5" />
-                    المسجلون
+                    {bi('المسجلون', 'Registrants')}
                   </Button>
                   <Button
                     variant="outline"
@@ -350,33 +358,33 @@ export default function CoachLiveSessionsPage() {
 
       {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent dir="rtl" className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent dir={dir} className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingId ? 'تعديل الجلسة المباشرة' : 'إنشاء جلسة مباشرة جديدة'}</DialogTitle>
+            <DialogTitle>{editingId ? bi('تعديل الجلسة المباشرة', 'Edit Live Session') : bi('إنشاء جلسة مباشرة جديدة', 'Create New Live Session')}</DialogTitle>
           </DialogHeader>
           <form id="live-session-form" onSubmit={handleSubmit} className="space-y-4 py-2">
             <div className="space-y-1.5">
-              <Label htmlFor="ls-title">العنوان *</Label>
+              <Label htmlFor="ls-title">{bi('العنوان *', 'Title *')}</Label>
               <Input
                 id="ls-title"
                 value={form.title}
                 onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
-                placeholder="عنوان الجلسة المباشرة"
+                placeholder={bi('عنوان الجلسة المباشرة', 'Live session title')}
                 required
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="ls-description">الوصف</Label>
+              <Label htmlFor="ls-description">{bi('الوصف', 'Description')}</Label>
               <Textarea
                 id="ls-description"
                 value={form.description}
                 onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                placeholder="وصف الجلسة وما ستتناوله..."
+                placeholder={bi('وصف الجلسة وما ستتناوله...', 'Describe the session and what it will cover...')}
                 rows={3}
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="ls-cover">صورة الغلاف</Label>
+              <Label htmlFor="ls-cover">{bi('صورة الغلاف', 'Cover Image')}</Label>
               <div className="flex gap-2 items-center">
                 <Input
                   id="ls-cover"
@@ -403,7 +411,7 @@ export default function CoachLiveSessionsPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label htmlFor="ls-date">التاريخ والوقت *</Label>
+                <Label htmlFor="ls-date">{bi('التاريخ والوقت *', 'Date & Time *')}</Label>
                 <Input
                   id="ls-date"
                   type="datetime-local"
@@ -414,7 +422,7 @@ export default function CoachLiveSessionsPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="ls-duration">المدة (دقيقة)</Label>
+                <Label htmlFor="ls-duration">{bi('المدة (دقيقة)', 'Duration (minutes)')}</Label>
                 <Input
                   id="ls-duration"
                   type="number"
@@ -427,7 +435,7 @@ export default function CoachLiveSessionsPage() {
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="ls-meet">رابط الاجتماع</Label>
+              <Label htmlFor="ls-meet">{bi('رابط الاجتماع', 'Meeting Link')}</Label>
               <Input
                 id="ls-meet"
                 value={form.meetLink}
@@ -438,7 +446,7 @@ export default function CoachLiveSessionsPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label htmlFor="ls-price">السعر (0 = مجاني)</Label>
+                <Label htmlFor="ls-price">{bi('السعر (0 = مجاني)', 'Price (0 = free)')}</Label>
                 <Input
                   id="ls-price"
                   type="number"
@@ -450,20 +458,20 @@ export default function CoachLiveSessionsPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="ls-max">الحد الأقصى للمشاركين</Label>
+                <Label htmlFor="ls-max">{bi('الحد الأقصى للمشاركين', 'Max Participants')}</Label>
                 <Input
                   id="ls-max"
                   type="number"
                   min="1"
                   value={form.maxParticipants}
                   onChange={e => setForm(f => ({ ...f, maxParticipants: e.target.value }))}
-                  placeholder="غير محدود"
+                  placeholder={bi('غير محدود', 'Unlimited')}
                   dir="ltr"
                 />
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label>الحالة</Label>
+              <Label>{bi('الحالة', 'Status')}</Label>
               <Select
                 value={form.status}
                 onValueChange={(v) => setForm(f => ({ ...f, status: v as 'draft' | 'published' }))}
@@ -472,18 +480,18 @@ export default function CoachLiveSessionsPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="draft">مسودة</SelectItem>
-                  <SelectItem value="published">منشور</SelectItem>
+                  <SelectItem value="draft">{bi('مسودة', 'Draft')}</SelectItem>
+                  <SelectItem value="published">{bi('منشور', 'Published')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </form>
           <DialogFooter className="gap-2">
             <Button variant="ghost" onClick={() => setDialogOpen(false)} disabled={submitting}>
-              إلغاء
+              {bi('إلغاء', 'Cancel')}
             </Button>
             <Button type="submit" form="live-session-form" disabled={submitting}>
-              {submitting ? 'جاري الحفظ...' : editingId ? 'حفظ التغييرات' : 'إنشاء الجلسة'}
+              {submitting ? bi('جاري الحفظ...', 'Saving...') : editingId ? bi('حفظ التغييرات', 'Save Changes') : bi('إنشاء الجلسة', 'Create Session')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -491,9 +499,9 @@ export default function CoachLiveSessionsPage() {
 
       {/* Registrations Dialog */}
       <Dialog open={!!regsSession} onOpenChange={(open) => !open && setRegsSession(null)}>
-        <DialogContent dir="rtl" className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent dir={dir} className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>المسجلون — {regsSession?.title}</DialogTitle>
+            <DialogTitle>{bi('المسجلون', 'Registrants')} — {regsSession?.title}</DialogTitle>
           </DialogHeader>
           {loadingRegs ? (
             <div className="space-y-2 py-4">
@@ -502,18 +510,18 @@ export default function CoachLiveSessionsPage() {
           ) : registrations.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
               <Users className="h-10 w-10 mb-2 opacity-30" />
-              <p>لا يوجد مسجلون بعد</p>
+              <p>{bi('لا يوجد مسجلون بعد', 'No registrants yet')}</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-right">الاسم</TableHead>
-                    <TableHead className="text-right">البريد الإلكتروني</TableHead>
-                    <TableHead className="text-right">الهاتف</TableHead>
-                    <TableHead className="text-right">تاريخ التسجيل</TableHead>
-                    <TableHead className="text-right">حالة الدفع</TableHead>
+                    <TableHead className="text-right">{bi('الاسم', 'Name')}</TableHead>
+                    <TableHead className="text-right">{bi('البريد الإلكتروني', 'Email')}</TableHead>
+                    <TableHead className="text-right">{bi('الهاتف', 'Phone')}</TableHead>
+                    <TableHead className="text-right">{bi('تاريخ التسجيل', 'Registration Date')}</TableHead>
+                    <TableHead className="text-right">{bi('حالة الدفع', 'Payment Status')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -525,7 +533,7 @@ export default function CoachLiveSessionsPage() {
                       <TableCell>{formatRegDate(reg.registeredAt)}</TableCell>
                       <TableCell>
                         <Badge variant={reg.paymentStatus === 'paid' ? 'default' : reg.paymentStatus === 'free' ? 'secondary' : 'outline'}>
-                          {reg.paymentStatus === 'paid' ? 'مدفوع' : reg.paymentStatus === 'free' ? 'مجاني' : 'في الانتظار'}
+                          {reg.paymentStatus === 'paid' ? bi('مدفوع', 'Paid') : reg.paymentStatus === 'free' ? bi('مجاني', 'Free') : bi('في الانتظار', 'Pending')}
                         </Badge>
                       </TableCell>
                     </TableRow>
@@ -533,29 +541,29 @@ export default function CoachLiveSessionsPage() {
                 </TableBody>
               </Table>
               <p className="text-xs text-muted-foreground mt-2 text-center">
-                إجمالي المسجلين: {registrations.length}
+                {bi(`إجمالي المسجلين: ${registrations.length}`, `Total registrants: ${registrations.length}`)}
               </p>
             </div>
           )}
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setRegsSession(null)}>إغلاق</Button>
+            <Button variant="ghost" onClick={() => setRegsSession(null)}>{bi('إغلاق', 'Close')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
-        <DialogContent dir="rtl" className="sm:max-w-md">
+        <DialogContent dir={dir} className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>حذف الجلسة المباشرة</DialogTitle>
+            <DialogTitle>{bi('حذف الجلسة المباشرة', 'Delete Live Session')}</DialogTitle>
           </DialogHeader>
-          <p className="text-muted-foreground text-sm">هل أنت متأكد من حذف هذه الجلسة؟ لا يمكن التراجع عن هذا الإجراء.</p>
+          <p className="text-muted-foreground text-sm">{bi('هل أنت متأكد من حذف هذه الجلسة؟ لا يمكن التراجع عن هذا الإجراء.', 'Are you sure you want to delete this session? This action cannot be undone.')}</p>
           <DialogFooter className="gap-2">
             <Button variant="ghost" onClick={() => setDeleteId(null)} disabled={deleting}>
-              إلغاء
+              {bi('إلغاء', 'Cancel')}
             </Button>
             <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
-              {deleting ? 'جاري الحذف...' : 'حذف'}
+              {deleting ? bi('جاري الحذف...', 'Deleting...') : bi('حذف', 'Delete')}
             </Button>
           </DialogFooter>
         </DialogContent>

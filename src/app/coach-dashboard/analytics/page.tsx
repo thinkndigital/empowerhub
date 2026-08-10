@@ -15,16 +15,16 @@ import { useUser } from "@/firebase/auth/use-user"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Progress } from "@/components/ui/progress"
 import { format, subMonths, startOfMonth } from "date-fns"
-import { ar } from "date-fns/locale"
-
-const progressConfig = { progress: { label: "التقدم", color: "hsl(var(--chart-1))" } }
-const sessionFrequencyConfig = { sessions: { label: "عدد الجلسات", color: "hsl(var(--chart-2))" } }
+import { ar, enUS } from "date-fns/locale"
+import { useLanguage } from "@/components/language-provider"
 
 type Beneficiary = { id: string; name?: string; progress?: number };
 type Session = { id: string; date: string; status: string; attendees: string[]; duration?: number };
 
 export default function CoachAnalyticsPage() {
   const { toast } = useToast();
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const { user: authUser } = useUser();
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [exportOptions, setExportOptions] = useState({ summary: true, progress: true, frequency: true });
@@ -61,6 +61,9 @@ export default function CoachAnalyticsPage() {
   useEffect(() => { fetchData(); }, [fetchData]);
   useEffect(() => { fetchEarnings(); }, [fetchEarnings]);
 
+  const progressConfig = useMemo(() => ({ progress: { label: bi("التقدم", "Progress"), color: "hsl(var(--chart-1))" } }), [lang]);
+  const sessionFrequencyConfig = useMemo(() => ({ sessions: { label: bi("عدد الجلسات", "Session count"), color: "hsl(var(--chart-2))" } }), [lang]);
+
   const stats = useMemo(() => {
     const totalBeneficiaries = beneficiaries?.length || 0;
     const avgProgress = beneficiaries && beneficiaries.length > 0
@@ -85,7 +88,7 @@ export default function CoachAnalyticsPage() {
     if (!sessions) return [];
     const months = Array.from({ length: 6 }, (_, i) => {
       const d = subMonths(new Date(), 5 - i);
-      return { month: format(d, 'MMM', { locale: ar }), start: startOfMonth(d).getTime(), end: new Date(d.getFullYear(), d.getMonth() + 1, 0).getTime() };
+      return { month: format(d, 'MMM', { locale: lang === 'en' ? enUS : ar }), start: startOfMonth(d).getTime(), end: new Date(d.getFullYear(), d.getMonth() + 1, 0).getTime() };
     });
     return months.map(m => ({
       month: m.month,
@@ -94,26 +97,26 @@ export default function CoachAnalyticsPage() {
         return t >= m.start && t <= m.end && s.status === 'completed';
       }).length,
     }));
-  }, [sessions]);
+  }, [sessions, lang]);
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={dir}>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-2xl font-bold tracking-tight">تحليلات التدريب</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{bi("تحليلات التدريب", "Coaching Analytics")}</h1>
         <Dialog open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen}>
           <DialogTrigger asChild>
-            <Button variant="outline" size="sm"><Download className="ml-2 h-4 w-4" />تصدير التقارير</Button>
+            <Button variant="outline" size="sm"><Download className="ml-2 h-4 w-4" />{bi("تصدير التقارير", "Export Reports")}</Button>
           </DialogTrigger>
-          <DialogContent dir="rtl">
+          <DialogContent dir={dir}>
             <DialogHeader>
-              <DialogTitle>تصدير التقارير</DialogTitle>
-              <DialogDescription>اختر أجزاء التقرير للتصدير.</DialogDescription>
+              <DialogTitle>{bi("تصدير التقارير", "Export Reports")}</DialogTitle>
+              <DialogDescription>{bi("اختر أجزاء التقرير للتصدير.", "Choose which report sections to export.")}</DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               {[
-                { key: "summary" as const, label: "الملخص الإحصائي" },
-                { key: "progress" as const, label: "تقدم المتدربين" },
-                { key: "frequency" as const, label: "تكرار الجلسات" },
+                { key: "summary" as const, label: bi("الملخص الإحصائي", "Summary statistics") },
+                { key: "progress" as const, label: bi("تقدم المتدربين", "Beneficiary progress") },
+                { key: "frequency" as const, label: bi("تكرار الجلسات", "Session frequency") },
               ].map(item => (
                 <div key={item.key} className="flex items-center gap-2">
                   <Checkbox id={item.key} checked={exportOptions[item.key]} onCheckedChange={() => setExportOptions(p => ({ ...p, [item.key]: !p[item.key] }))} />
@@ -122,8 +125,8 @@ export default function CoachAnalyticsPage() {
               ))}
             </div>
             <DialogFooter>
-              <DialogClose asChild><Button variant="ghost">إلغاء</Button></DialogClose>
-              <Button onClick={() => { toast({ title: "جاري التصدير..." }); setIsExportDialogOpen(false); }}>تصدير</Button>
+              <DialogClose asChild><Button variant="ghost">{bi("إلغاء", "Cancel")}</Button></DialogClose>
+              <Button onClick={() => { toast({ title: bi("جاري التصدير...", "Exporting...") }); setIsExportDialogOpen(false); }}>{bi("تصدير", "Export")}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -131,10 +134,10 @@ export default function CoachAnalyticsPage() {
 
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         {[
-          { label: "إجمالي المتدربين", value: stats.totalBeneficiaries, sub: "متدرب نشط", icon: <Users className="h-5 w-5 text-white" />, color: "bg-primary" },
-          { label: "متوسط تقدم المتدربين", value: `${stats.avgProgress}%`, sub: "نسبة الإنجاز الكلية", icon: <BarChart3 className="h-5 w-5 text-white" />, color: "bg-emerald-500" },
-          { label: "جلسات هذا الشهر", value: stats.sessionsThisMonth, sub: `بإجمالي ${stats.totalHours} ساعة`, icon: <Clock className="h-5 w-5 text-white" />, color: "bg-amber-500" },
-          { label: "إجمالي الأرباح", value: earningsLoading ? "—" : `${(earnings?.remaining ?? 0).toFixed(2)} د.أ`, sub: "الرصيد المتاح", icon: <DollarSign className="h-5 w-5 text-white" />, color: "bg-purple-500" },
+          { label: bi("إجمالي المتدربين", "Total Beneficiaries"), value: stats.totalBeneficiaries, sub: bi("متدرب نشط", "active beneficiary"), icon: <Users className="h-5 w-5 text-white" />, color: "bg-primary" },
+          { label: bi("متوسط تقدم المتدربين", "Avg. Beneficiary Progress"), value: `${stats.avgProgress}%`, sub: bi("نسبة الإنجاز الكلية", "overall completion rate"), icon: <BarChart3 className="h-5 w-5 text-white" />, color: "bg-emerald-500" },
+          { label: bi("جلسات هذا الشهر", "Sessions This Month"), value: stats.sessionsThisMonth, sub: bi(`بإجمالي ${stats.totalHours} ساعة`, `totaling ${stats.totalHours} hours`), icon: <Clock className="h-5 w-5 text-white" />, color: "bg-amber-500" },
+          { label: bi("إجمالي الأرباح", "Total Earnings"), value: earningsLoading ? "—" : `${(earnings?.remaining ?? 0).toFixed(2)} ${bi("د.أ", "JOD")}`, sub: bi("الرصيد المتاح", "available balance"), icon: <DollarSign className="h-5 w-5 text-white" />, color: "bg-purple-500" },
         ].map((s, i) => (
           <Card key={i} className="border-0 shadow-sm card-hover">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -152,7 +155,7 @@ export default function CoachAnalyticsPage() {
       {!loading && beneficiaries && beneficiaries.length > 0 && (
         <Card className="border-0 shadow-sm">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><TrendingUp className="h-5 w-5" /> تقدم المتدربين</CardTitle>
+            <CardTitle className="flex items-center gap-2"><TrendingUp className="h-5 w-5" /> {bi("تقدم المتدربين", "Beneficiary Progress")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {beneficiaries.map(b => (
@@ -171,13 +174,13 @@ export default function CoachAnalyticsPage() {
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="border-0 shadow-sm">
           <CardHeader>
-            <CardTitle>تقدم المتدربين</CardTitle>
-            <CardDescription>التقدم الحالي للمتدربين الذين تشرف عليهم.</CardDescription>
+            <CardTitle>{bi("تقدم المتدربين", "Beneficiary Progress")}</CardTitle>
+            <CardDescription>{bi("التقدم الحالي للمتدربين الذين تشرف عليهم.", "Current progress of the beneficiaries you supervise.")}</CardDescription>
           </CardHeader>
           <CardContent>
             <ChartContainer config={progressConfig} className="h-[250px] w-full relative">
               {loading ? <Skeleton className="h-full w-full" /> : progressData.length === 0 ? (
-                <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">لا توجد بيانات</div>
+                <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">{bi("لا توجد بيانات", "No data available")}</div>
               ) : (
                 <BarChart accessibilityLayer data={progressData} margin={{ left: 10, right: 20 }}>
                   <CartesianGrid vertical={false} />
@@ -192,8 +195,8 @@ export default function CoachAnalyticsPage() {
         </Card>
         <Card className="border-0 shadow-sm">
           <CardHeader>
-            <CardTitle>تكرار الجلسات الشهرية</CardTitle>
-            <CardDescription>عدد الجلسات المنجزة على مدار 6 أشهر.</CardDescription>
+            <CardTitle>{bi("تكرار الجلسات الشهرية", "Monthly Session Frequency")}</CardTitle>
+            <CardDescription>{bi("عدد الجلسات المنجزة على مدار 6 أشهر.", "Number of completed sessions over the past 6 months.")}</CardDescription>
           </CardHeader>
           <CardContent>
             <ChartContainer config={sessionFrequencyConfig} className="h-[250px] w-full relative">
