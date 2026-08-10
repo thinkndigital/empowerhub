@@ -7,12 +7,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Store, Package } from "lucide-react";
 import { useCurrency } from "@/hooks/use-currency";
 import { translateCategory } from "@/lib/product-category";
+import { useLanguage } from "@/components/language-provider";
 
 interface StoreItem { id: string; name: string; logoUrl?: string; location?: string; beneficiaryName?: string; }
 interface Product { id: string; name?: string; price?: number; category?: string; imageUrl?: string; image?: string; storeName?: string; }
 
 export default function AdminStoresPage() {
   const { symbol } = useCurrency();
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const [stores, setStores] = useState<StoreItem[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,21 +31,21 @@ export default function AdminStoresPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">المتاجر والمنتجات</h1>
-          <p className="text-sm text-muted-foreground mt-1">جميع المتاجر والمنتجات في السوق</p>
+          <h1 className="text-2xl font-bold tracking-tight">{bi("المتاجر والمنتجات", "Stores & Products")}</h1>
+          <p className="text-sm text-muted-foreground mt-1">{bi("جميع المتاجر والمنتجات في السوق", "All stores and products in the marketplace")}</p>
         </div>
         {!loading && (
           <div className="flex gap-2">
-            <Badge variant="secondary">{stores.length} متجر</Badge>
-            <Badge variant="secondary">{products.length} منتج</Badge>
+            <Badge variant="secondary">{stores.length} {bi("متجر", "stores")}</Badge>
+            <Badge variant="secondary">{products.length} {bi("منتج", "products")}</Badge>
           </div>
         )}
       </div>
 
-      <Tabs defaultValue="stores" dir="rtl">
+      <Tabs defaultValue="stores" dir={dir}>
         <TabsList>
-          <TabsTrigger value="stores">المتاجر</TabsTrigger>
-          <TabsTrigger value="products">المنتجات</TabsTrigger>
+          <TabsTrigger value="stores">{bi("المتاجر", "Stores")}</TabsTrigger>
+          <TabsTrigger value="products">{bi("المنتجات", "Products")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="stores" className="mt-4">
@@ -50,16 +53,16 @@ export default function AdminStoresPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-right">المتجر</TableHead>
-                  <TableHead className="text-right">صاحب المتجر</TableHead>
-                  <TableHead className="text-right">الموقع</TableHead>
+                  <TableHead className="text-right">{bi("المتجر", "Store")}</TableHead>
+                  <TableHead className="text-right">{bi("صاحب المتجر", "Owner")}</TableHead>
+                  <TableHead className="text-right">{bi("الموقع", "Location")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   [...Array(5)].map((_, i) => <TableRow key={i}>{[...Array(3)].map((_, j) => <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>)}</TableRow>)
                 ) : stores.length === 0 ? (
-                  <TableRow><TableCell colSpan={3} className="text-center py-16 text-muted-foreground"><Store className="h-10 w-10 mx-auto mb-3 opacity-20" /><p>لا توجد متاجر بعد.</p></TableCell></TableRow>
+                  <TableRow><TableCell colSpan={3} className="text-center py-16 text-muted-foreground"><Store className="h-10 w-10 mx-auto mb-3 opacity-20" /><p>{bi("لا توجد متاجر بعد.", "No stores yet.")}</p></TableCell></TableRow>
                 ) : stores.map(s => (
                   <TableRow key={s.id}>
                     <TableCell>
@@ -84,17 +87,17 @@ export default function AdminStoresPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-right">المنتج</TableHead>
-                  <TableHead className="text-right">الفئة</TableHead>
-                  <TableHead className="text-right">المتجر</TableHead>
-                  <TableHead className="text-right">السعر</TableHead>
+                  <TableHead className="text-right">{bi("المنتج", "Product")}</TableHead>
+                  <TableHead className="text-right">{bi("الفئة", "Category")}</TableHead>
+                  <TableHead className="text-right">{bi("المتجر", "Store")}</TableHead>
+                  <TableHead className="text-right">{bi("السعر", "Price")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   [...Array(5)].map((_, i) => <TableRow key={i}>{[...Array(4)].map((_, j) => <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>)}</TableRow>)
                 ) : products.length === 0 ? (
-                  <TableRow><TableCell colSpan={4} className="text-center py-16 text-muted-foreground"><Package className="h-10 w-10 mx-auto mb-3 opacity-20" /><p>لا توجد منتجات بعد.</p></TableCell></TableRow>
+                  <TableRow><TableCell colSpan={4} className="text-center py-16 text-muted-foreground"><Package className="h-10 w-10 mx-auto mb-3 opacity-20" /><p>{bi("لا توجد منتجات بعد.", "No products yet.")}</p></TableCell></TableRow>
                 ) : products.map(p => (
                   <TableRow key={p.id}>
                     <TableCell>

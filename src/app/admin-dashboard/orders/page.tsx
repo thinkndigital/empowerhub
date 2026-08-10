@@ -40,6 +40,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { exportToExcel, exportToPDF } from "@/lib/export-utils";
+import { useLanguage } from "@/components/language-provider";
 
 type Order = {
   id: string;
@@ -85,6 +86,12 @@ const roleLabel: Record<string, string> = {
   coach: "مدرب",
   admin: "مدير",
 };
+const roleLabelEn: Record<string, string> = {
+  beneficiary: "Beneficiary",
+  mentor: "Mentor",
+  coach: "Coach",
+  admin: "Admin",
+};
 
 const statusLabel: Record<string, string> = {
   pending: "قيد الانتظار",
@@ -96,11 +103,26 @@ const statusLabel: Record<string, string> = {
   paid: "مدفوع",
   unpaid: "غير مدفوع",
 };
+const statusLabelEn: Record<string, string> = {
+  pending: "Pending",
+  confirmed: "Confirmed",
+  rejected: "Rejected",
+  shipped: "Shipped",
+  completed: "Completed",
+  cancelled: "Cancelled",
+  paid: "Paid",
+  unpaid: "Unpaid",
+};
 
 export default function AdminFinancialOrdersPage() {
   const { user } = useUser();
   const { toast } = useToast();
   const { symbol } = useCurrency();
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
+  const locale = lang === 'en' ? 'en-US' : 'ar-EG';
+  const tRoleLabel = lang === 'en' ? roleLabelEn : roleLabel;
+  const tStatusLabel = lang === 'en' ? statusLabelEn : statusLabel;
 
   const [data, setData] = useState<FinancialData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -136,11 +158,11 @@ export default function AdminFinancialOrdersPage() {
       setData(json);
       setCommissionInput(String(json.commissionRate ?? 10));
     } catch (e: any) {
-      toast({ variant: "destructive", title: "خطأ", description: e.message });
+      toast({ variant: "destructive", title: bi("خطأ", "Error"), description: e.message });
     } finally {
       setLoading(false);
     }
-  }, [user, roleFilter, toast]);
+  }, [user, roleFilter, toast, lang]);
 
   useEffect(() => {
     fetchData();
@@ -150,7 +172,7 @@ export default function AdminFinancialOrdersPage() {
     if (!user) return;
     const rate = parseFloat(commissionInput);
     if (isNaN(rate) || rate < 0 || rate > 100) {
-      toast({ variant: "destructive", title: "قيمة غير صالحة", description: "يجب أن تكون النسبة بين 0 و 100" });
+      toast({ variant: "destructive", title: bi("قيمة غير صالحة", "Invalid value"), description: bi("يجب أن تكون النسبة بين 0 و 100", "The rate must be between 0 and 100") });
       return;
     }
     setSavingCommission(true);
@@ -161,10 +183,10 @@ export default function AdminFinancialOrdersPage() {
         headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
         body: JSON.stringify({ commissionRate: rate }),
       });
-      toast({ title: "تم الحفظ", description: `تم تحديث نسبة العمولة إلى ${rate}%` });
+      toast({ title: bi("تم الحفظ", "Saved"), description: bi(`تم تحديث نسبة العمولة إلى ${rate}%`, `Commission rate updated to ${rate}%`) });
       fetchData();
     } catch (e: any) {
-      toast({ variant: "destructive", title: "خطأ", description: e.message });
+      toast({ variant: "destructive", title: bi("خطأ", "Error"), description: e.message });
     } finally {
       setSavingCommission(false);
     }
@@ -173,7 +195,7 @@ export default function AdminFinancialOrdersPage() {
   const submitPayout = async () => {
     if (!user) return;
     if (!payoutForm.userId || !payoutForm.amount) {
-      toast({ variant: "destructive", title: "بيانات ناقصة", description: "يرجى تعبئة معرف المستخدم والمبلغ" });
+      toast({ variant: "destructive", title: bi("بيانات ناقصة", "Missing data"), description: bi("يرجى تعبئة معرف المستخدم والمبلغ", "Please fill in the user ID and amount") });
       return;
     }
     setSubmittingPayout(true);
@@ -195,12 +217,12 @@ export default function AdminFinancialOrdersPage() {
       });
       const json = await res.json();
       if (!json.ok) throw new Error(json.error);
-      toast({ title: "تم تسجيل التحويل بنجاح" });
+      toast({ title: bi("تم تسجيل التحويل بنجاح", "Payout recorded successfully") });
       setShowPayoutDialog(false);
       setPayoutForm({ userId: "", userName: "", userRole: "", amount: "", grossAmount: "", commissionAmount: "", transferReference: "", notes: "" });
       fetchData();
     } catch (e: any) {
-      toast({ variant: "destructive", title: "خطأ", description: e.message });
+      toast({ variant: "destructive", title: bi("خطأ", "Error"), description: e.message });
     } finally {
       setSubmittingPayout(false);
     }
@@ -218,10 +240,10 @@ export default function AdminFinancialOrdersPage() {
       });
       const json = await res.json();
       if (!json.ok) throw new Error(json.error);
-      toast({ title: "تم تحديث حالة التحويل إلى مدفوع" });
+      toast({ title: bi("تم تحديث حالة التحويل إلى مدفوع", "Payout status updated to paid") });
       fetchData();
     } catch (e: any) {
-      toast({ variant: "destructive", title: "خطأ", description: e.message });
+      toast({ variant: "destructive", title: bi("خطأ", "Error"), description: e.message });
     } finally {
       setMarkingPaid(null);
     }
@@ -236,54 +258,56 @@ export default function AdminFinancialOrdersPage() {
   const totalPaid = payouts.filter(p => p.status === "paid").reduce((s, p) => s + p.amount, 0);
   const remaining = Math.max(0, totalNet - totalPaid);
 
-  const exportHeaders = ["#", "اسم المستخدم", "الدور", "المنتج/الدورة", "التاريخ", "المبلغ الإجمالي", `العمولة (${data?.commissionRate}%)`, "صافي المستحق", "حالة الطلب", "حالة الدفع"];
+  const exportHeaders = lang === 'en'
+    ? ["#", "User name", "Role", "Product/Course", "Date", "Total amount", `Commission (${data?.commissionRate}%)`, "Net due", "Order status", "Payment status"]
+    : ["#", "اسم المستخدم", "الدور", "المنتج/الدورة", "التاريخ", "المبلغ الإجمالي", `العمولة (${data?.commissionRate}%)`, "صافي المستحق", "حالة الطلب", "حالة الدفع"];
   const exportRows = orders.map((o, i) => [
     i + 1,
     o.userName,
-    roleLabel[o.userRole] || o.userRole,
+    tRoleLabel[o.userRole] || o.userRole,
     o.productName,
-    o.createdAt ? new Date(o.createdAt).toLocaleDateString("ar-EG") : "",
+    o.createdAt ? new Date(o.createdAt).toLocaleDateString(locale) : "",
     o.totalAmount,
     o.commissionAmount,
     o.netAmount,
-    statusLabel[o.status] || o.status,
-    statusLabel[o.paymentStatus] || o.paymentStatus,
+    tStatusLabel[o.status] || o.status,
+    tStatusLabel[o.paymentStatus] || o.paymentStatus,
   ]);
   const exportSummary = {
-    "إجمالي المبيعات": `${totalGross.toFixed(2)} ${symbol}`,
-    "إجمالي العمولات": `${totalCommission.toFixed(2)} ${symbol}`,
-    "إجمالي الصافي": `${totalNet.toFixed(2)} ${symbol}`,
-    "تم صرفه": `${totalPaid.toFixed(2)} ${symbol}`,
-    "الرصيد المتبقي": `${remaining.toFixed(2)} ${symbol}`,
+    [bi("إجمالي المبيعات", "Total sales")]: `${totalGross.toFixed(2)} ${symbol}`,
+    [bi("إجمالي العمولات", "Total commissions")]: `${totalCommission.toFixed(2)} ${symbol}`,
+    [bi("إجمالي الصافي", "Total net")]: `${totalNet.toFixed(2)} ${symbol}`,
+    [bi("تم صرفه", "Paid out")]: `${totalPaid.toFixed(2)} ${symbol}`,
+    [bi("الرصيد المتبقي", "Remaining balance")]: `${remaining.toFixed(2)} ${symbol}`,
   };
 
-  const handleExportCSV = () => exportToExcel("كشف_الطلبات_المالي", exportHeaders, exportRows);
-  const handleExportPDF = () => exportToPDF("كشف الطلبات المالي - EmpowerHub", exportHeaders, exportRows, { summary: exportSummary });
+  const handleExportCSV = () => exportToExcel(bi("كشف_الطلبات_المالي", "financial_orders_report"), exportHeaders, exportRows);
+  const handleExportPDF = () => exportToPDF(bi("كشف الطلبات المالي - EmpowerHub", "Financial Orders Report - EmpowerHub"), exportHeaders, exportRows, { summary: exportSummary });
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={dir}>
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">كشف الطلبات المالي</h1>
-          <p className="text-muted-foreground text-sm mt-1">إدارة العمولات والمدفوعات لجميع المستخدمين</p>
+          <h1 className="text-2xl font-bold tracking-tight">{bi("كشف الطلبات المالي", "Financial Orders Report")}</h1>
+          <p className="text-muted-foreground text-sm mt-1">{bi("إدارة العمولات والمدفوعات لجميع المستخدمين", "Manage commissions and payouts for all users")}</p>
         </div>
         <div className="flex gap-2 flex-wrap">
           <Button variant="outline" size="sm" onClick={fetchData} disabled={loading} className="gap-2">
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-            تحديث
+            {bi("تحديث", "Refresh")}
           </Button>
           <Button variant="outline" size="sm" onClick={handleExportCSV} className="gap-2">
             <Download className="h-4 w-4" />
-            تصدير Excel
+            {bi("تصدير Excel", "Export Excel")}
           </Button>
           <Button variant="outline" size="sm" onClick={handleExportPDF} className="gap-2">
             <Printer className="h-4 w-4" />
-            تصدير PDF
+            {bi("تصدير PDF", "Export PDF")}
           </Button>
           <Button size="sm" onClick={() => setShowPayoutDialog(true)} className="gap-2">
             <Plus className="h-4 w-4" />
-            تسجيل تحويل جديد
+            {bi("تسجيل تحويل جديد", "Record new payout")}
           </Button>
         </div>
       </div>
@@ -293,7 +317,7 @@ export default function AdminFinancialOrdersPage() {
         <CardHeader className="pb-3">
           <CardTitle className="text-sm flex items-center gap-2">
             <Settings className="h-4 w-4" />
-            إعداد نسبة عمولة EmpowerHub
+            {bi("إعداد نسبة عمولة EmpowerHub", "EmpowerHub commission rate setting")}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -312,22 +336,22 @@ export default function AdminFinancialOrdersPage() {
             </div>
             <span className="text-sm text-muted-foreground">%</span>
             <Button size="sm" onClick={saveCommission} disabled={savingCommission}>
-              {savingCommission ? "جاري الحفظ..." : "حفظ"}
+              {savingCommission ? bi("جاري الحفظ...", "Saving...") : bi("حفظ", "Save")}
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground mt-2">النسبة الحالية: {data?.commissionRate ?? "..."}%</p>
+          <p className="text-xs text-muted-foreground mt-2">{bi("النسبة الحالية:", "Current rate:")} {data?.commissionRate ?? "..."}%</p>
         </CardContent>
       </Card>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         {[
-          { label: "إجمالي الطلبات", value: loading ? "..." : orders.length, icon: ShoppingBag, color: "text-primary" },
-          { label: "إجمالي المبيعات", value: loading ? "..." : `${totalGross.toFixed(2)} ${symbol}`, icon: TrendingUp, color: "text-blue-500" },
-          { label: "إجمالي العمولات", value: loading ? "..." : `${totalCommission.toFixed(2)} ${symbol}`, icon: DollarSign, color: "text-amber-500" },
-          { label: "إجمالي الصافي", value: loading ? "..." : `${totalNet.toFixed(2)} ${symbol}`, icon: Wallet, color: "text-emerald-500" },
-          { label: "تم صرفه", value: loading ? "..." : `${totalPaid.toFixed(2)} ${symbol}`, icon: CheckCircle, color: "text-emerald-600" },
-          { label: "الرصيد المتبقي", value: loading ? "..." : `${remaining.toFixed(2)} ${symbol}`, icon: Clock, color: "text-red-500" },
+          { label: bi("إجمالي الطلبات", "Total orders"), value: loading ? "..." : orders.length, icon: ShoppingBag, color: "text-primary" },
+          { label: bi("إجمالي المبيعات", "Total sales"), value: loading ? "..." : `${totalGross.toFixed(2)} ${symbol}`, icon: TrendingUp, color: "text-blue-500" },
+          { label: bi("إجمالي العمولات", "Total commissions"), value: loading ? "..." : `${totalCommission.toFixed(2)} ${symbol}`, icon: DollarSign, color: "text-amber-500" },
+          { label: bi("إجمالي الصافي", "Total net"), value: loading ? "..." : `${totalNet.toFixed(2)} ${symbol}`, icon: Wallet, color: "text-emerald-500" },
+          { label: bi("تم صرفه", "Paid out"), value: loading ? "..." : `${totalPaid.toFixed(2)} ${symbol}`, icon: CheckCircle, color: "text-emerald-600" },
+          { label: bi("الرصيد المتبقي", "Remaining balance"), value: loading ? "..." : `${remaining.toFixed(2)} ${symbol}`, icon: Clock, color: "text-red-500" },
         ].map((s, i) => (
           <Card key={i} className="border-0 shadow-sm">
             <CardContent className="pt-4 pb-4">
@@ -342,10 +366,10 @@ export default function AdminFinancialOrdersPage() {
       {/* Role filter tabs */}
       <div className="flex gap-2 flex-wrap">
         {[
-          { key: "all", label: "الكل" },
-          { key: "beneficiary", label: "مستفيدون" },
-          { key: "mentor", label: "مرشدون" },
-          { key: "coach", label: "مدربون" },
+          { key: "all", label: bi("الكل", "All") },
+          { key: "beneficiary", label: bi("مستفيدون", "Beneficiaries") },
+          { key: "mentor", label: bi("مرشدون", "Mentors") },
+          { key: "coach", label: bi("مدربون", "Coaches") },
         ].map(tab => (
           <Button
             key={tab.key}
@@ -361,7 +385,7 @@ export default function AdminFinancialOrdersPage() {
       {/* Orders Table */}
       <Card className="border-0 shadow-sm">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">الطلبات</CardTitle>
+          <CardTitle className="text-base">{bi("الطلبات", "Orders")}</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
@@ -371,7 +395,7 @@ export default function AdminFinancialOrdersPage() {
           ) : orders.length === 0 ? (
             <div className="py-16 text-center text-muted-foreground">
               <ShoppingBag className="h-10 w-10 mx-auto mb-3 opacity-20" />
-              <p>لا توجد طلبات</p>
+              <p>{bi("لا توجد طلبات", "No orders")}</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -379,15 +403,15 @@ export default function AdminFinancialOrdersPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="text-right">#</TableHead>
-                    <TableHead className="text-right">اسم المستخدم</TableHead>
-                    <TableHead className="text-right">الدور</TableHead>
-                    <TableHead className="text-right">المنتج/الدورة</TableHead>
-                    <TableHead className="text-right">التاريخ</TableHead>
-                    <TableHead className="text-right">المبلغ الإجمالي</TableHead>
-                    <TableHead className="text-right">العمولة</TableHead>
-                    <TableHead className="text-right">صافي المستحق</TableHead>
-                    <TableHead className="text-right">حالة الطلب</TableHead>
-                    <TableHead className="text-right">حالة الدفع</TableHead>
+                    <TableHead className="text-right">{bi("اسم المستخدم", "User name")}</TableHead>
+                    <TableHead className="text-right">{bi("الدور", "Role")}</TableHead>
+                    <TableHead className="text-right">{bi("المنتج/الدورة", "Product/Course")}</TableHead>
+                    <TableHead className="text-right">{bi("التاريخ", "Date")}</TableHead>
+                    <TableHead className="text-right">{bi("المبلغ الإجمالي", "Total amount")}</TableHead>
+                    <TableHead className="text-right">{bi("العمولة", "Commission")}</TableHead>
+                    <TableHead className="text-right">{bi("صافي المستحق", "Net due")}</TableHead>
+                    <TableHead className="text-right">{bi("حالة الطلب", "Order status")}</TableHead>
+                    <TableHead className="text-right">{bi("حالة الدفع", "Payment status")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -397,12 +421,12 @@ export default function AdminFinancialOrdersPage() {
                       <TableCell className="font-medium text-sm">{order.userName || "—"}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className="text-xs">
-                          {roleLabel[order.userRole] || order.userRole || "—"}
+                          {tRoleLabel[order.userRole] || order.userRole || "—"}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-sm max-w-[150px] truncate">{order.productName || "—"}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">
-                        {order.createdAt ? new Date(order.createdAt).toLocaleDateString("ar-EG") : "—"}
+                        {order.createdAt ? new Date(order.createdAt).toLocaleDateString(locale) : "—"}
                       </TableCell>
                       <TableCell className="text-sm font-medium">{order.totalAmount.toFixed(2)} {symbol}</TableCell>
                       <TableCell className="text-sm text-amber-600">
@@ -418,7 +442,7 @@ export default function AdminFinancialOrdersPage() {
                             ? "bg-amber-100 text-amber-700"
                             : "bg-red-100 text-red-700"
                         }`}>
-                          {statusLabel[order.status] || order.status}
+                          {tStatusLabel[order.status] || order.status}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -427,7 +451,7 @@ export default function AdminFinancialOrdersPage() {
                             ? "bg-emerald-100 text-emerald-700"
                             : "bg-gray-100 text-gray-600"
                         }`}>
-                          {statusLabel[order.paymentStatus] || order.paymentStatus}
+                          {tStatusLabel[order.paymentStatus] || order.paymentStatus}
                         </Badge>
                       </TableCell>
                     </TableRow>
@@ -442,10 +466,10 @@ export default function AdminFinancialOrdersPage() {
       {/* Payouts Section */}
       <Card className="border-0 shadow-sm">
         <CardHeader className="pb-3 flex flex-row items-center justify-between">
-          <CardTitle className="text-base">سجل التحويلات</CardTitle>
+          <CardTitle className="text-base">{bi("سجل التحويلات", "Payout history")}</CardTitle>
           <Button size="sm" onClick={() => setShowPayoutDialog(true)} className="gap-1">
             <Plus className="h-3.5 w-3.5" />
-            تحويل جديد
+            {bi("تحويل جديد", "New payout")}
           </Button>
         </CardHeader>
         <CardContent className="p-0">
@@ -455,22 +479,22 @@ export default function AdminFinancialOrdersPage() {
             </div>
           ) : payouts.length === 0 ? (
             <div className="py-12 text-center text-muted-foreground">
-              <p className="text-sm">لا توجد تحويلات مسجلة</p>
+              <p className="text-sm">{bi("لا توجد تحويلات مسجلة", "No payouts recorded")}</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-right">المستخدم</TableHead>
-                    <TableHead className="text-right">الدور</TableHead>
-                    <TableHead className="text-right">المبلغ الصافي</TableHead>
-                    <TableHead className="text-right">المبلغ الإجمالي</TableHead>
-                    <TableHead className="text-right">العمولة</TableHead>
-                    <TableHead className="text-right">المرجع</TableHead>
-                    <TableHead className="text-right">التاريخ</TableHead>
-                    <TableHead className="text-right">الحالة</TableHead>
-                    <TableHead className="text-right">إجراء</TableHead>
+                    <TableHead className="text-right">{bi("المستخدم", "User")}</TableHead>
+                    <TableHead className="text-right">{bi("الدور", "Role")}</TableHead>
+                    <TableHead className="text-right">{bi("المبلغ الصافي", "Net amount")}</TableHead>
+                    <TableHead className="text-right">{bi("المبلغ الإجمالي", "Total amount")}</TableHead>
+                    <TableHead className="text-right">{bi("العمولة", "Commission")}</TableHead>
+                    <TableHead className="text-right">{bi("المرجع", "Reference")}</TableHead>
+                    <TableHead className="text-right">{bi("التاريخ", "Date")}</TableHead>
+                    <TableHead className="text-right">{bi("الحالة", "Status")}</TableHead>
+                    <TableHead className="text-right">{bi("إجراء", "Action")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -479,7 +503,7 @@ export default function AdminFinancialOrdersPage() {
                       <TableCell className="font-medium text-sm">{payout.userName || payout.userId}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className="text-xs">
-                          {roleLabel[payout.userRole] || payout.userRole || "—"}
+                          {tRoleLabel[payout.userRole] || payout.userRole || "—"}
                         </Badge>
                       </TableCell>
                       <TableCell className="font-bold text-emerald-600">{payout.amount.toFixed(2)} {symbol}</TableCell>
@@ -487,7 +511,7 @@ export default function AdminFinancialOrdersPage() {
                       <TableCell className="text-sm text-amber-600">{(payout.commissionAmount || 0).toFixed(2)} {symbol}</TableCell>
                       <TableCell className="text-xs text-muted-foreground font-mono">{payout.transferReference || "—"}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">
-                        {payout.createdAt ? new Date(payout.createdAt).toLocaleDateString("ar-EG") : "—"}
+                        {payout.createdAt ? new Date(payout.createdAt).toLocaleDateString(locale) : "—"}
                       </TableCell>
                       <TableCell>
                         <Badge className={`text-xs border-0 ${
@@ -495,7 +519,7 @@ export default function AdminFinancialOrdersPage() {
                             ? "bg-emerald-100 text-emerald-700"
                             : "bg-amber-100 text-amber-700"
                         }`}>
-                          {payout.status === "paid" ? "مدفوع" : "معلق"}
+                          {payout.status === "paid" ? bi("مدفوع", "Paid") : bi("معلق", "Pending")}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -507,12 +531,12 @@ export default function AdminFinancialOrdersPage() {
                             disabled={markingPaid === payout.id}
                             className="text-xs h-7 text-emerald-600 border-emerald-200 hover:bg-emerald-50"
                           >
-                            {markingPaid === payout.id ? "..." : "تأكيد الدفع"}
+                            {markingPaid === payout.id ? "..." : bi("تأكيد الدفع", "Confirm payment")}
                           </Button>
                         )}
                         {payout.status === "paid" && payout.paidAt && (
                           <span className="text-xs text-muted-foreground">
-                            {new Date(payout.paidAt).toLocaleDateString("ar-EG")}
+                            {new Date(payout.paidAt).toLocaleDateString(locale)}
                           </span>
                         )}
                       </TableCell>
@@ -527,14 +551,14 @@ export default function AdminFinancialOrdersPage() {
 
       {/* New Payout Dialog */}
       <Dialog open={showPayoutDialog} onOpenChange={setShowPayoutDialog}>
-        <DialogContent className="max-w-md" dir="rtl">
+        <DialogContent className="max-w-md" dir={dir}>
           <DialogHeader>
-            <DialogTitle>تسجيل تحويل جديد</DialogTitle>
+            <DialogTitle>{bi("تسجيل تحويل جديد", "Record new payout")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="userId">معرف المستخدم (UID)</Label>
+                <Label htmlFor="userId">{bi("معرف المستخدم (UID)", "User ID (UID)")}</Label>
                 <Input
                   id="userId"
                   value={payoutForm.userId}
@@ -543,32 +567,32 @@ export default function AdminFinancialOrdersPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="userName">اسم المستخدم</Label>
+                <Label htmlFor="userName">{bi("اسم المستخدم", "User name")}</Label>
                 <Input
                   id="userName"
                   value={payoutForm.userName}
                   onChange={e => setPayoutForm(f => ({ ...f, userName: e.target.value }))}
-                  placeholder="الاسم"
+                  placeholder={bi("الاسم", "Name")}
                 />
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="userRole">الدور</Label>
+              <Label htmlFor="userRole">{bi("الدور", "Role")}</Label>
               <select
                 id="userRole"
                 value={payoutForm.userRole}
                 onChange={e => setPayoutForm(f => ({ ...f, userRole: e.target.value }))}
                 className="w-full border rounded-md px-3 py-2 text-sm bg-background"
               >
-                <option value="">اختر الدور</option>
-                <option value="beneficiary">مستفيد</option>
-                <option value="mentor">مرشد</option>
-                <option value="coach">مدرب</option>
+                <option value="">{bi("اختر الدور", "Select role")}</option>
+                <option value="beneficiary">{bi("مستفيد", "Beneficiary")}</option>
+                <option value="mentor">{bi("مرشد", "Mentor")}</option>
+                <option value="coach">{bi("مدرب", "Coach")}</option>
               </select>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="grossAmount">الإجمالي</Label>
+                <Label htmlFor="grossAmount">{bi("الإجمالي", "Total")}</Label>
                 <Input
                   id="grossAmount"
                   type="number"
@@ -579,7 +603,7 @@ export default function AdminFinancialOrdersPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="commissionAmount">العمولة</Label>
+                <Label htmlFor="commissionAmount">{bi("العمولة", "Commission")}</Label>
                 <Input
                   id="commissionAmount"
                   type="number"
@@ -590,7 +614,7 @@ export default function AdminFinancialOrdersPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="amount">الصافي</Label>
+                <Label htmlFor="amount">{bi("الصافي", "Net")}</Label>
                 <Input
                   id="amount"
                   type="number"
@@ -602,7 +626,7 @@ export default function AdminFinancialOrdersPage() {
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="transferReference">مرجع التحويل البنكي</Label>
+              <Label htmlFor="transferReference">{bi("مرجع التحويل البنكي", "Bank transfer reference")}</Label>
               <Input
                 id="transferReference"
                 value={payoutForm.transferReference}
@@ -611,20 +635,20 @@ export default function AdminFinancialOrdersPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="notes">ملاحظات</Label>
+              <Label htmlFor="notes">{bi("ملاحظات", "Notes")}</Label>
               <Textarea
                 id="notes"
                 value={payoutForm.notes}
                 onChange={e => setPayoutForm(f => ({ ...f, notes: e.target.value }))}
-                placeholder="ملاحظات اختيارية..."
+                placeholder={bi("ملاحظات اختيارية...", "Optional notes...")}
                 rows={2}
               />
             </div>
           </div>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setShowPayoutDialog(false)}>إلغاء</Button>
+            <Button variant="outline" onClick={() => setShowPayoutDialog(false)}>{bi("إلغاء", "Cancel")}</Button>
             <Button onClick={submitPayout} disabled={submittingPayout}>
-              {submittingPayout ? "جاري الحفظ..." : "تسجيل التحويل"}
+              {submittingPayout ? bi("جاري الحفظ...", "Saving...") : bi("تسجيل التحويل", "Record payout")}
             </Button>
           </DialogFooter>
         </DialogContent>

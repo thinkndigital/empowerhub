@@ -16,18 +16,9 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, Di
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { format, subMonths, startOfMonth } from "date-fns"
-import { ar } from "date-fns/locale"
+import { ar, enUS } from "date-fns/locale"
+import { useLanguage } from "@/components/language-provider"
 
-const userChartConfig = {
-  users: { label: "المستخدمون", color: "hsl(var(--chart-1))" },
-  orgs: { label: "المنظمات", color: "hsl(var(--chart-2))" },
-}
-const salesChartConfig = { sales: { label: "المبيعات (د.أ)", color: "hsl(var(--chart-1))" } }
-const userRolesConfig = {
-  beneficiaries: { label: "مستفيدون" }, mentors: { label: "مرشدون" },
-  coaches: { label: "مدربون" }, orgs: { label: "مدراء منظمات" }, admins: { label: "مشرفون" },
-}
-const courseEnrollmentConfig = { enrollments: { label: "المسجلون", color: "hsl(var(--chart-2))" } }
 const PIE_FILLS = ["hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"]
 
 type UserDoc = { id: string; role?: string; status?: string; createdAt?: any }
@@ -37,9 +28,23 @@ type CourseDoc = { id: string; title?: string; enrolledCount?: number }
 
 export default function AnalyticsPage() {
   const { toast } = useToast();
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
+  const dateLocale = lang === 'en' ? enUS : ar;
   const firestore = useFirestore();
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [exportOptions, setExportOptions] = useState({ summary: true, userGrowth: true, salesGrowth: true, roleDistribution: true, courseEnrollment: true });
+
+  const userChartConfig = useMemo(() => ({
+    users: { label: bi("المستخدمون", "Users"), color: "hsl(var(--chart-1))" },
+    orgs: { label: bi("المنظمات", "Organizations"), color: "hsl(var(--chart-2))" },
+  }), [lang]);
+  const salesChartConfig = useMemo(() => ({ sales: { label: bi("المبيعات (د.أ)", "Sales (JOD)"), color: "hsl(var(--chart-1))" } }), [lang]);
+  const userRolesConfig = useMemo(() => ({
+    beneficiaries: { label: bi("مستفيدون", "Beneficiaries") }, mentors: { label: bi("مرشدون", "Mentors") },
+    coaches: { label: bi("مدربون", "Coaches") }, orgs: { label: bi("مدراء منظمات", "Org managers") }, admins: { label: bi("مشرفون", "Admins") },
+  }), [lang]);
+  const courseEnrollmentConfig = useMemo(() => ({ enrollments: { label: bi("المسجلون", "Enrollments"), color: "hsl(var(--chart-2))" } }), [lang]);
 
   const usersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, "users")) : null, [firestore]);
   const { data: allUsers, isLoading: usersLoading } = useCollection<UserDoc>(usersQuery);
@@ -68,8 +73,8 @@ export default function AnalyticsPage() {
 
   const months6 = useMemo(() => Array.from({ length: 6 }, (_, i) => {
     const d = subMonths(new Date(), 5 - i);
-    return { label: format(d, 'MMM', { locale: ar }), start: startOfMonth(d).getTime(), end: new Date(d.getFullYear(), d.getMonth() + 1, 0).getTime() };
-  }), []);
+    return { label: format(d, 'MMM', { locale: dateLocale }), start: startOfMonth(d).getTime(), end: new Date(d.getFullYear(), d.getMonth() + 1, 0).getTime() };
+  }), [dateLocale]);
 
   const userGrowthData = useMemo(() => {
     if (!allUsers || !allOrgs) return [];
@@ -95,9 +100,9 @@ export default function AnalyticsPage() {
     if (!allUsers) return [];
     const roleCounts: Record<string, number> = {};
     allUsers.forEach(u => { const r = u.role || 'other'; roleCounts[r] = (roleCounts[r] || 0) + 1; });
-    const ROLE_LABELS: Record<string, string> = { beneficiary: "مستفيدون", mentor: "مرشدون", coach: "مدربون", organization: "مدراء منظمات", admin: "مشرفون" };
+    const ROLE_LABELS: Record<string, string> = { beneficiary: bi("مستفيدون", "Beneficiaries"), mentor: bi("مرشدون", "Mentors"), coach: bi("مدربون", "Coaches"), organization: bi("مدراء منظمات", "Org managers"), admin: bi("مشرفون", "Admins") };
     return Object.entries(roleCounts).map(([role, value], i) => ({ name: ROLE_LABELS[role] || role, value, fill: PIE_FILLS[i % PIE_FILLS.length] }));
-  }, [allUsers]);
+  }, [allUsers, lang]);
 
   const courseEnrollmentData = useMemo(() => {
     if (!allCourses) return [];
@@ -109,32 +114,32 @@ export default function AnalyticsPage() {
 
   const handleExport = (fullReport = false) => {
     const selected = fullReport ? Object.keys(exportOptions) : Object.entries(exportOptions).filter(([, v]) => v).map(([k]) => k);
-    if (!selected.length) { toast({ variant: "destructive", title: "لم يتم تحديد أي أجزاء" }); return; }
-    toast({ title: "جاري تصدير التقرير...", description: "سيتم تنزيل التقرير قريبًا." });
+    if (!selected.length) { toast({ variant: "destructive", title: bi("لم يتم تحديد أي أجزاء", "No sections selected") }); return; }
+    toast({ title: bi("جاري تصدير التقرير...", "Exporting report..."), description: bi("سيتم تنزيل التقرير قريبًا.", "The report will download shortly.") });
     setIsExportDialogOpen(false);
   };
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={dir}>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-2xl font-bold tracking-tight">تحليلات المنصة</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{bi("تحليلات المنصة", "Platform Analytics")}</h1>
         <Dialog open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen}>
           <DialogTrigger asChild>
-            <Button variant="outline" size="sm"><Download className="ml-2 h-4 w-4" />تصدير التقارير</Button>
+            <Button variant="outline" size="sm"><Download className="ml-2 h-4 w-4" />{bi("تصدير التقارير", "Export reports")}</Button>
           </DialogTrigger>
-          <DialogContent dir="rtl">
+          <DialogContent dir={dir}>
             <DialogHeader>
-              <DialogTitle>تصدير التقارير والتحليلات</DialogTitle>
-              <DialogDescription>اختر أجزاء التقرير للتصدير.</DialogDescription>
+              <DialogTitle>{bi("تصدير التقارير والتحليلات", "Export reports & analytics")}</DialogTitle>
+              <DialogDescription>{bi("اختر أجزاء التقرير للتصدير.", "Choose the report sections to export.")}</DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="grid grid-cols-2 gap-4">
                 {[
-                  { key: "summary" as const, label: "الملخص الإحصائي" },
-                  { key: "userGrowth" as const, label: "نمو المستخدمين" },
-                  { key: "salesGrowth" as const, label: "نمو المبيعات" },
-                  { key: "roleDistribution" as const, label: "توزيع الأدوار" },
-                  { key: "courseEnrollment" as const, label: "الدورات الأكثر تسجيلاً" },
+                  { key: "summary" as const, label: bi("الملخص الإحصائي", "Statistics summary") },
+                  { key: "userGrowth" as const, label: bi("نمو المستخدمين", "User growth") },
+                  { key: "salesGrowth" as const, label: bi("نمو المبيعات", "Sales growth") },
+                  { key: "roleDistribution" as const, label: bi("توزيع الأدوار", "Role distribution") },
+                  { key: "courseEnrollment" as const, label: bi("الدورات الأكثر تسجيلاً", "Top enrolled courses") },
                 ].map(item => (
                   <div key={item.key} className="flex items-center gap-2">
                     <Checkbox id={item.key} checked={exportOptions[item.key]} onCheckedChange={() => setExportOptions(p => ({ ...p, [item.key]: !p[item.key] }))} />
@@ -144,9 +149,9 @@ export default function AnalyticsPage() {
               </div>
             </div>
             <DialogFooter>
-              <DialogClose asChild><Button variant="ghost">إلغاء</Button></DialogClose>
-              <Button variant="outline" onClick={() => handleExport(false)}>تصدير المحدد</Button>
-              <Button onClick={() => handleExport(true)}>تصدير الكل</Button>
+              <DialogClose asChild><Button variant="ghost">{bi("إلغاء", "Cancel")}</Button></DialogClose>
+              <Button variant="outline" onClick={() => handleExport(false)}>{bi("تصدير المحدد", "Export selected")}</Button>
+              <Button onClick={() => handleExport(true)}>{bi("تصدير الكل", "Export all")}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -154,11 +159,11 @@ export default function AnalyticsPage() {
 
       <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
         {[
-          { label: "إجمالي المستخدمين", value: stats.totalUsers.toLocaleString(), sub: "مستخدم مسجل", icon: <Users className="h-5 w-5 text-white" />, color: "bg-primary", loading: usersLoading },
-          { label: "إجمالي المنظمات", value: stats.totalOrgs, sub: "منظمة مسجلة", icon: <Building className="h-5 w-5 text-white" />, color: "bg-purple-500", loading: orgsLoading },
-          { label: "المستخدمون النشطون", value: stats.activeUsers, sub: `${stats.totalUsers > 0 ? Math.round(stats.activeUsers / stats.totalUsers * 100) : 0}% من الإجمالي`, icon: <Activity className="h-5 w-5 text-white" />, color: "bg-emerald-500", loading: usersLoading },
-          { label: "إجمالي المنتجات", value: stats.totalProducts, sub: "منتج في المتجر", icon: <ShoppingCart className="h-5 w-5 text-white" />, color: "bg-amber-500", loading: false },
-          { label: "إجمالي الدورات", value: stats.totalCourses, sub: "دورة منشورة", icon: <BookOpen className="h-5 w-5 text-white" />, color: "bg-rose-500", loading: coursesLoading },
+          { label: bi("إجمالي المستخدمين", "Total users"), value: stats.totalUsers.toLocaleString(), sub: bi("مستخدم مسجل", "registered users"), icon: <Users className="h-5 w-5 text-white" />, color: "bg-primary", loading: usersLoading },
+          { label: bi("إجمالي المنظمات", "Total organizations"), value: stats.totalOrgs, sub: bi("منظمة مسجلة", "registered organizations"), icon: <Building className="h-5 w-5 text-white" />, color: "bg-purple-500", loading: orgsLoading },
+          { label: bi("المستخدمون النشطون", "Active users"), value: stats.activeUsers, sub: `${stats.totalUsers > 0 ? Math.round(stats.activeUsers / stats.totalUsers * 100) : 0}% ${bi("من الإجمالي", "of total")}`, icon: <Activity className="h-5 w-5 text-white" />, color: "bg-emerald-500", loading: usersLoading },
+          { label: bi("إجمالي المنتجات", "Total products"), value: stats.totalProducts, sub: bi("منتج في المتجر", "products in store"), icon: <ShoppingCart className="h-5 w-5 text-white" />, color: "bg-amber-500", loading: false },
+          { label: bi("إجمالي الدورات", "Total courses"), value: stats.totalCourses, sub: bi("دورة منشورة", "published courses"), icon: <BookOpen className="h-5 w-5 text-white" />, color: "bg-rose-500", loading: coursesLoading },
         ].map((s, i) => (
           <Card key={i} className="border-0 shadow-sm card-hover">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -176,13 +181,13 @@ export default function AnalyticsPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         <Card className="lg:col-span-4 border-0 shadow-sm">
           <CardHeader>
-            <CardTitle>نمو المستخدمين والمنظمات</CardTitle>
-            <CardDescription>المستخدمون والمنظمات الجدد على مدار 6 أشهر.</CardDescription>
+            <CardTitle>{bi("نمو المستخدمين والمنظمات", "User & organization growth")}</CardTitle>
+            <CardDescription>{bi("المستخدمون والمنظمات الجدد على مدار 6 أشهر.", "New users and organizations over the last 6 months.")}</CardDescription>
           </CardHeader>
           <CardContent>
             <ChartContainer config={userChartConfig} className="min-h-[250px] w-full relative">
               {loading ? <Skeleton className="h-[250px] w-full" /> : userGrowthData.every(d => d.users === 0 && d.orgs === 0) ? (
-                <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">لا توجد بيانات كافية</div>
+                <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">{bi("لا توجد بيانات كافية", "Not enough data")}</div>
               ) : (
                 <BarChart accessibilityLayer data={userGrowthData}>
                   <CartesianGrid vertical={false} />
@@ -190,8 +195,8 @@ export default function AnalyticsPage() {
                   <YAxis orientation="right" tickLine={false} axisLine={false} tickMargin={10} />
                   <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
                   <Legend />
-                  <Bar dataKey="users" fill="var(--color-users)" radius={4} name="المستخدمون" />
-                  <Bar dataKey="orgs" fill="var(--color-orgs)" radius={4} name="المنظمات" />
+                  <Bar dataKey="users" fill="var(--color-users)" radius={4} name={bi("المستخدمون", "Users")} />
+                  <Bar dataKey="orgs" fill="var(--color-orgs)" radius={4} name={bi("المنظمات", "Organizations")} />
                 </BarChart>
               )}
             </ChartContainer>
@@ -200,13 +205,13 @@ export default function AnalyticsPage() {
 
         <Card className="lg:col-span-3 border-0 shadow-sm">
           <CardHeader>
-            <CardTitle>توزيع أدوار المستخدمين</CardTitle>
-            <CardDescription>توزيع المستخدمين حسب الدور.</CardDescription>
+            <CardTitle>{bi("توزيع أدوار المستخدمين", "User role distribution")}</CardTitle>
+            <CardDescription>{bi("توزيع المستخدمين حسب الدور.", "Users distributed by role.")}</CardDescription>
           </CardHeader>
           <CardContent>
             <ChartContainer config={userRolesConfig} className="h-[250px] w-full relative">
               {loading ? <Skeleton className="h-full w-full" /> : userRolesData.length === 0 ? (
-                <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">لا توجد بيانات</div>
+                <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">{bi("لا توجد بيانات", "No data")}</div>
               ) : (
                 <ResponsiveContainer width="100%" height={250}>
                   <PieChart>
@@ -232,18 +237,18 @@ export default function AnalyticsPage() {
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="border-0 shadow-sm">
           <CardHeader>
-            <CardTitle>نمو المبيعات الشهرية</CardTitle>
-            <CardDescription>إجمالي مبيعات المتاجر على مدار 6 أشهر.</CardDescription>
+            <CardTitle>{bi("نمو المبيعات الشهرية", "Monthly sales growth")}</CardTitle>
+            <CardDescription>{bi("إجمالي مبيعات المتاجر على مدار 6 أشهر.", "Total store sales over the last 6 months.")}</CardDescription>
           </CardHeader>
           <CardContent>
             <ChartContainer config={salesChartConfig} className="h-[250px] w-full relative">
               {loading ? <Skeleton className="h-full w-full" /> : salesData.every(d => d.sales === 0) ? (
-                <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">لا توجد مبيعات بعد</div>
+                <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">{bi("لا توجد مبيعات بعد", "No sales yet")}</div>
               ) : (
                 <LineChart accessibilityLayer data={salesData} margin={{ left: -20, right: 10 }}>
                   <CartesianGrid vertical={false} />
                   <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
-                  <YAxis orientation="right" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={v => `${v} د.أ`} />
+                  <YAxis orientation="right" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={v => `${v} ${bi("د.أ", "JOD")}`} />
                   <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="line" />} />
                   <Line dataKey="sales" type="monotone" stroke="var(--color-sales)" strokeWidth={2} dot={false} />
                 </LineChart>
@@ -253,20 +258,20 @@ export default function AnalyticsPage() {
         </Card>
         <Card className="border-0 shadow-sm">
           <CardHeader>
-            <CardTitle>الدورات الأكثر تسجيلاً</CardTitle>
-            <CardDescription>ترتيب الدورات حسب عدد المسجلين.</CardDescription>
+            <CardTitle>{bi("الدورات الأكثر تسجيلاً", "Most enrolled courses")}</CardTitle>
+            <CardDescription>{bi("ترتيب الدورات حسب عدد المسجلين.", "Courses ranked by number of enrollments.")}</CardDescription>
           </CardHeader>
           <CardContent>
             <ChartContainer config={courseEnrollmentConfig} className="h-[250px] w-full relative">
               {coursesLoading ? <Skeleton className="h-full w-full" /> : courseEnrollmentData.length === 0 ? (
-                <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">لا توجد دورات بعد</div>
+                <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">{bi("لا توجد دورات بعد", "No courses yet")}</div>
               ) : (
                 <BarChart accessibilityLayer data={courseEnrollmentData} layout="vertical" margin={{ left: 10, right: 30 }}>
                   <CartesianGrid horizontal={false} />
                   <YAxis dataKey="name" type="category" tickLine={false} tickMargin={10} axisLine={false} width={120} />
                   <XAxis type="number" dataKey="enrollments" />
                   <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
-                  <Bar dataKey="enrollments" fill="var(--color-enrollments)" radius={4} name="المسجلون" />
+                  <Bar dataKey="enrollments" fill="var(--color-enrollments)" radius={4} name={bi("المسجلون", "Enrollments")} />
                 </BarChart>
               )}
             </ChartContainer>

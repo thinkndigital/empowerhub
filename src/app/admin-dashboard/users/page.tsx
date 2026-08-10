@@ -45,6 +45,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { useLanguage } from "@/components/language-provider";
 
 
 type Organization = { id: string; name: string; };
@@ -59,6 +60,15 @@ const roleMap: { [key: string]: string } = {
     merchant: "تاجر",
     team_member: "عضو فريق"
 };
+const roleMapEn: { [key: string]: string } = {
+    admin: "Admin",
+    organization: "Organization manager",
+    mentor: "Mentor",
+    beneficiary: "Beneficiary",
+    coach: "Coach",
+    merchant: "Merchant",
+    team_member: "Team member"
+};
 
 const editUserSchema = z.object({
   role: z.string({ required_error: "الرجاء اختيار دور للمستخدم." }),
@@ -66,6 +76,9 @@ const editUserSchema = z.object({
 
 export default function UsersPage() {
   const { toast } = useToast();
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
+  const tRoleMap = lang === 'en' ? roleMapEn : roleMap;
   const firestore = useFirestore();
   const [userToEdit, setUserToEdit] = useState<UserProfile | null>(null);
   const [userToView, setUserToView] = useState<UserProfile | null>(null);
@@ -102,23 +115,25 @@ export default function UsersPage() {
 
 
   const roleAr: Record<string, string> = { admin: 'مدير', organization: 'منظمة', mentor: 'مرشد', coach: 'مدرب', beneficiary: 'مستفيد', merchant: 'تاجر' };
+  const roleEn: Record<string, string> = { admin: 'Admin', organization: 'Organization', mentor: 'Mentor', coach: 'Coach', beneficiary: 'Beneficiary', merchant: 'Merchant' };
+  const tRoleAr = lang === 'en' ? roleEn : roleAr;
 
   const handleToggleStatus = async (user: UserProfile) => {
     if (!firestore) return;
 
     const userRef = doc(firestore, "users", user.id);
     const newStatus = user.status === "نشط" ? "غير نشط" : "نشط";
-    
+
     updateDoc(userRef, { status: newStatus })
         .then(() => {
             toast({
-                title: `تم تغيير حالة المستخدم`,
-                description: `أصبحت حالة ${user.name || 'المستخدم'} الآن "${newStatus}".`,
+                title: bi(`تم تغيير حالة المستخدم`, `User status changed`),
+                description: bi(`أصبحت حالة ${user.name || 'المستخدم'} الآن "${newStatus}".`, `${user.name || 'The user'}'s status is now "${newStatus}".`),
                 variant: newStatus === 'غير نشط' ? 'destructive' : 'default',
             });
         })
         .catch((err) => {
-            toast({ variant: "destructive", title: "خطأ!", description: "فشلت عملية التحديث."});
+            toast({ variant: "destructive", title: bi("خطأ!", "Error!"), description: bi("فشلت عملية التحديث.", "The update failed.")});
             const permissionError = new FirestorePermissionError({ path: userRef.path, operation: 'update', requestResourceData: { status: newStatus } });
             errorEmitter.emit('permission-error', permissionError);
         });
@@ -131,46 +146,46 @@ export default function UsersPage() {
     updateDoc(userRef, { role: values.role })
       .then(() => {
         toast({
-          title: "تم تحديث الدور!",
-          description: `تم تغيير دور ${userToEdit.name || 'المستخدم'} إلى ${roleMap[values.role] || values.role}.`,
+          title: bi("تم تحديث الدور!", "Role updated!"),
+          description: bi(`تم تغيير دور ${userToEdit.name || 'المستخدم'} إلى ${roleMap[values.role] || values.role}.`, `${userToEdit.name || 'The user'}'s role was changed to ${roleMapEn[values.role] || values.role}.`),
         });
         setUserToEdit(null);
       })
       .catch((err) => {
-        toast({ variant: "destructive", title: "خطأ!", description: "فشل تحديث الدور."});
+        toast({ variant: "destructive", title: bi("خطأ!", "Error!"), description: bi("فشل تحديث الدور.", "Failed to update the role.")});
         const permissionError = new FirestorePermissionError({ path: userRef.path, operation: 'update', requestResourceData: { role: values.role } });
         errorEmitter.emit('permission-error', permissionError);
       });
   }
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={dir}>
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">المستخدمون</h1>
-        <p className="text-sm text-muted-foreground">عرض وإدارة جميع المستخدمين المسجلين على المنصة.</p>
+        <h1 className="text-2xl font-bold tracking-tight">{bi("المستخدمون", "Users")}</h1>
+        <p className="text-sm text-muted-foreground">{bi("عرض وإدارة جميع المستخدمين المسجلين على المنصة.", "View and manage all users registered on the platform.")}</p>
       </div>
       <ExportButton
-        title="قائمة المستخدمين"
+        title={bi("قائمة المستخدمين", "Users list")}
         filename={`users-${new Date().toISOString().slice(0,10)}`}
-        headers={['الاسم', 'البريد الإلكتروني', 'الدور', 'المنظمة', 'الحالة']}
+        headers={lang === 'en' ? ['Name', 'Email', 'Role', 'Organization', 'Status'] : ['الاسم', 'البريد الإلكتروني', 'الدور', 'المنظمة', 'الحالة']}
         rows={(users ?? []).map(u => [
           u.name || '',
           u.email || '',
-          roleAr[u.role || ''] || u.role || '',
+          tRoleAr[u.role || ''] || u.role || '',
           orgMap.get(u.organizationId || '') || '',
-          u.status || 'نشط',
+          u.status || bi('نشط', 'Active'),
         ])}
-        options={{ summary: { 'إجمالي المستخدمين': String((users ?? []).length) } }}
+        options={{ summary: { [bi('إجمالي المستخدمين', 'Total users')]: String((users ?? []).length) } }}
       />
     </div>
     <Card className="border-0 shadow-sm">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>قائمة المستخدمين</CardTitle>
+            <CardTitle>{bi("قائمة المستخدمين", "Users list")}</CardTitle>
             <CardDescription>
-              {!loading && users ? `${users.length} مستخدم مسجل` : 'جاري التحميل...'}
+              {!loading && users ? `${users.length} ${bi("مستخدم مسجل", "registered users")}` : bi('جاري التحميل...', 'Loading...')}
             </CardDescription>
           </div>
         </div>
@@ -179,13 +194,13 @@ export default function UsersPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>الاسم</TableHead>
-              <TableHead className="hidden md:table-cell">البريد الإلكتروني</TableHead>
-              <TableHead>الدور</TableHead>
-              <TableHead className="hidden md:table-cell">المنظمة</TableHead>
-              <TableHead className="text-center">الحالة</TableHead>
+              <TableHead>{bi("الاسم", "Name")}</TableHead>
+              <TableHead className="hidden md:table-cell">{bi("البريد الإلكتروني", "Email")}</TableHead>
+              <TableHead>{bi("الدور", "Role")}</TableHead>
+              <TableHead className="hidden md:table-cell">{bi("المنظمة", "Organization")}</TableHead>
+              <TableHead className="text-center">{bi("الحالة", "Status")}</TableHead>
               <TableHead>
-                <span className="sr-only">الإجراءات</span>
+                <span className="sr-only">{bi("الإجراءات", "Actions")}</span>
               </TableHead>
             </TableRow>
           </TableHeader>
@@ -201,7 +216,7 @@ export default function UsersPage() {
                 </TableRow>
             ))}
             {!loading && users?.map((user) => {
-              const userName = user.name || 'مستخدم بلا اسم';
+              const userName = user.name || bi('مستخدم بلا اسم', 'Unnamed user');
               return (
               <TableRow key={user.id}>
                 <TableCell className="font-medium">
@@ -214,11 +229,11 @@ export default function UsersPage() {
                   </div>
                 </TableCell>
                 <TableCell className="hidden md:table-cell">{user.email || '-'}</TableCell>
-                <TableCell>{roleMap[user.role || ''] || user.role || 'غير محدد'}</TableCell>
+                <TableCell>{tRoleMap[user.role || ''] || user.role || bi('غير محدد', 'Not specified')}</TableCell>
                 <TableCell className="hidden md:table-cell">{orgMap.get(user.organizationId || "") || "EmpowerHub"}</TableCell>
                 <TableCell className="text-center">
                   <Badge variant={user.status === "نشط" ? "default" : "secondary"}>
-                    {user.status || "غير محدد"}
+                    {user.status || bi("غير محدد", "Not specified")}
                   </Badge>
                 </TableCell>
                 <TableCell>
@@ -226,25 +241,25 @@ export default function UsersPage() {
                     <DropdownMenuTrigger asChild>
                       <Button aria-haspopup="true" size="icon" variant="ghost">
                         <MoreHorizontal className="h-4 w-4" />
-                        <span className="sr-only">قائمة</span>
+                        <span className="sr-only">{bi("قائمة", "Menu")}</span>
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
+                      <DropdownMenuLabel>{bi("الإجراءات", "Actions")}</DropdownMenuLabel>
                       <DropdownMenuItem onSelect={() => setUserToView(user)}>
                         <Eye className="ml-2 h-4 w-4" />
-                        عرض الملف الشخصي
+                        {bi("عرض الملف الشخصي", "View profile")}
                       </DropdownMenuItem>
                       <DropdownMenuItem onSelect={() => setUserToEdit(user)}>
                         <Edit className="ml-2 h-4 w-4" />
-                        تعديل الدور
+                        {bi("تعديل الدور", "Edit role")}
                       </DropdownMenuItem>
-                      <DropdownMenuItem 
+                      <DropdownMenuItem
                         onClick={() => handleToggleStatus(user)}
                         className={user.status === "نشط" ? "text-red-500" : ""}
                       >
                         <UserX className="ml-2 h-4 w-4" />
-                        {user.status === "نشط" ? "حظر المستخدم" : "تفعيل المستخدم"}
+                        {user.status === "نشط" ? bi("حظر المستخدم", "Ban user") : bi("تفعيل المستخدم", "Activate user")}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -253,7 +268,7 @@ export default function UsersPage() {
             )})}
              {!loading && (!users || users.length === 0) && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center h-24">لا يوجد مستخدمون لعرضهم.</TableCell>
+                <TableCell colSpan={6} className="text-center h-24">{bi("لا يوجد مستخدمون لعرضهم.", "No users to display.")}</TableCell>
               </TableRow>
              )}
           </TableBody>
@@ -262,10 +277,10 @@ export default function UsersPage() {
     </Card>
 
     <Dialog open={!!userToView} onOpenChange={(isOpen) => !isOpen && setUserToView(null)}>
-        <DialogContent dir="rtl">
+        <DialogContent dir={dir}>
             <DialogHeader>
-                <DialogTitle>الملف الشخصي</DialogTitle>
-                <DialogDescription>تفاصيل المستخدم {userToView?.name || 'بلا اسم'}</DialogDescription>
+                <DialogTitle>{bi("الملف الشخصي", "Profile")}</DialogTitle>
+                <DialogDescription>{bi("تفاصيل المستخدم", "User details for")} {userToView?.name || bi('بلا اسم', 'Unnamed')}</DialogDescription>
             </DialogHeader>
             <div className="py-4 space-y-4">
                  <Avatar className="h-24 w-24 mx-auto">
@@ -273,13 +288,13 @@ export default function UsersPage() {
                     <AvatarFallback>{userToView?.name?.charAt(0) || 'U'}</AvatarFallback>
                 </Avatar>
                 <div className="text-center">
-                    <h3 className="text-xl font-semibold">{userToView?.name || 'مستخدم بلا اسم'}</h3>
-                    <p className="text-muted-foreground">{userToView?.email || 'لا يوجد بريد إلكتروني'}</p>
+                    <h3 className="text-xl font-semibold">{userToView?.name || bi('مستخدم بلا اسم', 'Unnamed user')}</h3>
+                    <p className="text-muted-foreground">{userToView?.email || bi('لا يوجد بريد إلكتروني', 'No email')}</p>
                 </div>
                 <div className="text-right space-y-2 border-t pt-4">
-                    <p><strong>الدور:</strong> {roleMap[userToView?.role || ''] || userToView?.role || 'غير محدد'}</p>
-                    <p><strong>المنظمة:</strong> {orgMap.get(userToView?.organizationId || "") || 'EmpowerHub (المنصة الرئيسية)'}</p>
-                    <p><strong>الحالة:</strong> <Badge variant={userToView?.status === "نشط" ? "default" : "secondary"}>{userToView?.status || 'غير محدد'}</Badge></p>
+                    <p><strong>{bi("الدور:", "Role:")}</strong> {tRoleMap[userToView?.role || ''] || userToView?.role || bi('غير محدد', 'Not specified')}</p>
+                    <p><strong>{bi("المنظمة:", "Organization:")}</strong> {orgMap.get(userToView?.organizationId || "") || bi('EmpowerHub (المنصة الرئيسية)', 'EmpowerHub (main platform)')}</p>
+                    <p><strong>{bi("الحالة:", "Status:")}</strong> <Badge variant={userToView?.status === "نشط" ? "default" : "secondary"}>{userToView?.status || bi('غير محدد', 'Not specified')}</Badge></p>
                 </div>
             </div>
         </DialogContent>
@@ -287,10 +302,10 @@ export default function UsersPage() {
 
 
     <Dialog open={!!userToEdit} onOpenChange={(isOpen) => !isOpen && setUserToEdit(null)}>
-      <DialogContent dir="rtl">
+      <DialogContent dir={dir}>
         <DialogHeader>
-          <DialogTitle>تعديل دور المستخدم</DialogTitle>
-          <DialogDescription>تغيير دور {userToEdit?.name || 'المستخدم'}.</DialogDescription>
+          <DialogTitle>{bi("تعديل دور المستخدم", "Edit user role")}</DialogTitle>
+          <DialogDescription>{bi("تغيير دور", "Change the role of")} {userToEdit?.name || bi('المستخدم', 'the user')}.</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onEditSubmit)} className="space-y-4 pt-4">
@@ -299,15 +314,15 @@ export default function UsersPage() {
               name="role"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>الدور الجديد</FormLabel>
+                  <FormLabel>{bi("الدور الجديد", "New role")}</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="اختر دورًا" />
+                        <SelectValue placeholder={bi("اختر دورًا", "Select a role")} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {Object.entries(roleMap).map(([key, value]) => (
+                      {Object.entries(tRoleMap).map(([key, value]) => (
                         <SelectItem key={key} value={key}>{value}</SelectItem>
                       ))}
                     </SelectContent>
@@ -317,8 +332,8 @@ export default function UsersPage() {
               )}
             />
             <DialogFooter>
-              <DialogClose asChild><Button variant="ghost">إلغاء</Button></DialogClose>
-              <Button type="submit">حفظ التغييرات</Button>
+              <DialogClose asChild><Button variant="ghost">{bi("إلغاء", "Cancel")}</Button></DialogClose>
+              <Button type="submit">{bi("حفظ التغييرات", "Save changes")}</Button>
             </DialogFooter>
           </form>
         </Form>

@@ -38,9 +38,12 @@ import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
 import { useState } from "react";
 import Link from "next/link";
+import { useLanguage } from "@/components/language-provider";
 
 export default function MentorsPage() {
   const { toast } = useToast();
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const firestore = useFirestore();
   const [mentorToView, setMentorToView] = useState<UserProfile | null>(null);
 
@@ -53,8 +56,8 @@ export default function MentorsPage() {
 
   const handleExport = () => {
     toast({
-      title: "جاري تصدير قائمة المرشدين...",
-      description: "سيتم تنزيل ملف CSV قريبًا.",
+      title: bi("جاري تصدير قائمة المرشدين...", "Exporting mentors list..."),
+      description: bi("سيتم تنزيل ملف CSV قريبًا.", "The CSV file will download shortly."),
     });
   };
 
@@ -66,36 +69,36 @@ export default function MentorsPage() {
     updateDoc(mentorRef, { status: newStatus })
         .then(() => {
             toast({
-                title: `تم تغيير حالة المرشد`,
-                description: `أصبحت حالة ${mentor.name || 'المرشد'} الآن "${newStatus}".`,
+                title: bi(`تم تغيير حالة المرشد`, `Mentor status changed`),
+                description: bi(`أصبحت حالة ${mentor.name || 'المرشد'} الآن "${newStatus}".`, `${mentor.name || 'The mentor'}'s status is now "${newStatus}".`),
             });
         })
         .catch((err) => {
-            toast({ variant: "destructive", title: "خطأ!", description: "فشلت عملية التحديث."});
+            toast({ variant: "destructive", title: bi("خطأ!", "Error!"), description: bi("فشلت عملية التحديث.", "The update failed.")});
             const permissionError = new FirestorePermissionError({ path: mentorRef.path, operation: 'update', requestResourceData: { status: newStatus } });
             errorEmitter.emit('permission-error', permissionError);
         });
   };
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={dir}>
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">المرشدون</h1>
-        <p className="text-sm text-muted-foreground">إدارة المرشدين في المنصة وتتبع أدائهم.</p>
+        <h1 className="text-2xl font-bold tracking-tight">{bi("المرشدون", "Mentors")}</h1>
+        <p className="text-sm text-muted-foreground">{bi("إدارة المرشدين في المنصة وتتبع أدائهم.", "Manage mentors on the platform and track their performance.")}</p>
       </div>
       <Button variant="outline" size="sm" onClick={handleExport}>
         <Download className="ml-2 h-4 w-4" />
-        تصدير
+        {bi("تصدير", "Export")}
       </Button>
     </div>
     <Card className="border-0 shadow-sm">
       <CardHeader>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <CardTitle className="text-base">قائمة المرشدين</CardTitle>
+            <CardTitle className="text-base">{bi("قائمة المرشدين", "Mentors list")}</CardTitle>
             <CardDescription>
-              {!loading && mentors ? `${mentors.length} مرشد مسجل` : 'جاري التحميل...'}
+              {!loading && mentors ? `${mentors.length} ${bi("مرشد مسجل", "registered mentors")}` : bi('جاري التحميل...', 'Loading...')}
             </CardDescription>
           </div>
         </div>
@@ -105,12 +108,12 @@ export default function MentorsPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>الاسم</TableHead>
-              <TableHead className="hidden md:table-cell">البريد الإلكتروني</TableHead>
-              <TableHead>مجال الخبرة</TableHead>
-              <TableHead className="text-center">الحالة</TableHead>
+              <TableHead>{bi("الاسم", "Name")}</TableHead>
+              <TableHead className="hidden md:table-cell">{bi("البريد الإلكتروني", "Email")}</TableHead>
+              <TableHead>{bi("مجال الخبرة", "Expertise")}</TableHead>
+              <TableHead className="text-center">{bi("الحالة", "Status")}</TableHead>
               <TableHead>
-                <span className="sr-only">الإجراءات</span>
+                <span className="sr-only">{bi("الإجراءات", "Actions")}</span>
               </TableHead>
             </TableRow>
           </TableHeader>
@@ -125,7 +128,7 @@ export default function MentorsPage() {
                 </TableRow>
             ))}
             {!loading && mentors?.map((mentor) => {
-              const mentorName = mentor.name || 'مرشد بلا اسم';
+              const mentorName = mentor.name || bi('مرشد بلا اسم', 'Unnamed mentor');
               return (
               <TableRow key={mentor.id}>
                 <TableCell className="font-medium">
@@ -137,11 +140,11 @@ export default function MentorsPage() {
                     <span>{mentorName}</span>
                   </div>
                 </TableCell>
-                <TableCell className="hidden md:table-cell">{mentor.email || 'لا يوجد بريد'}</TableCell>
-                <TableCell>{mentor.expertise || "غير محدد"}</TableCell>
+                <TableCell className="hidden md:table-cell">{mentor.email || bi('لا يوجد بريد', 'No email')}</TableCell>
+                <TableCell>{mentor.expertise || bi("غير محدد", "Not specified")}</TableCell>
                 <TableCell className="text-center">
                   <Badge variant={mentor.status === "نشط" ? "default" : "secondary"}>
-                    {mentor.status || 'غير محدد'}
+                    {mentor.status || bi('غير محدد', 'Not specified')}
                   </Badge>
                 </TableCell>
                 <TableCell>
@@ -149,27 +152,27 @@ export default function MentorsPage() {
                     <DropdownMenuTrigger asChild>
                       <Button aria-haspopup="true" size="icon" variant="ghost">
                         <MoreHorizontal className="h-4 w-4" />
-                        <span className="sr-only">قائمة</span>
+                        <span className="sr-only">{bi("قائمة", "Menu")}</span>
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
+                      <DropdownMenuLabel>{bi("الإجراءات", "Actions")}</DropdownMenuLabel>
                       <DropdownMenuItem onSelect={() => setMentorToView(mentor)}>
                         <Eye className="ml-2 h-4 w-4" />
-                        عرض الملف الشخصي
+                        {bi("عرض الملف الشخصي", "View profile")}
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
                         <Link href="/admin-dashboard/messages">
                             <MessageSquare className="ml-2 h-4 w-4" />
-                            إرسال رسالة
+                            {bi("إرسال رسالة", "Send message")}
                         </Link>
                       </DropdownMenuItem>
-                      <DropdownMenuItem 
+                      <DropdownMenuItem
                         onClick={() => handleToggleStatus(mentor)}
                         className={mentor.status === "نشط" ? "text-red-500" : ""}
                       >
                         <UserX className="ml-2 h-4 w-4" />
-                        {mentor.status === "نشط" ? "إيقاف الحساب" : "تفعيل الحساب"}
+                        {mentor.status === "نشط" ? bi("إيقاف الحساب", "Deactivate account") : bi("تفعيل الحساب", "Activate account")}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -178,7 +181,7 @@ export default function MentorsPage() {
             )})}
             {!loading && (!mentors || mentors.length === 0) && (
               <TableRow>
-                <TableCell colSpan={5} className="text-center h-24">لا يوجد مرشدون لعرضهم.</TableCell>
+                <TableCell colSpan={5} className="text-center h-24">{bi("لا يوجد مرشدون لعرضهم.", "No mentors to display.")}</TableCell>
               </TableRow>
             )}
           </TableBody>
@@ -188,23 +191,23 @@ export default function MentorsPage() {
     </Card>
 
     <Dialog open={!!mentorToView} onOpenChange={(isOpen) => !isOpen && setMentorToView(null)}>
-        <DialogContent dir="rtl">
+        <DialogContent dir={dir}>
             <DialogHeader>
-                <DialogTitle>الملف الشخصي للمرشد</DialogTitle>
-                <DialogDescription>تفاصيل المرشد {mentorToView?.name || 'بلا اسم'}</DialogDescription>
+                <DialogTitle>{bi("الملف الشخصي للمرشد", "Mentor profile")}</DialogTitle>
+                <DialogDescription>{bi("تفاصيل المرشد", "Mentor details for")} {mentorToView?.name || bi('بلا اسم', 'Unnamed')}</DialogDescription>
             </DialogHeader>
             <div className="py-4 space-y-4">
                  <Avatar className="h-24 w-24 mx-auto">
-                    <AvatarImage src={mentorToView?.avatarUrl || `https://picsum.photos/seed/${mentorToView?.id}/100/100`} alt={mentorToView?.name || 'مرشد'} />
+                    <AvatarImage src={mentorToView?.avatarUrl || `https://picsum.photos/seed/${mentorToView?.id}/100/100`} alt={mentorToView?.name || bi('مرشد', 'Mentor')} />
                     <AvatarFallback>{mentorToView?.name?.charAt(0) || 'M'}</AvatarFallback>
                 </Avatar>
                 <div className="text-center">
-                    <h3 className="text-xl font-semibold">{mentorToView?.name || 'مرشد بلا اسم'}</h3>
-                    <p className="text-muted-foreground">{mentorToView?.email || 'لا يوجد بريد إلكتروني'}</p>
+                    <h3 className="text-xl font-semibold">{mentorToView?.name || bi('مرشد بلا اسم', 'Unnamed mentor')}</h3>
+                    <p className="text-muted-foreground">{mentorToView?.email || bi('لا يوجد بريد إلكتروني', 'No email')}</p>
                 </div>
                 <div className="text-right space-y-2 border-t pt-4">
-                    <p><strong>مجال الخبرة:</strong> {mentorToView?.expertise || 'غير محدد'}</p>
-                    <p><strong>الحالة:</strong> <Badge variant={mentorToView?.status === "نشط" ? "default" : "secondary"}>{mentorToView?.status || 'غير محدد'}</Badge></p>
+                    <p><strong>{bi("مجال الخبرة:", "Expertise:")}</strong> {mentorToView?.expertise || bi('غير محدد', 'Not specified')}</p>
+                    <p><strong>{bi("الحالة:", "Status:")}</strong> <Badge variant={mentorToView?.status === "نشط" ? "default" : "secondary"}>{mentorToView?.status || bi('غير محدد', 'Not specified')}</Badge></p>
                 </div>
             </div>
         </DialogContent>

@@ -4,10 +4,13 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Star, Quote } from "lucide-react";
+import { useLanguage } from "@/components/language-provider";
 
 interface Story { id: string; beneficiaryName: string; beneficiaryRole: string; content: string; avatarUrl: string; stars: number; orgName: string; }
 
 export default function AdminSuccessStoriesPage() {
+  const { lang } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const [stories, setStories] = useState<Story[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -19,10 +22,10 @@ export default function AdminSuccessStoriesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">قصص النجاح</h1>
-          <p className="text-sm text-muted-foreground mt-1">قصص النجاح المنشورة من جميع المنظمات</p>
+          <h1 className="text-2xl font-bold tracking-tight">{bi("قصص النجاح", "Success Stories")}</h1>
+          <p className="text-sm text-muted-foreground mt-1">{bi("قصص النجاح المنشورة من جميع المنظمات", "Published success stories from all organizations")}</p>
         </div>
-        {!loading && <Badge variant="secondary" className="text-sm">{stories.length} قصة</Badge>}
+        {!loading && <Badge variant="secondary" className="text-sm">{stories.length} {bi("قصة", "stories")}</Badge>}
       </div>
 
       {loading ? (
@@ -32,7 +35,7 @@ export default function AdminSuccessStoriesPage() {
       ) : stories.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
           <Quote className="h-12 w-12 mb-3 opacity-20" />
-          <p className="text-sm">لا توجد قصص نجاح بعد.</p>
+          <p className="text-sm">{bi("لا توجد قصص نجاح بعد.", "No success stories yet.")}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

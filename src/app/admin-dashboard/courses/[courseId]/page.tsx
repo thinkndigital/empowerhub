@@ -22,6 +22,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useLanguage } from "@/components/language-provider";
 
 const courseEditSchema = z.object({
   title: z.string().min(2, { message: "يجب أن يكون العنوان حرفين على الأقل." }),
@@ -62,6 +63,8 @@ interface CourseDataFromDB {
 
 
 const AssessmentBuilder = ({ control, name, title }: { control: any, name: "preAssessment" | "postAssessment", title: string }) => {
+    const { lang } = useLanguage();
+    const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
     const { fields, append, remove } = useFieldArray({
         control,
         name
@@ -78,9 +81,9 @@ const AssessmentBuilder = ({ control, name, title }: { control: any, name: "preA
                             name={`${name}.${index}.question`}
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>السؤال {index + 1}</FormLabel>
+                                    <FormLabel>{bi("السؤال", "Question")} {index + 1}</FormLabel>
                                     <FormControl>
-                                        <Textarea placeholder="نص السؤال..." {...field} />
+                                        <Textarea placeholder={bi("نص السؤال...", "Question text...")} {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -91,16 +94,16 @@ const AssessmentBuilder = ({ control, name, title }: { control: any, name: "preA
                             name={`${name}.${index}.type`}
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>نوع السؤال</FormLabel>
+                                    <FormLabel>{bi("نوع السؤال", "Question type")}</FormLabel>
                                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                                         <FormControl>
                                             <SelectTrigger>
-                                                <SelectValue placeholder="اختر نوع السؤال" />
+                                                <SelectValue placeholder={bi("اختر نوع السؤال", "Select question type")} />
                                             </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
-                                            <SelectItem value="rating">تقييم (1-5)</SelectItem>
-                                            <SelectItem value="text">نص مفتوح</SelectItem>
+                                            <SelectItem value="rating">{bi("تقييم (1-5)", "Rating (1-5)")}</SelectItem>
+                                            <SelectItem value="text">{bi("نص مفتوح", "Open text")}</SelectItem>
                                         </SelectContent>
                                     </Select>
                                     <FormMessage />
@@ -115,7 +118,7 @@ const AssessmentBuilder = ({ control, name, title }: { control: any, name: "preA
             ))}
             <Button type="button" variant="outline" size="sm" onClick={() => append({ question: "", type: "rating" })}>
                 <PlusCircle className="ml-2 h-4 w-4" />
-                إضافة سؤال
+                {bi("إضافة سؤال", "Add question")}
             </Button>
         </div>
     );
@@ -124,6 +127,8 @@ const AssessmentBuilder = ({ control, name, title }: { control: any, name: "preA
 
 export default function AdminCourseEditPage({ params }: { params: { courseId: string } }) {
   const { toast } = useToast();
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const firestore = useFirestore();
 
   const courseRef = useMemoFirebase(() => {
@@ -192,15 +197,15 @@ export default function AdminCourseEditPage({ params }: { params: { courseId: st
     updateDoc(courseRef, dataToUpdate)
     .then(() => {
         toast({
-            title: "تم الحفظ بنجاح",
-            description: `تم تحديث تفاصيل دورة "${values.title}".`,
+            title: bi("تم الحفظ بنجاح", "Saved successfully"),
+            description: bi(`تم تحديث تفاصيل دورة "${values.title}".`, `The details of course "${values.title}" were updated.`),
         });
     })
     .catch((serverError) => {
         toast({
             variant: "destructive",
-            title: "حدث خطأ!",
-            description: "لم نتمكن من حفظ التغييرات. الرجاء المحاولة مرة أخرى.",
+            title: bi("حدث خطأ!", "An error occurred!"),
+            description: bi("لم نتمكن من حفظ التغييرات. الرجاء المحاولة مرة أخرى.", "We couldn't save the changes. Please try again."),
         });
         const permissionError = new FirestorePermissionError({
             path: courseRef.path,
@@ -237,10 +242,10 @@ export default function AdminCourseEditPage({ params }: { params: { courseId: st
   if (!course) {
     return (
         <div className="text-center">
-            <h1 className="text-2xl font-bold tracking-tight">الدورة غير موجودة</h1>
-            <p className="text-muted-foreground">لم نتمكن من العثور على الدورة التي تبحث عنها.</p>
+            <h1 className="text-2xl font-bold tracking-tight">{bi("الدورة غير موجودة", "Course not found")}</h1>
+            <p className="text-muted-foreground">{bi("لم نتمكن من العثور على الدورة التي تبحث عنها.", "We couldn't find the course you're looking for.")}</p>
             <Button asChild className="mt-4">
-                <Link href="/admin-dashboard/courses">العودة إلى الدورات</Link>
+                <Link href="/admin-dashboard/courses">{bi("العودة إلى الدورات", "Back to courses")}</Link>
             </Button>
         </div>
     )
@@ -248,52 +253,52 @@ export default function AdminCourseEditPage({ params }: { params: { courseId: st
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" dir={dir}>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-                 <h1 className="text-2xl font-bold tracking-tight">تحرير محتوى الدورة (المشرف)</h1>
-                 <p className="text-sm text-muted-foreground">أنت تقوم بتعديل دورة: <span className="font-bold text-primary">{course.title}</span></p>
+                 <h1 className="text-2xl font-bold tracking-tight">{bi("تحرير محتوى الدورة (المشرف)", "Edit course content (Admin)")}</h1>
+                 <p className="text-sm text-muted-foreground">{bi("أنت تقوم بتعديل دورة:", "You're editing course:")} <span className="font-bold text-primary">{course.title}</span></p>
             </div>
             <div className="flex flex-wrap gap-2">
                 <Button variant="outline" asChild>
                     <Link href="/admin-dashboard/courses">
                         <ArrowRight className="ml-2 h-4 w-4" />
-                        العودة
+                        {bi("العودة", "Back")}
                     </Link>
                 </Button>
                 <Button type="submit">
                     <Save className="ml-2 h-4 w-4" />
-                    حفظ التغييرات
+                    {bi("حفظ التغييرات", "Save changes")}
                 </Button>
             </div>
         </div>
 
         <Card className="border-0 shadow-sm">
           <CardHeader>
-            <CardTitle>المعلومات الأساسية</CardTitle>
+            <CardTitle>{bi("المعلومات الأساسية", "Basic information")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <FormField control={form.control} name="title" render={({ field }) => (
-                <FormItem><FormLabel>عنوان الدورة</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>{bi("عنوان الدورة", "Course title")}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
             )}/>
             <FormField control={form.control} name="category" render={({ field }) => (
-                <FormItem><FormLabel>الفئة</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>{bi("الفئة", "Category")}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
             )}/>
             <FormField control={form.control} name="description" render={({ field }) => (
-                <FormItem><FormLabel>الوصف</FormLabel><FormControl><Textarea rows={5} {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>{bi("الوصف", "Description")}</FormLabel><FormControl><Textarea rows={5} {...field} /></FormControl><FormMessage /></FormItem>
             )}/>
           </CardContent>
         </Card>
-        
+
         <Card className="border-0 shadow-sm">
             <CardHeader>
-                <CardTitle>محتوى الفيديو</CardTitle>
-                <CardDescription>أضف رابط الفيديو الرئيسي للدورة. يمكنك استخدام روابط من يوتيوب أو فيميو.</CardDescription>
+                <CardTitle>{bi("محتوى الفيديو", "Video content")}</CardTitle>
+                <CardDescription>{bi("أضف رابط الفيديو الرئيسي للدورة. يمكنك استخدام روابط من يوتيوب أو فيميو.", "Add the course's main video link. You can use YouTube or Vimeo links.")}</CardDescription>
             </CardHeader>
             <CardContent>
                 <FormField control={form.control} name="videoUrl" render={({ field }) => (
                     <FormItem>
-                        <FormLabel>رابط الفيديو</FormLabel>
+                        <FormLabel>{bi("رابط الفيديو", "Video link")}</FormLabel>
                         <FormControl><Input dir="ltr" placeholder="https://www.youtube.com/watch?v=..." {...field} /></FormControl>
                         <FormMessage />
                     </FormItem>
@@ -303,14 +308,14 @@ export default function AdminCourseEditPage({ params }: { params: { courseId: st
 
         <Card className="border-0 shadow-sm">
             <CardHeader>
-                <CardTitle>الاختبار القصير</CardTitle>
-                <CardDescription>أنشئ اختبارًا قصيرًا للتحقق من فهم المستفيدين. اتركه فارغًا إذا لم تكن هناك حاجة لاختبار.</CardDescription>
+                <CardTitle>{bi("الاختبار القصير", "Short quiz")}</CardTitle>
+                <CardDescription>{bi("أنشئ اختبارًا قصيرًا للتحقق من فهم المستفيدين. اتركه فارغًا إذا لم تكن هناك حاجة لاختبار.", "Create a short quiz to check beneficiaries' understanding. Leave it empty if no quiz is needed.")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
                 <FormField control={form.control} name="quiz.question" render={({ field }) => (
                     <FormItem>
-                        <FormLabel>السؤال</FormLabel>
-                        <FormControl><Textarea placeholder="ما هو أهم عنصر في...؟" {...field} /></FormControl>
+                        <FormLabel>{bi("السؤال", "Question")}</FormLabel>
+                        <FormControl><Textarea placeholder={bi("ما هو أهم عنصر في...؟", "What is the most important element in...?")} {...field} /></FormControl>
                         <FormMessage />
                     </FormItem>
                 )}/>
@@ -320,7 +325,7 @@ export default function AdminCourseEditPage({ params }: { params: { courseId: st
                     name="quiz.correctAnswer"
                     render={({ field }) => (
                         <FormItem className="space-y-3">
-                        <FormLabel>الخيارات (اختر الإجابة الصحيحة)</FormLabel>
+                        <FormLabel>{bi("الخيارات (اختر الإجابة الصحيحة)", "Options (select the correct answer)")}</FormLabel>
                         <FormControl>
                             <RadioGroup
                                 onValueChange={field.onChange}
@@ -337,7 +342,7 @@ export default function AdminCourseEditPage({ params }: { params: { courseId: st
                                                 <FormControl>
                                                     <RadioGroupItem value={optionField.value} />
                                                 </FormControl>
-                                                <Input {...optionField} placeholder={`الخيار ${index + 1}`} />
+                                                <Input {...optionField} placeholder={`${bi("الخيار", "Option")} ${index + 1}`} />
                                                 <Button type="button" variant="ghost" size="icon" onClick={() => removeQuizOption(index)} disabled={quizOptions.length <= 2}>
                                                     <Trash2 className="h-4 w-4 text-destructive" />
                                                 </Button>
@@ -354,38 +359,38 @@ export default function AdminCourseEditPage({ params }: { params: { courseId: st
                  <div className="flex items-center gap-2">
                     <Button type="button" variant="outline" size="sm" onClick={() => appendQuizOption({ value: "" })} disabled={quizOptions.length >= 4}>
                         <PlusCircle className="ml-2 h-4 w-4" />
-                        إضافة خيار
+                        {bi("إضافة خيار", "Add option")}
                     </Button>
-                    <FormDescription>يمكنك إضافة ما يصل إلى 4 خيارات.</FormDescription>
+                    <FormDescription>{bi("يمكنك إضافة ما يصل إلى 4 خيارات.", "You can add up to 4 options.")}</FormDescription>
                 </div>
             </CardContent>
         </Card>
-        
+
         <Card className="border-0 shadow-sm">
             <CardHeader>
-                <CardTitle className="flex items-center gap-2"><BookCheck className="h-5 w-5" />التقييمات</CardTitle>
+                <CardTitle className="flex items-center gap-2"><BookCheck className="h-5 w-5" />{bi("التقييمات", "Assessments")}</CardTitle>
                 <CardDescription>
-                    أنشئ تقييمًا قبليًا وبعديًا لقياس مدى تقدم المستفيدين. هذه التقييمات اختيارية.
+                    {bi("أنشئ تقييمًا قبليًا وبعديًا لقياس مدى تقدم المستفيدين. هذه التقييمات اختيارية.", "Create a pre- and post-assessment to measure beneficiaries' progress. These assessments are optional.")}
                 </CardDescription>
             </CardHeader>
             <CardContent>
                 <Tabs defaultValue="pre-assessment">
                     <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="pre-assessment">التقييم القبلي</TabsTrigger>
-                        <TabsTrigger value="post-assessment">التقييم البعدي</TabsTrigger>
+                        <TabsTrigger value="pre-assessment">{bi("التقييم القبلي", "Pre-assessment")}</TabsTrigger>
+                        <TabsTrigger value="post-assessment">{bi("التقييم البعدي", "Post-assessment")}</TabsTrigger>
                     </TabsList>
                     <TabsContent value="pre-assessment" className="pt-4">
                         <AssessmentBuilder
                             control={form.control}
                             name="preAssessment"
-                            title="أسئلة التقييم القبلي"
+                            title={bi("أسئلة التقييم القبلي", "Pre-assessment questions")}
                         />
                     </TabsContent>
                     <TabsContent value="post-assessment" className="pt-4">
                        <AssessmentBuilder
                             control={form.control}
                             name="postAssessment"
-                            title="أسئلة التقييم البعدي"
+                            title={bi("أسئلة التقييم البعدي", "Post-assessment questions")}
                         />
                     </TabsContent>
                 </Tabs>

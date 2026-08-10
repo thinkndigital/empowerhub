@@ -9,11 +9,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { GraduationCap, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { useCurrency } from "@/hooks/use-currency";
+import { useLanguage } from "@/components/language-provider";
 
 interface Coach { id: string; displayName?: string; name?: string; bio?: string; description?: string; specializations?: string[]; avatarUrl?: string; sessionPrice?: number | null; email?: string; }
 
 export default function AdminCoachesPage() {
   const { symbol } = useCurrency();
+  const { lang } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const [coaches, setCoaches] = useState<Coach[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -27,20 +30,20 @@ export default function AdminCoachesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">المدربون</h1>
-          <p className="text-sm text-muted-foreground mt-1">جميع المدربين المسجلين على المنصة</p>
+          <h1 className="text-2xl font-bold tracking-tight">{bi("المدربون", "Coaches")}</h1>
+          <p className="text-sm text-muted-foreground mt-1">{bi("جميع المدربين المسجلين على المنصة", "All coaches registered on the platform")}</p>
         </div>
-        {!loading && <Badge variant="secondary" className="text-sm">{coaches.length} مدرب</Badge>}
+        {!loading && <Badge variant="secondary" className="text-sm">{coaches.length} {bi("مدرب", "coaches")}</Badge>}
       </div>
 
       <div className="rounded-xl border border-border bg-card">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="text-right">المدرب</TableHead>
-              <TableHead className="text-right">التخصصات</TableHead>
-              <TableHead className="text-right">سعر الجلسة</TableHead>
-              <TableHead className="text-right">الإجراءات</TableHead>
+              <TableHead className="text-right">{bi("المدرب", "Coach")}</TableHead>
+              <TableHead className="text-right">{bi("التخصصات", "Specializations")}</TableHead>
+              <TableHead className="text-right">{bi("سعر الجلسة", "Session price")}</TableHead>
+              <TableHead className="text-right">{bi("الإجراءات", "Actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -51,9 +54,9 @@ export default function AdminCoachesPage() {
                 </TableRow>
               ))
             ) : coaches.length === 0 ? (
-              <TableRow><TableCell colSpan={4} className="text-center py-16 text-muted-foreground"><GraduationCap className="h-10 w-10 mx-auto mb-3 opacity-20" /><p>لا يوجد مدربون بعد.</p></TableCell></TableRow>
+              <TableRow><TableCell colSpan={4} className="text-center py-16 text-muted-foreground"><GraduationCap className="h-10 w-10 mx-auto mb-3 opacity-20" /><p>{bi("لا يوجد مدربون بعد.", "No coaches yet.")}</p></TableCell></TableRow>
             ) : coaches.map(c => {
-              const name = c.displayName || c.name || 'بدون اسم';
+              const name = c.displayName || c.name || bi('بدون اسم', 'No name');
               return (
                 <TableRow key={c.id}>
                   <TableCell>
@@ -76,12 +79,12 @@ export default function AdminCoachesPage() {
                     </div>
                   </TableCell>
                   <TableCell className="font-medium">
-                    {c.sessionPrice ? `${c.sessionPrice} ${symbol}` : <span className="text-muted-foreground text-xs">غير محدد</span>}
+                    {c.sessionPrice ? `${c.sessionPrice} ${symbol}` : <span className="text-muted-foreground text-xs">{bi("غير محدد", "Not set")}</span>}
                   </TableCell>
                   <TableCell>
                     <Button variant="ghost" size="sm" asChild>
                       <Link href={`/coaches/${c.id}`} target="_blank">
-                        <ExternalLink className="h-3.5 w-3.5 ml-1" />الملف الشخصي
+                        <ExternalLink className="h-3.5 w-3.5 ml-1" />{bi("الملف الشخصي", "Profile")}
                       </Link>
                     </Button>
                   </TableCell>

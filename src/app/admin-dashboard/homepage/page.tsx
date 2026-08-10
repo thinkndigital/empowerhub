@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Save, Plus, Trash2, Globe, Palette, Layout, Phone, Upload } from "lucide-react";
 import { uploadFile as uploadToStorage } from "@/lib/upload-file";
+import { useLanguage } from "@/components/language-provider";
 
 interface SiteConfig {
   siteName?: string;
@@ -40,10 +41,20 @@ const sectionLabels: Record<string, string> = {
   showTestimonials: 'الشهادات', showProducts: 'المنتجات', showStores: 'المتاجر',
   showPricing: 'خطط الأسعار', showContact: 'التواصل', showCTA: 'دعوة للتسجيل',
 };
+const sectionLabelsEn: Record<string, string> = {
+  showStats: 'Stats', showFeatures: 'Features', showOpportunities: 'Opportunities',
+  showHowItWorks: 'How it works', showRoles: 'Roles', showMentors: 'Mentors',
+  showCoaches: 'Coaches', showCourses: 'Courses', showBlog: 'Articles',
+  showTestimonials: 'Testimonials', showProducts: 'Products', showStores: 'Stores',
+  showPricing: 'Pricing plans', showContact: 'Contact', showCTA: 'Sign-up CTA',
+};
 
 export default function AdminHomepagePage() {
   const { user } = useUser();
   const { toast } = useToast();
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
+  const tSectionLabels = lang === 'en' ? sectionLabelsEn : sectionLabels;
   const [config, setConfig] = useState<SiteConfig>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -54,7 +65,7 @@ export default function AdminHomepagePage() {
     e.target.value = '';
     if (!file) return;
     if (!user) {
-      toast({ variant: 'destructive', title: 'خطأ', description: 'لم يتم التعرف على حسابك، أعد تحميل الصفحة وحاول مجدداً.' });
+      toast({ variant: 'destructive', title: bi('خطأ', 'Error'), description: bi('لم يتم التعرف على حسابك، أعد تحميل الصفحة وحاول مجدداً.', 'We could not identify your account. Reload the page and try again.') });
       return;
     }
     setUploadingLogo(true);
@@ -63,7 +74,7 @@ export default function AdminHomepagePage() {
       const url = await uploadToStorage(file, 'site/logo', token);
       setConfig(c => ({ ...c, logoUrl: url }));
     } catch (err: any) {
-      toast({ variant: 'destructive', title: 'فشل رفع الصورة', description: err?.message || 'حدث خطأ غير متوقع' });
+      toast({ variant: 'destructive', title: bi('فشل رفع الصورة', 'Image upload failed'), description: err?.message || bi('حدث خطأ غير متوقع', 'An unexpected error occurred') });
     }
     setUploadingLogo(false);
   };
@@ -74,11 +85,11 @@ export default function AdminHomepagePage() {
       const json = await res.json();
       if (json.config) setConfig(json.config);
     } catch {
-      toast({ variant: 'destructive', title: 'خطأ في تحميل الإعدادات' });
+      toast({ variant: 'destructive', title: bi('خطأ في تحميل الإعدادات', 'Error loading settings') });
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, lang]);
 
   useEffect(() => { fetchConfig(); }, [fetchConfig]);
 
@@ -92,11 +103,11 @@ export default function AdminHomepagePage() {
         headers: { authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(patch),
       });
-      if (!res.ok) throw new Error('فشل الحفظ');
-      toast({ title: 'تم الحفظ بنجاح' });
+      if (!res.ok) throw new Error(bi('فشل الحفظ', 'Save failed'));
+      toast({ title: bi('تم الحفظ بنجاح', 'Saved successfully') });
       fetchConfig();
     } catch (e: any) {
-      toast({ variant: 'destructive', title: 'خطأ', description: e.message });
+      toast({ variant: 'destructive', title: bi('خطأ', 'Error'), description: e.message });
     } finally {
       setSaving(false);
     }
@@ -117,45 +128,45 @@ export default function AdminHomepagePage() {
   );
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={dir}>
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">محرر الموقع الرئيسي</h1>
-        <p className="text-sm text-muted-foreground mt-1">تحكم في محتوى وإعدادات الصفحة الرئيسية للموقع</p>
+        <h1 className="text-2xl font-bold tracking-tight">{bi("محرر الموقع الرئيسي", "Homepage Editor")}</h1>
+        <p className="text-sm text-muted-foreground mt-1">{bi("تحكم في محتوى وإعدادات الصفحة الرئيسية للموقع", "Control the content and settings of the site's homepage")}</p>
       </div>
 
-      <Tabs defaultValue="identity" dir="rtl">
+      <Tabs defaultValue="identity" dir={dir}>
         <TabsList className="flex-wrap h-auto gap-1 mb-2">
-          <TabsTrigger value="identity">الهوية</TabsTrigger>
-          <TabsTrigger value="hero">قسم البطل</TabsTrigger>
-          <TabsTrigger value="stats">الإحصائيات</TabsTrigger>
-          <TabsTrigger value="features">المميزات</TabsTrigger>
-          <TabsTrigger value="howitworks">كيف تعمل</TabsTrigger>
-          <TabsTrigger value="contact">التواصل</TabsTrigger>
-          <TabsTrigger value="footer">التذييل</TabsTrigger>
-          <TabsTrigger value="sections">إظهار الأقسام</TabsTrigger>
+          <TabsTrigger value="identity">{bi("الهوية", "Identity")}</TabsTrigger>
+          <TabsTrigger value="hero">{bi("قسم البطل", "Hero section")}</TabsTrigger>
+          <TabsTrigger value="stats">{bi("الإحصائيات", "Stats")}</TabsTrigger>
+          <TabsTrigger value="features">{bi("المميزات", "Features")}</TabsTrigger>
+          <TabsTrigger value="howitworks">{bi("كيف تعمل", "How it works")}</TabsTrigger>
+          <TabsTrigger value="contact">{bi("التواصل", "Contact")}</TabsTrigger>
+          <TabsTrigger value="footer">{bi("التذييل", "Footer")}</TabsTrigger>
+          <TabsTrigger value="sections">{bi("إظهار الأقسام", "Section visibility")}</TabsTrigger>
         </TabsList>
 
         {/* Identity Tab */}
         <TabsContent value="identity">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><Globe className="h-5 w-5" />هوية المنصة</CardTitle>
-              <CardDescription>الاسم، الشعار، العلامة التجارية</CardDescription>
+              <CardTitle className="flex items-center gap-2"><Globe className="h-5 w-5" />{bi("هوية المنصة", "Platform identity")}</CardTitle>
+              <CardDescription>{bi("الاسم، الشعار، العلامة التجارية", "Name, logo, branding")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label>اسم المنصة</Label>
+                  <Label>{bi("اسم المنصة", "Platform name")}</Label>
                   <Input value={config.siteName || ''} onChange={e => set('siteName', e.target.value)} placeholder="EmpowerHub" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>الشعار الموجز (Tagline)</Label>
+                  <Label>{bi("الشعار الموجز (Tagline)", "Tagline")}</Label>
                   <Input value={config.tagline || ''} onChange={e => set('tagline', e.target.value)} placeholder="منصة التمكين الرقمي" />
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label>شعار المنصة (Logo)</Label>
+                  <Label>{bi("شعار المنصة (Logo)", "Logo")}</Label>
                   <div className="flex gap-2 items-start">
                     <Input value={config.logoUrl || ''} onChange={e => set('logoUrl', e.target.value)} placeholder="https://..." dir="ltr" className="flex-1" />
                     <label className="cursor-pointer flex-shrink-0">
@@ -172,7 +183,7 @@ export default function AdminHomepagePage() {
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="flex items-center gap-2"><Palette className="h-4 w-4" />اللون الرئيسي (Hex)</Label>
+                  <Label className="flex items-center gap-2"><Palette className="h-4 w-4" />{bi("اللون الرئيسي (Hex)", "Primary color (Hex)")}</Label>
                   <div className="flex gap-2">
                     <Input value={config.primaryColor || ''} onChange={e => set('primaryColor', e.target.value)} placeholder="#6366f1" dir="ltr" />
                     {config.primaryColor && <div className="h-9 w-9 rounded-md border border-border shrink-0" style={{ backgroundColor: config.primaryColor }} />}
@@ -180,7 +191,7 @@ export default function AdminHomepagePage() {
                 </div>
               </div>
               <Button onClick={() => save({ siteName: config.siteName, tagline: config.tagline, logoUrl: config.logoUrl, primaryColor: config.primaryColor })} disabled={saving}>
-                <Save className="h-4 w-4 ml-2" />{saving ? 'جاري الحفظ...' : 'حفظ الهوية'}
+                <Save className="h-4 w-4 ml-2" />{saving ? bi('جاري الحفظ...', 'Saving...') : bi('حفظ الهوية', 'Save identity')}
               </Button>
             </CardContent>
           </Card>
@@ -190,51 +201,51 @@ export default function AdminHomepagePage() {
         <TabsContent value="hero">
           <Card>
             <CardHeader>
-              <CardTitle>قسم البطل (Hero)</CardTitle>
-              <CardDescription>العنوان والوصف وأزرار الدعوة للتسجيل</CardDescription>
+              <CardTitle>{bi("قسم البطل (Hero)", "Hero section")}</CardTitle>
+              <CardDescription>{bi("العنوان والوصف وأزرار الدعوة للتسجيل", "The heading, description, and sign-up call-to-action buttons")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-1.5">
-                <Label>العنوان الرئيسي</Label>
+                <Label>{bi("العنوان الرئيسي", "Main heading")}</Label>
                 <Input value={config.hero?.title || ''} onChange={e => setHero('title', e.target.value)} />
               </div>
               <div className="space-y-1.5">
-                <Label>النص التوضيحي</Label>
+                <Label>{bi("النص التوضيحي", "Description text")}</Label>
                 <Textarea rows={3} value={config.hero?.subtitle || ''} onChange={e => setHero('subtitle', e.target.value)} className="resize-none" />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label>نص الزر الرئيسي</Label>
+                  <Label>{bi("نص الزر الرئيسي", "Primary button text")}</Label>
                   <Input value={config.hero?.ctaText || ''} onChange={e => setHero('ctaText', e.target.value)} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>نص الزر الثانوي</Label>
+                  <Label>{bi("نص الزر الثانوي", "Secondary button text")}</Label>
                   <Input value={config.hero?.ctaSecondaryText || ''} onChange={e => setHero('ctaSecondaryText', e.target.value)} />
                 </div>
               </div>
               <div className="space-y-4 p-4 rounded-xl border border-border bg-muted/30">
-                <p className="text-sm font-semibold">بانر الدعوة للتسجيل (CTA Banner)</p>
+                <p className="text-sm font-semibold">{bi("بانر الدعوة للتسجيل (CTA Banner)", "Sign-up CTA banner")}</p>
                 <div className="space-y-1.5">
-                  <Label>العنوان</Label>
+                  <Label>{bi("العنوان", "Title")}</Label>
                   <Input value={config.ctaBanner?.title || ''} onChange={e => setCtaBanner('title', e.target.value)} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>الوصف</Label>
+                  <Label>{bi("الوصف", "Description")}</Label>
                   <Input value={config.ctaBanner?.subtitle || ''} onChange={e => setCtaBanner('subtitle', e.target.value)} />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label>نص الزر الرئيسي</Label>
+                    <Label>{bi("نص الزر الرئيسي", "Primary button text")}</Label>
                     <Input value={config.ctaBanner?.primaryText || ''} onChange={e => setCtaBanner('primaryText', e.target.value)} />
                   </div>
                   <div className="space-y-1.5">
-                    <Label>نص الزر الثانوي</Label>
+                    <Label>{bi("نص الزر الثانوي", "Secondary button text")}</Label>
                     <Input value={config.ctaBanner?.secondaryText || ''} onChange={e => setCtaBanner('secondaryText', e.target.value)} />
                   </div>
                 </div>
               </div>
               <Button onClick={() => save({ hero: config.hero, ctaBanner: config.ctaBanner })} disabled={saving}>
-                <Save className="h-4 w-4 ml-2" />{saving ? 'جاري الحفظ...' : 'حفظ قسم البطل'}
+                <Save className="h-4 w-4 ml-2" />{saving ? bi('جاري الحفظ...', 'Saving...') : bi('حفظ قسم البطل', 'Save hero section')}
               </Button>
             </CardContent>
           </Card>
@@ -244,15 +255,15 @@ export default function AdminHomepagePage() {
         <TabsContent value="stats">
           <Card>
             <CardHeader>
-              <CardTitle>الإحصائيات</CardTitle>
-              <CardDescription>الأرقام التي تظهر في شريط الإنجازات</CardDescription>
+              <CardTitle>{bi("الإحصائيات", "Stats")}</CardTitle>
+              <CardDescription>{bi("الأرقام التي تظهر في شريط الإنجازات", "The numbers shown in the achievements bar")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {(config.stats || []).map((stat, i) => (
                 <div key={i} className="flex gap-3 items-start p-3 rounded-lg border border-border bg-muted/30">
                   <div className="flex-1 grid grid-cols-2 gap-3">
                     <div className="space-y-1">
-                      <Label className="text-xs">القيمة</Label>
+                      <Label className="text-xs">{bi("القيمة", "Value")}</Label>
                       <Input value={stat.value} onChange={e => {
                         const stats = [...(config.stats || [])];
                         stats[i] = { ...stats[i], value: e.target.value };
@@ -260,7 +271,7 @@ export default function AdminHomepagePage() {
                       }} placeholder="500+" />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs">التسمية</Label>
+                      <Label className="text-xs">{bi("التسمية", "Label")}</Label>
                       <Input value={stat.label} onChange={e => {
                         const stats = [...(config.stats || [])];
                         stats[i] = { ...stats[i], label: e.target.value };
@@ -275,11 +286,11 @@ export default function AdminHomepagePage() {
                 </div>
               ))}
               <Button variant="outline" size="sm" onClick={() => set('stats', [...(config.stats || []), { label: '', value: '' }])}>
-                <Plus className="h-4 w-4 ml-1" />إضافة إحصائية
+                <Plus className="h-4 w-4 ml-1" />{bi("إضافة إحصائية", "Add stat")}
               </Button>
               <br />
               <Button onClick={() => save({ stats: config.stats })} disabled={saving}>
-                <Save className="h-4 w-4 ml-2" />{saving ? 'جاري الحفظ...' : 'حفظ الإحصائيات'}
+                <Save className="h-4 w-4 ml-2" />{saving ? bi('جاري الحفظ...', 'Saving...') : bi('حفظ الإحصائيات', 'Save stats')}
               </Button>
             </CardContent>
           </Card>
@@ -289,8 +300,8 @@ export default function AdminHomepagePage() {
         <TabsContent value="features">
           <Card>
             <CardHeader>
-              <CardTitle>المميزات</CardTitle>
-              <CardDescription>ميزات المنصة الظاهرة في قسم المميزات</CardDescription>
+              <CardTitle>{bi("المميزات", "Features")}</CardTitle>
+              <CardDescription>{bi("ميزات المنصة الظاهرة في قسم المميزات", "The platform features shown in the features section")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {(config.features || []).map((feat, i) => (
@@ -314,11 +325,11 @@ export default function AdminHomepagePage() {
                 </div>
               ))}
               <Button variant="outline" size="sm" onClick={() => set('features', [...(config.features || []), { title: '', description: '' }])}>
-                <Plus className="h-4 w-4 ml-1" />إضافة ميزة
+                <Plus className="h-4 w-4 ml-1" />{bi("إضافة ميزة", "Add feature")}
               </Button>
               <br />
               <Button onClick={() => save({ features: config.features })} disabled={saving}>
-                <Save className="h-4 w-4 ml-2" />{saving ? 'جاري الحفظ...' : 'حفظ المميزات'}
+                <Save className="h-4 w-4 ml-2" />{saving ? bi('جاري الحفظ...', 'Saving...') : bi('حفظ المميزات', 'Save features')}
               </Button>
             </CardContent>
           </Card>
@@ -328,8 +339,8 @@ export default function AdminHomepagePage() {
         <TabsContent value="howitworks">
           <Card>
             <CardHeader>
-              <CardTitle>كيف تعمل المنصة</CardTitle>
-              <CardDescription>الخطوات الإرشادية لاستخدام المنصة</CardDescription>
+              <CardTitle>{bi("كيف تعمل المنصة", "How the platform works")}</CardTitle>
+              <CardDescription>{bi("الخطوات الإرشادية لاستخدام المنصة", "The guided steps for using the platform")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {(config.howItWorks || []).map((step, i) => (
@@ -357,11 +368,11 @@ export default function AdminHomepagePage() {
                 const len = (config.howItWorks || []).length + 1;
                 set('howItWorks', [...(config.howItWorks || []), { step: String(len), title: '', desc: '' }]);
               }}>
-                <Plus className="h-4 w-4 ml-1" />إضافة خطوة
+                <Plus className="h-4 w-4 ml-1" />{bi("إضافة خطوة", "Add step")}
               </Button>
               <br />
               <Button onClick={() => save({ howItWorks: config.howItWorks })} disabled={saving}>
-                <Save className="h-4 w-4 ml-2" />{saving ? 'جاري الحفظ...' : 'حفظ الخطوات'}
+                <Save className="h-4 w-4 ml-2" />{saving ? bi('جاري الحفظ...', 'Saving...') : bi('حفظ الخطوات', 'Save steps')}
               </Button>
             </CardContent>
           </Card>
@@ -371,29 +382,29 @@ export default function AdminHomepagePage() {
         <TabsContent value="contact">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><Phone className="h-5 w-5" />معلومات التواصل</CardTitle>
+              <CardTitle className="flex items-center gap-2"><Phone className="h-5 w-5" />{bi("معلومات التواصل", "Contact information")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label>رقم الهاتف</Label>
+                  <Label>{bi("رقم الهاتف", "Phone number")}</Label>
                   <Input value={config.contact?.phone || ''} onChange={e => setContact('phone', e.target.value)} dir="ltr" placeholder="+962XXXXXXXXX" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>رقم واتساب</Label>
+                  <Label>{bi("رقم واتساب", "WhatsApp number")}</Label>
                   <Input value={config.contact?.whatsapp || ''} onChange={e => setContact('whatsapp', e.target.value)} dir="ltr" placeholder="+962XXXXXXXXX" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>رابط واتساب</Label>
+                  <Label>{bi("رابط واتساب", "WhatsApp link")}</Label>
                   <Input value={config.contact?.whatsappLink || ''} onChange={e => setContact('whatsappLink', e.target.value)} dir="ltr" placeholder="https://wa.me/..." />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>البريد الإلكتروني</Label>
+                  <Label>{bi("البريد الإلكتروني", "Email")}</Label>
                   <Input value={config.contact?.email || ''} onChange={e => setContact('email', e.target.value)} dir="ltr" type="email" />
                 </div>
               </div>
               <Button onClick={() => save({ contact: config.contact })} disabled={saving}>
-                <Save className="h-4 w-4 ml-2" />{saving ? 'جاري الحفظ...' : 'حفظ التواصل'}
+                <Save className="h-4 w-4 ml-2" />{saving ? bi('جاري الحفظ...', 'Saving...') : bi('حفظ التواصل', 'Save contact info')}
               </Button>
             </CardContent>
           </Card>
@@ -402,23 +413,23 @@ export default function AdminHomepagePage() {
         {/* Footer Tab */}
         <TabsContent value="footer">
           <Card>
-            <CardHeader><CardTitle>التذييل (Footer)</CardTitle></CardHeader>
+            <CardHeader><CardTitle>{bi("التذييل (Footer)", "Footer")}</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-1.5">
-                <Label>وصف المنصة</Label>
+                <Label>{bi("وصف المنصة", "Platform description")}</Label>
                 <Textarea rows={2} value={config.footer?.description || ''} onChange={e => setFooter('description', e.target.value)} className="resize-none" />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label>البريد الإلكتروني</Label>
+                  <Label>{bi("البريد الإلكتروني", "Email")}</Label>
                   <Input value={config.footer?.email || ''} onChange={e => setFooter('email', e.target.value)} dir="ltr" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>رقم الهاتف</Label>
+                  <Label>{bi("رقم الهاتف", "Phone number")}</Label>
                   <Input value={config.footer?.phone || ''} onChange={e => setFooter('phone', e.target.value)} dir="ltr" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>تويتر / X</Label>
+                  <Label>{bi("تويتر / X", "Twitter / X")}</Label>
                   <Input value={config.footer?.twitter || ''} onChange={e => setFooter('twitter', e.target.value)} dir="ltr" placeholder="https://twitter.com/..." />
                 </div>
                 <div className="space-y-1.5">
@@ -430,12 +441,12 @@ export default function AdminHomepagePage() {
                   <Input value={config.footer?.instagram || ''} onChange={e => setFooter('instagram', e.target.value)} dir="ltr" placeholder="https://instagram.com/..." />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>حقوق النشر</Label>
+                  <Label>{bi("حقوق النشر", "Copyright")}</Label>
                   <Input value={config.footer?.copyright || ''} onChange={e => setFooter('copyright', e.target.value)} />
                 </div>
               </div>
               <Button onClick={() => save({ footer: config.footer })} disabled={saving}>
-                <Save className="h-4 w-4 ml-2" />{saving ? 'جاري الحفظ...' : 'حفظ التذييل'}
+                <Save className="h-4 w-4 ml-2" />{saving ? bi('جاري الحفظ...', 'Saving...') : bi('حفظ التذييل', 'Save footer')}
               </Button>
             </CardContent>
           </Card>
@@ -445,11 +456,11 @@ export default function AdminHomepagePage() {
         <TabsContent value="sections">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><Layout className="h-5 w-5" />إظهار أقسام الموقع</CardTitle>
-              <CardDescription>تحكم في الأقسام التي تظهر في الصفحة الرئيسية</CardDescription>
+              <CardTitle className="flex items-center gap-2"><Layout className="h-5 w-5" />{bi("إظهار أقسام الموقع", "Site section visibility")}</CardTitle>
+              <CardDescription>{bi("تحكم في الأقسام التي تظهر في الصفحة الرئيسية", "Control which sections appear on the homepage")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {Object.entries(sectionLabels).map(([key, label]) => (
+              {Object.entries(tSectionLabels).map(([key, label]) => (
                 <div key={key} className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted/30 transition-colors">
                   <Label className="cursor-pointer">{label}</Label>
                   <Switch
@@ -459,7 +470,7 @@ export default function AdminHomepagePage() {
                 </div>
               ))}
               <Button onClick={() => save({ sections: config.sections })} disabled={saving} className="mt-2">
-                <Save className="h-4 w-4 ml-2" />{saving ? 'جاري الحفظ...' : 'حفظ إعدادات الأقسام'}
+                <Save className="h-4 w-4 ml-2" />{saving ? bi('جاري الحفظ...', 'Saving...') : bi('حفظ إعدادات الأقسام', 'Save section settings')}
               </Button>
             </CardContent>
           </Card>
