@@ -174,7 +174,8 @@ const WhatsAppIcon = () => (
 const ExpertCard = ({
   expert, role,
 }: { expert: MentorUser; role: 'mentor' | 'coach'; onBook?: () => void; currencySymbol: string }) => {
-  const name = expert.displayName || expert.name || 'بدون اسم';
+  const { lang } = useLanguage();
+  const name = expert.displayName || expert.name || (lang === 'en' ? 'No name' : 'بدون اسم');
   const initial = name[0] || '?';
   const isMentor = role === 'mentor';
   const gradient = isMentor
@@ -211,7 +212,7 @@ const ExpertCard = ({
           </div>
         </Link>
         <span className="absolute top-2.5 right-2.5 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-black/40 text-white backdrop-blur-sm">
-          {isMentor ? 'مرشد' : 'مدرب'}
+          {lang === 'en' ? (isMentor ? 'Mentor' : 'Coach') : (isMentor ? 'مرشد' : 'مدرب')}
         </span>
         {/* Social icons overlay on bottom of photo */}
         {hasSocial && (
@@ -266,6 +267,7 @@ const ExpertCard = ({
 };
 
 function AutoCarousel({ children, count }: { children: React.ReactNode; count: number }) {
+  const { lang } = useLanguage();
   const [active, setActive] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -304,7 +306,7 @@ function AutoCarousel({ children, count }: { children: React.ReactNode; count: n
             <button
               key={i}
               onClick={() => setActive(i)}
-              aria-label={`الشريحة ${i + 1}`}
+              aria-label={lang === 'en' ? `Slide ${i + 1}` : `الشريحة ${i + 1}`}
               className={`h-2 rounded-full transition-all duration-300 ${
                 i === active % dotCount ? 'w-6 bg-primary' : 'w-2 bg-border hover:bg-muted-foreground/30'
               }`}
@@ -317,9 +319,13 @@ function AutoCarousel({ children, count }: { children: React.ReactNode; count: n
 }
 
 const LEVEL_LABELS: Record<string, string> = { beginner: 'مبتدئ', intermediate: 'متوسط', advanced: 'متقدم' };
+const LEVEL_LABELS_EN: Record<string, string> = { beginner: 'Beginner', intermediate: 'Intermediate', advanced: 'Advanced' };
 const LEVEL_COLORS: Record<string, string> = { beginner: 'bg-green-500/10 text-green-700', intermediate: 'bg-amber-500/10 text-amber-700', advanced: 'bg-red-500/10 text-red-700' };
 
-const CourseCard = ({ course, onEnroll, currencySymbol }: { course: CourseItem; onEnroll?: (c: CourseItem) => void; currencySymbol: string }) => (
+const CourseCard = ({ course, onEnroll, currencySymbol }: { course: CourseItem; onEnroll?: (c: CourseItem) => void; currencySymbol: string }) => {
+  const { lang } = useLanguage();
+  const levelLabels = lang === 'en' ? LEVEL_LABELS_EN : LEVEL_LABELS;
+  return (
   <div className="group rounded-3xl bg-card overflow-hidden hover:shadow-lg transition-shadow duration-200 flex flex-col">
     {/* Cover */}
     <div className="relative h-40 bg-muted overflow-hidden shrink-0">
@@ -333,13 +339,13 @@ const CourseCard = ({ course, onEnroll, currencySymbol }: { course: CourseItem; 
       {/* Price badge */}
       {course.price != null && (
         <div className="absolute top-2.5 left-2.5 bg-background/90 backdrop-blur-sm text-foreground text-[11px] font-bold rounded-full px-2.5 py-0.5 border border-border/50">
-          {course.price === 0 ? 'مجاني' : `${course.price} ${currencySymbol}`}
+          {course.price === 0 ? (lang === 'en' ? 'Free' : 'مجاني') : `${course.price} ${currencySymbol}`}
         </div>
       )}
       {/* Level badge */}
-      {course.level && LEVEL_LABELS[course.level] && (
+      {course.level && levelLabels[course.level] && (
         <div className={`absolute top-2.5 right-2.5 text-[10px] font-semibold rounded-full px-2 py-0.5 ${LEVEL_COLORS[course.level] || 'bg-muted text-muted-foreground'}`}>
-          {LEVEL_LABELS[course.level]}
+          {levelLabels[course.level]}
         </div>
       )}
     </div>
@@ -355,7 +361,7 @@ const CourseCard = ({ course, onEnroll, currencySymbol }: { course: CourseItem; 
             {course.coachName?.[0] || 'م'}
           </div>
         )}
-        <span className="text-[11px] text-muted-foreground truncate">{course.coachName || 'مدرب'}</span>
+        <span className="text-[11px] text-muted-foreground truncate">{course.coachName || (lang === 'en' ? 'Coach' : 'مدرب')}</span>
       </div>
 
       {/* Category */}
@@ -388,19 +394,23 @@ const CourseCard = ({ course, onEnroll, currencySymbol }: { course: CourseItem; 
     {/* Actions */}
     <div className="px-3.5 pb-3.5 flex gap-2">
       <Button variant="outline" size="sm" className="flex-1 text-xs h-8" asChild>
-        <Link href={`/courses/${course.id}`}>تفاصيل</Link>
+        <Link href={`/courses/${course.id}`}>{lang === 'en' ? 'Details' : 'تفاصيل'}</Link>
       </Button>
       <Button size="sm" className="flex-1 text-xs h-8" onClick={() => onEnroll?.(course)}>
-        {course.price === 0 || course.price === null ? 'اشترك مجاناً' : 'اشترك الآن'}
+        {course.price === 0 || course.price === null
+          ? (lang === 'en' ? 'Enroll free' : 'اشترك مجاناً')
+          : (lang === 'en' ? 'Enroll now' : 'اشترك الآن')}
       </Button>
     </div>
   </div>
-);
+  );
+};
 
 const ProductCard = ({ product, currencySymbol }: { product: Product; currencySymbol: string }) => {
   const { addItem } = useCart();
   const { toast } = useToast();
-  const name = product.name || 'منتج';
+  const { lang } = useLanguage();
+  const name = product.name || (lang === 'en' ? 'Product' : 'منتج');
   const imageUrl = product.imageUrl || product.image || '';
 
   const handleAddToCart = (e: React.MouseEvent) => {
@@ -419,14 +429,14 @@ const ProductCard = ({ product, currencySymbol }: { product: Product; currencySy
       organizationId: product.organizationId || '',
       stock: product.stock ?? undefined,
     });
-    toast({ title: 'أُضيف للسلة', description: name });
+    toast({ title: lang === 'en' ? 'Added to cart' : 'أُضيف للسلة', description: name });
   };
 
   return (
     <div className="group flex flex-col">
       <Link
         href={`/market/${product.id}`}
-        aria-label={`عرض تفاصيل ${name}`}
+        aria-label={lang === 'en' ? `View details for ${name}` : `عرض تفاصيل ${name}`}
         className="relative block w-full aspect-square rounded-3xl bg-muted/60 p-2.5 shadow-sm group-hover:shadow-md transition-shadow duration-200 text-right"
       >
         <div className="relative w-full h-full rounded-2xl overflow-hidden bg-background">
@@ -449,7 +459,7 @@ const ProductCard = ({ product, currencySymbol }: { product: Product; currencySy
             role="button"
             tabIndex={-1}
             onClick={handleAddToCart}
-            aria-label={`أضف للسلة ${name}`}
+            aria-label={lang === 'en' ? `Add ${name} to cart` : `أضف للسلة ${name}`}
             className="absolute bottom-4 left-4 h-9 w-9 rounded-full bg-background text-foreground shadow-md flex items-center justify-center opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 transition-all duration-200"
           >
             <ShoppingBag className="h-4 w-4" />
@@ -467,9 +477,11 @@ const ProductCard = ({ product, currencySymbol }: { product: Product; currencySy
 };
 
 const PublicSessionCard = ({ session, currencySymbol, onBook }: { session: PublicSession; currencySymbol: string; onBook?: () => void }) => {
+  const { lang } = useLanguage();
   const date = new Date(session.date);
-  const dateStr = date.toLocaleDateString('ar-EG', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
-  const timeStr = date.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+  const locale = lang === 'en' ? 'en-US' : 'ar-EG';
+  const dateStr = date.toLocaleDateString(locale, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+  const timeStr = date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
   const isFree = session.price === 0 || session.price == null;
   return (
     <div className="group rounded-3xl bg-card hover:shadow-lg transition-shadow flex flex-col overflow-hidden">
@@ -488,7 +500,7 @@ const PublicSessionCard = ({ session, currencySymbol, onBook }: { session: Publi
             ? 'bg-emerald-500 text-white'
             : 'bg-background/90 backdrop-blur-sm text-foreground border border-border/50'
         }`}>
-          {isFree ? 'مجاني' : `${session.price} ${currencySymbol}`}
+          {isFree ? (lang === 'en' ? 'Free' : 'مجاني') : `${session.price} ${currencySymbol}`}
         </div>
       </div>
 
@@ -505,13 +517,13 @@ const PublicSessionCard = ({ session, currencySymbol, onBook }: { session: Publi
         </div>
         <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t border-border/50">
           <span>{dateStr} — {timeStr}</span>
-          <span>{session.duration} د</span>
+          <span>{session.duration} {lang === 'en' ? 'min' : 'د'}</span>
         </div>
       </div>
 
       <div className="px-4 pb-4">
         <Button className="w-full h-9 text-sm" onClick={onBook}>
-          {isFree ? 'احجز مجاناً' : `احجز — ${session.price} ${currencySymbol}`}
+          {isFree ? (lang === 'en' ? 'Book free' : 'احجز مجاناً') : (lang === 'en' ? `Book — ${session.price} ${currencySymbol}` : `احجز — ${session.price} ${currencySymbol}`)}
         </Button>
       </div>
     </div>
@@ -531,6 +543,8 @@ export default function LandingPage() {
   const { symbol: currencySymbol } = useCurrency();
   const { logoUrl: platformLogoFallback } = usePlatformBrand();
   const { lang } = useLanguage();
+  // Static (non-admin-editable) UI chrome bilingual pairs.
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const [siteConfig, setSiteConfig] = useState<SiteConfig | null>(null);
   const [mentors, setMentors] = useState<MentorUser[]>([]);
   const [coaches, setCoaches] = useState<MentorUser[]>([]);
@@ -643,7 +657,7 @@ export default function LandingPage() {
 
   const handleContactSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    toast({ title: 'شكراً لتواصلك! سنرد عليك قريباً.' });
+    toast({ title: bi('شكراً لتواصلك! سنرد عليك قريباً.', "Thanks for reaching out! We'll get back to you soon.") });
     setContactName('');
     setContactEmail('');
     setContactMessage('');
@@ -1020,11 +1034,11 @@ export default function LandingPage() {
                           <div className="flex items-center justify-between pb-3 border-b border-border">
                             <span className="text-sm font-bold text-foreground flex items-center gap-1.5">
                               <tour.icon className="h-4 w-4 text-primary" />
-                              لوحة {tour.label}
+                              {bi(`لوحة ${tour.label}`, `${tour.label} dashboard`)}
                             </span>
                             <div className="flex items-center gap-1.5">
                               <span className="h-2 w-2 rounded-full bg-green-500" />
-                              <span className="text-xs text-muted-foreground">نشط</span>
+                              <span className="text-xs text-muted-foreground">{bi('نشط', 'Active')}</span>
                             </div>
                           </div>
 
@@ -1060,13 +1074,13 @@ export default function LandingPage() {
                   {/* Floating badge top */}
                   <div className="absolute -top-3 -right-4 bg-card border border-border rounded-xl shadow-lg px-3 py-2 flex items-center gap-1.5">
                     <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                    <span className="text-xs font-semibold text-foreground whitespace-nowrap">٢٫٥٠٠+ مستفيدة</span>
+                    <span className="text-xs font-semibold text-foreground whitespace-nowrap">{bi('٢٫٥٠٠+ مستفيدة', '2,500+ beneficiaries')}</span>
                   </div>
 
                   {/* Floating badge bottom */}
                   <div className="absolute -bottom-3 -left-4 bg-card border border-border rounded-xl shadow-lg px-3 py-2 flex items-center gap-1.5">
                     <Star className="h-3 w-3 text-amber-400 fill-amber-400" />
-                    <span className="text-xs font-semibold text-foreground whitespace-nowrap">٤.٩ تقييم المستفيدين</span>
+                    <span className="text-xs font-semibold text-foreground whitespace-nowrap">{bi('٤.٩ تقييم المستفيدين', '4.9 beneficiary rating')}</span>
                   </div>
                 </div>
 
@@ -1166,7 +1180,7 @@ export default function LandingPage() {
                     </ul>
                     <Button asChild size="lg" className="h-12 px-7 text-base font-semibold rounded-full bg-gradient-to-t from-primary to-primary/80 hover:to-primary hover:shadow-lg hover:shadow-primary/20 w-full sm:w-auto">
                       <Link href={tour.link}>
-                        {(tour as { cta?: string }).cta || `ابدأ كـ${tour.label}`}
+                        {(tour as { cta?: string }).cta || bi(`ابدأ كـ${tour.label}`, `Start as ${tour.label}`)}
                         <ArrowLeft className="mr-2 h-4 w-4" />
                       </Link>
                     </Button>
@@ -1320,12 +1334,12 @@ export default function LandingPage() {
                 <div className="flex flex-wrap justify-center gap-2">
                   {sections.showMentors && (
                     <Button variant="outline" size="sm" asChild>
-                      <Link href="/register?role=mentor">انضم كمرشد</Link>
+                      <Link href="/register?role=mentor">{bi('انضم كمرشد', 'Join as a mentor')}</Link>
                     </Button>
                   )}
                   {sections.showCoaches && (
                     <Button variant="outline" size="sm" asChild>
-                      <Link href="/register?role=coach">انضم كمدرب</Link>
+                      <Link href="/register?role=coach">{bi('انضم كمدرب', 'Join as a coach')}</Link>
                     </Button>
                   )}
                 </div>
@@ -1334,7 +1348,7 @@ export default function LandingPage() {
               {/* Mentors */}
               {sections.showMentors && (
                 <div className="mb-10 sm:mb-12">
-                  <p className="text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-4 sm:mb-5">المرشدون</p>
+                  <p className="text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-4 sm:mb-5">{bi('المرشدون', 'Mentors')}</p>
                   {loadingMentors ? (
                     <div className="flex gap-4 overflow-x-auto pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                       {[...Array(4)].map((_, i) => <div key={i} className="w-[82vw] sm:w-72 shrink-0 h-52 rounded-2xl bg-muted animate-pulse" />)}
@@ -1348,7 +1362,7 @@ export default function LandingPage() {
                       ))}
                     </AutoCarousel>
                   ) : (
-                    <p className="text-sm text-muted-foreground py-4">لا يوجد مرشدون بعد.</p>
+                    <p className="text-sm text-muted-foreground py-4">{bi('لا يوجد مرشدون بعد.', 'No mentors yet.')}</p>
                   )}
                 </div>
               )}
@@ -1356,7 +1370,7 @@ export default function LandingPage() {
               {/* Coaches */}
               {sections.showCoaches && (
                 <div>
-                  <p className="text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-4 sm:mb-5">المدربون</p>
+                  <p className="text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-4 sm:mb-5">{bi('المدربون', 'Coaches')}</p>
                   {loadingCoaches ? (
                     <div className="flex gap-4 overflow-x-auto pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                       {[...Array(4)].map((_, i) => <div key={i} className="w-[82vw] sm:w-72 shrink-0 h-52 rounded-2xl bg-muted animate-pulse" />)}
@@ -1370,7 +1384,7 @@ export default function LandingPage() {
                       ))}
                     </AutoCarousel>
                   ) : (
-                    <p className="text-sm text-muted-foreground py-4">لا يوجد مدربون بعد.</p>
+                    <p className="text-sm text-muted-foreground py-4">{bi('لا يوجد مدربون بعد.', 'No coaches yet.')}</p>
                   )}
                 </div>
               )}
@@ -1396,7 +1410,7 @@ export default function LandingPage() {
                       {(['all', 'free', 'paid'] as const).map(f => (
                         <button key={f} onClick={() => setCourseFilter(f)}
                           className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${courseFilter === f ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
-                          {f === 'all' ? 'الكل' : f === 'free' ? 'مجاني' : 'مدفوع'}
+                          {f === 'all' ? bi('الكل', 'All') : f === 'free' ? bi('مجاني', 'Free') : bi('مدفوع', 'Paid')}
                         </button>
                       ))}
                     </div>
@@ -1406,7 +1420,7 @@ export default function LandingPage() {
                         <div className="flex flex-wrap items-center justify-center gap-1.5">
                           <button onClick={() => setCourseCategoryFilter('الكل')}
                             className={`px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors ${courseCategoryFilter === 'الكل' ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:text-foreground'}`}>
-                            كل الفئات
+                            {bi('كل الفئات', 'All categories')}
                           </button>
                           {cats.map(cat => (
                             <button key={cat} onClick={() => setCourseCategoryFilter(cat)}
@@ -1427,7 +1441,7 @@ export default function LandingPage() {
               ) : courses.length === 0 ? (
                 <div className="py-12 text-center text-muted-foreground">
                   <BookOpen className="h-10 w-10 mx-auto mb-3 opacity-20" />
-                  <p className="text-sm">لا توجد دورات بعد.</p>
+                  <p className="text-sm">{bi('لا توجد دورات بعد.', 'No courses yet.')}</p>
                 </div>
               ) : (() => {
                 const filtered = courses.filter(c => {
@@ -1439,7 +1453,7 @@ export default function LandingPage() {
                 return filtered.length === 0 ? (
                   <div className="py-12 text-center text-muted-foreground">
                     <BookOpen className="h-10 w-10 mx-auto mb-3 opacity-20" />
-                    <p className="text-sm">لا توجد دورات مطابقة حالياً.</p>
+                    <p className="text-sm">{bi('لا توجد دورات مطابقة حالياً.', 'No matching courses right now.')}</p>
                   </div>
                 ) : (
                   <div className="flex gap-4 overflow-x-auto pb-3 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -1453,7 +1467,7 @@ export default function LandingPage() {
               })()}
               <div className="text-center mt-8">
                 <Button asChild variant="outline">
-                  <Link href="/courses">عرض جميع الدورات</Link>
+                  <Link href="/courses">{bi('عرض جميع الدورات', 'View all courses')}</Link>
                 </Button>
               </div>
             </div>
@@ -1474,7 +1488,7 @@ export default function LandingPage() {
                   {(['all', 'free', 'paid'] as const).map(f => (
                     <button key={f} onClick={() => setSessionFilter(f)}
                       className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${sessionFilter === f ? 'bg-muted shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
-                      {f === 'all' ? 'الكل' : f === 'free' ? 'مجاني' : 'مدفوع'}
+                      {f === 'all' ? bi('الكل', 'All') : f === 'free' ? bi('مجاني', 'Free') : bi('مدفوع', 'Paid')}
                     </button>
                   ))}
                 </div>
@@ -1488,7 +1502,11 @@ export default function LandingPage() {
                 return filtered.length === 0 ? (
                   <div className="py-10 text-center text-muted-foreground">
                     <Calendar className="h-10 w-10 mx-auto mb-3 opacity-20" />
-                    <p className="text-sm">لا توجد جلسات {sessionFilter === 'free' ? 'مجانية' : 'مدفوعة'} حالياً.</p>
+                    <p className="text-sm">
+                      {lang === 'en'
+                        ? `No ${sessionFilter === 'free' ? 'free' : 'paid'} sessions right now.`
+                        : `لا توجد جلسات ${sessionFilter === 'free' ? 'مجانية' : 'مدفوعة'} حالياً.`}
+                    </p>
                   </div>
                 ) : (
                   <div className="flex gap-4 overflow-x-auto pb-3 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -1516,7 +1534,7 @@ export default function LandingPage() {
                 <h2 className="text-3xl sm:text-4xl md:text-[2.75rem] font-extrabold tracking-tight text-foreground mb-4 text-balance">{sh('products', 'heading', 'منتجات من مجتمعنا')}</h2>
                 <Button asChild variant="outline" size="sm">
                   <Link href="/market">
-                    تصفح جميع المنتجات
+                    {bi('تصفح جميع المنتجات', 'Browse all products')}
                     <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
                   </Link>
                 </Button>
@@ -1529,8 +1547,8 @@ export default function LandingPage() {
               ) : products.length === 0 ? (
                 <div className="py-12 text-center text-muted-foreground">
                   <Store className="h-10 w-10 mx-auto mb-3 opacity-20" />
-                  <p className="text-sm mb-4">لا توجد منتجات بعد. كن أول من يضيف منتجه!</p>
-                  <Button asChild size="sm"><Link href="/register">ابدأ الآن</Link></Button>
+                  <p className="text-sm mb-4">{bi('لا توجد منتجات بعد. كن أول من يضيف منتجه!', 'No products yet. Be the first to add one!')}</p>
+                  <Button asChild size="sm"><Link href="/register">{bi('ابدأ الآن', 'Get started')}</Link></Button>
                 </div>
               ) : (
                 <div className="flex gap-4 overflow-x-auto pb-3 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -1596,7 +1614,7 @@ export default function LandingPage() {
                         <div className="mt-3 min-w-0">
                           <p className="font-bold text-base text-foreground truncate group-hover:text-primary transition-colors">{store.name}</p>
                           {store.beneficiaryName && (
-                            <p className="text-xs text-muted-foreground truncate mt-0.5">بإدارة {store.beneficiaryName}</p>
+                            <p className="text-xs text-muted-foreground truncate mt-0.5">{bi(`بإدارة ${store.beneficiaryName}`, `Run by ${store.beneficiaryName}`)}</p>
                           )}
                           {store.location && (
                             <p className="text-xs text-muted-foreground truncate mt-1 flex items-center gap-1">
@@ -1606,7 +1624,7 @@ export default function LandingPage() {
                         </div>
 
                         <div className="flex items-center gap-1 text-xs font-semibold text-primary mt-3 pt-3 border-t border-border/60">
-                          تسوّق الآن
+                          {bi('تسوّق الآن', 'Shop now')}
                           <ArrowLeft className="h-3.5 w-3.5 group-hover:-translate-x-0.5 transition-transform" />
                         </div>
                       </div>
@@ -1638,15 +1656,15 @@ export default function LandingPage() {
                       onClick={() => setPricingCycle('monthly')}
                       className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${pricingCycle === 'monthly' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                     >
-                      شهري
+                      {bi('شهري', 'Monthly')}
                     </button>
                     <button
                       onClick={() => setPricingCycle('annual')}
                       className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${pricingCycle === 'annual' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                     >
-                      سنوي
+                      {bi('سنوي', 'Annual')}
                       <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${pricingCycle === 'annual' ? 'bg-primary-foreground/20' : 'bg-emerald-500/10 text-emerald-600'}`}>
-                        وفّر
+                        {bi('وفّر', 'Save')}
                       </span>
                     </button>
                   </div>
@@ -1672,7 +1690,7 @@ export default function LandingPage() {
                     >
                       {plan.highlighted && (
                         <span className="relative z-10 self-center -mt-2 mb-3 bg-white text-foreground text-xs px-3 py-1 rounded-full font-semibold whitespace-nowrap">
-                          الأكثر شعبية
+                          {bi('الأكثر شعبية', 'Most popular')}
                         </span>
                       )}
                       <div className={`relative z-10 h-11 w-11 rounded-2xl flex items-center justify-center mb-4 ${plan.highlighted ? 'bg-white/15' : 'bg-background'}`}>
@@ -1681,18 +1699,22 @@ export default function LandingPage() {
                       <h3 className={`relative z-10 font-bold text-lg mb-4 ${plan.highlighted ? 'text-white' : 'text-foreground'}`}>{plan.name}</h3>
                       <div className="relative z-10 mb-4">
                         {plan.priceMonthly === 0 ? (
-                          <p className={`text-2xl font-bold ${plan.highlighted ? 'text-white' : 'text-foreground'}`}>مجاني</p>
+                          <p className={`text-2xl font-bold ${plan.highlighted ? 'text-white' : 'text-foreground'}`}>{bi('مجاني', 'Free')}</p>
                         ) : (
                           <>
                             <div className="flex items-baseline gap-1">
                               <span className={`text-3xl font-bold tabular-nums ${plan.highlighted ? 'text-white' : 'text-foreground'}`}>{displayPrice.toLocaleString()}</span>
-                              <span className={`text-sm ${plan.highlighted ? 'text-white/60' : 'text-muted-foreground'}`}>{plan.currency}/شهر</span>
+                              <span className={`text-sm ${plan.highlighted ? 'text-white/60' : 'text-muted-foreground'}`}>{plan.currency}{bi('/شهر', '/mo')}</span>
                             </div>
                             {savings > 0 && (
                               <p className={`text-xs mt-1 ${plan.highlighted ? 'text-white/60' : 'text-muted-foreground'}`}>
-                                {showAnnual
-                                  ? <>يُحتسب {plan.priceAnnual.toLocaleString()} {plan.currency} سنوياً {' '}<span className={`font-medium ${plan.highlighted ? 'text-white' : 'text-emerald-600'}`}>(وفّرت {savings}%)</span></>
-                                  : <>أو {plan.priceAnnual.toLocaleString()} {plan.currency}/سنة {' '}<span className={plan.highlighted ? 'text-white' : 'text-emerald-600'}>(وفر {savings}%)</span></>}
+                                {lang === 'en'
+                                  ? (showAnnual
+                                      ? <>Billed {plan.priceAnnual.toLocaleString()} {plan.currency} yearly {' '}<span className={`font-medium ${plan.highlighted ? 'text-white' : 'text-emerald-600'}`}>(save {savings}%)</span></>
+                                      : <>or {plan.priceAnnual.toLocaleString()} {plan.currency}/yr {' '}<span className={plan.highlighted ? 'text-white' : 'text-emerald-600'}>(save {savings}%)</span></>)
+                                  : (showAnnual
+                                      ? <>يُحتسب {plan.priceAnnual.toLocaleString()} {plan.currency} سنوياً {' '}<span className={`font-medium ${plan.highlighted ? 'text-white' : 'text-emerald-600'}`}>(وفّرت {savings}%)</span></>
+                                      : <>أو {plan.priceAnnual.toLocaleString()} {plan.currency}/سنة {' '}<span className={plan.highlighted ? 'text-white' : 'text-emerald-600'}>(وفر {savings}%)</span></>)}
                               </p>
                             )}
                           </>
@@ -1711,7 +1733,7 @@ export default function LandingPage() {
                         asChild
                         className={`relative z-10 w-full rounded-full ${plan.highlighted ? 'bg-white text-foreground hover:bg-white/90' : 'bg-foreground text-background hover:bg-foreground/90'}`}
                       >
-                        <Link href={`/register?role=organization&plan=${plan.key}`}>ابدأ الآن</Link>
+                        <Link href={`/register?role=organization&plan=${plan.key}`}>{bi('ابدأ الآن', 'Get started')}</Link>
                       </Button>
                     </div>
                   );
@@ -1773,7 +1795,7 @@ export default function LandingPage() {
                   {sh('blog', 'heading', 'أحدث المقالات')}
                 </h2>
                 <Link href="/articles" className="inline-flex items-center gap-1 text-sm font-semibold text-primary">
-                  عرض جميع المقالات <ArrowLeft className="h-3.5 w-3.5" />
+                  {bi('عرض جميع المقالات', 'View all articles')} <ArrowLeft className="h-3.5 w-3.5" />
                 </Link>
               </div>
               <div className="flex gap-4 overflow-x-auto pb-3 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -1816,7 +1838,7 @@ export default function LandingPage() {
                       <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1 border-t border-border">
                         <span>{article.authorName}</span>
                         <span className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />{article.readTime} د
+                          <Clock className="h-3 w-3" />{article.readTime} {bi('د', 'min')}
                         </span>
                       </div>
                     </div>
@@ -1844,7 +1866,7 @@ export default function LandingPage() {
                   {sh('opportunities', 'heading', 'أحدث الفرص والمشاريع')}
                 </h2>
                 <Link href="/projects" className="inline-flex items-center gap-1 text-sm font-semibold text-primary">
-                  عرض جميع الفرص <ArrowLeft className="h-3.5 w-3.5" />
+                  {bi('عرض جميع الفرص', 'View all opportunities')} <ArrowLeft className="h-3.5 w-3.5" />
                 </Link>
               </div>
               <div className="flex gap-4 overflow-x-auto pb-3 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -2050,7 +2072,7 @@ export default function LandingPage() {
                           <Phone className="h-4 w-4 text-muted-foreground" />
                         </div>
                         <div>
-                          <p className="text-xs text-muted-foreground mb-0.5">الهاتف</p>
+                          <p className="text-xs text-muted-foreground mb-0.5">{bi('الهاتف', 'Phone')}</p>
                           <p className="text-sm font-semibold text-foreground" dir="ltr">{contactInfo.phone}</p>
                         </div>
                       </div>
@@ -2061,7 +2083,7 @@ export default function LandingPage() {
                           <Mail className="h-4 w-4 text-muted-foreground" />
                         </div>
                         <div>
-                          <p className="text-xs text-muted-foreground mb-0.5">البريد الإلكتروني</p>
+                          <p className="text-xs text-muted-foreground mb-0.5">{bi('البريد الإلكتروني', 'Email')}</p>
                           <p className="text-sm font-semibold text-foreground" dir="ltr">{contactInfo.email}</p>
                         </div>
                       </div>
@@ -2072,7 +2094,7 @@ export default function LandingPage() {
                           <MessageSquare className="h-4 w-4 text-white" />
                         </div>
                         <div>
-                          <p className="text-xs text-muted-foreground mb-0.5">واتساب</p>
+                          <p className="text-xs text-muted-foreground mb-0.5">{bi('واتساب', 'WhatsApp')}</p>
                           <a
                             href={contactInfo.whatsappLink || `https://wa.me/${contactInfo.whatsapp.replace(/\D/g, '')}`}
                             target="_blank"
@@ -2089,23 +2111,23 @@ export default function LandingPage() {
                 </div>
 
                 <div className="p-5 sm:p-6 rounded-3xl bg-card">
-                  <h3 className="text-base sm:text-lg font-bold text-foreground mb-4 sm:mb-5">أرسل لنا رسالة</h3>
+                  <h3 className="text-base sm:text-lg font-bold text-foreground mb-4 sm:mb-5">{bi('أرسل لنا رسالة', 'Send us a message')}</h3>
                   <form onSubmit={handleContactSubmit} className="flex flex-col gap-3 sm:gap-4">
                     <div>
-                      <label className="text-sm font-medium mb-1.5 block">الاسم</label>
-                      <Input placeholder="اسمك الكريم" value={contactName} onChange={e => setContactName(e.target.value)} required />
+                      <label className="text-sm font-medium mb-1.5 block">{bi('الاسم', 'Name')}</label>
+                      <Input placeholder={bi('اسمك الكريم', 'Your name')} value={contactName} onChange={e => setContactName(e.target.value)} required />
                     </div>
                     <div>
-                      <label className="text-sm font-medium mb-1.5 block">البريد الإلكتروني</label>
+                      <label className="text-sm font-medium mb-1.5 block">{bi('البريد الإلكتروني', 'Email')}</label>
                       <Input type="email" placeholder="example@email.com" value={contactEmail} onChange={e => setContactEmail(e.target.value)} required dir="ltr" />
                     </div>
                     <div>
-                      <label className="text-sm font-medium mb-1.5 block">رسالتك</label>
-                      <Textarea placeholder="اكتب رسالتك هنا..." rows={4} value={contactMessage} onChange={e => setContactMessage(e.target.value)} required className="resize-none" />
+                      <label className="text-sm font-medium mb-1.5 block">{bi('رسالتك', 'Your message')}</label>
+                      <Textarea placeholder={bi('اكتب رسالتك هنا...', 'Write your message here...')} rows={4} value={contactMessage} onChange={e => setContactMessage(e.target.value)} required className="resize-none" />
                     </div>
                     <Button type="submit" className="w-full mt-1">
                       <Mail className="h-4 w-4 ml-2" />
-                      إرسال الرسالة
+                      {bi('إرسال الرسالة', 'Send message')}
                     </Button>
                   </form>
                 </div>
