@@ -31,18 +31,21 @@ import { useUser } from "@/firebase/auth/use-user";
 import { NotificationBell } from "@/components/notification-bell";
 import { MessageBell } from "@/components/message-bell";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { useLanguage } from "@/components/language-provider";
+import { LanguageSwitcher } from "@/components/language-switcher";
+import type { TranslationKey } from "@/lib/i18n/dictionary";
 
-const menuItems = [
-  { href: "/dashboard", label: "لوحة التحكم", icon: LayoutGrid },
-  { href: "/dashboard/training", label: "التدريب", icon: BookOpen },
-  { href: "/dashboard/mentorship", label: "الإرشاد", icon: Users },
-  { href: "/dashboard/my-store", label: "متجري", icon: Store },
-  { href: "/dashboard/inventory", label: "المخزون", icon: Boxes },
-  { href: "/dashboard/customers", label: "العملاء", icon: Contact },
-  { href: "/dashboard/reports", label: "التقارير", icon: BarChart3 },
-  { href: "/dashboard/messages", label: "الرسائل", icon: MessageSquare },
-  { href: "/dashboard/contact", label: "التواصل مع المنظمة", icon: HelpCircle },
-  { href: "/dashboard/content", label: "محتوى السوشال ميديا", icon: Layers },
+const menuItems: { href: string; label: string; labelKey: TranslationKey; icon: any }[] = [
+  { href: "/dashboard", label: "لوحة التحكم", labelKey: "dashboard.navDashboard", icon: LayoutGrid },
+  { href: "/dashboard/training", label: "التدريب", labelKey: "dashboard.navTraining", icon: BookOpen },
+  { href: "/dashboard/mentorship", label: "الإرشاد", labelKey: "dashboard.navMentorship", icon: Users },
+  { href: "/dashboard/my-store", label: "متجري", labelKey: "dashboard.navMyStore", icon: Store },
+  { href: "/dashboard/inventory", label: "المخزون", labelKey: "dashboard.navInventory", icon: Boxes },
+  { href: "/dashboard/customers", label: "العملاء", labelKey: "dashboard.navCustomers", icon: Contact },
+  { href: "/dashboard/reports", label: "التقارير", labelKey: "dashboard.navReports", icon: BarChart3 },
+  { href: "/dashboard/messages", label: "الرسائل", labelKey: "dashboard.navMessages", icon: MessageSquare },
+  { href: "/dashboard/contact", label: "التواصل مع المنظمة", labelKey: "dashboard.navContactOrg", icon: HelpCircle },
+  { href: "/dashboard/content", label: "محتوى السوشال ميديا", labelKey: "dashboard.navSocialContent", icon: Layers },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -50,6 +53,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const { user: authUser, userProfile: realUserProfile, loading } = useUser();
   const auth = useAuth();
+  const { lang, dir, t } = useLanguage();
 
   const [avatarUrl, setAvatarUrl] = useState('');
   const { logoUrl: platformLogo } = usePlatformBrand();
@@ -113,18 +117,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {(organization?.logoUrl || platformLogo)
             ? <img src={organization?.logoUrl || platformLogo} alt="شعار" className="h-16 w-16 object-contain animate-pulse" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
             : <Logo className="h-16 w-16 animate-pulse" />}
-          <p className="text-muted-foreground text-sm">جاري التحميل...</p>
+          <p className="text-muted-foreground text-sm">{t('dashboard.loading')}</p>
         </div>
       </div>
     );
   }
 
-  const displayName = userProfile?.name || authUser?.displayName || 'مستفيد';
+  const displayName = userProfile?.name || authUser?.displayName || t('dashboard.roleBeneficiary');
   const displayEmail = userProfile?.email || authUser?.email || '';
 
   return (
-    <SidebarProvider dir="rtl">
-      <Sidebar side="right">
+    <SidebarProvider dir={dir}>
+      <Sidebar side={lang === 'ar' ? 'right' : 'left'}>
         <SidebarHeader className="border-b border-sidebar-border/70">
           <div className="flex items-center gap-3 px-4 py-5">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg overflow-hidden bg-primary/10">
@@ -134,32 +138,35 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
             <div className="flex flex-col min-w-0">
               <span className="text-sm font-semibold text-foreground truncate">{organization?.name || 'EmpowerHub'}</span>
-              <span className="text-xs text-muted-foreground">لوحة المستفيد</span>
+              <span className="text-xs text-muted-foreground">{t('dashboard.subtitleBeneficiary')}</span>
             </div>
           </div>
         </SidebarHeader>
         <SidebarContent className="px-2 py-3">
           <SidebarMenu className="gap-0.5">
-            {menuItems.map((item) => (
-              <SidebarMenuItem key={item.label}>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))}
-                  tooltip={item.label}
-                  className="h-9 rounded-lg text-sidebar-foreground"
-                >
-                  <Link href={item.href}>
-                    <item.icon />
-                    <span>{item.label}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
+            {menuItems.map((item) => {
+              const label = t(item.labelKey);
+              return (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))}
+                    tooltip={label}
+                    className="h-9 rounded-lg text-sidebar-foreground"
+                  >
+                    <Link href={item.href}>
+                      <item.icon />
+                      <span>{label}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              );
+            })}
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter className="border-t border-sidebar-border/70 p-3 gap-1">
-          <SidebarMenuButton asChild tooltip="الإعدادات" className="h-9 rounded-lg text-sidebar-foreground">
-            <Link href="/dashboard/settings"><Settings /><span>الإعدادات</span></Link>
+          <SidebarMenuButton asChild tooltip={t('dashboard.settings')} className="h-9 rounded-lg text-sidebar-foreground">
+            <Link href="/dashboard/settings"><Settings /><span>{t('dashboard.settings')}</span></Link>
           </SidebarMenuButton>
           <div className="flex items-center gap-2.5 rounded-lg px-2 py-2 hover:bg-sidebar-accent/60 transition-colors cursor-pointer">
             <Avatar className="h-7 w-7 shrink-0 ring-2 ring-sidebar-border">
@@ -170,7 +177,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <span className="text-xs font-semibold text-foreground truncate">{displayName}</span>
               <span className="text-xs text-muted-foreground truncate">{displayEmail}</span>
             </div>
-            <button onClick={handleLogout} className="shrink-0 text-muted-foreground hover:text-foreground transition-colors" title="تسجيل الخروج">
+            <button onClick={handleLogout} className="shrink-0 text-muted-foreground hover:text-foreground transition-colors" title={t('dashboard.logout')}>
               <LogOut className="h-3.5 w-3.5" />
             </button>
           </div>
@@ -182,10 +189,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="flex-1">
             <div className="relative max-w-xs">
               <Search className="absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input type="search" placeholder="بحث..." className="pr-9 bg-muted/40 border-border/60 focus-visible:ring-1 focus-visible:ring-primary/50 h-9 w-full rounded-lg text-sm" />
+              <Input type="search" placeholder={t('dashboard.search')} className="pr-9 bg-muted/40 border-border/60 focus-visible:ring-1 focus-visible:ring-primary/50 h-9 w-full rounded-lg text-sm" />
             </div>
           </div>
           <div className="flex items-center gap-1">
+            <LanguageSwitcher />
             <ThemeToggle />
             <MessageBell href="/dashboard/messages" />
             <NotificationBell />
@@ -208,18 +216,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <DropdownMenuSeparator />
                 {authUser ? (
                   <>
-                    <DropdownMenuItem onSelect={() => router.push('/dashboard/settings')} className="text-right cursor-pointer">الملف الشخصي</DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => router.push('/dashboard/settings')} className="text-right cursor-pointer">{t('dashboard.profile')}</DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onSelect={handleLogout} className="text-right cursor-pointer">تسجيل الخروج</DropdownMenuItem>
+                    <DropdownMenuItem onSelect={handleLogout} className="text-right cursor-pointer">{t('dashboard.logout')}</DropdownMenuItem>
                   </>
                 ) : (
-                  <DropdownMenuItem onSelect={() => router.push('/login')} className="text-right">تسجيل الدخول</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => router.push('/login')} className="text-right">{t('dashboard.login')}</DropdownMenuItem>
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         </header>
-        <main className="flex flex-1 flex-col gap-6 p-4 lg:p-6 bg-background min-h-0" dir="rtl">
+        <main className="flex flex-1 flex-col gap-6 p-4 lg:p-6 bg-background min-h-0" dir={dir}>
           {children}
         </main>
       </SidebarInset>

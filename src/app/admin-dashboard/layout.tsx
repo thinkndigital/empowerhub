@@ -29,22 +29,25 @@ import { useUser, type UserProfile } from "@/firebase/auth/use-user";
 import { NotificationBell } from "@/components/notification-bell";
 import { MessageBell } from "@/components/message-bell";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { useLanguage } from "@/components/language-provider";
+import { LanguageSwitcher } from "@/components/language-switcher";
+import type { TranslationKey } from "@/lib/i18n/dictionary";
 
-const menuItems = [
-  { href: "/admin-dashboard", label: "لوحة التحكم", icon: LayoutGrid },
-  { href: "/admin-dashboard/organizations", label: "الجهات المسجلة", icon: Building },
-  { href: "/admin-dashboard/users", label: "المستخدمون", icon: Users },
-  { href: "/admin-dashboard/mentors", label: "المرشدون", icon: Users },
-  { href: "/admin-dashboard/coaches", label: "المدربون", icon: GraduationCap },
-  { href: "/admin-dashboard/courses", label: "الدورات", icon: BookOpen },
-  { href: "/admin-dashboard/live-sessions", label: "الجلسات المباشرة", icon: Video },
-  { href: "/admin-dashboard/articles", label: "المقالات", icon: FileText },
-  { href: "/admin-dashboard/projects", label: "المشاريع والفرص", icon: Briefcase },
-  { href: "/admin-dashboard/stores", label: "المتاجر والمنتجات", icon: Store },
-  { href: "/admin-dashboard/success-stories", label: "قصص النجاح", icon: Quote },
-  { href: "/admin-dashboard/analytics", label: "تحليلات المنصة", icon: BarChartHorizontal },
-  { href: "/admin-dashboard/messages", label: "الرسائل", icon: MessageSquare },
-  { href: "/admin-dashboard/homepage", label: "محرر الموقع", icon: Layout },
+const menuItems: { href: string; label: string; labelKey: TranslationKey; icon: any }[] = [
+  { href: "/admin-dashboard", label: "لوحة التحكم", labelKey: "dashboard.navDashboard", icon: LayoutGrid },
+  { href: "/admin-dashboard/organizations", label: "الجهات المسجلة", labelKey: "dashboard.navOrganizations", icon: Building },
+  { href: "/admin-dashboard/users", label: "المستخدمون", labelKey: "dashboard.navUsers", icon: Users },
+  { href: "/admin-dashboard/mentors", label: "المرشدون", labelKey: "dashboard.navMentors", icon: Users },
+  { href: "/admin-dashboard/coaches", label: "المدربون", labelKey: "dashboard.navCoaches", icon: GraduationCap },
+  { href: "/admin-dashboard/courses", label: "الدورات", labelKey: "dashboard.navCourses", icon: BookOpen },
+  { href: "/admin-dashboard/live-sessions", label: "الجلسات المباشرة", labelKey: "dashboard.navLiveSessions", icon: Video },
+  { href: "/admin-dashboard/articles", label: "المقالات", labelKey: "dashboard.navArticles", icon: FileText },
+  { href: "/admin-dashboard/projects", label: "المشاريع والفرص", labelKey: "dashboard.navProjectsOpportunities", icon: Briefcase },
+  { href: "/admin-dashboard/stores", label: "المتاجر والمنتجات", labelKey: "dashboard.navStoresProducts", icon: Store },
+  { href: "/admin-dashboard/success-stories", label: "قصص النجاح", labelKey: "dashboard.navSuccessStories", icon: Quote },
+  { href: "/admin-dashboard/analytics", label: "تحليلات المنصة", labelKey: "dashboard.navPlatformAnalytics", icon: BarChartHorizontal },
+  { href: "/admin-dashboard/messages", label: "الرسائل", labelKey: "dashboard.navMessages", icon: MessageSquare },
+  { href: "/admin-dashboard/homepage", label: "محرر الموقع", labelKey: "dashboard.navSiteEditor", icon: Layout },
 ];
 
 export default function AdminDashboardLayout({ children }: { children: React.ReactNode }) {
@@ -53,6 +56,7 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
   const { user: authUser, userProfile: realUserProfile, loading } = useUser();
   const auth = useAuth();
   const { logoUrl: platformLogo } = usePlatformBrand();
+  const { lang, dir, t } = useLanguage();
 
   const handleLogout = async () => {
     if (auth) await signOut(auth);
@@ -76,18 +80,18 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
           {platformLogo
             ? <img src={platformLogo} alt="شعار" className="h-16 w-16 object-contain animate-pulse" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
             : <Logo className="h-16 w-16 animate-pulse" />}
-          <p className="text-muted-foreground text-sm">جاري التحميل...</p>
+          <p className="text-muted-foreground text-sm">{t('dashboard.loading')}</p>
         </div>
       </div>
     );
   }
 
-  const displayName = userProfile.name || 'مستخدم';
+  const displayName = userProfile.name || t('dashboard.roleUser');
   const displayEmail = userProfile.email || '';
 
   return (
-    <SidebarProvider dir="rtl">
-      <Sidebar side="right">
+    <SidebarProvider dir={dir}>
+      <Sidebar side={lang === 'ar' ? 'right' : 'left'}>
         <SidebarHeader className="border-b border-sidebar-border">
           <div className="flex items-center gap-3 px-3 py-4">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-accent overflow-hidden">
@@ -97,26 +101,29 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
             </div>
             <div className="flex flex-col">
               <span className="text-sm font-semibold text-sidebar-accent-foreground">EmpowerHub</span>
-              <span className="text-xs text-sidebar-foreground">لوحة تحكم المشرف</span>
+              <span className="text-xs text-sidebar-foreground">{t('dashboard.subtitleAdmin')}</span>
             </div>
           </div>
         </SidebarHeader>
         <SidebarContent>
           <SidebarMenu>
-            {menuItems.map((item) => (
-              <SidebarMenuItem key={item.label}>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === item.href || (item.href !== '/admin-dashboard' && pathname.startsWith(item.href))}
-                  tooltip={item.label}
-                >
-                  <Link href={item.href}>
-                    <item.icon />
-                    <span>{item.label}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
+            {menuItems.map((item) => {
+              const label = t(item.labelKey);
+              return (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === item.href || (item.href !== '/admin-dashboard' && pathname.startsWith(item.href))}
+                    tooltip={label}
+                  >
+                    <Link href={item.href}>
+                      <item.icon />
+                      <span>{label}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              );
+            })}
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter className="border-t border-sidebar-border p-2">
@@ -130,13 +137,13 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
               <span className="text-xs text-sidebar-foreground truncate">{displayEmail}</span>
             </div>
             {authUser && (
-              <button onClick={handleLogout} className="shrink-0 text-sidebar-foreground hover:text-sidebar-accent-foreground transition-colors" title="تسجيل الخروج">
+              <button onClick={handleLogout} className="shrink-0 text-sidebar-foreground hover:text-sidebar-accent-foreground transition-colors" title={t('dashboard.logout')}>
                 <LogOut className="h-4 w-4" />
               </button>
             )}
           </div>
-          <SidebarMenuButton asChild tooltip="إعدادات النظام">
-            <Link href="/admin-dashboard/settings"><Settings /><span>إعدادات النظام</span></Link>
+          <SidebarMenuButton asChild tooltip={t('dashboard.systemSettings')}>
+            <Link href="/admin-dashboard/settings"><Settings /><span>{t('dashboard.systemSettings')}</span></Link>
           </SidebarMenuButton>
         </SidebarFooter>
       </Sidebar>
@@ -146,10 +153,11 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
           <div className="flex-1">
             <div className="relative max-w-sm">
               <Search className="absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input type="search" placeholder="بحث..." className="pr-8 bg-muted/50 border-0 focus-visible:ring-1 h-9 w-full" />
+              <Input type="search" placeholder={t('dashboard.search')} className="pr-8 bg-muted/50 border-0 focus-visible:ring-1 h-9 w-full" />
             </div>
           </div>
           <div className="flex items-center gap-1">
+            <LanguageSwitcher />
             <ThemeToggle />
             <MessageBell href="/admin-dashboard/messages" />
             <NotificationBell />
@@ -172,18 +180,18 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
                 <DropdownMenuSeparator />
                 {authUser ? (
                   <>
-                    <DropdownMenuItem className="text-right cursor-pointer" onSelect={() => router.push('/admin-dashboard/settings')}>إعدادات النظام</DropdownMenuItem>
+                    <DropdownMenuItem className="text-right cursor-pointer" onSelect={() => router.push('/admin-dashboard/settings')}>{t('dashboard.systemSettings')}</DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onSelect={handleLogout} className="text-right cursor-pointer">تسجيل الخروج</DropdownMenuItem>
+                    <DropdownMenuItem onSelect={handleLogout} className="text-right cursor-pointer">{t('dashboard.logout')}</DropdownMenuItem>
                   </>
                 ) : (
-                  <DropdownMenuItem onSelect={() => router.push('/login')} className="text-right">تسجيل الدخول</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => router.push('/login')} className="text-right">{t('dashboard.login')}</DropdownMenuItem>
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         </header>
-        <main className="flex flex-1 flex-col gap-6 p-4 lg:p-6 bg-background" dir="rtl">
+        <main className="flex flex-1 flex-col gap-6 p-4 lg:p-6 bg-background" dir={dir}>
           {children}
         </main>
       </SidebarInset>

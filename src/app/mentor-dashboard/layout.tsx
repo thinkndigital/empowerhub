@@ -31,17 +31,20 @@ import { NotificationBell } from "@/components/notification-bell";
 import { MessageBell } from "@/components/message-bell";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { applyPlatformColor } from "@/lib/platform-color";
+import { useLanguage } from "@/components/language-provider";
+import { LanguageSwitcher } from "@/components/language-switcher";
+import type { TranslationKey } from "@/lib/i18n/dictionary";
 
-const allMentorMenuItems = [
-  { href: "/mentor-dashboard",                  label: "لوحة التحكم",    icon: LayoutGrid,    sectionKey: null },
-  { href: "/mentor-dashboard/my-beneficiaries", label: "المستفيدون",     icon: Users,         sectionKey: 'my_beneficiaries' },
-  { href: "/mentor-dashboard/orders",           label: "الطلبات",        icon: ShoppingBag,   sectionKey: 'orders' },
-  { href: "/mentor-dashboard/sessions",         label: "الجلسات",        icon: Calendar,      sectionKey: 'sessions' },
-  { href: "/mentor-dashboard/articles",         label: "المقالات",       icon: FileText,      sectionKey: null },
-  { href: "/mentor-dashboard/analytics",        label: "التحليلات",      icon: BarChart3,     sectionKey: 'analytics' },
-  { href: "/mentor-dashboard/messages",         label: "الرسائل",        icon: MessageSquare, sectionKey: 'messages' },
-  { href: "/mentor-dashboard/invitations",      label: "الدعوات",        icon: Bell,          sectionKey: 'invitations' },
-  { href: "/mentor-dashboard/assessments",      label: "نماذج التقييم", icon: ClipboardCheck, sectionKey: null },
+const allMentorMenuItems: { href: string; label: string; labelKey: TranslationKey; icon: any; sectionKey: string | null }[] = [
+  { href: "/mentor-dashboard",                  label: "لوحة التحكم",    labelKey: "dashboard.navDashboard",    icon: LayoutGrid,    sectionKey: null },
+  { href: "/mentor-dashboard/my-beneficiaries", label: "المستفيدون",     labelKey: "dashboard.navBeneficiaries", icon: Users,         sectionKey: 'my_beneficiaries' },
+  { href: "/mentor-dashboard/orders",           label: "الطلبات",        labelKey: "dashboard.navOrders",       icon: ShoppingBag,   sectionKey: 'orders' },
+  { href: "/mentor-dashboard/sessions",         label: "الجلسات",        labelKey: "dashboard.navSessions",     icon: Calendar,      sectionKey: 'sessions' },
+  { href: "/mentor-dashboard/articles",         label: "المقالات",       labelKey: "dashboard.navArticles",     icon: FileText,      sectionKey: null },
+  { href: "/mentor-dashboard/analytics",        label: "التحليلات",      labelKey: "dashboard.navAnalytics",    icon: BarChart3,     sectionKey: 'analytics' },
+  { href: "/mentor-dashboard/messages",         label: "الرسائل",        labelKey: "dashboard.navMessages",     icon: MessageSquare, sectionKey: 'messages' },
+  { href: "/mentor-dashboard/invitations",      label: "الدعوات",        labelKey: "dashboard.navInvitations",  icon: Bell,          sectionKey: 'invitations' },
+  { href: "/mentor-dashboard/assessments",      label: "نماذج التقييم", labelKey: "dashboard.navAssessments",  icon: ClipboardCheck, sectionKey: null },
 ];
 
 export default function MentorDashboardLayout({ children }: { children: React.ReactNode }) {
@@ -49,6 +52,7 @@ export default function MentorDashboardLayout({ children }: { children: React.Re
   const router = useRouter();
   const { user: authUser, userProfile: realUserProfile, loading } = useUser();
   const auth = useAuth();
+  const { lang, dir, t } = useLanguage();
 
   const [avatarUrl, setAvatarUrl] = useState('');
   const [menuItems, setMenuItems] = useState(allMentorMenuItems);
@@ -100,13 +104,13 @@ export default function MentorDashboardLayout({ children }: { children: React.Re
           {(platformLogo || organization?.logoUrl)
             ? <img src={platformLogo || organization?.logoUrl} alt="شعار" className="h-16 w-16 object-contain animate-pulse" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
             : <Logo className="h-16 w-16 animate-pulse" />}
-          <p className="text-muted-foreground text-sm">جاري التحميل...</p>
+          <p className="text-muted-foreground text-sm">{t('dashboard.loading')}</p>
         </div>
       </div>
     );
   }
 
-  const displayName = userProfile?.name || authUser?.displayName || 'مرشد';
+  const displayName = userProfile?.name || authUser?.displayName || t('dashboard.roleMentor');
   const displayEmail = userProfile?.email || authUser?.email || '';
   const logoSrc = platformLogo || organization?.logoUrl;
 
@@ -116,8 +120,8 @@ export default function MentorDashboardLayout({ children }: { children: React.Re
       : pathname === href || pathname.startsWith(href + '/');
 
   return (
-    <SidebarProvider dir="rtl">
-      <Sidebar side="right">
+    <SidebarProvider dir={dir}>
+      <Sidebar side={lang === 'ar' ? 'right' : 'left'}>
         <SidebarHeader className="border-b border-sidebar-border/60 px-4 py-3">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl overflow-hidden bg-sidebar-accent/80">
@@ -127,7 +131,7 @@ export default function MentorDashboardLayout({ children }: { children: React.Re
             </div>
             <div className="flex flex-col min-w-0">
               <span className="text-sm font-semibold text-sidebar-accent-foreground truncate leading-tight">{organization?.name || 'EmpowerHub'}</span>
-              <span className="text-[11px] text-sidebar-foreground/70 leading-tight mt-0.5">لوحة تحكم المرشد</span>
+              <span className="text-[11px] text-sidebar-foreground/70 leading-tight mt-0.5">{t('dashboard.subtitleMentor')}</span>
             </div>
           </div>
         </SidebarHeader>
@@ -136,17 +140,18 @@ export default function MentorDashboardLayout({ children }: { children: React.Re
           <SidebarMenu className="gap-0.5">
             {menuItems.map((item) => {
               const active = isActive(item.href);
+              const label = t(item.labelKey);
               return (
-                <SidebarMenuItem key={item.label}>
+                <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton
                     asChild
                     isActive={active}
-                    tooltip={item.label}
+                    tooltip={label}
                     className="rounded-xl h-10 px-3 gap-3 text-sm font-medium transition-colors hover:bg-sidebar-accent/40"
                   >
                     <Link href={item.href}>
                       <item.icon className="h-4 w-4 shrink-0" />
-                      <span>{item.label}</span>
+                      <span>{label}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -159,12 +164,12 @@ export default function MentorDashboardLayout({ children }: { children: React.Re
           <SidebarMenuButton
             asChild
             isActive={isActive('/mentor-dashboard/settings')}
-            tooltip="الإعدادات"
+            tooltip={t('dashboard.settings')}
             className="rounded-xl h-10 px-3 gap-3 text-sm font-medium transition-colors hover:bg-sidebar-accent/40"
           >
             <Link href="/mentor-dashboard/settings">
               <Settings className="h-4 w-4 shrink-0" />
-              <span>الإعدادات</span>
+              <span>{t('dashboard.settings')}</span>
             </Link>
           </SidebarMenuButton>
           <div className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 hover:bg-sidebar-accent/60 transition-colors cursor-default mt-1">
@@ -179,7 +184,7 @@ export default function MentorDashboardLayout({ children }: { children: React.Re
             <button
               onClick={handleLogout}
               className="shrink-0 h-7 w-7 flex items-center justify-center rounded-lg text-sidebar-foreground/60 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-              title="تسجيل الخروج"
+              title={t('dashboard.logout')}
             >
               <LogOut className="h-3.5 w-3.5" />
             </button>
@@ -195,12 +200,13 @@ export default function MentorDashboardLayout({ children }: { children: React.Re
               <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/60 pointer-events-none" />
               <Input
                 type="search"
-                placeholder="بحث..."
+                placeholder={t('dashboard.search')}
                 className="pr-9 h-9 text-sm bg-muted/40 border-transparent focus-visible:bg-background focus-visible:border-primary/40 focus-visible:ring-0"
               />
             </div>
           </div>
           <div className="mr-auto flex items-center gap-1">
+            <LanguageSwitcher />
             <ThemeToggle />
             <MessageBell href="/mentor-dashboard/messages" />
             <NotificationBell />
@@ -222,21 +228,21 @@ export default function MentorDashboardLayout({ children }: { children: React.Re
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem className="text-right cursor-pointer rounded-lg gap-2" onSelect={() => router.push('/mentor-dashboard/settings')}>
-                  <Settings className="h-4 w-4" />الإعدادات
+                  <Settings className="h-4 w-4" />{t('dashboard.settings')}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 {authUser ? (
                   <DropdownMenuItem onSelect={handleLogout} className="text-right cursor-pointer rounded-lg gap-2 text-destructive focus:text-destructive focus:bg-destructive/10">
-                    <LogOut className="h-4 w-4" />تسجيل الخروج
+                    <LogOut className="h-4 w-4" />{t('dashboard.logout')}
                   </DropdownMenuItem>
                 ) : (
-                  <DropdownMenuItem onSelect={() => router.push('/login')} className="text-right cursor-pointer rounded-lg gap-2">تسجيل الدخول</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => router.push('/login')} className="text-right cursor-pointer rounded-lg gap-2">{t('dashboard.login')}</DropdownMenuItem>
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         </header>
-        <main className="flex flex-1 flex-col gap-6 p-4 lg:p-6 bg-background" dir="rtl">
+        <main className="flex flex-1 flex-col gap-6 p-4 lg:p-6 bg-background" dir={dir}>
           {children}
         </main>
       </SidebarInset>

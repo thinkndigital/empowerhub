@@ -29,23 +29,26 @@ import { MessageBell } from "@/components/message-bell";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { applyOrgColor } from "@/lib/apply-org-color";
 import { applyPlatformColor } from "@/lib/platform-color";
+import { useLanguage } from "@/components/language-provider";
+import { LanguageSwitcher } from "@/components/language-switcher";
+import type { TranslationKey } from "@/lib/i18n/dictionary";
 
-const allMenuItems = [
-  { href: "/organization-dashboard",                 label: "لوحة التحكم",        icon: LayoutGrid,    sectionKey: null },
-  { href: "/organization-dashboard/beneficiaries",   label: "المستفيدون",         icon: Users,         sectionKey: 'beneficiaries' },
-  { href: "/organization-dashboard/team",            label: "فريق العمل",         icon: Users,         sectionKey: 'team' },
-  { href: "/organization-dashboard/mentors",         label: "المرشدون",           icon: Users,         sectionKey: 'mentors' },
-  { href: "/organization-dashboard/coaches",         label: "المدربون",           icon: GraduationCap, sectionKey: 'coaches' },
-  { href: "/organization-dashboard/courses",         label: "الدورات",            icon: BookOpen,      sectionKey: 'courses' },
-  { href: "/organization-dashboard/live-sessions",   label: "الجلسات المباشرة",   icon: Video,         sectionKey: null },
-  { href: "/organization-dashboard/projects",        label: "المشاريع",           icon: Briefcase,     sectionKey: 'projects' },
-  { href: "/organization-dashboard/stores",          label: "المتاجر",            icon: Store,         sectionKey: 'stores' },
-  { href: "/organization-dashboard/orders",          label: "الطلبات",            icon: ClipboardList, sectionKey: 'orders' },
-  { href: "/organization-dashboard/reports",         label: "التقارير",           icon: BarChart3,     sectionKey: 'reports' },
-  { href: "/organization-dashboard/assessments",     label: "نماذج التقييم",     icon: ClipboardCheck, sectionKey: null },
-  { href: "/organization-dashboard/success-stories", label: "قصص النجاح",        icon: Quote,         sectionKey: null },
-  { href: "/organization-dashboard/beneficiary-requests", label: "طلبات المستفيدين", icon: Inbox,   sectionKey: null },
-  { href: "/organization-dashboard/messages",        label: "الرسائل",            icon: MessageSquare, sectionKey: 'messages' },
+const allMenuItems: { href: string; label: string; labelKey: TranslationKey; icon: any; sectionKey: string | null }[] = [
+  { href: "/organization-dashboard",                 label: "لوحة التحكم",        labelKey: "dashboard.navDashboard",          icon: LayoutGrid,    sectionKey: null },
+  { href: "/organization-dashboard/beneficiaries",   label: "المستفيدون",         labelKey: "dashboard.navBeneficiaries",      icon: Users,         sectionKey: 'beneficiaries' },
+  { href: "/organization-dashboard/team",            label: "فريق العمل",         labelKey: "dashboard.navTeam",               icon: Users,         sectionKey: 'team' },
+  { href: "/organization-dashboard/mentors",         label: "المرشدون",           labelKey: "dashboard.navMentors",            icon: Users,         sectionKey: 'mentors' },
+  { href: "/organization-dashboard/coaches",         label: "المدربون",           labelKey: "dashboard.navCoaches",            icon: GraduationCap, sectionKey: 'coaches' },
+  { href: "/organization-dashboard/courses",         label: "الدورات",            labelKey: "dashboard.navCourses",            icon: BookOpen,      sectionKey: 'courses' },
+  { href: "/organization-dashboard/live-sessions",   label: "الجلسات المباشرة",   labelKey: "dashboard.navLiveSessions",       icon: Video,         sectionKey: null },
+  { href: "/organization-dashboard/projects",        label: "المشاريع",           labelKey: "dashboard.navProjects",           icon: Briefcase,     sectionKey: 'projects' },
+  { href: "/organization-dashboard/stores",          label: "المتاجر",            labelKey: "dashboard.navStores",             icon: Store,         sectionKey: 'stores' },
+  { href: "/organization-dashboard/orders",          label: "الطلبات",            labelKey: "dashboard.navOrders",             icon: ClipboardList, sectionKey: 'orders' },
+  { href: "/organization-dashboard/reports",         label: "التقارير",           labelKey: "dashboard.navReports",            icon: BarChart3,     sectionKey: 'reports' },
+  { href: "/organization-dashboard/assessments",     label: "نماذج التقييم",     labelKey: "dashboard.navAssessments",        icon: ClipboardCheck, sectionKey: null },
+  { href: "/organization-dashboard/success-stories", label: "قصص النجاح",        labelKey: "dashboard.navSuccessStories",     icon: Quote,         sectionKey: null },
+  { href: "/organization-dashboard/beneficiary-requests", label: "طلبات المستفيدين", labelKey: "dashboard.navBeneficiaryRequests", icon: Inbox,   sectionKey: null },
+  { href: "/organization-dashboard/messages",        label: "الرسائل",            labelKey: "dashboard.navMessages",           icon: MessageSquare, sectionKey: 'messages' },
 ];
 
 export default function OrganizationDashboardLayout({ children }: { children: React.ReactNode }) {
@@ -53,6 +56,7 @@ export default function OrganizationDashboardLayout({ children }: { children: Re
   const router = useRouter();
   const { user: authUser, userProfile } = useUser();
   const auth = useAuth();
+  const { lang, dir, t } = useLanguage();
   const [orgName, setOrgName] = useState('');
   const [orgLogo, setOrgLogo] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
@@ -95,7 +99,7 @@ export default function OrganizationDashboardLayout({ children }: { children: Re
     router.push("/login");
   };
 
-  const displayName = userProfile?.name || authUser?.displayName || 'مدير';
+  const displayName = userProfile?.name || authUser?.displayName || t('dashboard.roleManager');
   const displayEmail = userProfile?.email || authUser?.email || '';
   const logoSrc = orgLogo || platformLogo;
 
@@ -105,8 +109,8 @@ export default function OrganizationDashboardLayout({ children }: { children: Re
       : pathname === href || pathname.startsWith(href + '/');
 
   return (
-    <SidebarProvider dir="rtl">
-      <Sidebar side="right">
+    <SidebarProvider dir={dir}>
+      <Sidebar side={lang === 'ar' ? 'right' : 'left'}>
         {/* ── Sidebar Header ── */}
         <SidebarHeader className="border-b border-sidebar-border/60 px-4 py-3">
           <div className="flex items-center gap-3">
@@ -117,7 +121,7 @@ export default function OrganizationDashboardLayout({ children }: { children: Re
             </div>
             <div className="flex flex-col min-w-0">
               <span className="text-sm font-semibold text-sidebar-accent-foreground truncate leading-tight">{orgName || 'EmpowerHub'}</span>
-              <span className="text-[11px] text-sidebar-foreground/70 leading-tight mt-0.5">لوحة تحكم المنظمة</span>
+              <span className="text-[11px] text-sidebar-foreground/70 leading-tight mt-0.5">{t('dashboard.subtitleOrganization')}</span>
             </div>
           </div>
         </SidebarHeader>
@@ -127,17 +131,18 @@ export default function OrganizationDashboardLayout({ children }: { children: Re
           <SidebarMenu className="gap-0.5">
             {menuItems.map((item) => {
               const active = isActive(item.href);
+              const label = t(item.labelKey);
               return (
-                <SidebarMenuItem key={item.label}>
+                <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton
                     asChild
                     isActive={active}
-                    tooltip={item.label}
+                    tooltip={label}
                     className="rounded-xl h-10 px-3 gap-3 text-sm font-medium transition-colors hover:bg-sidebar-accent/40"
                   >
                     <Link href={item.href}>
                       <item.icon className="h-4 w-4 shrink-0" />
-                      <span>{item.label}</span>
+                      <span>{label}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -151,12 +156,12 @@ export default function OrganizationDashboardLayout({ children }: { children: Re
           <SidebarMenuButton
             asChild
             isActive={isActive('/organization-dashboard/settings')}
-            tooltip="الإعدادات"
+            tooltip={t('dashboard.settings')}
             className="rounded-xl h-10 px-3 gap-3 text-sm font-medium transition-colors hover:bg-sidebar-accent/40"
           >
             <Link href="/organization-dashboard/settings">
               <Settings className="h-4 w-4 shrink-0" />
-              <span>الإعدادات</span>
+              <span>{t('dashboard.settings')}</span>
             </Link>
           </SidebarMenuButton>
           <div className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 hover:bg-sidebar-accent/60 transition-colors cursor-default mt-1">
@@ -171,7 +176,7 @@ export default function OrganizationDashboardLayout({ children }: { children: Re
             <button
               onClick={handleLogout}
               className="shrink-0 h-7 w-7 flex items-center justify-center rounded-lg text-sidebar-foreground/60 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-              title="تسجيل الخروج"
+              title={t('dashboard.logout')}
             >
               <LogOut className="h-3.5 w-3.5" />
             </button>
@@ -188,12 +193,13 @@ export default function OrganizationDashboardLayout({ children }: { children: Re
               <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/60 pointer-events-none" />
               <Input
                 type="search"
-                placeholder="بحث..."
+                placeholder={t('dashboard.search')}
                 className="pr-9 h-9 text-sm bg-muted/40 border-transparent focus-visible:bg-background focus-visible:border-primary/40 focus-visible:ring-0"
               />
             </div>
           </div>
           <div className="mr-auto flex items-center gap-1">
+            <LanguageSwitcher />
             <ThemeToggle />
             <MessageBell href="/organization-dashboard/messages" />
             <NotificationBell />
@@ -215,18 +221,18 @@ export default function OrganizationDashboardLayout({ children }: { children: Re
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem className="text-right cursor-pointer rounded-lg gap-2" onSelect={() => router.push('/organization-dashboard/settings')}>
-                  <Settings className="h-4 w-4" />الإعدادات
+                  <Settings className="h-4 w-4" />{t('dashboard.settings')}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onSelect={handleLogout} className="text-right cursor-pointer rounded-lg gap-2 text-destructive focus:text-destructive focus:bg-destructive/10">
-                  <LogOut className="h-4 w-4" />تسجيل الخروج
+                  <LogOut className="h-4 w-4" />{t('dashboard.logout')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         </header>
 
-        <main className="flex flex-1 flex-col gap-6 p-4 lg:p-6 bg-background" dir="rtl">
+        <main className="flex flex-1 flex-col gap-6 p-4 lg:p-6 bg-background" dir={dir}>
           {children}
         </main>
       </SidebarInset>
