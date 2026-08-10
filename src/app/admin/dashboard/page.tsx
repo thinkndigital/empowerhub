@@ -6,17 +6,18 @@ import { Building2, Users, GraduationCap, BookOpen, ShoppingBag, TrendingUp, Plu
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useLanguage } from "@/components/language-provider";
 
 interface Stats { orgs: number; users: number; mentors: number; coaches: number; courses: number; products: number; }
 interface Org { id: string; name: string; plan: string; primaryColor: string; logoUrl?: string; }
 
 const statCards = [
-  { key: "orgs", label: "المنظمات", icon: Building2, color: "from-blue-500 to-blue-600", bg: "bg-blue-500/10", text: "text-blue-400", href: "/admin/dashboard/organizations" },
-  { key: "users", label: "المستخدمون", icon: Users, color: "from-purple-500 to-purple-600", bg: "bg-purple-500/10", text: "text-purple-400", href: "/admin/dashboard/users" },
-  { key: "mentors", label: "المرشدون", icon: GraduationCap, color: "from-emerald-500 to-emerald-600", bg: "bg-emerald-500/10", text: "text-emerald-400", href: "/admin/dashboard/mentors" },
-  { key: "coaches", label: "المدربون", icon: GraduationCap, color: "from-orange-500 to-orange-600", bg: "bg-orange-500/10", text: "text-orange-400", href: "/admin/dashboard/mentors" },
-  { key: "courses", label: "الدورات", icon: BookOpen, color: "from-cyan-500 to-cyan-600", bg: "bg-cyan-500/10", text: "text-cyan-400", href: "#" },
-  { key: "products", label: "المنتجات", icon: ShoppingBag, color: "from-pink-500 to-pink-600", bg: "bg-pink-500/10", text: "text-pink-400", href: "#" },
+  { key: "orgs", labelAr: "المنظمات", labelEn: "Organizations", icon: Building2, color: "from-blue-500 to-blue-600", bg: "bg-blue-500/10", text: "text-blue-400", href: "/admin/dashboard/organizations" },
+  { key: "users", labelAr: "المستخدمون", labelEn: "Users", icon: Users, color: "from-purple-500 to-purple-600", bg: "bg-purple-500/10", text: "text-purple-400", href: "/admin/dashboard/users" },
+  { key: "mentors", labelAr: "المرشدون", labelEn: "Mentors", icon: GraduationCap, color: "from-emerald-500 to-emerald-600", bg: "bg-emerald-500/10", text: "text-emerald-400", href: "/admin/dashboard/mentors" },
+  { key: "coaches", labelAr: "المدربون", labelEn: "Coaches", icon: GraduationCap, color: "from-orange-500 to-orange-600", bg: "bg-orange-500/10", text: "text-orange-400", href: "/admin/dashboard/mentors" },
+  { key: "courses", labelAr: "الدورات", labelEn: "Courses", icon: BookOpen, color: "from-cyan-500 to-cyan-600", bg: "bg-cyan-500/10", text: "text-cyan-400", href: "#" },
+  { key: "products", labelAr: "المنتجات", labelEn: "Products", icon: ShoppingBag, color: "from-pink-500 to-pink-600", bg: "bg-pink-500/10", text: "text-pink-400", href: "#" },
 ];
 
 const planColors: Record<string, string> = {
@@ -28,6 +29,8 @@ const planColors: Record<string, string> = {
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [orgs, setOrgs] = useState<Org[]>([]);
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
 
   useEffect(() => {
     fetch("/api/admin-panel/stats").then(r => r.json()).then(d => setStats(d));
@@ -35,11 +38,11 @@ export default function AdminDashboardPage() {
   }, []);
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={dir}>
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-foreground">لوحة التحكم الرئيسية</h1>
-        <p className="text-muted-foreground text-sm mt-1">نظرة عامة على منصة EmpowerHub</p>
+        <h1 className="text-2xl font-bold text-foreground">{bi('لوحة التحكم الرئيسية', 'Main Dashboard')}</h1>
+        <p className="text-muted-foreground text-sm mt-1">{bi('نظرة عامة على منصة EmpowerHub', 'Overview of the EmpowerHub platform')}</p>
       </div>
 
       {/* Stats Grid */}
@@ -50,7 +53,7 @@ export default function AdminDashboardPage() {
               <CardContent className="p-5">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-muted-foreground text-xs mb-1">{card.label}</p>
+                    <p className="text-muted-foreground text-xs mb-1">{bi(card.labelAr, card.labelEn)}</p>
                     <p className="text-3xl font-bold text-foreground">
                       {stats ? stats[card.key as keyof Stats] : "—"}
                     </p>
@@ -70,19 +73,19 @@ export default function AdminDashboardPage() {
         <Link href="/admin/dashboard/organizations">
           <Button className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white gap-2">
             <Building2 className="h-4 w-4" />
-            <span>إدارة المنظمات</span>
+            <span>{bi('إدارة المنظمات', 'Manage organizations')}</span>
           </Button>
         </Link>
         <Link href="/admin/dashboard/users">
           <Button className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white gap-2">
             <Users className="h-4 w-4" />
-            <span>إدارة المستخدمين</span>
+            <span>{bi('إدارة المستخدمين', 'Manage users')}</span>
           </Button>
         </Link>
         <Link href="/admin/dashboard/landing">
           <Button className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white gap-2">
             <Globe className="h-4 w-4" />
-            <span>تعديل الصفحة الرئيسية</span>
+            <span>{bi('تعديل الصفحة الرئيسية', 'Edit homepage')}</span>
           </Button>
         </Link>
       </div>
@@ -90,17 +93,17 @@ export default function AdminDashboardPage() {
       {/* Organizations List */}
       <Card className="border-0 shadow-sm">
         <CardHeader className="flex flex-row items-center justify-between pb-4">
-          <CardTitle className="text-foreground text-lg">المنظمات المسجلة</CardTitle>
+          <CardTitle className="text-foreground text-lg">{bi('المنظمات المسجلة', 'Registered Organizations')}</CardTitle>
           <Link href="/admin/dashboard/organizations">
             <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground gap-1">
-              <span>عرض الكل</span>
+              <span>{bi('عرض الكل', 'View all')}</span>
               <ArrowLeft className="h-3 w-3" />
             </Button>
           </Link>
         </CardHeader>
         <CardContent>
           {orgs.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">لا توجد منظمات</p>
+            <p className="text-muted-foreground text-center py-8">{bi('لا توجد منظمات', 'No organizations')}</p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {orgs.map(org => (

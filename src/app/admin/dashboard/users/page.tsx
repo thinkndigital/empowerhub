@@ -17,6 +17,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { useLanguage } from "@/components/language-provider";
 
 interface User {
   id: string; name: string; email: string; role: string;
@@ -34,12 +35,18 @@ const roleBadge: Record<string, string> = {
 const roleLabel: Record<string, string> = {
   admin: "مشرف", organization: "منظمة", mentor: "مرشد", coach: "مدرب", beneficiary: "مستفيد", merchant: "تاجر",
 };
+const roleLabelEn: Record<string, string> = {
+  admin: "Admin", organization: "Organization", mentor: "Mentor", coach: "Coach", beneficiary: "Beneficiary", merchant: "Merchant",
+};
 const statusBadge: Record<string, string> = {
   active: "text-emerald-400", suspended: "text-red-400", pending: "text-yellow-400",
 };
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
+  const tRole = lang === 'en' ? roleLabelEn : roleLabel;
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [loading, setLoading] = useState(true);
@@ -90,30 +97,30 @@ export default function UsersPage() {
   );
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={dir}>
       <div>
-        <h1 className="text-2xl font-bold text-foreground">المستخدمون</h1>
-        <p className="text-muted-foreground text-sm">إدارة جميع المستخدمين في المنصة</p>
+        <h1 className="text-2xl font-bold text-foreground">{bi('المستخدمون', 'Users')}</h1>
+        <p className="text-muted-foreground text-sm">{bi('إدارة جميع المستخدمين في المنصة', 'Manage all users on the platform')}</p>
       </div>
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="بحث بالاسم أو البريد..." className="bg-muted border-border text-foreground pr-10" />
+          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder={bi('بحث بالاسم أو البريد...', 'Search by name or email...')} className="bg-muted border-border text-foreground pr-10" />
         </div>
         <Select value={roleFilter} onValueChange={setRoleFilter}>
           <SelectTrigger className="w-full sm:w-44 bg-muted border-border text-foreground/90">
-            <SelectValue placeholder="كل الأدوار" />
+            <SelectValue placeholder={bi('كل الأدوار', 'All roles')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">كل الأدوار</SelectItem>
-            <SelectItem value="beneficiary">المستفيدون</SelectItem>
-            <SelectItem value="merchant">التجار</SelectItem>
-            <SelectItem value="mentor">المرشدون</SelectItem>
-            <SelectItem value="coach">المدربون</SelectItem>
-            <SelectItem value="organization">المنظمات</SelectItem>
-            <SelectItem value="admin">المشرفون</SelectItem>
+            <SelectItem value="all">{bi('كل الأدوار', 'All roles')}</SelectItem>
+            <SelectItem value="beneficiary">{bi('المستفيدون', 'Beneficiaries')}</SelectItem>
+            <SelectItem value="merchant">{bi('التجار', 'Merchants')}</SelectItem>
+            <SelectItem value="mentor">{bi('المرشدون', 'Mentors')}</SelectItem>
+            <SelectItem value="coach">{bi('المدربون', 'Coaches')}</SelectItem>
+            <SelectItem value="organization">{bi('المنظمات', 'Organizations')}</SelectItem>
+            <SelectItem value="admin">{bi('المشرفون', 'Admins')}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -122,19 +129,19 @@ export default function UsersPage() {
       <Card className="border-0 shadow-sm">
         <CardContent className="p-0">
           {loading ? (
-            <div className="text-muted-foreground text-center py-12">جاري التحميل...</div>
+            <div className="text-muted-foreground text-center py-12">{bi('جاري التحميل...', 'Loading...')}</div>
           ) : filtered.length === 0 ? (
-            <div className="text-muted-foreground text-center py-12">لا يوجد مستخدمون</div>
+            <div className="text-muted-foreground text-center py-12">{bi('لا يوجد مستخدمون', 'No users')}</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-border">
-                    <th className="text-right text-muted-foreground text-xs font-medium px-4 py-3">المستخدم</th>
-                    <th className="text-right text-muted-foreground text-xs font-medium px-4 py-3 hidden md:table-cell">البريد</th>
-                    <th className="text-right text-muted-foreground text-xs font-medium px-4 py-3">الدور</th>
-                    <th className="text-right text-muted-foreground text-xs font-medium px-4 py-3 hidden sm:table-cell">الحالة</th>
-                    <th className="text-right text-muted-foreground text-xs font-medium px-4 py-3">إجراءات</th>
+                    <th className="text-right text-muted-foreground text-xs font-medium px-4 py-3">{bi('المستخدم', 'User')}</th>
+                    <th className="text-right text-muted-foreground text-xs font-medium px-4 py-3 hidden md:table-cell">{bi('البريد', 'Email')}</th>
+                    <th className="text-right text-muted-foreground text-xs font-medium px-4 py-3">{bi('الدور', 'Role')}</th>
+                    <th className="text-right text-muted-foreground text-xs font-medium px-4 py-3 hidden sm:table-cell">{bi('الحالة', 'Status')}</th>
+                    <th className="text-right text-muted-foreground text-xs font-medium px-4 py-3">{bi('إجراءات', 'Actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -154,12 +161,12 @@ export default function UsersPage() {
                       </td>
                       <td className="px-4 py-3">
                         <span className={`text-xs px-2 py-0.5 rounded-full border ${roleBadge[user.role] || roleBadge.beneficiary}`}>
-                          {roleLabel[user.role] || user.role}
+                          {tRole[user.role] || user.role}
                         </span>
                       </td>
                       <td className="px-4 py-3 hidden sm:table-cell">
                         <span className={`text-xs font-medium ${statusBadge[user.status || 'active']}`}>
-                          ● {user.status === 'suspended' ? 'موقوف' : user.status === 'pending' ? 'معلق' : 'نشط'}
+                          ● {user.status === 'suspended' ? bi('موقوف', 'Suspended') : user.status === 'pending' ? bi('معلق', 'Pending') : bi('نشط', 'Active')}
                         </span>
                       </td>
                       <td className="px-4 py-3">
@@ -183,54 +190,54 @@ export default function UsersPage() {
 
       {/* Edit Dialog */}
       <Dialog open={!!editUser} onOpenChange={o => !o && setEditUser(null)}>
-        <DialogContent dir="rtl" className="sm:max-w-sm">
+        <DialogContent dir={dir} className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>تعديل: {editUser?.name}</DialogTitle>
+            <DialogTitle>{bi('تعديل:', 'Edit:')} {editUser?.name}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>الدور</Label>
+              <Label>{bi('الدور', 'Role')}</Label>
               <Select value={form.role} onValueChange={v => setForm(f => ({ ...f, role: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="beneficiary">مستفيد</SelectItem>
-                  <SelectItem value="merchant">تاجر</SelectItem>
-                  <SelectItem value="mentor">مرشد</SelectItem>
-                  <SelectItem value="coach">مدرب</SelectItem>
-                  <SelectItem value="organization">منظمة</SelectItem>
-                  <SelectItem value="admin">مشرف</SelectItem>
+                  <SelectItem value="beneficiary">{bi('مستفيد', 'Beneficiary')}</SelectItem>
+                  <SelectItem value="merchant">{bi('تاجر', 'Merchant')}</SelectItem>
+                  <SelectItem value="mentor">{bi('مرشد', 'Mentor')}</SelectItem>
+                  <SelectItem value="coach">{bi('مدرب', 'Coach')}</SelectItem>
+                  <SelectItem value="organization">{bi('منظمة', 'Organization')}</SelectItem>
+                  <SelectItem value="admin">{bi('مشرف', 'Admin')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>الحالة</Label>
+              <Label>{bi('الحالة', 'Status')}</Label>
               <Select value={form.status} onValueChange={v => setForm(f => ({ ...f, status: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="active">نشط</SelectItem>
-                  <SelectItem value="suspended">موقوف</SelectItem>
-                  <SelectItem value="pending">معلق</SelectItem>
+                  <SelectItem value="active">{bi('نشط', 'Active')}</SelectItem>
+                  <SelectItem value="suspended">{bi('موقوف', 'Suspended')}</SelectItem>
+                  <SelectItem value="pending">{bi('معلق', 'Pending')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditUser(null)}>إلغاء</Button>
-            <Button onClick={handleEdit} disabled={saving}>{saving ? "جاري الحفظ..." : "حفظ"}</Button>
+            <Button variant="outline" onClick={() => setEditUser(null)}>{bi('إلغاء', 'Cancel')}</Button>
+            <Button onClick={handleEdit} disabled={saving}>{saving ? bi("جاري الحفظ...", "Saving...") : bi("حفظ", "Save")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Delete */}
       <AlertDialog open={!!deleteUser} onOpenChange={o => !o && setDeleteUser(null)}>
-        <AlertDialogContent dir="rtl">
+        <AlertDialogContent dir={dir}>
           <AlertDialogHeader>
-            <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
-            <AlertDialogDescription>هل أنت متأكد من حذف "{deleteUser?.name}"؟ سيُحذف من Firebase Auth وقاعدة البيانات.</AlertDialogDescription>
+            <AlertDialogTitle>{bi('تأكيد الحذف', 'Confirm Deletion')}</AlertDialogTitle>
+            <AlertDialogDescription>{bi(`هل أنت متأكد من حذف "${deleteUser?.name}"؟ سيُحذف من Firebase Auth وقاعدة البيانات.`, `Are you sure you want to delete "${deleteUser?.name}"? They will be removed from Firebase Auth and the database.`)}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>إلغاء</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">حذف</AlertDialogAction>
+            <AlertDialogCancel>{bi('إلغاء', 'Cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">{bi('حذف', 'Delete')}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

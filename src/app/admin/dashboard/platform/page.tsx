@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { useUser } from "@/firebase/auth/use-user";
 import { uploadFile as uploadToStorage } from "@/lib/upload-file";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/components/language-provider";
 
 interface DashSections {
   organization: Record<string, boolean>;
@@ -46,11 +47,31 @@ const sectionLabels: Record<string, Record<string, string>> = {
   },
 };
 
+const sectionLabelsEn: Record<string, Record<string, string>> = {
+  organization: {
+    beneficiaries: 'Beneficiaries', team: 'Team', mentors: 'Mentors',
+    coaches: 'Coaches', courses: 'Courses', stores: 'Stores',
+    orders: 'Orders', reports: 'Reports', messages: 'Messages', settings: 'Settings',
+  },
+  beneficiary: {
+    progress: 'My progress', courses: 'My courses', sessions: 'My sessions',
+    messages: 'Messages', store: 'My store', orders: 'My orders', settings: 'Settings',
+  },
+  mentor: {
+    my_beneficiaries: 'Beneficiaries', sessions: 'Sessions', analytics: 'Analytics',
+    messages: 'Messages', invitations: 'Invitations', settings: 'Settings',
+  },
+  coach: {
+    courses: 'Courses', sessions: 'Sessions', analytics: 'Analytics',
+    messages: 'Messages', invitations: 'Invitations', settings: 'Settings',
+  },
+};
+
 const dashboardMeta = [
-  { key: 'organization' as const, label: 'لوحة المنظمة', icon: Building2, color: 'text-blue-400', bg: 'bg-blue-500/10' },
-  { key: 'beneficiary' as const, label: 'لوحة المستفيد', icon: Users, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
-  { key: 'mentor' as const, label: 'لوحة المرشد', icon: GraduationCap, color: 'text-purple-400', bg: 'bg-purple-500/10' },
-  { key: 'coach' as const, label: 'لوحة المدرب', icon: BookOpen, color: 'text-orange-400', bg: 'bg-orange-500/10' },
+  { key: 'organization' as const, labelAr: 'لوحة المنظمة', labelEn: 'Organization dashboard', icon: Building2, color: 'text-blue-400', bg: 'bg-blue-500/10' },
+  { key: 'beneficiary' as const, labelAr: 'لوحة المستفيد', labelEn: 'Beneficiary dashboard', icon: Users, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+  { key: 'mentor' as const, labelAr: 'لوحة المرشد', labelEn: 'Mentor dashboard', icon: GraduationCap, color: 'text-purple-400', bg: 'bg-purple-500/10' },
+  { key: 'coach' as const, labelAr: 'لوحة المدرب', labelEn: 'Coach dashboard', icon: BookOpen, color: 'text-orange-400', bg: 'bg-orange-500/10' },
 ];
 
 const defaultSections: DashSections = {
@@ -71,6 +92,8 @@ const defaultConfig: PlatformConfig = {
 function ImageUploadField({ label, value, onChange, hint }: { label: string; value: string; onChange: (v: string) => void; hint?: string }) {
   const { user } = useUser();
   const { toast } = useToast();
+  const { lang } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const [uploading, setUploading] = useState(false);
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -85,7 +108,7 @@ function ImageUploadField({ label, value, onChange, hint }: { label: string; val
       const token = user ? await user.getIdToken() : undefined;
       onChange(await uploadToStorage(file, 'platform', token));
     } catch (err: any) {
-      toast({ variant: 'destructive', title: 'فشل رفع الصورة', description: err?.message || 'حدث خطأ غير متوقع' });
+      toast({ variant: 'destructive', title: bi('فشل رفع الصورة', 'Failed to upload image'), description: err?.message || bi('حدث خطأ غير متوقع', 'An unexpected error occurred') });
     }
     setUploading(false);
   };
@@ -121,6 +144,9 @@ export default function PlatformConfigPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
+  const tSectionLabels = lang === 'en' ? sectionLabelsEn : sectionLabels;
 
   useEffect(() => {
     fetch('/api/admin-panel/platform-config').then(r => r.json()).then(d => {
@@ -164,47 +190,47 @@ export default function PlatformConfigPage() {
     }));
   };
 
-  if (loading) return <div className="text-muted-foreground text-center py-16">جاري التحميل...</div>;
+  if (loading) return <div className="text-muted-foreground text-center py-16">{bi('جاري التحميل...', 'Loading...')}</div>;
 
   return (
-    <div className="space-y-6 max-w-3xl" dir="rtl">
+    <div className="space-y-6 max-w-3xl" dir={dir}>
       <div>
-        <h1 className="text-2xl font-bold text-foreground">تخصيص المنصة</h1>
-        <p className="text-muted-foreground text-sm">تعديل الشعار والنصوص وتفعيل أو إيقاف أقسام لوحات التحكم</p>
+        <h1 className="text-2xl font-bold text-foreground">{bi('تخصيص المنصة', 'Platform Customization')}</h1>
+        <p className="text-muted-foreground text-sm">{bi('تعديل الشعار والنصوص وتفعيل أو إيقاف أقسام لوحات التحكم', 'Edit the logo and text, and enable or disable dashboard sections')}</p>
       </div>
 
       {/* Identity */}
       <Card className="border-0 shadow-sm">
-        <CardHeader><CardTitle className="text-foreground text-base">هوية المنصة</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-foreground text-base">{bi('هوية المنصة', 'Platform Identity')}</CardTitle></CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>اسم المنصة</Label>
+              <Label>{bi('اسم المنصة', 'Platform name')}</Label>
               <Input value={config.platformName} onChange={e => setConfig(c => ({ ...c, platformName: e.target.value }))} placeholder="EmpowerHub" />
             </div>
             <div className="space-y-2">
-              <Label>الشعار النصي (Tagline)</Label>
-              <Input value={config.platformTagline} onChange={e => setConfig(c => ({ ...c, platformTagline: e.target.value }))} placeholder="منصة التمكين الرقمي" />
+              <Label>{bi('الشعار النصي (Tagline)', 'Tagline')}</Label>
+              <Input value={config.platformTagline} onChange={e => setConfig(c => ({ ...c, platformTagline: e.target.value }))} placeholder={bi('منصة التمكين الرقمي', 'Digital Empowerment Platform')} />
             </div>
           </div>
           <ImageUploadField
-            label="شعار المنصة (Logo)"
+            label={bi('شعار المنصة (Logo)', 'Platform Logo')}
             value={config.logoUrl}
             onChange={v => setConfig(c => ({ ...c, logoUrl: v }))}
-            hint="يظهر في جميع لوحات التحكم والسايدبار"
+            hint={bi('يظهر في جميع لوحات التحكم والسايدبار', 'Appears in all dashboards and the sidebar')}
           />
           <ImageUploadField
-            label="أيقونة المتصفح (Favicon)"
+            label={bi('أيقونة المتصفح (Favicon)', 'Browser Favicon')}
             value={config.faviconUrl}
             onChange={v => setConfig(c => ({ ...c, faviconUrl: v }))}
-            hint="مثالي: 32×32 أو 64×64 بكسل"
+            hint={bi('مثالي: 32×32 أو 64×64 بكسل', 'Ideal: 32×32 or 64×64 px')}
           />
         </CardContent>
       </Card>
 
       {/* Dashboard section toggles */}
       {dashboardMeta.map(dash => {
-        const sections = sectionLabels[dash.key] || {};
+        const sections = tSectionLabels[dash.key] || {};
         const current = config.dashboardSections[dash.key] || {};
         const DashIcon = dash.icon;
         const enabledCount = Object.values(current).filter(Boolean).length;
@@ -217,8 +243,8 @@ export default function PlatformConfigPage() {
                   <DashIcon className={`h-5 w-5 ${dash.color}`} />
                 </div>
                 <div className="flex-1">
-                  <CardTitle className="text-foreground text-base">{dash.label}</CardTitle>
-                  <p className="text-muted-foreground text-xs">{enabledCount} من {total} قسم مفعّل</p>
+                  <CardTitle className="text-foreground text-base">{bi(dash.labelAr, dash.labelEn)}</CardTitle>
+                  <p className="text-muted-foreground text-xs">{bi(`${enabledCount} من ${total} قسم مفعّل`, `${enabledCount} of ${total} sections enabled`)}</p>
                 </div>
                 <Button
                   variant="ghost"
@@ -229,7 +255,7 @@ export default function PlatformConfigPage() {
                     Object.keys(sections).forEach(k => setSection(dash.key, k, !allEnabled));
                   }}
                 >
-                  {Object.keys(sections).every(k => current[k]) ? 'إيقاف الكل' : 'تفعيل الكل'}
+                  {Object.keys(sections).every(k => current[k]) ? bi('إيقاف الكل', 'Disable all') : bi('تفعيل الكل', 'Enable all')}
                 </Button>
               </div>
             </CardHeader>
@@ -252,7 +278,7 @@ export default function PlatformConfigPage() {
 
       <Button onClick={save} disabled={saving} className={`w-full gap-2 ${saved ? 'bg-emerald-600 hover:bg-emerald-700' : ''}`}>
         <Save className="h-4 w-4" />
-        {saving ? 'جاري الحفظ...' : saved ? 'تم الحفظ ✓' : 'حفظ الإعدادات'}
+        {saving ? bi('جاري الحفظ...', 'Saving...') : saved ? bi('تم الحفظ ✓', 'Saved ✓') : bi('حفظ الإعدادات', 'Save settings')}
       </Button>
     </div>
   );
