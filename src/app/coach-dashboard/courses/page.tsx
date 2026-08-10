@@ -64,6 +64,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { COURSE_CATEGORIES } from "@/lib/course-category";
 import { useCurrency } from "@/hooks/use-currency";
+import { useLanguage } from "@/components/language-provider";
+import { enUS } from "date-fns/locale";
 
 type Course = {
   id: string;
@@ -88,13 +90,25 @@ const LEVELS = [
   { value: 'advanced', label: 'متقدم' },
 ];
 
+const LEVELS_EN = [
+  { value: 'beginner', label: 'Beginner' },
+  { value: 'intermediate', label: 'Intermediate' },
+  { value: 'advanced', label: 'Advanced' },
+];
+
 const LANGUAGES = [
   { value: 'arabic', label: 'العربية' },
   { value: 'english', label: 'الإنجليزية' },
   { value: 'both', label: 'ثنائي اللغة' },
 ];
 
-const levelLabel = (v?: string) => LEVELS.find(l => l.value === v)?.label || '';
+const LANGUAGES_EN = [
+  { value: 'arabic', label: 'Arabic' },
+  { value: 'english', label: 'English' },
+  { value: 'both', label: 'Bilingual' },
+];
+
+const levelLabel = (v?: string, lang: 'ar' | 'en' = 'ar') => (lang === 'en' ? LEVELS_EN : LEVELS).find(l => l.value === v)?.label || '';
 const levelColor = (v?: string) => v === 'beginner' ? 'bg-green-500/10 text-green-700' : v === 'intermediate' ? 'bg-amber-500/10 text-amber-700' : v === 'advanced' ? 'bg-red-500/10 text-red-700' : '';
 
 const addCourseFormSchema = z.object({
@@ -131,6 +145,8 @@ function CourseCard({
   onSession: (c: Course) => void;
   onEnroll: (c: Course) => void;
 }) {
+  const { lang } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const isPublished = course.status === "منشورة" || course.status === "published";
   const count = course.enrolledCount ?? 0;
 
@@ -156,12 +172,12 @@ function CourseCard({
             ? "bg-green-500/90 text-white border-green-600/20"
             : "bg-background/90 text-muted-foreground border-border/50 backdrop-blur-sm"
         )}>
-          {isPublished ? 'منشورة' : 'مسودة'}
+          {isPublished ? bi('منشورة', 'Published') : bi('مسودة', 'Draft')}
         </div>
         {/* Price badge */}
         {course.price != null && (
           <div className="absolute top-3 left-3 bg-background/90 backdrop-blur-sm text-foreground text-[11px] font-bold rounded-full px-2.5 py-0.5 border border-border/50">
-            {course.price === 0 ? 'مجاني' : `${course.price} ${currencySymbol}`}
+            {course.price === 0 ? bi('مجاني', 'Free') : `${course.price} ${currencySymbol}`}
           </div>
         )}
       </div>
@@ -176,7 +192,7 @@ function CourseCard({
           )}
           {course.level && (
             <span className={cn("text-[10px] font-medium rounded-full px-2 py-0.5", levelColor(course.level))}>
-              {levelLabel(course.level)}
+              {levelLabel(course.level, lang)}
             </span>
           )}
         </div>
@@ -196,12 +212,12 @@ function CourseCard({
           )}
           <span className="flex items-center gap-1">
             <Users className="h-3 w-3" />
-            {count} مسجّل
+            {bi(`${count} مسجّل`, `${count} enrolled`)}
           </span>
           {course.language && (
             <span className="flex items-center gap-1">
               <Globe className="h-3 w-3" />
-              {LANGUAGES.find(l => l.value === course.language)?.label || course.language}
+              {(lang === 'en' ? LANGUAGES_EN : LANGUAGES).find(l => l.value === course.language)?.label || course.language}
             </span>
           )}
         </div>
@@ -223,14 +239,14 @@ function CourseCard({
           <Button size="sm" variant="outline" className="flex-1 h-8 text-xs" asChild>
             <Link href={`/coach-dashboard/courses/${course.id}`}>
               <Edit className="h-3 w-3 ml-1" />
-              تحرير
+              {bi('تحرير', 'Edit')}
             </Link>
           </Button>
           {isPublished && (
             <Button size="sm" variant="ghost" className="h-8 text-xs px-2.5" asChild>
               <Link href={`/courses/${course.id}`} target="_blank">
                 <Globe className="h-3 w-3 ml-1" />
-                عرض
+                {bi('عرض', 'View')}
               </Link>
             </Button>
           )}
@@ -241,22 +257,22 @@ function CourseCard({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
-              <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
+              <DropdownMenuLabel>{bi('الإجراءات', 'Actions')}</DropdownMenuLabel>
               <DropdownMenuItem onClick={() => onPublish(course)}>
                 {isPublished ? <X className="ml-2 h-4 w-4" /> : <Check className="ml-2 h-4 w-4" />}
-                {isPublished ? 'إلغاء النشر' : 'نشر الدورة'}
+                {isPublished ? bi('إلغاء النشر', 'Unpublish') : bi('نشر الدورة', 'Publish course')}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onEnroll(course)}>
                 <UserPlus className="ml-2 h-4 w-4" />
-                تسجيل مستفيد
+                {bi('تسجيل مستفيد', 'Enroll beneficiary')}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onSession(course)}>
                 <Video className="ml-2 h-4 w-4" />
-                إضافة جلسة مباشرة
+                {bi('إضافة جلسة مباشرة', 'Add live session')}
               </DropdownMenuItem>
               <DropdownMenuItem className="text-red-500" onClick={() => onDelete(course)}>
                 <Trash2 className="ml-2 h-4 w-4" />
-                حذف الدورة
+                {bi('حذف الدورة', 'Delete course')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -269,6 +285,8 @@ function CourseCard({
 export default function CoachCoursesPage() {
   const { toast } = useToast();
   const { symbol: currencySymbol } = useCurrency();
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const [isAddCourseDialogOpen, setIsAddCourseDialogOpen] = useState(false);
   const [seedingDemo, setSeedingDemo] = useState(false);
   const [sessionCourse, setSessionCourse] = useState<Course | null>(null);
@@ -328,11 +346,11 @@ export default function CoachCoursesPage() {
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error((await res.json()).error);
-      toast({ title: "تم بنجاح!", description: `تمت إضافة دورة "${values.title}" كمسودة.` });
+      toast({ title: bi("تم بنجاح!", "Success!"), description: bi(`تمت إضافة دورة "${values.title}" كمسودة.`, `Course "${values.title}" was added as a draft.`) });
       addCourseForm.reset();
       setIsAddCourseDialogOpen(false);
       fetchCourses();
-    } catch { toast({ variant: "destructive", title: "حدث خطأ!", description: "لم نتمكن من إضافة الدورة." }); }
+    } catch { toast({ variant: "destructive", title: bi("حدث خطأ!", "An error occurred!"), description: bi("لم نتمكن من إضافة الدورة.", "We couldn't add the course.") }); }
   }
 
   async function onAddSessionSubmit(values: z.infer<typeof addSessionFormSchema>) {
@@ -344,10 +362,10 @@ export default function CoachCoursesPage() {
         headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
         body: JSON.stringify({ ...values, date: values.date.toISOString(), attendees: [], status: 'scheduled', courseId: sessionCourse.id, meetLink: values.meetLink || '' }),
       });
-      toast({ title: "تمت الجدولة!", description: `تمت جدولة جلسة "${values.title}".` });
+      toast({ title: bi("تمت الجدولة!", "Scheduled!"), description: bi(`تمت جدولة جلسة "${values.title}".`, `Session "${values.title}" was scheduled.`) });
       addSessionForm.reset();
       setSessionCourse(null);
-    } catch { toast({ variant: "destructive", title: "خطأ!", description: "فشل جدولة الجلسة." }); }
+    } catch { toast({ variant: "destructive", title: bi("خطأ!", "Error!"), description: bi("فشل جدولة الجلسة.", "Failed to schedule the session.") }); }
   }
 
   async function handlePublish(course: Course) {
@@ -360,9 +378,9 @@ export default function CoachCoursesPage() {
         headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
         body: JSON.stringify({ id: course.id, status: newStatus }),
       });
-      toast({ title: newStatus === "منشورة" ? "تم النشر!" : "تم الإلغاء!" });
+      toast({ title: newStatus === "منشورة" ? bi("تم النشر!", "Published!") : bi("تم الإلغاء!", "Unpublished!") });
       fetchCourses();
-    } catch { toast({ variant: "destructive", title: "خطأ!", description: "فشلت عملية التحديث." }); }
+    } catch { toast({ variant: "destructive", title: bi("خطأ!", "Error!"), description: bi("فشلت عملية التحديث.", "The update failed.") }); }
   }
 
   async function handleDelete() {
@@ -370,10 +388,10 @@ export default function CoachCoursesPage() {
     try {
       const token = await authUser.getIdToken();
       await fetch(`/api/courses?id=${courseToDelete.id}`, { method: 'DELETE', headers: { authorization: `Bearer ${token}` } });
-      toast({ title: "تم الحذف!", description: `تم حذف دورة "${courseToDelete.title}".` });
+      toast({ title: bi("تم الحذف!", "Deleted!"), description: bi(`تم حذف دورة "${courseToDelete.title}".`, `Course "${courseToDelete.title}" was deleted.`) });
       setCourseToDelete(null);
       fetchCourses();
-    } catch { toast({ variant: "destructive", title: "خطأ!", description: "فشل حذف الدورة." }); }
+    } catch { toast({ variant: "destructive", title: bi("خطأ!", "Error!"), description: bi("فشل حذف الدورة.", "Failed to delete the course.") }); }
   }
 
   async function handleSeedDemo() {
@@ -387,10 +405,13 @@ export default function CoachCoursesPage() {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
-      toast({ title: json.alreadyExists ? 'الدورة التجريبية موجودة بالفعل!' : 'تم إنشاء الدورة التجريبية!', description: 'يمكنك الآن تعديل محتواها من زر "تحرير".' });
+      toast({
+        title: json.alreadyExists ? bi('الدورة التجريبية موجودة بالفعل!', 'The demo course already exists!') : bi('تم إنشاء الدورة التجريبية!', 'Demo course created!'),
+        description: bi('يمكنك الآن تعديل محتواها من زر "تحرير".', 'You can now edit its content from the "Edit" button.'),
+      });
       fetchCourses();
     } catch (e: any) {
-      toast({ variant: 'destructive', title: 'خطأ', description: e.message });
+      toast({ variant: 'destructive', title: bi('خطأ', 'Error'), description: e.message });
     } finally {
       setSeedingDemo(false);
     }
@@ -407,12 +428,12 @@ export default function CoachCoursesPage() {
         body: JSON.stringify({ beneficiaryId: selectedBeneficiaryId }),
       });
       if (!res.ok) throw new Error((await res.json()).error);
-      toast({ title: "تم التسجيل!", description: "تم تسجيل المستفيد في الدورة بنجاح." });
+      toast({ title: bi("تم التسجيل!", "Enrolled!"), description: bi("تم تسجيل المستفيد في الدورة بنجاح.", "The beneficiary was enrolled in the course successfully.") });
       setEnrollCourse(null);
       setSelectedBeneficiaryId('');
       fetchCourses();
     } catch (e: any) {
-      toast({ variant: "destructive", title: "خطأ!", description: e.message || "فشل تسجيل المستفيد." });
+      toast({ variant: "destructive", title: bi("خطأ!", "Error!"), description: e.message || bi("فشل تسجيل المستفيد.", "Failed to enroll the beneficiary.") });
     } finally {
       setEnrolling(false);
     }
@@ -422,32 +443,32 @@ export default function CoachCoursesPage() {
   const drafts = courses.filter(c => c.status !== "منشورة" && c.status !== "published");
 
   return (
-    <div dir="rtl" className="space-y-8">
+    <div dir={dir} className="space-y-8">
 
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">دوراتي التدريبية</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{bi('دوراتي التدريبية', 'My Courses')}</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {loading ? 'جاري التحميل...' : `${courses.length} دورة · ${published.length} منشورة · ${drafts.length} مسودة`}
+            {loading ? bi('جاري التحميل...', 'Loading...') : bi(`${courses.length} دورة · ${published.length} منشورة · ${drafts.length} مسودة`, `${courses.length} courses · ${published.length} published · ${drafts.length} draft`)}
           </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={handleSeedDemo} disabled={seedingDemo} className="gap-2">
             <Star className="h-4 w-4" />
-            {seedingDemo ? 'جاري الإنشاء...' : 'دورة تجريبية'}
+            {seedingDemo ? bi('جاري الإنشاء...', 'Creating...') : bi('دورة تجريبية', 'Demo course')}
           </Button>
         <Dialog open={isAddCourseDialogOpen} onOpenChange={setIsAddCourseDialogOpen}>
           <DialogTrigger asChild>
             <Button className="gap-2">
               <PlusCircle className="h-4 w-4" />
-              إنشاء دورة جديدة
+              {bi('إنشاء دورة جديدة', 'Create new course')}
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-2xl" dir="rtl">
+          <DialogContent className="sm:max-w-2xl" dir={dir}>
             <DialogHeader>
-              <DialogTitle>إنشاء دورة تدريبية جديدة</DialogTitle>
-              <DialogDescription>أدخل تفاصيل الدورة. يمكنك تعديل المحتوى والدروس لاحقاً من صفحة التحرير.</DialogDescription>
+              <DialogTitle>{bi('إنشاء دورة تدريبية جديدة', 'Create a new course')}</DialogTitle>
+              <DialogDescription>{bi('أدخل تفاصيل الدورة. يمكنك تعديل المحتوى والدروس لاحقاً من صفحة التحرير.', 'Enter the course details. You can edit the content and lessons later from the edit page.')}</DialogDescription>
             </DialogHeader>
             <Form {...addCourseForm}>
               <form onSubmit={addCourseForm.handleSubmit(onAddCourseSubmit)} id="add-course-form" className="space-y-4 pt-2 max-h-[70vh] overflow-y-auto px-1">
@@ -455,8 +476,8 @@ export default function CoachCoursesPage() {
                 {/* Title */}
                 <FormField control={addCourseForm.control} name="title" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>عنوان الدورة <span className="text-red-500">*</span></FormLabel>
-                    <FormControl><Input placeholder="مثال: أساسيات التسويق الرقمي للمبتدئين" {...field} /></FormControl>
+                    <FormLabel>{bi('عنوان الدورة', 'Course title')} <span className="text-red-500">*</span></FormLabel>
+                    <FormControl><Input placeholder={bi('مثال: أساسيات التسويق الرقمي للمبتدئين', 'e.g. Digital Marketing Basics for Beginners')} {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -465,10 +486,10 @@ export default function CoachCoursesPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <FormField control={addCourseForm.control} name="category" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>التخصص / الفئة <span className="text-red-500">*</span></FormLabel>
+                      <FormLabel>{bi('التخصص / الفئة', 'Specialty / Category')} <span className="text-red-500">*</span></FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
-                          <SelectTrigger><SelectValue placeholder="اختر الفئة" /></SelectTrigger>
+                          <SelectTrigger><SelectValue placeholder={bi('اختر الفئة', 'Choose category')} /></SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           {COURSE_CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
@@ -482,13 +503,13 @@ export default function CoachCoursesPage() {
                   )} />
                   <FormField control={addCourseForm.control} name="level" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>المستوى</FormLabel>
+                      <FormLabel>{bi('المستوى', 'Level')}</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
-                          <SelectTrigger><SelectValue placeholder="اختر المستوى" /></SelectTrigger>
+                          <SelectTrigger><SelectValue placeholder={bi('اختر المستوى', 'Choose level')} /></SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {LEVELS.map(l => <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>)}
+                          {(lang === 'en' ? LEVELS_EN : LEVELS).map(l => <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>)}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -499,9 +520,9 @@ export default function CoachCoursesPage() {
                 {/* Description */}
                 <FormField control={addCourseForm.control} name="description" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>وصف الدورة</FormLabel>
+                    <FormLabel>{bi('وصف الدورة', 'Course description')}</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="اشرح باختصار ما سيتعلمه المشارك، ومن هي الفئة المستهدفة..." rows={3} {...field} />
+                      <Textarea placeholder={bi('اشرح باختصار ما سيتعلمه المشارك، ومن هي الفئة المستهدفة...', 'Briefly explain what the participant will learn and who the target audience is...')} rows={3} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -511,27 +532,27 @@ export default function CoachCoursesPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <FormField control={addCourseForm.control} name="price" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>السعر ({currencySymbol})</FormLabel>
-                      <FormControl><Input type="number" min={0} placeholder="0 = مجاني" {...field} /></FormControl>
+                      <FormLabel>{bi('السعر', 'Price')} ({currencySymbol})</FormLabel>
+                      <FormControl><Input type="number" min={0} placeholder={bi('0 = مجاني', '0 = free')} {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )} />
                   <FormField control={addCourseForm.control} name="duration" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>المدة الإجمالية</FormLabel>
-                      <FormControl><Input placeholder="مثال: 8 ساعات" {...field} /></FormControl>
+                      <FormLabel>{bi('المدة الإجمالية', 'Total duration')}</FormLabel>
+                      <FormControl><Input placeholder={bi('مثال: 8 ساعات', 'e.g. 8 hours')} {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )} />
                   <FormField control={addCourseForm.control} name="language" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>لغة الدورة</FormLabel>
+                      <FormLabel>{bi('لغة الدورة', 'Course language')}</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
-                          <SelectTrigger><SelectValue placeholder="اختر اللغة" /></SelectTrigger>
+                          <SelectTrigger><SelectValue placeholder={bi('اختر اللغة', 'Choose language')} /></SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {LANGUAGES.map(l => <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>)}
+                          {(lang === 'en' ? LANGUAGES_EN : LANGUAGES).map(l => <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>)}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -542,9 +563,9 @@ export default function CoachCoursesPage() {
                 {/* Tags */}
                 <FormField control={addCourseForm.control} name="tags" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>الوسوم (Tags)</FormLabel>
-                    <FormControl><Input placeholder="مثال: تسويق، سوشيال ميديا، مبيعات (مفصولة بفاصلة)" {...field} /></FormControl>
-                    <FormDescription>اكتب الوسوم مفصولة بفاصلة لتسهيل البحث.</FormDescription>
+                    <FormLabel>{bi('الوسوم', 'Tags')} (Tags)</FormLabel>
+                    <FormControl><Input placeholder={bi('مثال: تسويق، سوشيال ميديا، مبيعات (مفصولة بفاصلة)', 'e.g. marketing, social media, sales (comma-separated)')} {...field} /></FormControl>
+                    <FormDescription>{bi('اكتب الوسوم مفصولة بفاصلة لتسهيل البحث.', 'Write tags separated by commas to make search easier.')}</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -552,9 +573,9 @@ export default function CoachCoursesPage() {
                 {/* Cover Image URL */}
                 <FormField control={addCourseForm.control} name="coverImageUrl" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>رابط صورة الغلاف</FormLabel>
+                    <FormLabel>{bi('رابط صورة الغلاف', 'Cover image URL')}</FormLabel>
                     <FormControl><Input dir="ltr" placeholder="https://..." {...field} /></FormControl>
-                    <FormDescription>يفضّل صورة بنسبة عرض 16:9 (مثلاً 1280×720 بكسل).</FormDescription>
+                    <FormDescription>{bi('يفضّل صورة بنسبة عرض 16:9 (مثلاً 1280×720 بكسل).', 'A 16:9 aspect ratio image is preferred (e.g. 1280×720 px).')}</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -562,8 +583,8 @@ export default function CoachCoursesPage() {
               </form>
             </Form>
             <DialogFooter>
-              <DialogClose asChild><Button variant="ghost">إلغاء</Button></DialogClose>
-              <Button type="submit" form="add-course-form">حفظ الدورة كمسودة</Button>
+              <DialogClose asChild><Button variant="ghost">{bi('إلغاء', 'Cancel')}</Button></DialogClose>
+              <Button type="submit" form="add-course-form">{bi('حفظ الدورة كمسودة', 'Save course as draft')}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -574,10 +595,10 @@ export default function CoachCoursesPage() {
       {!loading && courses.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: 'إجمالي الدورات', value: courses.length, icon: BookOpen, color: 'text-primary' },
-            { label: 'منشورة', value: published.length, icon: Globe, color: 'text-green-600' },
-            { label: 'مسودة', value: drafts.length, icon: Lock, color: 'text-amber-600' },
-            { label: 'إجمالي المسجّلين', value: courses.reduce((s, c) => s + (c.enrolledCount ?? 0), 0), icon: Users, color: 'text-sky-600' },
+            { label: bi('إجمالي الدورات', 'Total courses'), value: courses.length, icon: BookOpen, color: 'text-primary' },
+            { label: bi('منشورة', 'Published'), value: published.length, icon: Globe, color: 'text-green-600' },
+            { label: bi('مسودة', 'Draft'), value: drafts.length, icon: Lock, color: 'text-amber-600' },
+            { label: bi('إجمالي المسجّلين', 'Total enrolled'), value: courses.reduce((s, c) => s + (c.enrolledCount ?? 0), 0), icon: Users, color: 'text-sky-600' },
           ].map((stat, i) => (
             <div key={i} className="rounded-xl border border-border bg-card p-4 flex items-center gap-3">
               <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center shrink-0">
@@ -612,16 +633,16 @@ export default function CoachCoursesPage() {
           <div className="h-16 w-16 rounded-full bg-primary/5 flex items-center justify-center mb-4">
             <BookOpen className="h-7 w-7 text-primary/30" />
           </div>
-          <h3 className="text-base font-semibold mb-1">لا توجد دورات بعد</h3>
-          <p className="text-sm text-muted-foreground mb-6 max-w-xs">ابدأ بإنشاء دورتك التدريبية الأولى، أو جرّب دورة تجريبية جاهزة للتعديل.</p>
+          <h3 className="text-base font-semibold mb-1">{bi('لا توجد دورات بعد', 'No courses yet')}</h3>
+          <p className="text-sm text-muted-foreground mb-6 max-w-xs">{bi('ابدأ بإنشاء دورتك التدريبية الأولى، أو جرّب دورة تجريبية جاهزة للتعديل.', 'Start by creating your first course, or try a ready-made demo course you can edit.')}</p>
           <div className="flex flex-col sm:flex-row gap-3">
             <Button onClick={() => setIsAddCourseDialogOpen(true)}>
               <PlusCircle className="h-4 w-4 ml-2" />
-              إنشاء دورة جديدة
+              {bi('إنشاء دورة جديدة', 'Create new course')}
             </Button>
             <Button variant="outline" onClick={handleSeedDemo} disabled={seedingDemo}>
               <Star className="h-4 w-4 ml-2" />
-              {seedingDemo ? 'جاري الإنشاء...' : 'إنشاء دورة تجريبية'}
+              {seedingDemo ? bi('جاري الإنشاء...', 'Creating...') : bi('إنشاء دورة تجريبية', 'Create demo course')}
             </Button>
           </div>
         </div>
@@ -643,19 +664,19 @@ export default function CoachCoursesPage() {
 
       {/* ── Enroll Beneficiary Dialog ── */}
       <Dialog open={!!enrollCourse} onOpenChange={(open) => !open && setEnrollCourse(null)}>
-        <DialogContent dir="rtl">
+        <DialogContent dir={dir}>
           <DialogHeader>
-            <DialogTitle>تسجيل مستفيد في الدورة</DialogTitle>
-            <DialogDescription>اختر مستفيداً لتسجيله في دورة &quot;{enrollCourse?.title}&quot;.</DialogDescription>
+            <DialogTitle>{bi('تسجيل مستفيد في الدورة', 'Enroll beneficiary in course')}</DialogTitle>
+            <DialogDescription>{bi(`اختر مستفيداً لتسجيله في دورة "${enrollCourse?.title}".`, `Choose a beneficiary to enroll in "${enrollCourse?.title}".`)}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <Select value={selectedBeneficiaryId} onValueChange={setSelectedBeneficiaryId}>
               <SelectTrigger>
-                <SelectValue placeholder="اختر مستفيداً" />
+                <SelectValue placeholder={bi('اختر مستفيداً', 'Choose a beneficiary')} />
               </SelectTrigger>
               <SelectContent>
                 {beneficiaries.length === 0
-                  ? <SelectItem value="none" disabled>لا يوجد مستفيدون</SelectItem>
+                  ? <SelectItem value="none" disabled>{bi('لا يوجد مستفيدون', 'No beneficiaries')}</SelectItem>
                   : beneficiaries.map(b => (
                     <SelectItem key={b.id} value={b.id}>{b.name || b.id}</SelectItem>
                   ))
@@ -664,9 +685,9 @@ export default function CoachCoursesPage() {
             </Select>
           </div>
           <DialogFooter>
-            <DialogClose asChild><Button variant="ghost">إلغاء</Button></DialogClose>
+            <DialogClose asChild><Button variant="ghost">{bi('إلغاء', 'Cancel')}</Button></DialogClose>
             <Button onClick={handleEnrollBeneficiary} disabled={!selectedBeneficiaryId || enrolling}>
-              {enrolling ? 'جاري التسجيل...' : 'تأكيد التسجيل'}
+              {enrolling ? bi('جاري التسجيل...', 'Enrolling...') : bi('تأكيد التسجيل', 'Confirm enrollment')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -674,29 +695,29 @@ export default function CoachCoursesPage() {
 
       {/* ── Add Live Session Dialog ── */}
       <Dialog open={!!sessionCourse} onOpenChange={(isOpen) => !isOpen && setSessionCourse(null)}>
-        <DialogContent dir="rtl" onPointerDownOutside={(e) => { if (e.target instanceof Element && e.target.closest('.rdp')) { e.preventDefault(); } }}>
+        <DialogContent dir={dir} onPointerDownOutside={(e) => { if (e.target instanceof Element && e.target.closest('.rdp')) { e.preventDefault(); } }}>
           <DialogHeader>
-            <DialogTitle>جدولة جلسة مباشرة</DialogTitle>
-            <DialogDescription>إضافة جلسة مباشرة تابعة لدورة &quot;{sessionCourse?.title}&quot;.</DialogDescription>
+            <DialogTitle>{bi('جدولة جلسة مباشرة', 'Schedule live session')}</DialogTitle>
+            <DialogDescription>{bi(`إضافة جلسة مباشرة تابعة لدورة "${sessionCourse?.title}".`, `Add a live session for course "${sessionCourse?.title}".`)}</DialogDescription>
           </DialogHeader>
           <Form {...addSessionForm}>
             <form onSubmit={addSessionForm.handleSubmit(onAddSessionSubmit)} className="space-y-4 pt-4">
               <FormField control={addSessionForm.control} name="title" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>عنوان الجلسة</FormLabel>
-                  <FormControl><Input placeholder="مثال: أسئلة وأجوبة مباشرة" {...field} /></FormControl>
+                  <FormLabel>{bi('عنوان الجلسة', 'Session title')}</FormLabel>
+                  <FormControl><Input placeholder={bi('مثال: أسئلة وأجوبة مباشرة', 'e.g. Live Q&A')} {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
               <div className="grid grid-cols-2 gap-4">
                 <FormField control={addSessionForm.control} name="date" render={({ field }) => (
                   <FormItem className="flex flex-col">
-                    <FormLabel>التاريخ</FormLabel>
+                    <FormLabel>{bi('التاريخ', 'Date')}</FormLabel>
                     <Popover>
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button variant="outline" className={cn("pr-3 text-right font-normal", !field.value && "text-muted-foreground")}>
-                            {field.value ? format(field.value, "PPP", { locale: ar }) : <span>اختر تاريخًا</span>}
+                            {field.value ? format(field.value, "PPP", { locale: lang === 'en' ? enUS : ar }) : <span>{bi('اختر تاريخًا', 'Choose a date')}</span>}
                             <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                           </Button>
                         </FormControl>
@@ -710,7 +731,7 @@ export default function CoachCoursesPage() {
                 )} />
                 <FormField control={addSessionForm.control} name="duration" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>المدة (دقيقة)</FormLabel>
+                    <FormLabel>{bi('المدة (دقيقة)', 'Duration (minutes)')}</FormLabel>
                     <FormControl><Input type="number" placeholder="60" {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
@@ -718,21 +739,21 @@ export default function CoachCoursesPage() {
               </div>
               <FormField control={addSessionForm.control} name="meetLink" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>رابط Google Meet (اختياري)</FormLabel>
+                  <FormLabel>{bi('رابط Google Meet (اختياري)', 'Google Meet link (optional)')}</FormLabel>
                   <div className="flex items-center gap-2">
                     <FormControl>
                       <Input dir="ltr" placeholder="https://meet.google.com/..." {...field} />
                     </FormControl>
                     <Button type="button" variant="outline" onClick={() => field.onChange(`https://meet.google.com/lookup/${Math.random().toString(36).substring(2, 10)}`)}>
-                      إنشاء رابط
+                      {bi('إنشاء رابط', 'Generate link')}
                     </Button>
                   </div>
                   <FormMessage />
                 </FormItem>
               )} />
               <DialogFooter>
-                <DialogClose asChild><Button variant="ghost">إلغاء</Button></DialogClose>
-                <Button type="submit">جدولة الجلسة</Button>
+                <DialogClose asChild><Button variant="ghost">{bi('إلغاء', 'Cancel')}</Button></DialogClose>
+                <Button type="submit">{bi('جدولة الجلسة', 'Schedule session')}</Button>
               </DialogFooter>
             </form>
           </Form>
@@ -741,16 +762,16 @@ export default function CoachCoursesPage() {
 
       {/* ── Delete Confirmation ── */}
       <AlertDialog open={!!courseToDelete} onOpenChange={(isOpen) => !isOpen && setCourseToDelete(null)}>
-        <AlertDialogContent dir="rtl">
+        <AlertDialogContent dir={dir}>
           <AlertDialogHeader>
-            <AlertDialogTitle>هل أنت متأكد تمامًا؟</AlertDialogTitle>
+            <AlertDialogTitle>{bi('هل أنت متأكد تمامًا؟', 'Are you absolutely sure?')}</AlertDialogTitle>
             <AlertDialogDescription>
-              هذا الإجراء لا يمكن التراجع عنه. سيؤدي إلى حذف دورة &quot;{courseToDelete?.title}&quot; نهائيًا.
+              {bi(`هذا الإجراء لا يمكن التراجع عنه. سيؤدي إلى حذف دورة "${courseToDelete?.title}" نهائيًا.`, `This action cannot be undone. It will permanently delete the course "${courseToDelete?.title}".`)}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>إلغاء</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}>نعم، قم بالحذف</AlertDialogAction>
+            <AlertDialogCancel>{bi('إلغاء', 'Cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>{bi('نعم، قم بالحذف', 'Yes, delete')}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

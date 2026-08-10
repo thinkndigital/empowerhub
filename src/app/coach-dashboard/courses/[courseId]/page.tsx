@@ -21,6 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { COURSE_CATEGORIES } from "@/lib/course-category";
 import { Separator } from "@/components/ui/separator";
+import { useLanguage } from "@/components/language-provider";
 
 const courseEditSchema = z.object({
   title: z.string().min(2, { message: "يجب أن يكون العنوان حرفين على الأقل." }),
@@ -81,6 +82,8 @@ interface Material {
 
 const AssessmentBuilder = ({ control, name, title }: { control: any, name: "preAssessment" | "postAssessment", title: string }) => {
   const { fields, append, remove } = useFieldArray({ control, name });
+  const { lang } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   return (
     <div className="space-y-4">
       <h3 className="font-medium">{title}</h3>
@@ -89,21 +92,21 @@ const AssessmentBuilder = ({ control, name, title }: { control: any, name: "preA
           <div className="flex-grow space-y-2">
             <FormField control={control} name={`${name}.${index}.question`} render={({ field }) => (
               <FormItem>
-                <FormLabel>السؤال {index + 1}</FormLabel>
-                <FormControl><Textarea placeholder="نص السؤال..." {...field} /></FormControl>
+                <FormLabel>{bi('السؤال', 'Question')} {index + 1}</FormLabel>
+                <FormControl><Textarea placeholder={bi('نص السؤال...', 'Question text...')} {...field} /></FormControl>
                 <FormMessage />
               </FormItem>
             )} />
             <FormField control={control} name={`${name}.${index}.type`} render={({ field }) => (
               <FormItem>
-                <FormLabel>نوع السؤال</FormLabel>
+                <FormLabel>{bi('نوع السؤال', 'Question type')}</FormLabel>
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
-                    <SelectTrigger><SelectValue placeholder="اختر نوع السؤال" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder={bi('اختر نوع السؤال', 'Choose question type')} /></SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="rating">تقييم (1-5)</SelectItem>
-                    <SelectItem value="text">نص مفتوح</SelectItem>
+                    <SelectItem value="rating">{bi('تقييم (1-5)', 'Rating (1-5)')}</SelectItem>
+                    <SelectItem value="text">{bi('نص مفتوح', 'Open text')}</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -117,7 +120,7 @@ const AssessmentBuilder = ({ control, name, title }: { control: any, name: "preA
       ))}
       <Button type="button" variant="outline" size="sm" onClick={() => append({ question: "", type: "rating" })}>
         <PlusCircle className="ml-2 h-4 w-4" />
-        إضافة سؤال
+        {bi('إضافة سؤال', 'Add question')}
       </Button>
     </div>
   );
@@ -129,15 +132,17 @@ const materialTypeIcon = (type: string) => {
   return <Link2 className="h-4 w-4" />;
 };
 
-const materialTypeLabel = (type: string) => {
+const materialTypeLabel = (type: string, bi: (ar: string, en: string) => string) => {
   if (type === 'pdf') return 'PDF';
-  if (type === 'doc') return 'مستند';
-  return 'رابط';
+  if (type === 'doc') return bi('مستند', 'Document');
+  return bi('رابط', 'Link');
 };
 
 export default function CourseEditPage({ params }: { params: { courseId: string } }) {
   const { toast } = useToast();
   const { user: authUser } = useUser();
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const [course, setCourse] = useState<CourseDataFromDB | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -238,9 +243,9 @@ export default function CourseEditPage({ params }: { params: { courseId: string 
         headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
         body: JSON.stringify(dataToUpdate),
       });
-      toast({ title: "تم الحفظ بنجاح", description: `تم تحديث تفاصيل دورة "${values.title}".` });
+      toast({ title: bi("تم الحفظ بنجاح", "Saved successfully"), description: bi(`تم تحديث تفاصيل دورة "${values.title}".`, `Course "${values.title}" details were updated.`) });
     } catch {
-      toast({ variant: "destructive", title: "حدث خطأ!", description: "لم نتمكن من حفظ التغييرات." });
+      toast({ variant: "destructive", title: bi("حدث خطأ!", "An error occurred!"), description: bi("لم نتمكن من حفظ التغييرات.", "We couldn't save the changes.") });
     }
   }
 
@@ -259,9 +264,9 @@ export default function CourseEditPage({ params }: { params: { courseId: string 
       setLessons(prev => [...prev, { id: json.id, ...newLesson, order }]);
       setNewLesson({ title: '', description: '', videoUrl: '' });
       setShowAddLesson(false);
-      toast({ title: 'تم إضافة الدرس' });
+      toast({ title: bi('تم إضافة الدرس', 'Lesson added') });
     } catch {
-      toast({ variant: 'destructive', title: 'خطأ!', description: 'فشل إضافة الدرس.' });
+      toast({ variant: 'destructive', title: bi('خطأ!', 'Error!'), description: bi('فشل إضافة الدرس.', 'Failed to add the lesson.') });
     } finally { setLessonSaving(false); }
   }
 
@@ -277,9 +282,9 @@ export default function CourseEditPage({ params }: { params: { courseId: string 
       });
       setLessons(prev => prev.map(l => l.id === editingLesson.id ? editingLesson : l));
       setEditingLesson(null);
-      toast({ title: 'تم تحديث الدرس' });
+      toast({ title: bi('تم تحديث الدرس', 'Lesson updated') });
     } catch {
-      toast({ variant: 'destructive', title: 'خطأ!', description: 'فشل تحديث الدرس.' });
+      toast({ variant: 'destructive', title: bi('خطأ!', 'Error!'), description: bi('فشل تحديث الدرس.', 'Failed to update the lesson.') });
     } finally { setLessonSaving(false); }
   }
 
@@ -293,9 +298,9 @@ export default function CourseEditPage({ params }: { params: { courseId: string 
       });
       const updated = lessons.filter(l => l.id !== id).map((l, i) => ({ ...l, order: i }));
       setLessons(updated);
-      toast({ title: 'تم حذف الدرس' });
+      toast({ title: bi('تم حذف الدرس', 'Lesson deleted') });
     } catch {
-      toast({ variant: 'destructive', title: 'خطأ!', description: 'فشل حذف الدرس.' });
+      toast({ variant: 'destructive', title: bi('خطأ!', 'Error!'), description: bi('فشل حذف الدرس.', 'Failed to delete the lesson.') });
     }
   }
 
@@ -354,11 +359,11 @@ export default function CourseEditPage({ params }: { params: { courseId: string 
 
   if (!course) {
     return (
-      <div className="text-center">
-        <h1 className="text-2xl font-bold">الدورة غير موجودة</h1>
-        <p className="text-muted-foreground">لم نتمكن من العثور على الدورة التي تبحث عنها.</p>
+      <div className="text-center" dir={dir}>
+        <h1 className="text-2xl font-bold">{bi('الدورة غير موجودة', 'Course not found')}</h1>
+        <p className="text-muted-foreground">{bi('لم نتمكن من العثور على الدورة التي تبحث عنها.', "We couldn't find the course you're looking for.")}</p>
         <Button asChild className="mt-4">
-          <Link href="/coach-dashboard/courses">العودة إلى الدورات</Link>
+          <Link href="/coach-dashboard/courses">{bi('العودة إلى الدورات', 'Back to courses')}</Link>
         </Button>
       </div>
     );
@@ -366,40 +371,40 @@ export default function CourseEditPage({ params }: { params: { courseId: string 
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8" dir={dir}>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">تحرير محتوى الدورة</h1>
-            <p className="text-muted-foreground">أنت تقوم بتعديل دورة: <span className="font-bold text-primary">{course.title}</span></p>
+            <h1 className="text-2xl font-bold tracking-tight">{bi('تحرير محتوى الدورة', 'Edit Course Content')}</h1>
+            <p className="text-muted-foreground">{bi('أنت تقوم بتعديل دورة:', 'You are editing course:')} <span className="font-bold text-primary">{course.title}</span></p>
           </div>
           <div className="flex gap-2 flex-wrap">
             <Button variant="outline" asChild>
               <Link href="/coach-dashboard/courses">
                 <ArrowRight className="ml-2 h-4 w-4" />
-                العودة
+                {bi('العودة', 'Back')}
               </Link>
             </Button>
             <Button type="submit">
               <Save className="ml-2 h-4 w-4" />
-              حفظ التغييرات
+              {bi('حفظ التغييرات', 'Save changes')}
             </Button>
           </div>
         </div>
 
         {/* Basic Info */}
         <Card className="border-0 shadow-sm">
-          <CardHeader><CardTitle>المعلومات الأساسية</CardTitle></CardHeader>
+          <CardHeader><CardTitle>{bi('المعلومات الأساسية', 'Basic Information')}</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField control={form.control} name="title" render={({ field }) => (
-                <FormItem><FormLabel>عنوان الدورة <span className="text-red-500">*</span></FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>{bi('عنوان الدورة', 'Course title')} <span className="text-red-500">*</span></FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
               )} />
               <FormField control={form.control} name="category" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>الفئة <span className="text-red-500">*</span></FormLabel>
+                  <FormLabel>{bi('الفئة', 'Category')} <span className="text-red-500">*</span></FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
-                      <SelectTrigger><SelectValue placeholder="اختر الفئة" /></SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder={bi('اختر الفئة', 'Choose category')} /></SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       {COURSE_CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
@@ -413,26 +418,26 @@ export default function CourseEditPage({ params }: { params: { courseId: string 
               )} />
             </div>
             <FormField control={form.control} name="description" render={({ field }) => (
-              <FormItem><FormLabel>الوصف</FormLabel><FormControl><Textarea rows={4} {...field} /></FormControl><FormMessage /></FormItem>
+              <FormItem><FormLabel>{bi('الوصف', 'Description')}</FormLabel><FormControl><Textarea rows={4} {...field} /></FormControl><FormMessage /></FormItem>
             )} />
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <FormField control={form.control} name="price" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>السعر (د.أ)</FormLabel>
-                  <FormControl><Input type="number" min={0} placeholder="0 = مجاني" {...field} /></FormControl>
+                  <FormLabel>{bi('السعر (د.أ)', 'Price (JOD)')}</FormLabel>
+                  <FormControl><Input type="number" min={0} placeholder={bi('0 = مجاني', '0 = free')} {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
               <FormField control={form.control} name="duration" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>المدة الإجمالية</FormLabel>
-                  <FormControl><Input placeholder="مثال: 10 ساعات" {...field} /></FormControl>
+                  <FormLabel>{bi('المدة الإجمالية', 'Total duration')}</FormLabel>
+                  <FormControl><Input placeholder={bi('مثال: 10 ساعات', 'e.g. 10 hours')} {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
               <FormField control={form.control} name="coverImageUrl" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>رابط صورة الغلاف</FormLabel>
+                  <FormLabel>{bi('رابط صورة الغلاف', 'Cover image URL')}</FormLabel>
                   <FormControl><Input dir="ltr" placeholder="https://..." {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
@@ -440,8 +445,8 @@ export default function CourseEditPage({ params }: { params: { courseId: string 
             </div>
             <FormField control={form.control} name="videoUrl" render={({ field }) => (
               <FormItem>
-                <FormLabel>رابط الفيديو التعريفي (اختياري)</FormLabel>
-                <FormDescription>فيديو تعريفي يظهر في صفحة الدورة العامة.</FormDescription>
+                <FormLabel>{bi('رابط الفيديو التعريفي (اختياري)', 'Intro video URL (optional)')}</FormLabel>
+                <FormDescription>{bi('فيديو تعريفي يظهر في صفحة الدورة العامة.', 'An intro video that appears on the public course page.')}</FormDescription>
                 <FormControl><Input dir="ltr" placeholder="https://www.youtube.com/watch?v=..." {...field} /></FormControl>
                 <FormMessage />
               </FormItem>
@@ -449,11 +454,11 @@ export default function CourseEditPage({ params }: { params: { courseId: string 
 
             {/* Objectives */}
             <div className="space-y-2">
-              <FormLabel>أهداف الدورة (ما سيتعلمه المشارك)</FormLabel>
+              <FormLabel>{bi('أهداف الدورة (ما سيتعلمه المشارك)', 'Course objectives (what the participant will learn)')}</FormLabel>
               {objectiveFields.map((item, index) => (
                 <div key={item.id} className="flex gap-2">
                   <FormField control={form.control} name={`objectives.${index}.value`} render={({ field }) => (
-                    <FormItem className="flex-1"><FormControl><Input placeholder={`هدف ${index + 1}`} {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem className="flex-1"><FormControl><Input placeholder={bi(`هدف ${index + 1}`, `Objective ${index + 1}`)} {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
                   <Button type="button" variant="ghost" size="icon" onClick={() => removeObjective(index)}>
                     <Trash2 className="h-4 w-4 text-destructive" />
@@ -461,17 +466,17 @@ export default function CourseEditPage({ params }: { params: { courseId: string 
                 </div>
               ))}
               <Button type="button" variant="outline" size="sm" onClick={() => appendObjective({ value: '' })}>
-                <PlusCircle className="ml-2 h-4 w-4" /> إضافة هدف
+                <PlusCircle className="ml-2 h-4 w-4" /> {bi('إضافة هدف', 'Add objective')}
               </Button>
             </div>
 
             {/* Requirements */}
             <div className="space-y-2">
-              <FormLabel>المتطلبات الأساسية</FormLabel>
+              <FormLabel>{bi('المتطلبات الأساسية', 'Prerequisites')}</FormLabel>
               {reqFields.map((item, index) => (
                 <div key={item.id} className="flex gap-2">
                   <FormField control={form.control} name={`requirements.${index}.value`} render={({ field }) => (
-                    <FormItem className="flex-1"><FormControl><Input placeholder={`متطلب ${index + 1}`} {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem className="flex-1"><FormControl><Input placeholder={bi(`متطلب ${index + 1}`, `Requirement ${index + 1}`)} {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
                   <Button type="button" variant="ghost" size="icon" onClick={() => removeReq(index)}>
                     <Trash2 className="h-4 w-4 text-destructive" />
@@ -479,7 +484,7 @@ export default function CourseEditPage({ params }: { params: { courseId: string 
                 </div>
               ))}
               <Button type="button" variant="outline" size="sm" onClick={() => appendReq({ value: '' })}>
-                <PlusCircle className="ml-2 h-4 w-4" /> إضافة متطلب
+                <PlusCircle className="ml-2 h-4 w-4" /> {bi('إضافة متطلب', 'Add requirement')}
               </Button>
             </div>
           </CardContent>
@@ -488,14 +493,14 @@ export default function CourseEditPage({ params }: { params: { courseId: string 
         {/* Lessons */}
         <Card className="border-0 shadow-sm">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Video className="h-5 w-5" /> الدروس والمحتوى</CardTitle>
-            <CardDescription>أضف دروس الدورة وقم بترتيبها. كل درس يمكن أن يحتوي على فيديو ووصف.</CardDescription>
+            <CardTitle className="flex items-center gap-2"><Video className="h-5 w-5" /> {bi('الدروس والمحتوى', 'Lessons & Content')}</CardTitle>
+            <CardDescription>{bi('أضف دروس الدورة وقم بترتيبها. كل درس يمكن أن يحتوي على فيديو ووصف.', 'Add and order the course lessons. Each lesson can have a video and description.')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {lessonsLoading ? (
               <Skeleton className="h-16 w-full" />
             ) : lessons.length === 0 && !showAddLesson ? (
-              <p className="text-sm text-muted-foreground text-center py-4">لا توجد دروس بعد. أضف درسًا للبدء.</p>
+              <p className="text-sm text-muted-foreground text-center py-4">{bi('لا توجد دروس بعد. أضف درسًا للبدء.', 'No lessons yet. Add a lesson to get started.')}</p>
             ) : (
               lessons.map((lesson, index) => (
                 <div key={lesson.id} className="border rounded-md overflow-hidden">
@@ -509,7 +514,7 @@ export default function CourseEditPage({ params }: { params: { courseId: string 
                       </Button>
                     </div>
                     <span className="text-sm font-medium flex-1">{index + 1}. {lesson.title}</span>
-                    {lesson.videoUrl && <Badge variant="secondary" className="text-xs"><Video className="h-3 w-3 ml-1" />فيديو</Badge>}
+                    {lesson.videoUrl && <Badge variant="secondary" className="text-xs"><Video className="h-3 w-3 ml-1" />{bi('فيديو', 'Video')}</Badge>}
                     <Button type="button" variant="ghost" size="icon" onClick={() => setEditingLesson(editingLesson?.id === lesson.id ? null : lesson)}>
                       <Pencil className="h-4 w-4" />
                     </Button>
@@ -520,7 +525,7 @@ export default function CourseEditPage({ params }: { params: { courseId: string 
                   {editingLesson?.id === lesson.id && (
                     <div className="p-3 space-y-3 border-t">
                       <div>
-                        <label className="text-sm font-medium">عنوان الدرس</label>
+                        <label className="text-sm font-medium">{bi('عنوان الدرس', 'Lesson title')}</label>
                         <Input
                           value={editingLesson.title}
                           onChange={e => setEditingLesson(prev => prev ? { ...prev, title: e.target.value } : prev)}
@@ -528,7 +533,7 @@ export default function CourseEditPage({ params }: { params: { courseId: string 
                         />
                       </div>
                       <div>
-                        <label className="text-sm font-medium">الوصف (اختياري)</label>
+                        <label className="text-sm font-medium">{bi('الوصف (اختياري)', 'Description (optional)')}</label>
                         <Textarea
                           value={editingLesson.description || ''}
                           onChange={e => setEditingLesson(prev => prev ? { ...prev, description: e.target.value } : prev)}
@@ -537,7 +542,7 @@ export default function CourseEditPage({ params }: { params: { courseId: string 
                         />
                       </div>
                       <div>
-                        <label className="text-sm font-medium">رابط الفيديو (اختياري)</label>
+                        <label className="text-sm font-medium">{bi('رابط الفيديو (اختياري)', 'Video URL (optional)')}</label>
                         <Input
                           dir="ltr"
                           value={editingLesson.videoUrl || ''}
@@ -549,9 +554,9 @@ export default function CourseEditPage({ params }: { params: { courseId: string 
                       <div className="flex gap-2">
                         <Button type="button" size="sm" onClick={saveEditLesson} disabled={lessonSaving}>
                           <Save className="ml-2 h-4 w-4" />
-                          حفظ
+                          {bi('حفظ', 'Save')}
                         </Button>
-                        <Button type="button" size="sm" variant="ghost" onClick={() => setEditingLesson(null)}>إلغاء</Button>
+                        <Button type="button" size="sm" variant="ghost" onClick={() => setEditingLesson(null)}>{bi('إلغاء', 'Cancel')}</Button>
                       </div>
                     </div>
                   )}
@@ -561,18 +566,18 @@ export default function CourseEditPage({ params }: { params: { courseId: string 
 
             {showAddLesson && (
               <div className="border rounded-md p-3 space-y-3 bg-muted/20">
-                <p className="text-sm font-medium">درس جديد</p>
+                <p className="text-sm font-medium">{bi('درس جديد', 'New lesson')}</p>
                 <div>
-                  <label className="text-sm font-medium">عنوان الدرس *</label>
+                  <label className="text-sm font-medium">{bi('عنوان الدرس *', 'Lesson title *')}</label>
                   <Input
                     value={newLesson.title}
                     onChange={e => setNewLesson(prev => ({ ...prev, title: e.target.value }))}
-                    placeholder="عنوان الدرس..."
+                    placeholder={bi('عنوان الدرس...', 'Lesson title...')}
                     className="mt-1"
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium">الوصف (اختياري)</label>
+                  <label className="text-sm font-medium">{bi('الوصف (اختياري)', 'Description (optional)')}</label>
                   <Textarea
                     value={newLesson.description}
                     onChange={e => setNewLesson(prev => ({ ...prev, description: e.target.value }))}
@@ -581,7 +586,7 @@ export default function CourseEditPage({ params }: { params: { courseId: string 
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium">رابط الفيديو (اختياري)</label>
+                  <label className="text-sm font-medium">{bi('رابط الفيديو (اختياري)', 'Video URL (optional)')}</label>
                   <Input
                     dir="ltr"
                     value={newLesson.videoUrl}
@@ -593,9 +598,9 @@ export default function CourseEditPage({ params }: { params: { courseId: string 
                 <div className="flex gap-2">
                   <Button type="button" size="sm" onClick={addLesson} disabled={lessonSaving || !newLesson.title.trim()}>
                     <PlusCircle className="ml-2 h-4 w-4" />
-                    إضافة
+                    {bi('إضافة', 'Add')}
                   </Button>
-                  <Button type="button" size="sm" variant="ghost" onClick={() => { setShowAddLesson(false); setNewLesson({ title: '', description: '', videoUrl: '' }); }}>إلغاء</Button>
+                  <Button type="button" size="sm" variant="ghost" onClick={() => { setShowAddLesson(false); setNewLesson({ title: '', description: '', videoUrl: '' }); }}>{bi('إلغاء', 'Cancel')}</Button>
                 </div>
               </div>
             )}
@@ -603,7 +608,7 @@ export default function CourseEditPage({ params }: { params: { courseId: string 
             {!showAddLesson && (
               <Button type="button" variant="outline" size="sm" onClick={() => setShowAddLesson(true)}>
                 <PlusCircle className="ml-2 h-4 w-4" />
-                إضافة درس
+                {bi('إضافة درس', 'Add lesson')}
               </Button>
             )}
           </CardContent>
@@ -612,18 +617,18 @@ export default function CourseEditPage({ params }: { params: { courseId: string 
         {/* Materials */}
         <Card className="border-0 shadow-sm">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><FileText className="h-5 w-5" /> المواد التعليمية</CardTitle>
-            <CardDescription>أضف روابط ومستندات ومواد تعليمية مرتبطة بالدورة.</CardDescription>
+            <CardTitle className="flex items-center gap-2"><FileText className="h-5 w-5" /> {bi('المواد التعليمية', 'Learning Materials')}</CardTitle>
+            <CardDescription>{bi('أضف روابط ومستندات ومواد تعليمية مرتبطة بالدورة.', 'Add links, documents, and learning materials related to the course.')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {materials.length === 0 && !showAddMaterial ? (
-              <p className="text-sm text-muted-foreground text-center py-4">لا توجد مواد تعليمية بعد.</p>
+              <p className="text-sm text-muted-foreground text-center py-4">{bi('لا توجد مواد تعليمية بعد.', 'No learning materials yet.')}</p>
             ) : (
               materials.map((mat, index) => (
                 <div key={index} className="flex items-center gap-2 p-3 border rounded-md">
                   <span className="text-muted-foreground">{materialTypeIcon(mat.type)}</span>
                   <span className="flex-1 text-sm font-medium">{mat.title}</span>
-                  <Badge variant="outline" className="text-xs">{materialTypeLabel(mat.type)}</Badge>
+                  <Badge variant="outline" className="text-xs">{materialTypeLabel(mat.type, bi)}</Badge>
                   <a href={mat.url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline max-w-[120px] truncate">{mat.url}</a>
                   <Button type="button" variant="ghost" size="icon" onClick={() => deleteMaterial(index)}>
                     <Trash2 className="h-4 w-4 text-destructive" />
@@ -634,18 +639,18 @@ export default function CourseEditPage({ params }: { params: { courseId: string 
 
             {showAddMaterial && (
               <div className="border rounded-md p-3 space-y-3 bg-muted/20">
-                <p className="text-sm font-medium">مادة جديدة</p>
+                <p className="text-sm font-medium">{bi('مادة جديدة', 'New material')}</p>
                 <div>
-                  <label className="text-sm font-medium">عنوان المادة *</label>
+                  <label className="text-sm font-medium">{bi('عنوان المادة *', 'Material title *')}</label>
                   <Input
                     value={newMaterial.title}
                     onChange={e => setNewMaterial(prev => ({ ...prev, title: e.target.value }))}
-                    placeholder="اسم المادة التعليمية..."
+                    placeholder={bi('اسم المادة التعليمية...', 'Learning material name...')}
                     className="mt-1"
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium">الرابط *</label>
+                  <label className="text-sm font-medium">{bi('الرابط *', 'Link *')}</label>
                   <Input
                     dir="ltr"
                     value={newMaterial.url}
@@ -655,22 +660,22 @@ export default function CourseEditPage({ params }: { params: { courseId: string 
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium">النوع</label>
+                  <label className="text-sm font-medium">{bi('النوع', 'Type')}</label>
                   <Select value={newMaterial.type} onValueChange={(v) => setNewMaterial(prev => ({ ...prev, type: v as Material['type'] }))}>
                     <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="link">رابط</SelectItem>
+                      <SelectItem value="link">{bi('رابط', 'Link')}</SelectItem>
                       <SelectItem value="pdf">PDF</SelectItem>
-                      <SelectItem value="doc">مستند</SelectItem>
+                      <SelectItem value="doc">{bi('مستند', 'Document')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="flex gap-2">
                   <Button type="button" size="sm" onClick={addMaterial} disabled={!newMaterial.title.trim() || !newMaterial.url.trim()}>
                     <PlusCircle className="ml-2 h-4 w-4" />
-                    إضافة
+                    {bi('إضافة', 'Add')}
                   </Button>
-                  <Button type="button" size="sm" variant="ghost" onClick={() => { setShowAddMaterial(false); setNewMaterial({ title: '', url: '', type: 'link' }); }}>إلغاء</Button>
+                  <Button type="button" size="sm" variant="ghost" onClick={() => { setShowAddMaterial(false); setNewMaterial({ title: '', url: '', type: 'link' }); }}>{bi('إلغاء', 'Cancel')}</Button>
                 </div>
               </div>
             )}
@@ -678,7 +683,7 @@ export default function CourseEditPage({ params }: { params: { courseId: string 
             {!showAddMaterial && (
               <Button type="button" variant="outline" size="sm" onClick={() => setShowAddMaterial(true)}>
                 <PlusCircle className="ml-2 h-4 w-4" />
-                إضافة مادة
+                {bi('إضافة مادة', 'Add material')}
               </Button>
             )}
           </CardContent>
@@ -687,27 +692,27 @@ export default function CourseEditPage({ params }: { params: { courseId: string 
         {/* Quiz */}
         <Card className="border-0 shadow-sm">
           <CardHeader>
-            <CardTitle>الاختبار القصير</CardTitle>
-            <CardDescription>أنشئ اختبارًا قصيرًا للتحقق من فهم المستفيدين. اتركه فارغًا إذا لم تكن هناك حاجة لاختبار.</CardDescription>
+            <CardTitle>{bi('الاختبار القصير', 'Short Quiz')}</CardTitle>
+            <CardDescription>{bi('أنشئ اختبارًا قصيرًا للتحقق من فهم المستفيدين. اتركه فارغًا إذا لم تكن هناك حاجة لاختبار.', "Create a short quiz to check beneficiaries' understanding. Leave it empty if a quiz isn't needed.")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <FormField control={form.control} name="quiz.question" render={({ field }) => (
               <FormItem>
-                <FormLabel>السؤال</FormLabel>
-                <FormControl><Textarea placeholder="ما هو أهم عنصر في...؟" {...field} /></FormControl>
+                <FormLabel>{bi('السؤال', 'Question')}</FormLabel>
+                <FormControl><Textarea placeholder={bi('ما هو أهم عنصر في...؟', 'What is the most important element in...?')} {...field} /></FormControl>
                 <FormMessage />
               </FormItem>
             )} />
             <FormField control={form.control} name="quiz.correctAnswer" render={({ field }) => (
               <FormItem className="space-y-3">
-                <FormLabel>الخيارات (اختر الإجابة الصحيحة)</FormLabel>
+                <FormLabel>{bi('الخيارات (اختر الإجابة الصحيحة)', 'Options (choose the correct answer)')}</FormLabel>
                 <FormControl>
                   <RadioGroup onValueChange={field.onChange} value={field.value} className="flex flex-col space-y-2">
                     {fields.map((item, index) => (
                       <FormField key={item.id} control={form.control} name={`quiz.options.${index}.value`} render={({ field: optionField }) => (
                         <FormItem className="flex items-center gap-2 space-y-0">
                           <FormControl><RadioGroupItem value={optionField.value} /></FormControl>
-                          <Input {...optionField} placeholder={`الخيار ${index + 1}`} />
+                          <Input {...optionField} placeholder={bi(`الخيار ${index + 1}`, `Option ${index + 1}`)} />
                           <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 2}>
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
@@ -722,9 +727,9 @@ export default function CourseEditPage({ params }: { params: { courseId: string 
             <div className="flex items-center gap-2">
               <Button type="button" variant="outline" size="sm" onClick={() => append({ value: "" })} disabled={fields.length >= 4}>
                 <PlusCircle className="ml-2 h-4 w-4" />
-                إضافة خيار
+                {bi('إضافة خيار', 'Add option')}
               </Button>
-              <FormDescription>يمكنك إضافة ما يصل إلى 4 خيارات.</FormDescription>
+              <FormDescription>{bi('يمكنك إضافة ما يصل إلى 4 خيارات.', 'You can add up to 4 options.')}</FormDescription>
             </div>
           </CardContent>
         </Card>
@@ -732,20 +737,20 @@ export default function CourseEditPage({ params }: { params: { courseId: string 
         {/* Assessments */}
         <Card className="border-0 shadow-sm">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><BookCheck className="h-5 w-5" />التقييمات</CardTitle>
-            <CardDescription>أنشئ تقييمًا قبليًا وبعديًا لقياس مدى تقدم المستفيدين. هذه التقييمات اختيارية.</CardDescription>
+            <CardTitle className="flex items-center gap-2"><BookCheck className="h-5 w-5" />{bi('التقييمات', 'Assessments')}</CardTitle>
+            <CardDescription>{bi('أنشئ تقييمًا قبليًا وبعديًا لقياس مدى تقدم المستفيدين. هذه التقييمات اختيارية.', 'Create a pre- and post-assessment to measure beneficiary progress. These assessments are optional.')}</CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="pre-assessment">
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="pre-assessment">التقييم القبلي</TabsTrigger>
-                <TabsTrigger value="post-assessment">التقييم البعدي</TabsTrigger>
+                <TabsTrigger value="pre-assessment">{bi('التقييم القبلي', 'Pre-assessment')}</TabsTrigger>
+                <TabsTrigger value="post-assessment">{bi('التقييم البعدي', 'Post-assessment')}</TabsTrigger>
               </TabsList>
               <TabsContent value="pre-assessment" className="pt-4">
-                <AssessmentBuilder control={form.control} name="preAssessment" title="أسئلة التقييم القبلي" />
+                <AssessmentBuilder control={form.control} name="preAssessment" title={bi('أسئلة التقييم القبلي', 'Pre-assessment questions')} />
               </TabsContent>
               <TabsContent value="post-assessment" className="pt-4">
-                <AssessmentBuilder control={form.control} name="postAssessment" title="أسئلة التقييم البعدي" />
+                <AssessmentBuilder control={form.control} name="postAssessment" title={bi('أسئلة التقييم البعدي', 'Post-assessment questions')} />
               </TabsContent>
             </Tabs>
           </CardContent>
