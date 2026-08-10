@@ -1,15 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import { uniqueStoreSlug as uniqueSlug } from '@/lib/store-slug';
+import { resolveMerchantScope, hasMerchantPermission } from '@/lib/merchant-scope';
 
 // إنشاء متجر جديد
 export async function POST(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
     const decoded = await adminAuth.verifyIdToken(token);
-    const uid = decoded.uid;
+    const scope = await resolveMerchantScope(decoded.uid);
+    if (!hasMerchantPermission(scope, 'store')) {
+      return NextResponse.json({ error: 'لا تملك صلاحية إدارة المتجر' }, { status: 403 });
+    }
 
-    const userDoc = await adminDb.collection('users').doc(uid).get();
+    const userDoc = await adminDb.collection('users').doc(scope.merchantId).get();
     const userData = userDoc.data() || {};
 
     const body = await req.json();
@@ -20,7 +24,7 @@ export async function POST(req: NextRequest) {
     const storeData = {
       ...data,
       slug,
-      beneficiaryId: uid,
+      beneficiaryId: scope.merchantId,
       beneficiaryName: userData.name || '',
       organizationId: userData.organizationId || '',
       createdAt: new Date().toISOString(),
@@ -39,16 +43,19 @@ export async function PUT(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
     const decoded = await adminAuth.verifyIdToken(token);
-    const uid = decoded.uid;
+    const scope = await resolveMerchantScope(decoded.uid);
+    if (!hasMerchantPermission(scope, 'store')) {
+      return NextResponse.json({ error: 'لا تملك صلاحية إدارة المتجر' }, { status: 403 });
+    }
 
     const body = await req.json();
     const { id, ...data } = body;
 
     if (!id) return NextResponse.json({ error: 'id مطلوب' }, { status: 400 });
 
-    // تأكد أن المتجر تابع لهذا المستفيد
+    // تأكد أن المتجر تابع لهذا التاجر
     const storeDoc = await adminDb.collection('stores').doc(id).get();
-    if (!storeDoc.exists || storeDoc.data()?.beneficiaryId !== uid) {
+    if (!storeDoc.exists || storeDoc.data()?.beneficiaryId !== scope.merchantId) {
       return NextResponse.json({ error: 'غير مصرح' }, { status: 403 });
     }
 

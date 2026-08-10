@@ -4,8 +4,9 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutGrid, Search, Settings, Store,
-  Users, BarChart3, MessageSquare, LogOut, Layers, Boxes, ClipboardList,
+  Users, BarChart3, MessageSquare, LogOut, Layers, Boxes, ClipboardList, ShieldCheck,
 } from "lucide-react";
+import type { MerchantPermission } from "@/lib/merchant-permissions";
 import { signOut } from "firebase/auth";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/firebase/provider";
@@ -30,15 +31,15 @@ import { NotificationBell } from "@/components/notification-bell";
 import { MessageBell } from "@/components/message-bell";
 import { ThemeToggle } from "@/components/theme-toggle";
 
-const menuItems = [
+const menuItems: { href: string; label: string; icon: any; permission?: MerchantPermission }[] = [
   { href: "/merchant-dashboard", label: "لوحة التحكم", icon: LayoutGrid },
-  { href: "/merchant-dashboard/store", label: "متجري", icon: Store },
-  { href: "/merchant-dashboard/inventory", label: "المخزون", icon: Boxes },
-  { href: "/merchant-dashboard/orders", label: "الطلبات", icon: ClipboardList },
-  { href: "/merchant-dashboard/customers", label: "العملاء", icon: Users },
-  { href: "/merchant-dashboard/reports", label: "التقارير", icon: BarChart3 },
+  { href: "/merchant-dashboard/store", label: "متجري", icon: Store, permission: "store" },
+  { href: "/merchant-dashboard/inventory", label: "المخزون", icon: Boxes, permission: "inventory" },
+  { href: "/merchant-dashboard/orders", label: "الطلبات", icon: ClipboardList, permission: "orders" },
+  { href: "/merchant-dashboard/customers", label: "العملاء", icon: Users, permission: "customers" },
+  { href: "/merchant-dashboard/reports", label: "التقارير", icon: BarChart3, permission: "reports" },
   { href: "/merchant-dashboard/messages", label: "الرسائل", icon: MessageSquare },
-  { href: "/merchant-dashboard/content", label: "محتوى السوشال ميديا", icon: Layers },
+  { href: "/merchant-dashboard/content", label: "محتوى السوشال ميديا", icon: Layers, permission: "content" },
 ];
 
 export default function MerchantDashboardLayout({ children }: { children: React.ReactNode }) {
@@ -87,6 +88,15 @@ export default function MerchantDashboardLayout({ children }: { children: React.
   const displayName = userProfile?.name || authUser?.displayName || 'تاجر';
   const displayEmail = userProfile?.email || authUser?.email || '';
 
+  const isStaff = (userProfile as any)?.role === 'merchant_staff';
+  const isStaffAdmin = isStaff && (userProfile as any)?.merchantRole === 'admin';
+  const staffPermissions: string[] = isStaff ? ((userProfile as any)?.permissions || []) : [];
+  const visibleMenuItems = menuItems.filter(item => {
+    if (!isStaff || isStaffAdmin) return true;
+    if (!item.permission) return true;
+    return staffPermissions.includes(item.permission);
+  });
+
   return (
     <SidebarProvider dir="rtl">
       <Sidebar side="right">
@@ -105,7 +115,7 @@ export default function MerchantDashboardLayout({ children }: { children: React.
         </SidebarHeader>
         <SidebarContent className="px-2 py-3">
           <SidebarMenu className="gap-0.5">
-            {menuItems.map((item) => (
+            {visibleMenuItems.map((item) => (
               <SidebarMenuItem key={item.label}>
                 <SidebarMenuButton
                   asChild
@@ -123,6 +133,11 @@ export default function MerchantDashboardLayout({ children }: { children: React.
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter className="border-t border-sidebar-border/70 p-3 gap-1">
+          {!isStaff && (
+            <SidebarMenuButton asChild tooltip="الفريق والصلاحيات" className="h-9 rounded-lg text-sidebar-foreground">
+              <Link href="/merchant-dashboard/team"><ShieldCheck /><span>الفريق والصلاحيات</span></Link>
+            </SidebarMenuButton>
+          )}
           <SidebarMenuButton asChild tooltip="الإعدادات" className="h-9 rounded-lg text-sidebar-foreground">
             <Link href="/merchant-dashboard/settings"><Settings /><span>الإعدادات</span></Link>
           </SidebarMenuButton>

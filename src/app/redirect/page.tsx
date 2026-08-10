@@ -12,7 +12,8 @@ function getRoleDashboard(role: string) {
     case "mentor":       return "/mentor-dashboard";
     case "coach":        return "/coach-dashboard";
     case "admin":        return "/admin-dashboard";
-    case "merchant":     return "/merchant-dashboard";
+    case "merchant":
+    case "merchant_staff": return "/merchant-dashboard";
     default:             return "/dashboard";
   }
 }
