@@ -18,6 +18,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useLanguage } from "@/components/language-provider";
 
 interface OrgSub {
   org: { id: string; name: string; plan: string };
@@ -47,9 +48,17 @@ const statusConfig: Record<string, { label: string; color: string; icon: any }> 
   pending: { label: 'معلق', color: 'text-yellow-400 bg-yellow-500/20 border-yellow-500/30', icon: Clock },
 };
 
-function formatDate(d?: string) {
+const statusConfigEn: Record<string, { label: string; color: string; icon: any }> = {
+  active: { label: 'Active', color: 'text-emerald-400 bg-emerald-500/20 border-emerald-500/30', icon: CheckCircle },
+  expired: { label: 'Expired', color: 'text-red-400 bg-red-500/20 border-red-500/30', icon: XCircle },
+  trial: { label: 'Trial', color: 'text-blue-400 bg-blue-500/20 border-blue-500/30', icon: Clock },
+  cancelled: { label: 'Cancelled', color: 'text-muted-foreground bg-muted-foreground/20 border-muted-foreground/30', icon: XCircle },
+  pending: { label: 'Pending', color: 'text-yellow-400 bg-yellow-500/20 border-yellow-500/30', icon: Clock },
+};
+
+function formatDate(d?: string, locale: string = 'ar-EG') {
   if (!d) return '—';
-  return new Date(d).toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric' });
+  return new Date(d).toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 function daysLeft(endDate?: string) {
@@ -62,6 +71,10 @@ export default function SubscriptionsPage() {
   const [data, setData] = useState<OrgSub[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
+  const locale = lang === 'en' ? 'en-US' : 'ar-EG';
+  const tStatus = lang === 'en' ? statusConfigEn : statusConfig;
   const [editItem, setEditItem] = useState<OrgSub | null>(null);
   const [cancelItem, setCancelItem] = useState<OrgSub | null>(null);
   const [saving, setSaving] = useState(false);
@@ -146,27 +159,31 @@ export default function SubscriptionsPage() {
   };
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={dir}>
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">الاشتراكات</h1>
-          <p className="text-muted-foreground text-sm">إدارة اشتراكات المنظمات وتتبع حالتها</p>
+          <h1 className="text-2xl font-bold text-foreground">{bi('الاشتراكات', 'Subscriptions')}</h1>
+          <p className="text-muted-foreground text-sm">{bi('إدارة اشتراكات المنظمات وتتبع حالتها', 'Manage organization subscriptions and track their status')}</p>
         </div>
         <ExportButton
-          title="اشتراكات المنظمات"
+          title={bi('اشتراكات المنظمات', 'Organization Subscriptions')}
           filename={`subscriptions-${new Date().toISOString().slice(0,10)}`}
-          headers={['المنظمة', 'الخطة', 'الحالة', 'دورة الفوترة', 'السعر', 'العملة', 'تاريخ البداية', 'تاريخ الانتهاء']}
+          headers={lang === 'en'
+            ? ['Organization', 'Plan', 'Status', 'Billing Cycle', 'Price', 'Currency', 'Start Date', 'End Date']
+            : ['المنظمة', 'الخطة', 'الحالة', 'دورة الفوترة', 'السعر', 'العملة', 'تاريخ البداية', 'تاريخ الانتهاء']}
           rows={data.map(d => [
             d.org.name || '',
             d.subscription?.planName || '—',
-            statusConfig[d.subscription?.status || '']?.label || d.subscription?.status || 'بدون اشتراك',
-            d.subscription?.billingCycle === 'annual' ? 'سنوي' : d.subscription?.billingCycle === 'monthly' ? 'شهري' : '—',
+            tStatus[d.subscription?.status || '']?.label || d.subscription?.status || bi('بدون اشتراك', 'No subscription'),
+            d.subscription?.billingCycle === 'annual' ? bi('سنوي', 'Annual') : d.subscription?.billingCycle === 'monthly' ? bi('شهري', 'Monthly') : '—',
             d.subscription?.price ?? '—',
             d.subscription?.currency || '—',
-            d.subscription?.startDate ? formatDate(d.subscription.startDate) : '—',
-            d.subscription?.endDate ? formatDate(d.subscription.endDate) : '—',
+            d.subscription?.startDate ? formatDate(d.subscription.startDate, locale) : '—',
+            d.subscription?.endDate ? formatDate(d.subscription.endDate, locale) : '—',
           ])}
-          options={{ summary: { 'إجمالي المنظمات': String(stats.total), 'نشطة': String(stats.active), 'منتهية': String(stats.expired), 'بدون اشتراك': String(stats.noSub) } }}
+          options={{ summary: lang === 'en'
+            ? { 'Total Organizations': String(stats.total), 'Active': String(stats.active), 'Expired': String(stats.expired), 'No Subscription': String(stats.noSub) }
+            : { 'إجمالي المنظمات': String(stats.total), 'نشطة': String(stats.active), 'منتهية': String(stats.expired), 'بدون اشتراك': String(stats.noSub) } }}
           variant="outline"
         />
       </div>
@@ -174,10 +191,10 @@ export default function SubscriptionsPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'إجمالي المنظمات', value: stats.total, color: 'text-foreground', bg: 'bg-muted/40' },
-          { label: 'اشتراكات نشطة', value: stats.active, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
-          { label: 'منتهية الصلاحية', value: stats.expired, color: 'text-red-400', bg: 'bg-red-500/10' },
-          { label: 'بدون اشتراك', value: stats.noSub, color: 'text-yellow-400', bg: 'bg-yellow-500/10' },
+          { label: bi('إجمالي المنظمات', 'Total Organizations'), value: stats.total, color: 'text-foreground', bg: 'bg-muted/40' },
+          { label: bi('اشتراكات نشطة', 'Active Subscriptions'), value: stats.active, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+          { label: bi('منتهية الصلاحية', 'Expired'), value: stats.expired, color: 'text-red-400', bg: 'bg-red-500/10' },
+          { label: bi('بدون اشتراك', 'No Subscription'), value: stats.noSub, color: 'text-yellow-400', bg: 'bg-yellow-500/10' },
         ].map(s => (
           <Card key={s.label} className={`${s.bg} border-border`}>
             <CardContent className="p-4 text-center">
@@ -190,7 +207,7 @@ export default function SubscriptionsPage() {
 
       {/* Table */}
       {loading ? (
-        <p className="text-muted-foreground text-center py-12">جاري التحميل...</p>
+        <p className="text-muted-foreground text-center py-12">{bi('جاري التحميل...', 'Loading...')}</p>
       ) : (
         <Card className="border-0 shadow-sm">
           <CardContent className="p-0">
@@ -198,18 +215,18 @@ export default function SubscriptionsPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-border">
-                    <th className="text-right text-muted-foreground text-xs px-4 py-3">المنظمة</th>
-                    <th className="text-right text-muted-foreground text-xs px-4 py-3 hidden sm:table-cell">الخطة</th>
-                    <th className="text-right text-muted-foreground text-xs px-4 py-3">الحالة</th>
-                    <th className="text-right text-muted-foreground text-xs px-4 py-3 hidden md:table-cell">تاريخ الانتهاء</th>
-                    <th className="text-right text-muted-foreground text-xs px-4 py-3 hidden lg:table-cell">السعر</th>
-                    <th className="text-right text-muted-foreground text-xs px-4 py-3">إجراءات</th>
+                    <th className="text-right text-muted-foreground text-xs px-4 py-3">{bi('المنظمة', 'Organization')}</th>
+                    <th className="text-right text-muted-foreground text-xs px-4 py-3 hidden sm:table-cell">{bi('الخطة', 'Plan')}</th>
+                    <th className="text-right text-muted-foreground text-xs px-4 py-3">{bi('الحالة', 'Status')}</th>
+                    <th className="text-right text-muted-foreground text-xs px-4 py-3 hidden md:table-cell">{bi('تاريخ الانتهاء', 'End Date')}</th>
+                    <th className="text-right text-muted-foreground text-xs px-4 py-3 hidden lg:table-cell">{bi('السعر', 'Price')}</th>
+                    <th className="text-right text-muted-foreground text-xs px-4 py-3">{bi('إجراءات', 'Actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {data.map(item => {
                     const sub = item.subscription;
-                    const statusInfo = statusConfig[sub?.status || 'pending'] || statusConfig.pending;
+                    const statusInfo = tStatus[sub?.status || 'pending'] || tStatus.pending;
                     const StatusIcon = statusInfo.icon;
                     const days = daysLeft(sub?.endDate);
 
@@ -238,13 +255,13 @@ export default function SubscriptionsPage() {
                         </td>
                         <td className="px-4 py-3 hidden md:table-cell">
                           <div>
-                            <span className="text-foreground/90 text-sm">{formatDate(sub?.endDate)}</span>
+                            <span className="text-foreground/90 text-sm">{formatDate(sub?.endDate, locale)}</span>
                             {days !== null && days >= 0 && days <= 30 && (
                               <p className={`text-xs mt-0.5 ${days <= 7 ? 'text-red-400' : 'text-yellow-400'}`}>
-                                {days === 0 ? 'ينتهي اليوم' : `${days} يوم`}
+                                {days === 0 ? bi('ينتهي اليوم', 'Expires today') : bi(`${days} يوم`, `${days} days`)}
                               </p>
                             )}
-                            {days !== null && days < 0 && <p className="text-xs text-red-400 mt-0.5">انتهى منذ {Math.abs(days)} يوم</p>}
+                            {days !== null && days < 0 && <p className="text-xs text-red-400 mt-0.5">{bi(`انتهى منذ ${Math.abs(days)} يوم`, `Expired ${Math.abs(days)} days ago`)}</p>}
                           </div>
                         </td>
                         <td className="px-4 py-3 hidden lg:table-cell">
@@ -258,11 +275,11 @@ export default function SubscriptionsPage() {
                           <div className="flex gap-1">
                             <Button size="sm" variant="ghost" onClick={() => openEdit(item)} className="h-8 px-2 text-muted-foreground hover:text-foreground text-xs gap-1">
                               <Pencil className="h-3 w-3" />
-                              <span className="hidden sm:inline">تعديل</span>
+                              <span className="hidden sm:inline">{bi('تعديل', 'Edit')}</span>
                             </Button>
                             {sub && sub.status === 'active' && (
                               <Button size="sm" variant="ghost" onClick={() => setCancelItem(item)} className="h-8 px-2 text-red-400 hover:text-red-300 text-xs">
-                                إلغاء
+                                {bi('إلغاء', 'Cancel')}
                               </Button>
                             )}
                           </div>
@@ -279,20 +296,20 @@ export default function SubscriptionsPage() {
 
       {/* Edit Dialog */}
       <Dialog open={!!editItem} onOpenChange={o => !o && setEditItem(null)}>
-        <DialogContent dir="rtl" className="sm:max-w-lg">
+        <DialogContent dir={dir} className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>اشتراك: {editItem?.org.name}</DialogTitle>
+            <DialogTitle>{bi('اشتراك:', 'Subscription:')} {editItem?.org.name}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             {/* Plan */}
             <div className="space-y-2">
-              <Label>الخطة</Label>
+              <Label>{bi('الخطة', 'Plan')}</Label>
               <Select value={form.planId} onValueChange={handlePlanChange}>
-                <SelectTrigger><SelectValue placeholder="اختر الخطة..." /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={bi('اختر الخطة...', 'Choose plan...')} /></SelectTrigger>
                 <SelectContent>
                   {plans.map(p => (
                     <SelectItem key={p.id} value={p.id}>
-                      {p.name} — {p.priceMonthly} {p.currency}/شهر
+                      {p.name} — {p.priceMonthly} {p.currency}{bi('/شهر', '/mo')}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -302,20 +319,20 @@ export default function SubscriptionsPage() {
             {/* Status & Billing */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>الحالة</Label>
+                <Label>{bi('الحالة', 'Status')}</Label>
                 <Select value={form.status} onValueChange={v => setForm(f => ({ ...f, status: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="active">نشط</SelectItem>
-                    <SelectItem value="trial">تجريبي</SelectItem>
-                    <SelectItem value="expired">منتهي</SelectItem>
-                    <SelectItem value="cancelled">ملغي</SelectItem>
-                    <SelectItem value="pending">معلق</SelectItem>
+                    <SelectItem value="active">{bi('نشط', 'Active')}</SelectItem>
+                    <SelectItem value="trial">{bi('تجريبي', 'Trial')}</SelectItem>
+                    <SelectItem value="expired">{bi('منتهي', 'Expired')}</SelectItem>
+                    <SelectItem value="cancelled">{bi('ملغي', 'Cancelled')}</SelectItem>
+                    <SelectItem value="pending">{bi('معلق', 'Pending')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>دورة الفوترة</Label>
+                <Label>{bi('دورة الفوترة', 'Billing Cycle')}</Label>
                 <Select value={form.billingCycle} onValueChange={v => {
                   const plan = plans.find(p => p.id === form.planId);
                   setForm(f => ({
@@ -325,9 +342,9 @@ export default function SubscriptionsPage() {
                 }}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="monthly">شهري</SelectItem>
-                    <SelectItem value="annual">سنوي</SelectItem>
-                    <SelectItem value="lifetime">مدى الحياة</SelectItem>
+                    <SelectItem value="monthly">{bi('شهري', 'Monthly')}</SelectItem>
+                    <SelectItem value="annual">{bi('سنوي', 'Annual')}</SelectItem>
+                    <SelectItem value="lifetime">{bi('مدى الحياة', 'Lifetime')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -336,11 +353,11 @@ export default function SubscriptionsPage() {
             {/* Dates */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>تاريخ البدء</Label>
+                <Label>{bi('تاريخ البدء', 'Start Date')}</Label>
                 <Input type="date" value={form.startDate} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))} dir="ltr" />
               </div>
               <div className="space-y-2">
-                <Label>تاريخ الانتهاء</Label>
+                <Label>{bi('تاريخ الانتهاء', 'End Date')}</Label>
                 <Input type="date" value={form.endDate} onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))} dir="ltr" />
               </div>
             </div>
@@ -348,36 +365,36 @@ export default function SubscriptionsPage() {
             {/* Price */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="col-span-2 space-y-2">
-                <Label>السعر الفعلي</Label>
+                <Label>{bi('السعر الفعلي', 'Actual Price')}</Label>
                 <Input type="number" value={form.price} onChange={e => setForm(f => ({ ...f, price: +e.target.value }))} />
               </div>
               <div className="space-y-2">
-                <Label>العملة</Label>
+                <Label>{bi('العملة', 'Currency')}</Label>
                 <Input value={form.currency} onChange={e => setForm(f => ({ ...f, currency: e.target.value }))} dir="ltr" />
               </div>
             </div>
 
             {/* Notes */}
             <div className="space-y-2">
-              <Label>ملاحظات</Label>
-              <Input value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="ملاحظات إضافية..." />
+              <Label>{bi('ملاحظات', 'Notes')}</Label>
+              <Input value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder={bi('ملاحظات إضافية...', 'Additional notes...')} />
             </div>
 
             {/* Permanent free access */}
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div>
-                <Label>منح اشتراك مجاني دائم</Label>
+                <Label>{bi('منح اشتراك مجاني دائم', 'Grant permanent free access')}</Label>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  تتجاهل هذه المنظمة انتهاء الفترة التجريبية أو الاشتراك ولا تُقفل أبدًا.
+                  {bi('تتجاهل هذه المنظمة انتهاء الفترة التجريبية أو الاشتراك ولا تُقفل أبدًا.', 'This organization ignores trial/subscription expiry and is never locked.')}
                 </p>
               </div>
               <Switch checked={form.permanentFree} onCheckedChange={v => setForm(f => ({ ...f, permanentFree: v }))} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditItem(null)}>إلغاء</Button>
+            <Button variant="outline" onClick={() => setEditItem(null)}>{bi('إلغاء', 'Cancel')}</Button>
             <Button onClick={handleSave} disabled={saving}>
-              {saving ? 'جاري الحفظ...' : 'حفظ الاشتراك'}
+              {saving ? bi('جاري الحفظ...', 'Saving...') : bi('حفظ الاشتراك', 'Save subscription')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -385,14 +402,14 @@ export default function SubscriptionsPage() {
 
       {/* Cancel Confirm */}
       <AlertDialog open={!!cancelItem} onOpenChange={o => !o && setCancelItem(null)}>
-        <AlertDialogContent dir="rtl">
+        <AlertDialogContent dir={dir}>
           <AlertDialogHeader>
-            <AlertDialogTitle>إلغاء الاشتراك</AlertDialogTitle>
-            <AlertDialogDescription>هل تريد إلغاء اشتراك "{cancelItem?.org.name}"؟</AlertDialogDescription>
+            <AlertDialogTitle>{bi('إلغاء الاشتراك', 'Cancel Subscription')}</AlertDialogTitle>
+            <AlertDialogDescription>{bi(`هل تريد إلغاء اشتراك "${cancelItem?.org.name}"؟`, `Do you want to cancel "${cancelItem?.org.name}"'s subscription?`)}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>تراجع</AlertDialogCancel>
-            <AlertDialogAction onClick={handleCancel} className="bg-red-600 hover:bg-red-700">إلغاء الاشتراك</AlertDialogAction>
+            <AlertDialogCancel>{bi('تراجع', 'Back')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleCancel} className="bg-red-600 hover:bg-red-700">{bi('إلغاء الاشتراك', 'Cancel Subscription')}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -18,6 +18,7 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
+import { useLanguage } from "@/components/language-provider";
 
 interface ContentItem {
   id: string;
@@ -33,27 +34,29 @@ interface ContentItem {
   [key: string]: any;
 }
 
-const COLLECTIONS: Record<string, { label: string; col: string; titleField: string; subtitleField?: string }> = {
-  projects:     { label: 'الفرص والمشاريع', col: 'projects',     titleField: 'title', subtitleField: 'organizationName' },
-  articles:     { label: 'المقالات',         col: 'articles',     titleField: 'title', subtitleField: 'authorName' },
-  live_sessions:{ label: 'الجلسات المباشرة', col: 'live_sessions', titleField: 'title', subtitleField: 'coachName' },
-  courses:      { label: 'الدورات التدريبية', col: 'courses',     titleField: 'title', subtitleField: 'coachName' },
+const COLLECTIONS: Record<string, { label: string; labelEn: string; col: string; titleField: string; subtitleField?: string }> = {
+  projects:     { label: 'الفرص والمشاريع', labelEn: 'Opportunities & Projects', col: 'projects',     titleField: 'title', subtitleField: 'organizationName' },
+  articles:     { label: 'المقالات',         labelEn: 'Articles', col: 'articles',     titleField: 'title', subtitleField: 'authorName' },
+  live_sessions:{ label: 'الجلسات المباشرة', labelEn: 'Live Sessions', col: 'live_sessions', titleField: 'title', subtitleField: 'coachName' },
+  courses:      { label: 'الدورات التدريبية', labelEn: 'Courses', col: 'courses',     titleField: 'title', subtitleField: 'coachName' },
 };
 
 const PROJECT_TYPES = ['تدريب', 'تطوع', 'وظيفة', 'منحة', 'مبادرة', 'أخرى'];
 
 function StatusBadge({ status }: { status?: string }) {
   const isPublished = status === 'published';
+  const { lang } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   return (
     <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${isPublished ? 'bg-emerald-500/20 text-emerald-400' : 'bg-yellow-500/20 text-yellow-400'}`}>
-      {isPublished ? '● منشور' : '● مسودة'}
+      {isPublished ? bi('● منشور', '● Published') : bi('● مسودة', '● Draft')}
     </span>
   );
 }
 
-function formatDate(d?: string) {
+function formatDate(d?: string, locale: string = 'ar-SA') {
   if (!d) return '—';
-  return new Date(d).toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' });
+  return new Date(d).toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 async function adminUpload(file: File, folder: string): Promise<string> {
@@ -69,6 +72,9 @@ async function adminUpload(file: File, folder: string): Promise<string> {
 export default function ContentPage() {
   const [items, setItems] = useState<Record<string, ContentItem[]>>({});
   const [loading, setLoading] = useState(true);
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
+  const locale = lang === 'en' ? 'en-US' : 'ar-SA';
   const [toggling, setToggling] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ col: string; id: string; title: string } | null>(null);
   const [showAdd, setShowAdd] = useState<string | null>(null); // col name
@@ -164,35 +170,35 @@ export default function ContentPage() {
         {/* Summary */}
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span className="text-emerald-400 font-semibold">{published}</span> منشور
-            <span className="mr-2 text-yellow-400 font-semibold">{drafts}</span> مسودة
-            <span className="mr-2 text-muted-foreground">{list.length} إجمالي</span>
+            <span className="text-emerald-400 font-semibold">{published}</span> {bi('منشور', 'published')}
+            <span className="mr-2 text-yellow-400 font-semibold">{drafts}</span> {bi('مسودة', 'draft')}
+            <span className="mr-2 text-muted-foreground">{list.length} {bi('إجمالي', 'total')}</span>
           </div>
           <Button size="sm" variant="ghost" onClick={load} className="text-muted-foreground hover:text-foreground h-7 w-7 p-0">
             <RefreshCw className="h-3.5 w-3.5" />
           </Button>
           <Button size="sm" onClick={() => openAdd(col)} className="mr-auto bg-primary hover:bg-primary/80 text-primary-foreground gap-1.5 h-8 text-xs">
             <Plus className="h-3.5 w-3.5" />
-            إضافة جديد
+            {bi('إضافة جديد', 'Add new')}
           </Button>
         </div>
 
         <Card className="border-0 shadow-sm">
           <CardContent className="p-0">
             {list.length === 0 ? (
-              <p className="text-muted-foreground text-center py-10">لا يوجد محتوى بعد</p>
+              <p className="text-muted-foreground text-center py-10">{bi('لا يوجد محتوى بعد', 'No content yet')}</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-border">
-                      <th className="text-right text-muted-foreground text-xs px-4 py-3">العنوان</th>
+                      <th className="text-right text-muted-foreground text-xs px-4 py-3">{bi('العنوان', 'Title')}</th>
                       <th className="text-right text-muted-foreground text-xs px-4 py-3 hidden sm:table-cell">
-                        {col === 'projects' ? 'المنظمة' : col === 'articles' ? 'الكاتب' : col === 'courses' ? 'المدرب' : 'المدرب'}
+                        {col === 'projects' ? bi('المنظمة', 'Organization') : col === 'articles' ? bi('الكاتب', 'Author') : bi('المدرب', 'Coach')}
                       </th>
-                      <th className="text-right text-muted-foreground text-xs px-4 py-3">الحالة</th>
-                      <th className="text-right text-muted-foreground text-xs px-4 py-3 hidden md:table-cell">تاريخ الإنشاء</th>
-                      <th className="text-right text-muted-foreground text-xs px-4 py-3">إجراءات</th>
+                      <th className="text-right text-muted-foreground text-xs px-4 py-3">{bi('الحالة', 'Status')}</th>
+                      <th className="text-right text-muted-foreground text-xs px-4 py-3 hidden md:table-cell">{bi('تاريخ الإنشاء', 'Created')}</th>
+                      <th className="text-right text-muted-foreground text-xs px-4 py-3">{bi('إجراءات', 'Actions')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -213,7 +219,7 @@ export default function ContentPage() {
                             <StatusBadge status={item.status} />
                           </td>
                           <td className="px-4 py-3 hidden md:table-cell">
-                            <span className="text-muted-foreground text-xs">{formatDate(item.createdAt)}</span>
+                            <span className="text-muted-foreground text-xs">{formatDate(item.createdAt, locale)}</span>
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex gap-1.5">
@@ -222,7 +228,7 @@ export default function ContentPage() {
                                 onClick={() => toggleStatus(col, item.id, item.status)}
                                 disabled={toggling === key}
                                 className={`h-7 w-7 p-0 ${item.status === 'published' ? 'text-yellow-400 hover:text-yellow-300' : 'text-emerald-400 hover:text-emerald-300'}`}
-                                title={item.status === 'published' ? 'إلغاء النشر' : 'نشر'}
+                                title={item.status === 'published' ? bi('إلغاء النشر', 'Unpublish') : bi('نشر', 'Publish')}
                               >
                                 {toggling === key
                                   ? <RefreshCw className="h-3.5 w-3.5 animate-spin" />
@@ -253,7 +259,7 @@ export default function ContentPage() {
 
   const coverUploadField = (
     <div className="space-y-2" key="coverImageUrl">
-      <Label className="text-foreground/90 text-xs">صورة الغلاف</Label>
+      <Label className="text-foreground/90 text-xs">{bi('صورة الغلاف', 'Cover image')}</Label>
       {(coverPreview || addForm.coverImageUrl) && (
         <img src={coverPreview || addForm.coverImageUrl} alt="" className="w-full h-28 object-cover rounded-lg border border-border" />
       )}
@@ -264,13 +270,13 @@ export default function ContentPage() {
           disabled={uploadingCover}
           className="border-border text-foreground/90 hover:text-foreground gap-1.5 flex-1">
           <Upload className="h-3.5 w-3.5" />
-          {uploadingCover ? 'جاري الرفع...' : 'رفع صورة'}
+          {uploadingCover ? bi('جاري الرفع...', 'Uploading...') : bi('رفع صورة', 'Upload image')}
         </Button>
       </div>
       <Input
         value={addForm.coverImageUrl || ''}
         onChange={e => { setAddForm(p => ({ ...p, coverImageUrl: e.target.value })); setCoverPreview(null); }}
-        placeholder="أو أدخل رابط الصورة https://..."
+        placeholder={bi('أو أدخل رابط الصورة https://...', 'Or enter image URL https://...')}
         className="bg-muted border-border text-foreground text-xs"
       />
     </div>
@@ -287,7 +293,7 @@ export default function ContentPage() {
             className="bg-muted border-border text-foreground text-sm resize-none" rows={3} />
         ) : type === 'select' ? (
           <Select value={addForm[key] || ''} onValueChange={v => setAddForm(p => ({ ...p, [key]: v }))}>
-            <SelectTrigger className="bg-muted border-border text-foreground text-sm"><SelectValue placeholder="اختر..." /></SelectTrigger>
+            <SelectTrigger className="bg-muted border-border text-foreground text-sm"><SelectValue placeholder={bi('اختر...', 'Choose...')} /></SelectTrigger>
             <SelectContent>{options?.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
           </Select>
         ) : (
@@ -297,41 +303,41 @@ export default function ContentPage() {
       </div>
     );
 
-    const commonFields = [f('title', 'العنوان *')];
+    const commonFields = [f('title', bi('العنوان *', 'Title *'))];
 
     const extraFields: Record<string, JSX.Element[]> = {
       projects: [
-        f('description', 'الوصف', 'textarea'),
-        f('type', 'نوع الفرصة', 'select', PROJECT_TYPES),
-        f('organizationName', 'اسم المنظمة'),
-        f('location', 'الموقع'),
-        f('deadline', 'الموعد النهائي (YYYY-MM-DD)'),
+        f('description', bi('الوصف', 'Description'), 'textarea'),
+        f('type', bi('نوع الفرصة', 'Opportunity type'), 'select', PROJECT_TYPES),
+        f('organizationName', bi('اسم المنظمة', 'Organization name')),
+        f('location', bi('الموقع', 'Location')),
+        f('deadline', bi('الموعد النهائي (YYYY-MM-DD)', 'Deadline (YYYY-MM-DD)')),
         coverUploadField,
       ],
       articles: [
-        f('excerpt', 'مقتطف'),
-        f('content', 'المحتوى', 'textarea'),
-        f('authorName', 'اسم الكاتب'),
-        f('authorRole', 'دور الكاتب', 'select', ['mentor', 'coach']),
-        f('tags', 'التاغات (افصل بفاصلة)'),
+        f('excerpt', bi('مقتطف', 'Excerpt')),
+        f('content', bi('المحتوى', 'Content'), 'textarea'),
+        f('authorName', bi('اسم الكاتب', 'Author name')),
+        f('authorRole', bi('دور الكاتب', 'Author role'), 'select', ['mentor', 'coach']),
+        f('tags', bi('التاغات (افصل بفاصلة)', 'Tags (comma-separated)')),
         coverUploadField,
       ],
       live_sessions: [
-        f('description', 'الوصف', 'textarea'),
-        f('coachName', 'اسم المدرب'),
-        f('date', 'التاريخ والوقت (ISO)'),
-        f('duration', 'المدة (دقائق)'),
-        f('price', 'السعر'),
-        f('maxParticipants', 'الحد الأقصى للمشاركين'),
-        f('meetLink', 'رابط الاجتماع'),
+        f('description', bi('الوصف', 'Description'), 'textarea'),
+        f('coachName', bi('اسم المدرب', 'Coach name')),
+        f('date', bi('التاريخ والوقت (ISO)', 'Date & time (ISO)')),
+        f('duration', bi('المدة (دقائق)', 'Duration (minutes)')),
+        f('price', bi('السعر', 'Price')),
+        f('maxParticipants', bi('الحد الأقصى للمشاركين', 'Max participants')),
+        f('meetLink', bi('رابط الاجتماع', 'Meeting link')),
         coverUploadField,
       ],
       courses: [
-        f('description', 'الوصف', 'textarea'),
-        f('coachName', 'اسم المدرب'),
-        f('price', 'السعر'),
-        f('duration', 'المدة'),
-        f('level', 'المستوى'),
+        f('description', bi('الوصف', 'Description'), 'textarea'),
+        f('coachName', bi('اسم المدرب', 'Coach name')),
+        f('price', bi('السعر', 'Price')),
+        f('duration', bi('المدة', 'Duration')),
+        f('level', bi('المستوى', 'Level')),
         coverUploadField,
       ],
     };
@@ -345,32 +351,32 @@ export default function ContentPage() {
   };
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={dir}>
       <div>
-        <h1 className="text-2xl font-bold text-foreground">إدارة المحتوى</h1>
-        <p className="text-muted-foreground text-sm mt-1">نشر وإلغاء نشر وإدارة جميع المحتوى على المنصة</p>
+        <h1 className="text-2xl font-bold text-foreground">{bi('إدارة المحتوى', 'Content Management')}</h1>
+        <p className="text-muted-foreground text-sm mt-1">{bi('نشر وإلغاء نشر وإدارة جميع المحتوى على المنصة', 'Publish, unpublish, and manage all content on the platform')}</p>
       </div>
 
       {/* Legend */}
       <div className="flex flex-wrap gap-4 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-sm text-amber-300">
         <span className="flex items-center gap-2">
-          <Eye className="h-4 w-4" /> المحتوى <strong>المنشور</strong> يظهر على الموقع
+          <Eye className="h-4 w-4" /> {bi('المحتوى', 'Content')} <strong>{bi('المنشور', 'published')}</strong> {bi('يظهر على الموقع', 'appears on the site')}
         </span>
         <span className="flex items-center gap-2">
-          <EyeOff className="h-4 w-4" /> المحتوى <strong>كمسودة</strong> لا يظهر للزوار
+          <EyeOff className="h-4 w-4" /> {bi('المحتوى', 'Content')} <strong>{bi('كمسودة', 'as a draft')}</strong> {bi('لا يظهر للزوار', "doesn't appear to visitors")}
         </span>
-        <span className="text-muted-foreground mr-auto text-xs">اضغط أيقونة العين لتغيير الحالة فوراً</span>
+        <span className="text-muted-foreground mr-auto text-xs">{bi('اضغط أيقونة العين لتغيير الحالة فوراً', 'Click the eye icon to change status instantly')}</span>
       </div>
 
       {loading ? (
-        <div className="text-muted-foreground text-center py-16 animate-pulse">جاري تحميل المحتوى...</div>
+        <div className="text-muted-foreground text-center py-16 animate-pulse">{bi('جاري تحميل المحتوى...', 'Loading content...')}</div>
       ) : (
         <Tabs defaultValue="projects">
           <TabsList className="bg-muted rounded-xl h-auto flex-wrap gap-0.5 p-1">
             {Object.entries(COLLECTIONS).map(([key, meta]) => (
               <TabsTrigger key={key} value={key}
                 className="rounded-lg border-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-muted-foreground hover:text-foreground text-xs sm:text-sm">
-                {meta.label}
+                {bi(meta.label, meta.labelEn)}
                 <span className="mr-1.5 text-[10px] opacity-70">({(items[key] || []).length})</span>
               </TabsTrigger>
             ))}
@@ -385,15 +391,15 @@ export default function ContentPage() {
 
       {/* Add Dialog */}
       <Dialog open={!!showAdd} onOpenChange={o => { if (!o) { setShowAdd(null); setAddForm({}); setCoverPreview(null); } }}>
-        <DialogContent dir="rtl" className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent dir={dir} className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>إضافة — {showAdd ? COLLECTIONS[showAdd]?.label : ''}</DialogTitle>
+            <DialogTitle>{bi('إضافة —', 'Add —')} {showAdd ? bi(COLLECTIONS[showAdd]?.label, COLLECTIONS[showAdd]?.labelEn) : ''}</DialogTitle>
           </DialogHeader>
           {renderAddForm()}
           <DialogFooter className="gap-2 mt-2">
-            <Button variant="outline" onClick={() => { setShowAdd(null); setAddForm({}); setCoverPreview(null); }}>إلغاء</Button>
+            <Button variant="outline" onClick={() => { setShowAdd(null); setAddForm({}); setCoverPreview(null); }}>{bi('إلغاء', 'Cancel')}</Button>
             <Button onClick={handleAdd} disabled={saving || !addForm.title?.trim()} className="bg-primary hover:bg-primary/80">
-              {saving ? 'جاري الحفظ...' : 'نشر مباشرة'}
+              {saving ? bi('جاري الحفظ...', 'Saving...') : bi('نشر مباشرة', 'Publish directly')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -401,14 +407,14 @@ export default function ContentPage() {
 
       {/* Delete confirm */}
       <AlertDialog open={!!deleteTarget} onOpenChange={o => !o && setDeleteTarget(null)}>
-        <AlertDialogContent dir="rtl">
+        <AlertDialogContent dir={dir}>
           <AlertDialogHeader>
-            <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
-            <AlertDialogDescription>هل أنت متأكد من حذف "{deleteTarget?.title}"؟ لا يمكن التراجع.</AlertDialogDescription>
+            <AlertDialogTitle>{bi('تأكيد الحذف', 'Confirm Deletion')}</AlertDialogTitle>
+            <AlertDialogDescription>{bi(`هل أنت متأكد من حذف "${deleteTarget?.title}"؟ لا يمكن التراجع.`, `Are you sure you want to delete "${deleteTarget?.title}"? This cannot be undone.`)}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>إلغاء</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">حذف</AlertDialogAction>
+            <AlertDialogCancel>{bi('إلغاء', 'Cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">{bi('حذف', 'Delete')}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
