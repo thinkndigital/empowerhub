@@ -7,6 +7,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { MapPin, Calendar, Building2 } from "lucide-react";
+import { useLanguage } from "@/components/language-provider";
 
 interface Project {
   id: string;
@@ -23,6 +24,16 @@ interface Project {
 
 const PROJECT_TYPES = ['الكل', 'تدريب', 'تطوع', 'وظيفة', 'منحة', 'مبادرة', 'أخرى'];
 
+const TYPE_LABELS_EN: Record<string, string> = {
+  'الكل': 'All',
+  'تدريب': 'Training',
+  'تطوع': 'Volunteering',
+  'وظيفة': 'Job',
+  'منحة': 'Grant',
+  'مبادرة': 'Initiative',
+  'أخرى': 'Other',
+};
+
 const TYPE_COLORS: Record<string, string> = {
   'تدريب': 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
   'تطوع': 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
@@ -33,6 +44,8 @@ const TYPE_COLORS: Record<string, string> = {
 };
 
 export default function ProjectsPage() {
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [typeFilter, setTypeFilter] = useState('الكل');
@@ -60,31 +73,31 @@ export default function ProjectsPage() {
   function deadlineLabel(deadline: string) {
     if (!deadline) return null;
     const diff = Math.ceil((new Date(deadline).getTime() - Date.now()) / 86400000);
-    if (diff < 0) return { text: 'انتهى التقديم', color: 'text-destructive' };
-    if (diff === 0) return { text: 'آخر يوم', color: 'text-orange-500' };
-    if (diff <= 7) return { text: `${diff} أيام متبقية`, color: 'text-orange-500' };
-    return { text: `${diff} يوم متبقي`, color: 'text-green-600 dark:text-green-400' };
+    if (diff < 0) return { text: bi('انتهى التقديم', 'Applications closed'), color: 'text-destructive' };
+    if (diff === 0) return { text: bi('آخر يوم', 'Last day'), color: 'text-orange-500' };
+    if (diff <= 7) return { text: bi(`${diff} أيام متبقية`, `${diff} days left`), color: 'text-orange-500' };
+    return { text: bi(`${diff} يوم متبقي`, `${diff} days left`), color: 'text-green-600 dark:text-green-400' };
   }
 
   function formatDate(d: string) {
     if (!d) return '';
-    return new Date(d).toLocaleDateString('ar-SA', { month: 'short', day: 'numeric', year: 'numeric' });
+    return new Date(d).toLocaleDateString(lang === 'en' ? 'en-US' : 'ar-SA', { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
+    <div className="min-h-screen bg-background" dir={dir}>
       {/* Page header */}
       <div className="border-b border-border bg-muted/30">
         <div className="container py-10 sm:py-14">
           <nav className="flex items-center gap-1.5 text-xs text-muted-foreground mb-5" aria-label="breadcrumb">
-            <Link href="/" className="hover:text-primary transition-colors">الرئيسية</Link>
+            <Link href="/" className="hover:text-primary transition-colors">{bi('الرئيسية', 'Home')}</Link>
             <span className="text-border/80 select-none">/</span>
-            <span className="text-foreground font-medium">الفرص والمشاريع</span>
+            <span className="text-foreground font-medium">{bi('الفرص والمشاريع', 'Opportunities & Projects')}</span>
           </nav>
-          <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">فرص متاحة</p>
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground mb-3">الفرص والمشاريع</h1>
+          <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">{bi('فرص متاحة', 'Available opportunities')}</p>
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground mb-3">{bi('الفرص والمشاريع', 'Opportunities & Projects')}</h1>
           <p className="text-muted-foreground text-sm sm:text-base max-w-xl leading-relaxed">
-            اكتشف فرص التدريب والتطوع والوظائف والمنح
+            {bi('اكتشف فرص التدريب والتطوع والوظائف والمنح', 'Discover training, volunteering, job, and grant opportunities')}
           </p>
         </div>
       </div>
@@ -92,14 +105,14 @@ export default function ProjectsPage() {
       <div className="container py-10">
         {/* Filter */}
         <div className="flex items-center gap-3 mb-8">
-          <span className="text-sm font-medium text-muted-foreground shrink-0">تصفية حسب النوع:</span>
+          <span className="text-sm font-medium text-muted-foreground shrink-0">{bi('تصفية حسب النوع:', 'Filter by type:')}</span>
           <Select value={typeFilter} onValueChange={setTypeFilter}>
             <SelectTrigger className="w-40">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {PROJECT_TYPES.map(t => (
-                <SelectItem key={t} value={t}>{t}</SelectItem>
+                <SelectItem key={t} value={t}>{lang === 'en' ? (TYPE_LABELS_EN[t] || t) : t}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -120,7 +133,7 @@ export default function ProjectsPage() {
           </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-20 text-muted-foreground">
-            <p className="text-lg">لا توجد فرص في هذه الفئة حالياً</p>
+            <p className="text-lg">{bi('لا توجد فرص في هذه الفئة حالياً', 'No opportunities in this category yet')}</p>
           </div>
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -151,7 +164,7 @@ export default function ProjectsPage() {
                     {/* Type badge */}
                     <div className="flex items-center gap-2">
                       <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full ${TYPE_COLORS[project.type] || TYPE_COLORS['أخرى']}`}>
-                        {project.type}
+                        {lang === 'en' ? (TYPE_LABELS_EN[project.type] || project.type) : project.type}
                       </span>
                     </div>
 
@@ -189,7 +202,7 @@ export default function ProjectsPage() {
                     {/* CTA */}
                     <Link href={`/projects/${project.id}`} className="mt-2">
                       <Button size="sm" className="w-full">
-                        تقديم الآن
+                        {bi('تقديم الآن', 'Apply now')}
                       </Button>
                     </Link>
                   </div>

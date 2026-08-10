@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Search, Clock, Tag } from "lucide-react";
+import { useLanguage } from "@/components/language-provider";
 
 interface Article {
   id: string;
@@ -20,6 +21,8 @@ interface Article {
 }
 
 export default function ArticlesPage() {
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const [categoryFilter, setCategoryFilter] = useState('الكل');
@@ -60,23 +63,23 @@ export default function ArticlesPage() {
 
   function formatDate(d: string | null) {
     if (!d) return '';
-    return new Date(d).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
+    return new Date(d).toLocaleDateString(lang === 'en' ? 'en-US' : 'ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
   }
 
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
+    <div className="min-h-screen bg-background" dir={dir}>
       {/* Page header */}
       <div className="border-b border-border bg-muted/30">
         <div className="container py-10 sm:py-14">
           <nav className="flex items-center gap-1.5 text-xs text-muted-foreground mb-5" aria-label="breadcrumb">
-            <Link href="/" className="hover:text-primary transition-colors">الرئيسية</Link>
+            <Link href="/" className="hover:text-primary transition-colors">{bi('الرئيسية', 'Home')}</Link>
             <span className="text-border/80 select-none">/</span>
-            <span className="text-foreground font-medium">المقالات</span>
+            <span className="text-foreground font-medium">{bi('المقالات', 'Articles')}</span>
           </nav>
-          <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">معرفة وخبرة</p>
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground mb-3">المقالات</h1>
+          <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">{bi('معرفة وخبرة', 'Knowledge & experience')}</p>
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground mb-3">{bi('المقالات', 'Articles')}</h1>
           <p className="text-muted-foreground text-sm sm:text-base max-w-xl leading-relaxed">
-            رؤى ومعرفة من مرشدين ومدربين متميزين
+            {bi('رؤى ومعرفة من مرشدين ومدربين متميزين', 'Insights and knowledge from outstanding mentors and coaches')}
           </p>
         </div>
       </div>
@@ -88,7 +91,7 @@ export default function ArticlesPage() {
           <Input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="ابحث في المقالات..."
+            placeholder={bi('ابحث في المقالات...', 'Search articles...')}
             className="pr-9"
           />
         </div>
@@ -106,7 +109,7 @@ export default function ArticlesPage() {
                     : 'bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground'
                 }`}
               >
-                {cat}
+                {cat === 'الكل' ? bi('الكل', 'All') : cat}
               </button>
             ))}
           </div>
@@ -128,7 +131,7 @@ export default function ArticlesPage() {
           </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-20 text-muted-foreground">
-            <p className="text-lg">لا توجد مقالات</p>
+            <p className="text-lg">{bi('لا توجد مقالات', 'No articles yet')}</p>
           </div>
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -187,7 +190,7 @@ export default function ArticlesPage() {
                       <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
                         <span>{formatDate(article.publishedAt)}</span>
                         <span className="flex items-center gap-0.5">
-                          <Clock className="h-2.5 w-2.5" />{article.readTime} د
+                          <Clock className="h-2.5 w-2.5" />{bi(`${article.readTime} د`, `${article.readTime} min`)}
                         </span>
                       </div>
                     </div>

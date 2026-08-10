@@ -14,6 +14,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowRight, CreditCard, Banknote, ShoppingCart, CheckCircle, Loader2 } from "lucide-react";
+import { useLanguage } from "@/components/language-provider";
 
 interface GatewayInfo { enabled: boolean; label: string; }
 interface PaymentConfig {
@@ -46,6 +47,8 @@ const GATEWAY_KEYS: GatewayKey[] = ['moyasar', 'stripe', 'paypal', 'paytabs', 'h
 const BNPL_GATEWAYS: GatewayKey[] = ['tamara', 'tabby'];
 
 export default function CheckoutPage() {
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const router = useRouter();
   const { toast } = useToast();
   const { items, total, clear } = useCart();
@@ -104,7 +107,7 @@ export default function CheckoutPage() {
       });
 
       const cartData = await cartRes.json();
-      if (!cartData.ok) throw new Error(cartData.error || 'فشل في إنشاء الطلب');
+      if (!cartData.ok) throw new Error(cartData.error || bi('فشل في إنشاء الطلب', 'Failed to create the order'));
 
       if (paymentMethod !== 'cod') {
         const payRes = await fetch('/api/public/payment/initiate', {
@@ -113,7 +116,7 @@ export default function CheckoutPage() {
           body: JSON.stringify({
             orderId: cartData.batchOrderId,
             amount: cartData.total,
-            description: 'سلة مشتريات',
+            description: bi('سلة مشتريات', 'Shopping cart'),
             gateway: paymentMethod,
           }),
         });
@@ -124,7 +127,7 @@ export default function CheckoutPage() {
           window.location.href = payData.paymentUrl;
           return;
         } else {
-          throw new Error(payData.error || 'فشل في تهيئة الدفع');
+          throw new Error(payData.error || bi('فشل في تهيئة الدفع', 'Failed to initiate payment'));
         }
       }
 
@@ -146,9 +149,9 @@ export default function CheckoutPage() {
 
       clear();
       setDone(true);
-      toast({ title: 'تم استلام طلبك بنجاح!', description: `سيتم التواصل معك على ${phone} قريباً.` });
+      toast({ title: bi('تم استلام طلبك بنجاح!', 'Your order was received successfully!'), description: bi(`سيتم التواصل معك على ${phone} قريباً.`, `We will contact you at ${phone} soon.`) });
     } catch (err: any) {
-      toast({ variant: 'destructive', title: 'خطأ', description: err.message || 'حدث خطأ، حاول مرة أخرى.' });
+      toast({ variant: 'destructive', title: bi('خطأ', 'Error'), description: err.message || bi('حدث خطأ، حاول مرة أخرى.', 'An error occurred, please try again.') });
     } finally {
       setLoading(false);
     }
@@ -156,7 +159,7 @@ export default function CheckoutPage() {
 
   if (done) {
     return (
-      <div className="min-h-screen bg-background" dir="rtl">
+      <div className="min-h-screen bg-background" dir={dir}>
         <SiteHeader />
         <div className="container py-16 max-w-md">
           <div className="flex flex-col items-center gap-4 text-center">
@@ -164,10 +167,10 @@ export default function CheckoutPage() {
               <CheckCircle className="h-8 w-8 text-emerald-600" />
             </div>
             <div>
-              <h1 className="font-bold text-xl mb-1">تم استلام طلبك!</h1>
-              <p className="text-muted-foreground text-sm">سيتم التواصل معك على <span dir="ltr">{phone}</span> قريباً لتأكيد الطلب.</p>
+              <h1 className="font-bold text-xl mb-1">{bi('تم استلام طلبك!', 'Your order was received!')}</h1>
+              <p className="text-muted-foreground text-sm">{bi('سيتم التواصل معك على', 'We will contact you at')} <span dir="ltr">{phone}</span> {bi('قريباً لتأكيد الطلب.', 'soon to confirm the order.')}</p>
             </div>
-            <Button asChild className="w-full"><Link href="/market">متابعة التسوق</Link></Button>
+            <Button asChild className="w-full"><Link href="/market">{bi('متابعة التسوق', 'Continue shopping')}</Link></Button>
           </div>
         </div>
       </div>
@@ -180,43 +183,43 @@ export default function CheckoutPage() {
   const hasAnyMethod = paymentConfig.allowCOD || enabledGateways.length > 0;
 
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
+    <div className="min-h-screen bg-background" dir={dir}>
       <SiteHeader />
 
       <div className="container py-8 sm:py-10 max-w-3xl">
         <nav className="flex items-center gap-1.5 text-xs text-muted-foreground mb-6" aria-label="breadcrumb">
-          <Link href="/" className="hover:text-primary transition-colors">الرئيسية</Link>
+          <Link href="/" className="hover:text-primary transition-colors">{bi('الرئيسية', 'Home')}</Link>
           <span className="text-border/80 select-none">/</span>
-          <Link href="/cart" className="hover:text-primary transition-colors">السلة</Link>
+          <Link href="/cart" className="hover:text-primary transition-colors">{bi('السلة', 'Cart')}</Link>
           <span className="text-border/80 select-none">/</span>
-          <span className="text-foreground font-medium">إتمام الشراء</span>
+          <span className="text-foreground font-medium">{bi('إتمام الشراء', 'Checkout')}</span>
         </nav>
 
         <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-6 flex items-center gap-2.5">
-          <ShoppingCart className="h-6 w-6 text-primary" />إتمام الشراء
+          <ShoppingCart className="h-6 w-6 text-primary" />{bi('إتمام الشراء', 'Checkout')}
         </h1>
 
         <form onSubmit={handleSubmit} className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-5">
             {/* Buyer info */}
             <div className="rounded-xl border border-border bg-card p-5 space-y-4">
-              <h2 className="font-semibold text-foreground">معلومات التوصيل</h2>
+              <h2 className="font-semibold text-foreground">{bi('معلومات التوصيل', 'Delivery information')}</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="buyer-name">الاسم الكامل <span className="text-red-500">*</span></Label>
-                  <Input id="buyer-name" value={name} onChange={e => setName(e.target.value)} placeholder="اسمك الكريم" required />
+                  <Label htmlFor="buyer-name">{bi('الاسم الكامل', 'Full name')} <span className="text-red-500">*</span></Label>
+                  <Input id="buyer-name" value={name} onChange={e => setName(e.target.value)} placeholder={bi('اسمك الكريم', 'Your full name')} required />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="buyer-phone">رقم الهاتف <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="buyer-phone">{bi('رقم الهاتف', 'Phone number')} <span className="text-red-500">*</span></Label>
                   <Input id="buyer-phone" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+966 5X XXX XXXX" dir="ltr" required />
                 </div>
                 <div className="space-y-1.5 sm:col-span-2">
-                  <Label htmlFor="buyer-address">عنوان التوصيل</Label>
-                  <Input id="buyer-address" value={address} onChange={e => setAddress(e.target.value)} placeholder="المدينة، الحي، الشارع..." />
+                  <Label htmlFor="buyer-address">{bi('عنوان التوصيل', 'Delivery address')}</Label>
+                  <Input id="buyer-address" value={address} onChange={e => setAddress(e.target.value)} placeholder={bi('المدينة، الحي، الشارع...', 'City, neighborhood, street...')} />
                 </div>
                 <div className="space-y-1.5 sm:col-span-2">
-                  <Label htmlFor="buyer-notes">ملاحظات (اختياري)</Label>
-                  <Textarea id="buyer-notes" value={notes} onChange={e => setNotes(e.target.value)} placeholder="أي تفاصيل إضافية..." rows={2} className="resize-none" />
+                  <Label htmlFor="buyer-notes">{bi('ملاحظات (اختياري)', 'Notes (optional)')}</Label>
+                  <Textarea id="buyer-notes" value={notes} onChange={e => setNotes(e.target.value)} placeholder={bi('أي تفاصيل إضافية...', 'Any additional details...')} rows={2} className="resize-none" />
                 </div>
               </div>
             </div>
@@ -224,7 +227,7 @@ export default function CheckoutPage() {
             {/* Payment method */}
             {hasAnyMethod && (
               <div className="rounded-xl border border-border bg-card p-5 space-y-3">
-                <h2 className="font-semibold text-foreground">طريقة الدفع</h2>
+                <h2 className="font-semibold text-foreground">{bi('طريقة الدفع', 'Payment method')}</h2>
                 <RadioGroup value={paymentMethod} onValueChange={v => setPaymentMethod(v as any)} className="space-y-2">
                   {paymentConfig.allowCOD && (
                     <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${paymentMethod === 'cod' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/40'}`}>
@@ -232,7 +235,7 @@ export default function CheckoutPage() {
                       <Banknote className="h-5 w-5 text-emerald-600" />
                       <div>
                         <p className="text-sm font-medium">{paymentConfig.codLabel}</p>
-                        <p className="text-xs text-muted-foreground">ادفع عند استلام المنتج</p>
+                        <p className="text-xs text-muted-foreground">{bi('ادفع عند استلام المنتج', 'Pay when you receive the product')}</p>
                       </div>
                     </label>
                   )}
@@ -244,10 +247,10 @@ export default function CheckoutPage() {
                         <CreditCard className={`h-5 w-5 ${isBNPL ? 'text-purple-600' : 'text-blue-600'}`} />
                         <div>
                           <p className="text-sm font-medium">{paymentConfig[gk]?.label}</p>
-                          <p className="text-xs text-muted-foreground">{isBNPL ? 'اشتري الآن وادفع لاحقاً' : 'ادفع الآن ببطاقة بنكية'}</p>
+                          <p className="text-xs text-muted-foreground">{isBNPL ? bi('اشتري الآن وادفع لاحقاً', 'Buy now, pay later') : bi('ادفع الآن ببطاقة بنكية', 'Pay now by card')}</p>
                         </div>
                         <Badge className={`mr-auto text-xs border-0 ${isBNPL ? 'bg-purple-500/10 text-purple-600' : 'bg-blue-500/10 text-blue-600'}`}>
-                          {isBNPL ? 'تقسيط' : 'آمن'}
+                          {isBNPL ? bi('تقسيط', 'Installments') : bi('آمن', 'Secure')}
                         </Badge>
                       </label>
                     );
@@ -255,21 +258,21 @@ export default function CheckoutPage() {
                 </RadioGroup>
                 {paymentMethod !== 'cod' && (
                   <p className="text-xs text-muted-foreground bg-muted/40 rounded-lg px-3 py-2">
-                    سيتم تحويلك لصفحة الدفع الآمنة الخاصة بمزوّد الدفع لإدخال بيانات البطاقة.
+                    {bi('سيتم تحويلك لصفحة الدفع الآمنة الخاصة بمزوّد الدفع لإدخال بيانات البطاقة.', 'You will be redirected to the payment provider’s secure page to enter your card details.')}
                   </p>
                 )}
               </div>
             )}
 
             <Button variant="ghost" asChild className="gap-1.5 text-muted-foreground">
-              <Link href="/cart"><ArrowRight className="h-4 w-4" />العودة للسلة</Link>
+              <Link href="/cart"><ArrowRight className="h-4 w-4" />{bi('العودة للسلة', 'Back to cart')}</Link>
             </Button>
           </div>
 
           {/* Summary */}
           <div className="lg:col-span-1">
             <div className="rounded-xl border border-border bg-card p-5 space-y-3 sticky top-20">
-              <h2 className="font-semibold text-foreground">ملخص الطلب</h2>
+              <h2 className="font-semibold text-foreground">{bi('ملخص الطلب', 'Order summary')}</h2>
               <div className="space-y-1.5 text-sm max-h-52 overflow-y-auto">
                 {items.map(item => (
                   <div key={item.productId} className="flex items-center justify-between">
@@ -279,12 +282,12 @@ export default function CheckoutPage() {
                 ))}
               </div>
               <div className="flex justify-between font-bold text-base pt-2 border-t border-border">
-                <span>الإجمالي</span>
+                <span>{bi('الإجمالي', 'Total')}</span>
                 <span className="text-primary">{total.toFixed(2)} {currency}</span>
               </div>
               <Button type="submit" size="lg" className="w-full gap-2" disabled={loading || !name.trim() || !phone.trim()}>
                 {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-                {loading ? 'جاري المعالجة...' : paymentMethod === 'cod' ? 'تأكيد الطلب' : `الدفع الآن — ${total.toFixed(2)} ${currency}`}
+                {loading ? bi('جاري المعالجة...', 'Processing...') : paymentMethod === 'cod' ? bi('تأكيد الطلب', 'Confirm order') : bi(`الدفع الآن — ${total.toFixed(2)} ${currency}`, `Pay now — ${total.toFixed(2)} ${currency}`)}
               </Button>
             </div>
           </div>

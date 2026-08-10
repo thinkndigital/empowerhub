@@ -12,6 +12,7 @@ import {
   ArrowRight, ArrowLeft, BookOpen, Users, Calendar, Loader2,
   MessageSquare, Mail, Linkedin, Instagram,
 } from "lucide-react";
+import { useLanguage } from "@/components/language-provider";
 
 interface Course {
   id: string;
@@ -38,6 +39,8 @@ interface Coach {
 }
 
 export default function CoachProfilePage() {
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const { id } = useParams<{ id: string }>();
   const [coach, setCoach] = useState<Coach | null>(null);
   const [loading, setLoading] = useState(true);
@@ -58,7 +61,7 @@ export default function CoachProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background" dir="rtl">
+      <div className="min-h-screen flex items-center justify-center bg-background" dir={dir}>
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -66,25 +69,25 @@ export default function CoachProfilePage() {
 
   if (notFound || !coach) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background" dir="rtl">
-        <h1 className="text-2xl font-bold">المدرب غير موجود</h1>
-        <Button asChild variant="outline"><Link href="/">العودة للرئيسية</Link></Button>
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background" dir={dir}>
+        <h1 className="text-2xl font-bold">{bi('المدرب غير موجود', 'Coach not found')}</h1>
+        <Button asChild variant="outline"><Link href="/">{bi('العودة للرئيسية', 'Back to home')}</Link></Button>
       </div>
     );
   }
 
-  const name = coach.name || 'بدون اسم';
+  const name = coach.name || bi('بدون اسم', 'No name');
   const hasPrice = coach.sessionPrice != null && coach.sessionPrice > 0;
 
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
+    <div className="min-h-screen bg-background" dir={dir}>
       {/* Header */}
       <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur shadow-sm">
         <div className="container flex h-14 items-center gap-3">
           <Button variant="ghost" size="sm" asChild>
             <Link href="/" className="flex items-center gap-1 text-muted-foreground hover:text-foreground">
               <ArrowRight className="h-4 w-4" />
-              الرئيسية
+              {bi('الرئيسية', 'Home')}
             </Link>
           </Button>
           <span className="text-muted-foreground">/</span>
@@ -105,12 +108,12 @@ export default function CoachProfilePage() {
               </div>
               <div className="flex-1 pb-1">
                 <h1 className="text-2xl font-extrabold">{name}</h1>
-                <p className="text-muted-foreground text-sm mt-0.5">مدرب</p>
+                <p className="text-muted-foreground text-sm mt-0.5">{bi('مدرب', 'Coach')}</p>
               </div>
               {hasPrice && (
                 <Button size="lg" className="gap-2 shrink-0" onClick={() => setBookingOpen(true)}>
                   <Calendar className="h-5 w-5" />
-                  احجز جلسة — {coach.sessionPrice} د.أ
+                  {bi(`احجز جلسة — ${coach.sessionPrice} د.أ`, `Book a session — ${coach.sessionPrice} JOD`)}
                 </Button>
               )}
             </div>
@@ -123,7 +126,7 @@ export default function CoachProfilePage() {
             {/* Specializations */}
             {Array.isArray(coach.specializations) && coach.specializations.length > 0 && (
               <div className="mb-6">
-                <h3 className="text-sm font-semibold mb-2">التخصصات</h3>
+                <h3 className="text-sm font-semibold mb-2">{bi('التخصصات', 'Specializations')}</h3>
                 <div className="flex flex-wrap gap-2">
                   {coach.specializations.map((s, i) => (
                     <Badge key={i} variant="secondary" className="text-xs">{s}</Badge>
@@ -135,7 +138,7 @@ export default function CoachProfilePage() {
             {/* Contact info */}
             {(coach.whatsapp || coach.email || coach.linkedin || coach.instagram) && (
               <div>
-                <h3 className="text-sm font-semibold mb-3">وسائل التواصل</h3>
+                <h3 className="text-sm font-semibold mb-3">{bi('وسائل التواصل', 'Contact methods')}</h3>
                 <div className="flex flex-wrap gap-3">
                   {coach.whatsapp && (
                     <a
@@ -145,7 +148,7 @@ export default function CoachProfilePage() {
                       style={{ backgroundColor: '#25D366' }}
                     >
                       <MessageSquare className="h-4 w-4" />
-                      واتساب
+                      {bi('واتساب', 'WhatsApp')}
                     </a>
                   )}
                   {coach.email && (
@@ -188,7 +191,7 @@ export default function CoachProfilePage() {
           <div>
             <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
               <BookOpen className="h-5 w-5 text-primary" />
-              دورات {name} التدريبية
+              {bi(`دورات ${name} التدريبية`, `Training courses by ${name}`)}
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
               {coach.courses.map(course => (
@@ -203,7 +206,7 @@ export default function CoachProfilePage() {
                     )}
                     {course.price != null && (
                       <Badge className="absolute top-2 left-2 bg-primary text-primary-foreground">
-                        {course.price === 0 ? 'مجاني' : `${course.price} د.أ`}
+                        {course.price === 0 ? bi('مجاني', 'Free') : bi(`${course.price} د.أ`, `${course.price} JOD`)}
                       </Badge>
                     )}
                   </div>
@@ -218,7 +221,7 @@ export default function CoachProfilePage() {
                         {course.enrollmentCount > 0 && (
                           <span className="flex items-center gap-1">
                             <Users className="h-3 w-3" />
-                            {course.enrollmentCount} مسجّل
+                            {bi(`${course.enrollmentCount} مسجّل`, `${course.enrollmentCount} enrolled`)}
                           </span>
                         )}
                       </div>
@@ -227,7 +230,7 @@ export default function CoachProfilePage() {
                   <CardFooter className="pt-0">
                     <Button asChild className="w-full" variant="outline">
                       <Link href={`/courses/${course.id}`}>
-                        تفاصيل الدورة
+                        {bi('تفاصيل الدورة', 'Course details')}
                         <ArrowLeft className="mr-2 h-4 w-4" />
                       </Link>
                     </Button>

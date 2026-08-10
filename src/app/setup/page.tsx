@@ -11,8 +11,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Logo } from "@/components/logo";
 import { CheckCircle2, Shield, AlertTriangle } from "lucide-react";
 import Link from "next/link";
+import { useLanguage } from "@/components/language-provider";
 
 export default function SetupPage() {
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const auth = useAuth();
   const firestore = useFirestore();
   const [name, setName] = useState("");
@@ -24,7 +27,7 @@ export default function SetupPage() {
 
   const handleSetup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!auth || !firestore) { setError("الخدمة غير متاحة مؤقتاً."); return; }
+    if (!auth || !firestore) { setError(bi("الخدمة غير متاحة مؤقتاً.", "The service is temporarily unavailable.")); return; }
     setLoading(true);
     setError("");
 
@@ -44,9 +47,9 @@ export default function SetupPage() {
       setDone(true);
     } catch (err: any) {
       if (err.code === "auth/email-already-in-use") {
-        setError("هذا البريد مستخدم بالفعل. حاول تسجيل الدخول.");
+        setError(bi("هذا البريد مستخدم بالفعل. حاول تسجيل الدخول.", "This email is already in use. Try logging in."));
       } else {
-        setError(err.message || "حدث خطأ غير متوقع.");
+        setError(err.message || bi("حدث خطأ غير متوقع.", "An unexpected error occurred."));
       }
     } finally {
       setLoading(false);
@@ -55,7 +58,7 @@ export default function SetupPage() {
 
   if (done) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4" dir="rtl">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4" dir={dir}>
         <Card className="max-w-md w-full border-0 shadow-lg text-center">
           <CardContent className="pt-8 pb-8 space-y-4">
             <div className="flex justify-center">
@@ -63,14 +66,14 @@ export default function SetupPage() {
                 <CheckCircle2 className="h-8 w-8 text-primary" />
               </div>
             </div>
-            <h2 className="text-2xl font-bold">تم الإعداد بنجاح!</h2>
-            <p className="text-muted-foreground">تم إنشاء حساب المشرف العام. يمكنك الآن الدخول للوحة التحكم.</p>
+            <h2 className="text-2xl font-bold">{bi('تم الإعداد بنجاح!', 'Setup completed successfully!')}</h2>
+            <p className="text-muted-foreground">{bi('تم إنشاء حساب المشرف العام. يمكنك الآن الدخول للوحة التحكم.', 'The super admin account has been created. You can now log in to the dashboard.')}</p>
             <div className="flex gap-3 justify-center pt-2">
               <Button asChild className="shadow-md">
-                <Link href="/admin-dashboard">لوحة تحكم المشرف</Link>
+                <Link href="/admin-dashboard">{bi('لوحة تحكم المشرف', 'Admin dashboard')}</Link>
               </Button>
               <Button variant="outline" asChild>
-                <Link href="/login">تسجيل الدخول</Link>
+                <Link href="/login">{bi('تسجيل الدخول', 'Log in')}</Link>
               </Button>
             </div>
           </CardContent>
@@ -80,35 +83,35 @@ export default function SetupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4" dir="rtl">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4" dir={dir}>
       <div className="w-full max-w-md space-y-6">
         <div className="text-center space-y-2">
           <Logo className="h-16 w-16 mx-auto" />
-          <h1 className="text-3xl font-bold">إعداد المنصة</h1>
-          <p className="text-muted-foreground">أنشئ حساب المشرف العام لبدء استخدام المنصة</p>
+          <h1 className="text-3xl font-bold">{bi('إعداد المنصة', 'Platform setup')}</h1>
+          <p className="text-muted-foreground">{bi('أنشئ حساب المشرف العام لبدء استخدام المنصة', 'Create the super admin account to start using the platform')}</p>
         </div>
 
         <Card className="border-0 shadow-sm">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <Shield className="h-4 w-4 text-primary" />
-              حساب المشرف العام
+              {bi('حساب المشرف العام', 'Super admin account')}
             </CardTitle>
-            <CardDescription>هذا الحساب سيملك صلاحيات كاملة على المنصة</CardDescription>
+            <CardDescription>{bi('هذا الحساب سيملك صلاحيات كاملة على المنصة', 'This account will have full permissions over the platform')}</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSetup} className="space-y-4">
               <div className="space-y-2">
-                <Label>الاسم الكامل</Label>
+                <Label>{bi('الاسم الكامل', 'Full name')}</Label>
                 <Input
-                  placeholder="محمد أحمد"
+                  placeholder={bi('محمد أحمد', 'John Doe')}
                   value={name}
                   onChange={e => setName(e.target.value)}
                   required
                 />
               </div>
               <div className="space-y-2">
-                <Label>البريد الإلكتروني</Label>
+                <Label>{bi('البريد الإلكتروني', 'Email')}</Label>
                 <Input
                   type="email"
                   dir="ltr"
@@ -119,11 +122,11 @@ export default function SetupPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>كلمة المرور</Label>
+                <Label>{bi('كلمة المرور', 'Password')}</Label>
                 <Input
                   type="password"
                   dir="ltr"
-                  placeholder="8 أحرف على الأقل"
+                  placeholder={bi('8 أحرف على الأقل', 'At least 8 characters')}
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   minLength={8}
@@ -139,20 +142,20 @@ export default function SetupPage() {
               )}
 
               <Button type="submit" className="w-full shadow-md" disabled={loading}>
-                {loading ? "جاري الإعداد..." : "إنشاء حساب المشرف"}
+                {loading ? bi("جاري الإعداد...", "Setting up...") : bi("إنشاء حساب المشرف", "Create admin account")}
               </Button>
             </form>
           </CardContent>
         </Card>
 
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800 space-y-1">
-          <p className="font-semibold">⚠️ ملاحظة أمنية</p>
-          <p>هذه الصفحة مخصصة للإعداد الأولي فقط. بعد إنشاء الحساب، احذف هذه الصفحة أو قيّد الوصول إليها.</p>
+          <p className="font-semibold">{bi('⚠️ ملاحظة أمنية', '⚠️ Security note')}</p>
+          <p>{bi('هذه الصفحة مخصصة للإعداد الأولي فقط. بعد إنشاء الحساب، احذف هذه الصفحة أو قيّد الوصول إليها.', 'This page is intended for initial setup only. After creating the account, delete this page or restrict access to it.')}</p>
         </div>
 
         <p className="text-center text-sm text-muted-foreground">
-          لديك حساب مسبقاً؟{" "}
-          <Link href="/login" className="text-primary underline">تسجيل الدخول</Link>
+          {bi('لديك حساب مسبقاً؟', 'Already have an account?')}{" "}
+          <Link href="/login" className="text-primary underline">{bi('تسجيل الدخول', 'Log in')}</Link>
         </p>
       </div>
     </div>

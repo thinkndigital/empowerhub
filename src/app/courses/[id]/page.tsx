@@ -12,6 +12,7 @@ import {
   ArrowRight, BookOpen, Users, Clock, CheckCircle, Loader2,
   ShoppingCart, PlayCircle, GraduationCap,
 } from "lucide-react";
+import { useLanguage } from "@/components/language-provider";
 
 interface Course {
   id: string;
@@ -30,6 +31,8 @@ interface Course {
 }
 
 export default function CourseDetailPage() {
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const { id } = useParams<{ id: string }>();
   const { user: authUser, loading: authLoading } = useUser();
   const [course, setCourse] = useState<Course | null>(null);
@@ -73,7 +76,7 @@ export default function CourseDetailPage() {
 
   if (loading || authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background" dir="rtl">
+      <div className="min-h-screen flex items-center justify-center bg-background" dir={dir}>
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -81,9 +84,9 @@ export default function CourseDetailPage() {
 
   if (notFound || !course) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background" dir="rtl">
-        <h1 className="text-2xl font-bold">الدورة غير موجودة</h1>
-        <Button asChild variant="outline"><Link href="/">العودة للرئيسية</Link></Button>
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background" dir={dir}>
+        <h1 className="text-2xl font-bold">{bi('الدورة غير موجودة', 'Course not found')}</h1>
+        <Button asChild variant="outline"><Link href="/">{bi('العودة للرئيسية', 'Back to home')}</Link></Button>
       </div>
     );
   }
@@ -97,7 +100,7 @@ export default function CourseDetailPage() {
         <Button className="w-full" size="lg" asChild>
           <Link href={`/dashboard/training/${course.id}`}>
             <PlayCircle className="h-5 w-5 ml-2" />
-            تابع الدورة
+            {bi('تابع الدورة', 'Continue course')}
           </Link>
         </Button>
       );
@@ -107,23 +110,23 @@ export default function CourseDetailPage() {
     return (
       <Button className="w-full" size="lg" onClick={() => setEnrollOpen(true)}>
         {isFree ? (
-          <><GraduationCap className="h-5 w-5 ml-2" />اشترك مجاناً</>
+          <><GraduationCap className="h-5 w-5 ml-2" />{bi('اشترك مجاناً', 'Enroll for free')}</>
         ) : (
-          <><ShoppingCart className="h-5 w-5 ml-2" />اشترك الآن</>
+          <><ShoppingCart className="h-5 w-5 ml-2" />{bi('اشترك الآن', 'Enroll now')}</>
         )}
       </Button>
     );
   };
 
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
+    <div className="min-h-screen bg-background" dir={dir}>
       {/* Header */}
       <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur shadow-sm">
         <div className="container flex h-14 items-center gap-3">
           <Button variant="ghost" size="sm" asChild>
             <Link href="/" className="flex items-center gap-1 text-muted-foreground hover:text-foreground">
               <ArrowRight className="h-4 w-4" />
-              الرئيسية
+              {bi('الرئيسية', 'Home')}
             </Link>
           </Button>
           <span className="text-muted-foreground">/</span>
@@ -133,7 +136,7 @@ export default function CourseDetailPage() {
           {isEnrolled && (
             <Badge className="mr-auto bg-emerald-500 border-0 text-white">
               <CheckCircle className="h-3 w-3 ml-1" />
-              مسجّل
+              {bi('مسجّل', 'Enrolled')}
             </Badge>
           )}
         </div>
@@ -168,7 +171,7 @@ export default function CourseDetailPage() {
                     ) : course.coachName[0]}
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">المدرب</p>
+                    <p className="text-xs text-muted-foreground">{bi('المدرب', 'Coach')}</p>
                     <Link href={`/coaches/${course.createdBy}`} className="font-semibold text-sm hover:text-primary transition-colors">
                       {course.coachName}
                     </Link>
@@ -180,7 +183,7 @@ export default function CourseDetailPage() {
             {/* Objectives */}
             {course.objectives?.length > 0 && (
               <div>
-                <h2 className="text-lg font-bold mb-3">ما ستتعلمه</h2>
+                <h2 className="text-lg font-bold mb-3">{bi('ما ستتعلمه', 'What you will learn')}</h2>
                 <ul className="space-y-2">
                   {course.objectives.map((obj, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm">
@@ -195,7 +198,7 @@ export default function CourseDetailPage() {
             {/* Requirements */}
             {course.requirements?.length > 0 && (
               <div>
-                <h2 className="text-lg font-bold mb-3">المتطلبات</h2>
+                <h2 className="text-lg font-bold mb-3">{bi('المتطلبات', 'Requirements')}</h2>
                 <ul className="space-y-2">
                   {course.requirements.map((req, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
@@ -228,13 +231,13 @@ export default function CourseDetailPage() {
                   {isEnrolled ? (
                     <Badge className="text-sm px-3 py-1 bg-emerald-500 text-white border-0">
                       <CheckCircle className="h-3 w-3 ml-1" />
-                      مسجّل في الدورة
+                      {bi('مسجّل في الدورة', 'Enrolled in course')}
                     </Badge>
                   ) : isFree ? (
-                    <Badge className="text-lg px-4 py-1 bg-emerald-500 text-white border-0">مجاني</Badge>
+                    <Badge className="text-lg px-4 py-1 bg-emerald-500 text-white border-0">{bi('مجاني', 'Free')}</Badge>
                   ) : (
                     <p className="text-3xl font-extrabold text-primary">
-                      {course.price} <span className="text-sm font-normal text-muted-foreground">د.أ</span>
+                      {course.price} <span className="text-sm font-normal text-muted-foreground">{bi('د.أ', 'JOD')}</span>
                     </p>
                   )}
                 </div>
@@ -259,7 +262,7 @@ export default function CourseDetailPage() {
 
                 {!isEnrolled && (
                   <p className="text-xs text-muted-foreground text-center">
-                    أدخل بياناتك للتسجيل الفوري في الدورة.
+                    {bi('أدخل بياناتك للتسجيل الفوري في الدورة.', 'Enter your details to enroll in the course instantly.')}
                   </p>
                 )}
               </CardContent>

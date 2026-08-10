@@ -11,6 +11,7 @@ import {
   ArrowRight, Phone, Mail, Linkedin, Instagram, MessageSquare,
   Calendar, Star, CheckCircle, Loader2,
 } from "lucide-react";
+import { useLanguage } from "@/components/language-provider";
 
 interface Mentor {
   id: string;
@@ -26,6 +27,8 @@ interface Mentor {
 }
 
 export default function MentorProfilePage() {
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const { id } = useParams<{ id: string }>();
   const [mentor, setMentor] = useState<Mentor | null>(null);
   const [loading, setLoading] = useState(true);
@@ -46,7 +49,7 @@ export default function MentorProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background" dir="rtl">
+      <div className="min-h-screen flex items-center justify-center bg-background" dir={dir}>
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -54,25 +57,25 @@ export default function MentorProfilePage() {
 
   if (notFound || !mentor) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background" dir="rtl">
-        <h1 className="text-2xl font-bold">المرشد غير موجود</h1>
-        <Button asChild variant="outline"><Link href="/">العودة للرئيسية</Link></Button>
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background" dir={dir}>
+        <h1 className="text-2xl font-bold">{bi('المرشد غير موجود', 'Mentor not found')}</h1>
+        <Button asChild variant="outline"><Link href="/">{bi('العودة للرئيسية', 'Back to home')}</Link></Button>
       </div>
     );
   }
 
-  const name = mentor.name || 'بدون اسم';
+  const name = mentor.name || bi('بدون اسم', 'No name');
   const hasPrice = mentor.sessionPrice != null && mentor.sessionPrice > 0;
 
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
+    <div className="min-h-screen bg-background" dir={dir}>
       {/* Header */}
       <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur shadow-sm">
         <div className="container flex h-14 items-center gap-3">
           <Button variant="ghost" size="sm" asChild>
             <Link href="/" className="flex items-center gap-1 text-muted-foreground hover:text-foreground">
               <ArrowRight className="h-4 w-4" />
-              الرئيسية
+              {bi('الرئيسية', 'Home')}
             </Link>
           </Button>
           <span className="text-muted-foreground">/</span>
@@ -93,7 +96,7 @@ export default function MentorProfilePage() {
               </div>
               <div className="flex-1 pb-1">
                 <h1 className="text-2xl font-extrabold">{name}</h1>
-                <p className="text-muted-foreground text-sm mt-0.5">مرشد</p>
+                <p className="text-muted-foreground text-sm mt-0.5">{bi('مرشد', 'Mentor')}</p>
               </div>
             </div>
 
@@ -105,7 +108,7 @@ export default function MentorProfilePage() {
             {/* Specializations */}
             {Array.isArray(mentor.specializations) && mentor.specializations.length > 0 && (
               <div className="mb-6">
-                <h3 className="text-sm font-semibold mb-2">التخصصات</h3>
+                <h3 className="text-sm font-semibold mb-2">{bi('التخصصات', 'Specializations')}</h3>
                 <div className="flex flex-wrap gap-2">
                   {mentor.specializations.map((s, i) => (
                     <Badge key={i} variant="secondary" className="text-xs">{s}</Badge>
@@ -118,12 +121,12 @@ export default function MentorProfilePage() {
             {hasPrice && (
               <div className="flex items-center justify-between p-4 rounded-xl bg-primary/5 border border-primary/20 mb-6">
                 <div>
-                  <p className="text-sm text-muted-foreground">سعر الجلسة</p>
-                  <p className="text-2xl font-extrabold text-primary">{mentor.sessionPrice} <span className="text-sm font-normal">د.أ</span></p>
+                  <p className="text-sm text-muted-foreground">{bi('سعر الجلسة', 'Session price')}</p>
+                  <p className="text-2xl font-extrabold text-primary">{mentor.sessionPrice} <span className="text-sm font-normal">{bi('د.أ', 'JOD')}</span></p>
                 </div>
                 <Button size="lg" className="gap-2" onClick={() => setBookingOpen(true)}>
                   <Calendar className="h-5 w-5" />
-                  احجز جلسة
+                  {bi('احجز جلسة', 'Book a session')}
                 </Button>
               </div>
             )}
@@ -131,14 +134,14 @@ export default function MentorProfilePage() {
             {!hasPrice && (
               <div className="flex items-center gap-3 p-4 rounded-xl bg-muted/50 border mb-6">
                 <CheckCircle className="h-5 w-5 text-emerald-500 flex-shrink-0" />
-                <p className="text-sm text-muted-foreground">تواصل مع المرشد لمعرفة سعر الجلسة</p>
+                <p className="text-sm text-muted-foreground">{bi('تواصل مع المرشد لمعرفة سعر الجلسة', 'Contact the mentor to learn the session price')}</p>
               </div>
             )}
 
             {/* Contact info */}
             {(mentor.whatsapp || mentor.email || mentor.linkedin || mentor.instagram) && (
               <div>
-                <h3 className="text-sm font-semibold mb-3">وسائل التواصل</h3>
+                <h3 className="text-sm font-semibold mb-3">{bi('وسائل التواصل', 'Contact methods')}</h3>
                 <div className="flex flex-wrap gap-3">
                   {mentor.whatsapp && (
                     <a
@@ -148,7 +151,7 @@ export default function MentorProfilePage() {
                       style={{ backgroundColor: '#25D366' }}
                     >
                       <MessageSquare className="h-4 w-4" />
-                      واتساب
+                      {bi('واتساب', 'WhatsApp')}
                     </a>
                   )}
                   {mentor.email && (
@@ -188,9 +191,9 @@ export default function MentorProfilePage() {
 
         {/* CTA */}
         <div className="text-center">
-          <p className="text-muted-foreground text-sm mb-4">هل تريد التسجيل في المنصة؟</p>
+          <p className="text-muted-foreground text-sm mb-4">{bi('هل تريد التسجيل في المنصة؟', 'Want to sign up on the platform?')}</p>
           <Button asChild variant="outline">
-            <Link href="/register">إنشاء حساب مجاناً</Link>
+            <Link href="/register">{bi('إنشاء حساب مجاناً', 'Create a free account')}</Link>
           </Button>
         </div>
       </main>

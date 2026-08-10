@@ -12,6 +12,19 @@ import { useToast } from "@/hooks/use-toast";
 import { ShoppingCart, ShoppingBag, Search, Store, MessageCircle, ArrowLeft, MapPin } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { translateCategory } from "@/lib/product-category";
+import { useLanguage } from "@/components/language-provider";
+
+const PRODUCT_CATEGORY_LABELS_EN: Record<string, string> = {
+  'الكل': 'All',
+  'مصنوعات يدوية': 'Handmade goods',
+  'طعام ومشروبات': 'Food & beverages',
+  'ملابس وأزياء': 'Clothing & fashion',
+  'حرف يدوية': 'Handicrafts',
+  'خدمات': 'Services',
+  'منتجات زراعية': 'Agricultural products',
+  'منزل وديكور': 'Home & decor',
+  'أخرى': 'Other',
+};
 
 interface Product {
   id: string;
@@ -32,6 +45,9 @@ interface Product {
 }
 
 export default function MarketPage() {
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
+  const categoryLabel = (c: string) => (lang === 'en' ? (PRODUCT_CATEGORY_LABELS_EN[c] || c) : c);
   const [searchQuery, setSearchQuery] = useState("");
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,7 +70,7 @@ export default function MarketPage() {
       organizationId: product.organizationId || '',
       stock: product.stock,
     });
-    toast({ title: 'أُضيف للسلة', description: product.name });
+    toast({ title: bi('أُضيف للسلة', 'Added to cart'), description: product.name });
   };
 
   useEffect(() => {
@@ -94,7 +110,7 @@ export default function MarketPage() {
   }, [allProducts, searchQuery, activeCategory]);
 
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
+    <div className="min-h-screen bg-background" dir={dir}>
 
       <SiteHeader />
 
@@ -105,21 +121,21 @@ export default function MarketPage() {
           <div className="container">
             <div className="max-w-2xl">
               <nav className="flex items-center gap-1.5 text-xs text-muted-foreground mb-5" aria-label="breadcrumb">
-                <Link href="/" className="hover:text-primary transition-colors">الرئيسية</Link>
+                <Link href="/" className="hover:text-primary transition-colors">{bi('الرئيسية', 'Home')}</Link>
                 <span className="text-border/80 select-none">/</span>
-                <span className="text-foreground font-medium">المتجر</span>
+                <span className="text-foreground font-medium">{bi('المتجر', 'Store')}</span>
               </nav>
-              <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">متجر المجتمع</p>
+              <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">{bi('متجر المجتمع', 'Community store')}</p>
               <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-foreground leading-tight mb-4">
-                منتجات صنعها مجتمعنا
+                {bi('منتجات صنعها مجتمعنا', 'Products made by our community')}
               </h1>
               <p className="text-base sm:text-lg text-muted-foreground leading-relaxed mb-8">
-                اكتشف منتجات فريدة ومصنوعة بحب من مستفيدي برنامج التمكين. كل عملية شراء تدعم رحلة صاحبها نحو الاستقلالية.
+                {bi('اكتشف منتجات فريدة ومصنوعة بحب من مستفيدي برنامج التمكين. كل عملية شراء تدعم رحلة صاحبها نحو الاستقلالية.', 'Discover unique products made with love by beneficiaries of the empowerment program. Every purchase supports their journey toward independence.')}
               </p>
               <div className="relative max-w-md">
                 <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                 <Input
-                  placeholder="ابحث عن منتج..."
+                  placeholder={bi('ابحث عن منتج...', 'Search for a product...')}
                   className="pr-10 h-11 bg-card"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
@@ -145,7 +161,7 @@ export default function MarketPage() {
                       : 'bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground'
                   }`}
                 >
-                  {cat}
+                  {categoryLabel(cat)}
                 </button>
               ))}
             </div>
@@ -155,10 +171,10 @@ export default function MarketPage() {
           {!loading && (
             <p className="text-sm text-muted-foreground mb-5 sm:mb-6">
               {filteredProducts.length > 0
-                ? `${filteredProducts.length} منتج`
-                : 'لا توجد نتائج'}
+                ? bi(`${filteredProducts.length} منتج`, `${filteredProducts.length} products`)
+                : bi('لا توجد نتائج', 'No results')}
               {searchQuery && (
-                <span> لـ &ldquo;<strong className="text-foreground">{searchQuery}</strong>&rdquo;</span>
+                <span> {bi('لـ', 'for')} &ldquo;<strong className="text-foreground">{searchQuery}</strong>&rdquo;</span>
               )}
             </p>
           )}
@@ -190,7 +206,7 @@ export default function MarketPage() {
                   {/* Image */}
                   <Link
                     href={`/market/${product.id}`}
-                    aria-label={`عرض تفاصيل ${product.name}`}
+                    aria-label={bi(`عرض تفاصيل ${product.name}`, `View details for ${product.name}`)}
                     className="relative h-40 sm:h-48 bg-muted overflow-hidden shrink-0 block w-full text-right"
                   >
                     {product.imageUrl ? (
@@ -207,7 +223,7 @@ export default function MarketPage() {
                     )}
                     {product.category && (
                       <div className="absolute top-2 right-2 bg-background/90 backdrop-blur-sm text-foreground text-[10px] sm:text-xs font-semibold rounded-full px-2 py-0.5 border border-border/50">
-                        {translateCategory(product.category)}
+                        {categoryLabel(translateCategory(product.category))}
                       </div>
                     )}
                   </Link>
@@ -221,7 +237,7 @@ export default function MarketPage() {
                     <div className="mt-auto pt-1.5 flex flex-col gap-0.5">
                       {product.beneficiaryName && (
                         <p className="text-xs text-muted-foreground">
-                          من: <span className="font-medium text-foreground">{product.beneficiaryName}</span>
+                          {bi('من:', 'By:')} <span className="font-medium text-foreground">{product.beneficiaryName}</span>
                         </p>
                       )}
                       {product.location && (
@@ -236,8 +252,8 @@ export default function MarketPage() {
                   {/* Footer */}
                   <div className="px-3 sm:px-4 pb-3 sm:pb-4 pt-3 border-t border-border flex items-center justify-between gap-2">
                     <p className="font-extrabold text-base sm:text-lg text-foreground tabular-nums leading-none">
-                      {product.price != null ? product.price.toLocaleString('ar') : '—'}
-                      <span className="text-xs font-normal text-muted-foreground mr-0.5">د.أ</span>
+                      {product.price != null ? product.price.toLocaleString(lang === 'en' ? 'en-US' : 'ar') : '—'}
+                      <span className="text-xs font-normal text-muted-foreground mr-0.5">{bi('د.أ', 'JOD')}</span>
                     </p>
                     <div className="flex gap-1.5 shrink-0">
                       {product.whatsapp && (
@@ -245,7 +261,7 @@ export default function MarketPage() {
                           href={`https://wa.me/${product.whatsapp.replace(/\D/g, '')}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          aria-label="تواصل واتساب"
+                          aria-label={bi('تواصل واتساب', 'Contact via WhatsApp')}
                           className="h-8 w-8 rounded-lg border border-green-500/40 text-green-600 flex items-center justify-center hover:bg-green-50 transition-colors shrink-0"
                         >
                           <MessageCircle className="h-3.5 w-3.5" />
@@ -256,7 +272,7 @@ export default function MarketPage() {
                           size="sm"
                           variant="outline"
                           className="h-8 w-8 p-0 shrink-0"
-                          aria-label="أضف للسلة"
+                          aria-label={bi('أضف للسلة', 'Add to cart')}
                           onClick={() => handleAddToCart(product)}
                         >
                           <ShoppingBag className="h-3.5 w-3.5" />
@@ -265,7 +281,7 @@ export default function MarketPage() {
                       <Button size="sm" className="h-8 text-xs px-2.5 sm:px-3 gap-1" asChild>
                         <Link href={`/market/${product.id}`}>
                           <ShoppingCart className="h-3.5 w-3.5" />
-                          <span className="hidden sm:inline">اطلب</span>
+                          <span className="hidden sm:inline">{bi('اطلب', 'Order')}</span>
                         </Link>
                       </Button>
                     </div>
@@ -282,16 +298,16 @@ export default function MarketPage() {
                 <Store className="h-7 w-7 text-muted-foreground/30" />
               </div>
               <h3 className="text-lg font-semibold text-foreground mb-2">
-                {searchQuery ? `لا توجد نتائج لـ "${searchQuery}"` : 'لا توجد منتجات بعد'}
+                {searchQuery ? bi(`لا توجد نتائج لـ "${searchQuery}"`, `No results for "${searchQuery}"`) : bi('لا توجد منتجات بعد', 'No products yet')}
               </h3>
               <p className="text-sm text-muted-foreground mb-6">
-                {searchQuery ? 'جرّب كلمة بحث مختلفة أو تصفح فئة أخرى' : 'كن أول من يضيف منتجه في المتجر'}
+                {searchQuery ? bi('جرّب كلمة بحث مختلفة أو تصفح فئة أخرى', 'Try a different search term or browse another category') : bi('كن أول من يضيف منتجه في المتجر', 'Be the first to add your product to the store')}
               </p>
               {searchQuery ? (
-                <Button variant="outline" size="sm" onClick={() => setSearchQuery("")}>مسح البحث</Button>
+                <Button variant="outline" size="sm" onClick={() => setSearchQuery("")}>{bi('مسح البحث', 'Clear search')}</Button>
               ) : (
                 <Button asChild size="sm">
-                  <Link href="/register">أضف منتجك الآن <ArrowLeft className="mr-1.5 h-3.5 w-3.5" /></Link>
+                  <Link href="/register">{bi('أضف منتجك الآن', 'Add your product now')} <ArrowLeft className="mr-1.5 h-3.5 w-3.5" /></Link>
                 </Button>
               )}
             </div>
@@ -310,13 +326,13 @@ export default function MarketPage() {
             <span className="font-bold text-sm text-foreground">{platformName}</span>
           </div>
           <p className="text-xs text-muted-foreground text-center">
-            جميع المنتجات من مستفيدي برنامج التمكين © 2024
+            {bi('جميع المنتجات من مستفيدي برنامج التمكين © 2024', 'All products are from beneficiaries of the empowerment program © 2024')}
           </p>
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            <Link href="/" className="hover:text-foreground transition-colors">الرئيسية</Link>
-            <Link href="/login" className="hover:text-foreground transition-colors">تسجيل الدخول</Link>
+            <Link href="/" className="hover:text-foreground transition-colors">{bi('الرئيسية', 'Home')}</Link>
+            <Link href="/login" className="hover:text-foreground transition-colors">{bi('تسجيل الدخول', 'Log in')}</Link>
             <Link href="/register" className="hover:text-foreground transition-colors flex items-center gap-1">
-              ابدأ مجاناً <ArrowLeft className="h-3 w-3" />
+              {bi('ابدأ مجاناً', 'Start for free')} <ArrowLeft className="h-3 w-3" />
             </Link>
           </div>
         </div>

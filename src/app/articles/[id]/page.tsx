@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { ArrowRight, Clock, Tag, Calendar } from "lucide-react";
+import { useLanguage } from "@/components/language-provider";
 
 interface Article {
   id: string;
@@ -27,7 +28,14 @@ const ROLE_LABELS: Record<string, string> = {
   coach: 'مدرب',
 };
 
+const ROLE_LABELS_EN: Record<string, string> = {
+  mentor: 'Mentor',
+  coach: 'Coach',
+};
+
 export default function ArticleDetailPage() {
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const params = useParams();
   const router = useRouter();
   const id = params?.id as string;
@@ -56,7 +64,7 @@ export default function ArticleDetailPage() {
 
   function formatDate(d: string | null) {
     if (!d) return '';
-    return new Date(d).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
+    return new Date(d).toLocaleDateString(lang === 'en' ? 'en-US' : 'ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
   }
 
   if (loading) {
@@ -69,23 +77,23 @@ export default function ArticleDetailPage() {
 
   if (notFound || !article) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 text-center" dir="rtl">
-        <h1 className="text-2xl font-bold text-foreground">المقال غير موجود</h1>
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 text-center" dir={dir}>
+        <h1 className="text-2xl font-bold text-foreground">{bi('المقال غير موجود', 'Article not found')}</h1>
         <Button onClick={() => router.push('/articles')}>
           <ArrowRight className="h-4 w-4 ml-2" />
-          العودة للمقالات
+          {bi('العودة للمقالات', 'Back to articles')}
         </Button>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
+    <div className="min-h-screen bg-background" dir={dir}>
       <div className="container max-w-3xl py-10">
         {/* Back button */}
         <Button variant="ghost" onClick={() => router.push('/articles')} className="mb-6 gap-2 text-muted-foreground">
           <ArrowRight className="h-4 w-4" />
-          العودة للمقالات
+          {bi('العودة للمقالات', 'Back to articles')}
         </Button>
 
         {/* Cover image */}
@@ -118,7 +126,7 @@ export default function ArticleDetailPage() {
             <div className="flex items-center gap-2">
               <span className="font-semibold text-foreground">{article.authorName}</span>
               <Badge variant="secondary" className="text-xs">
-                {ROLE_LABELS[article.authorRole] || article.authorRole}
+                {(lang === 'en' ? ROLE_LABELS_EN[article.authorRole] : ROLE_LABELS[article.authorRole]) || article.authorRole}
               </Badge>
             </div>
             <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
@@ -130,7 +138,7 @@ export default function ArticleDetailPage() {
               )}
               <span className="flex items-center gap-1">
                 <Clock className="h-3 w-3" />
-                {article.readTime} دقيقة قراءة
+                {bi(`${article.readTime} دقيقة قراءة`, `${article.readTime} min read`)}
               </span>
             </div>
           </div>
@@ -148,7 +156,7 @@ export default function ArticleDetailPage() {
           <div className="mt-10 pt-6 border-t border-border">
             <p className="text-sm text-muted-foreground mb-3 flex items-center gap-1.5">
               <Tag className="h-3.5 w-3.5" />
-              الوسوم
+              {bi('الوسوم', 'Tags')}
             </p>
             <div className="flex flex-wrap gap-2">
               {article.tags.map(tag => (

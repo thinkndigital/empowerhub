@@ -13,6 +13,18 @@ import {
   ArrowRight, ShoppingBag, ShoppingCart, MessageCircle, MapPin,
   Store, PackageX, PackageCheck, Loader2,
 } from "lucide-react";
+import { useLanguage } from "@/components/language-provider";
+
+const PRODUCT_CATEGORY_LABELS_EN: Record<string, string> = {
+  'مصنوعات يدوية': 'Handmade goods',
+  'طعام ومشروبات': 'Food & beverages',
+  'ملابس وأزياء': 'Clothing & fashion',
+  'حرف يدوية': 'Handicrafts',
+  'خدمات': 'Services',
+  'منتجات زراعية': 'Agricultural products',
+  'منزل وديكور': 'Home & decor',
+  'أخرى': 'Other',
+};
 
 interface Product {
   id: string;
@@ -33,6 +45,9 @@ interface Product {
 }
 
 export default function ProductDetailPage() {
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
+  const categoryLabel = (c: string) => (lang === 'en' ? (PRODUCT_CATEGORY_LABELS_EN[c] || c) : c);
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { addItem } = useCart();
@@ -101,7 +116,7 @@ export default function ProductDetailPage() {
 
   const handleAddToCart = () => {
     addToCart();
-    toast({ title: 'أُضيف للسلة', description: product?.name });
+    toast({ title: bi('أُضيف للسلة', 'Added to cart'), description: product?.name });
   };
 
   const handleBuyNow = () => {
@@ -113,7 +128,7 @@ export default function ProductDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background" dir="rtl">
+      <div className="min-h-screen bg-background" dir={dir}>
         <SiteHeader />
         <div className="flex items-center justify-center py-32">
           <Loader2 className="h-8 w-8 text-primary animate-spin" />
@@ -124,12 +139,12 @@ export default function ProductDetailPage() {
 
   if (notFound || !product) {
     return (
-      <div className="min-h-screen bg-background" dir="rtl">
+      <div className="min-h-screen bg-background" dir={dir}>
         <SiteHeader />
         <div className="flex flex-col items-center justify-center gap-4 py-32 text-center">
-          <h1 className="text-xl font-bold text-foreground">المنتج غير موجود</h1>
+          <h1 className="text-xl font-bold text-foreground">{bi('المنتج غير موجود', 'Product not found')}</h1>
           <Button asChild variant="outline">
-            <Link href="/market"><ArrowRight className="h-4 w-4 ml-2" />العودة للمتجر</Link>
+            <Link href="/market"><ArrowRight className="h-4 w-4 ml-2" />{bi('العودة للمتجر', 'Back to store')}</Link>
           </Button>
         </div>
       </div>
@@ -139,14 +154,14 @@ export default function ProductDetailPage() {
   const sellerName = product.beneficiaryName || product.storeName;
 
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
+    <div className="min-h-screen bg-background" dir={dir}>
       <SiteHeader />
 
       <div className="container py-8 sm:py-10">
         <nav className="flex items-center gap-1.5 text-xs text-muted-foreground mb-6" aria-label="breadcrumb">
-          <Link href="/" className="hover:text-primary transition-colors">الرئيسية</Link>
+          <Link href="/" className="hover:text-primary transition-colors">{bi('الرئيسية', 'Home')}</Link>
           <span className="text-border/80 select-none">/</span>
-          <Link href="/market" className="hover:text-primary transition-colors">المتجر</Link>
+          <Link href="/market" className="hover:text-primary transition-colors">{bi('المتجر', 'Store')}</Link>
           <span className="text-border/80 select-none">/</span>
           <span className="text-foreground font-medium line-clamp-1">{product.name}</span>
         </nav>
@@ -168,7 +183,7 @@ export default function ProductDetailPage() {
             )}
             {product.category && (
               <div className="absolute top-3 right-3 bg-background/90 backdrop-blur-sm text-foreground text-xs font-semibold rounded-full px-2.5 py-1 border border-border/50">
-                {translateCategory(product.category)}
+                {categoryLabel(translateCategory(product.category))}
               </div>
             )}
           </div>
@@ -178,29 +193,29 @@ export default function ProductDetailPage() {
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-foreground leading-snug">{product.name}</h1>
               {sellerName && (
-                <p className="text-sm text-muted-foreground mt-1.5">من: <span className="font-medium text-foreground">{sellerName}</span></p>
+                <p className="text-sm text-muted-foreground mt-1.5">{bi('من:', 'By:')} <span className="font-medium text-foreground">{sellerName}</span></p>
               )}
             </div>
 
             <div className="flex items-center justify-between p-4 rounded-xl bg-muted/50">
               <div>
                 <p className="text-3xl font-extrabold text-foreground tabular-nums leading-none">
-                  {product.price != null ? product.price.toLocaleString('ar') : '—'}
-                  <span className="text-base font-normal text-muted-foreground mr-1.5">د.أ</span>
+                  {product.price != null ? product.price.toLocaleString(lang === 'en' ? 'en-US' : 'ar') : '—'}
+                  <span className="text-base font-normal text-muted-foreground mr-1.5">{bi('د.أ', 'JOD')}</span>
                 </p>
                 {!!product.deliveryCost && (
-                  <p className="text-xs text-muted-foreground mt-1.5">+ {product.deliveryCost} د.أ رسوم توصيل</p>
+                  <p className="text-xs text-muted-foreground mt-1.5">{bi(`+ ${product.deliveryCost} د.أ رسوم توصيل`, `+ ${product.deliveryCost} JOD delivery fee`)}</p>
                 )}
               </div>
               <div className={`flex items-center gap-1.5 text-sm font-semibold ${outOfStock ? 'text-destructive' : 'text-emerald-600'}`}>
                 {outOfStock ? <PackageX className="h-4 w-4" /> : <PackageCheck className="h-4 w-4" />}
-                {outOfStock ? 'نفذ المخزون' : (product.stock != null ? `متوفر (${product.stock})` : 'متوفر')}
+                {outOfStock ? bi('نفذ المخزون', 'Out of stock') : (product.stock != null ? bi(`متوفر (${product.stock})`, `In stock (${product.stock})`) : bi('متوفر', 'In stock'))}
               </div>
             </div>
 
             {product.description && (
               <div>
-                <h3 className="text-sm font-semibold text-foreground mb-1.5">الوصف والمواصفات</h3>
+                <h3 className="text-sm font-semibold text-foreground mb-1.5">{bi('الوصف والمواصفات', 'Description & specifications')}</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">{product.description}</p>
               </div>
             )}
@@ -216,18 +231,18 @@ export default function ProductDetailPage() {
                 <a href={`https://wa.me/${product.whatsapp.replace(/\D/g, '')}`}
                   target="_blank" rel="noopener noreferrer"
                   className="h-11 w-11 shrink-0 rounded-lg border border-green-500/40 text-green-600 flex items-center justify-center hover:bg-green-50 transition-colors"
-                  aria-label="واتساب">
+                  aria-label={bi('واتساب', 'WhatsApp')}>
                   <MessageCircle className="h-4 w-4" />
                 </a>
               )}
               {!outOfStock && product.beneficiaryId && (
                 <Button variant="outline" size="lg" className="gap-2" onClick={handleAddToCart}>
-                  <ShoppingBag className="h-4 w-4" />أضف للسلة
+                  <ShoppingBag className="h-4 w-4" />{bi('أضف للسلة', 'Add to cart')}
                 </Button>
               )}
               <Button size="lg" className="flex-1 gap-2" disabled={outOfStock || buyingNow} onClick={handleBuyNow}>
                 {buyingNow ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShoppingCart className="h-4 w-4" />}
-                {outOfStock ? 'غير متاح حالياً' : 'اشتر الآن'}
+                {outOfStock ? bi('غير متاح حالياً', 'Currently unavailable') : bi('اشتر الآن', 'Buy now')}
               </Button>
             </div>
           </div>
@@ -237,7 +252,7 @@ export default function ProductDetailPage() {
         {relatedProducts.length > 0 && (
           <div className="max-w-5xl mt-14 pt-10 border-t border-border">
             <h2 className="text-xl font-bold text-foreground mb-5">
-              {product.category ? 'منتجات من نفس التصنيف' : 'قد يعجبك أيضاً'}
+              {product.category ? bi('منتجات من نفس التصنيف', 'Products from the same category') : bi('قد يعجبك أيضاً', 'You might also like')}
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
               {relatedProducts.map(p => (
@@ -263,8 +278,8 @@ export default function ProductDetailPage() {
                   <div className="p-2.5 sm:p-3 flex flex-col gap-1">
                     <h3 className="font-semibold text-xs sm:text-sm line-clamp-1 text-foreground">{p.name}</h3>
                     <p className="font-extrabold text-sm text-foreground tabular-nums leading-none">
-                      {p.price != null ? p.price.toLocaleString('ar') : '—'}
-                      <span className="text-[10px] font-normal text-muted-foreground mr-0.5">د.أ</span>
+                      {p.price != null ? p.price.toLocaleString(lang === 'en' ? 'en-US' : 'ar') : '—'}
+                      <span className="text-[10px] font-normal text-muted-foreground mr-0.5">{bi('د.أ', 'JOD')}</span>
                     </p>
                   </div>
                 </Link>

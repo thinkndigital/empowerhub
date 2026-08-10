@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Logo } from "@/components/logo";
 import { usePlatformBrand } from "@/components/platform-brand-provider";
+import { useLanguage } from "@/components/language-provider";
 
 interface PlanInfo {
   id: string;
@@ -30,6 +31,8 @@ const GATEWAY_ICONS: Record<GatewayKey, string> = {
 };
 
 function PaymentPageInner() {
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const searchParams = useSearchParams();
   const router = useRouter();
   const { toast } = useToast();
@@ -49,7 +52,7 @@ function PaymentPageInner() {
   useEffect(() => {
     async function load() {
       if (!planKey || !orgId) {
-        setError("رابط الدفع غير صحيح. الرجاء إعادة التسجيل.");
+        setError(bi("رابط الدفع غير صحيح. الرجاء إعادة التسجيل.", "Invalid payment link. Please sign up again."));
         setLoading(false);
         return;
       }
@@ -63,7 +66,7 @@ function PaymentPageInner() {
 
         const matched = (plansData.plans || []).find((p: PlanInfo) => p.key === planKey);
         if (!matched) {
-          setError("لم يتم العثور على هذه الخطة. تواصل مع الدعم الفني.");
+          setError(bi("لم يتم العثور على هذه الخطة. تواصل مع الدعم الفني.", "This plan could not be found. Please contact support."));
           setLoading(false);
           return;
         }
@@ -78,7 +81,7 @@ function PaymentPageInner() {
         const firstEnabled = Object.keys(enabledGateways)[0] as GatewayKey | undefined;
         if (firstEnabled) setSelectedGateway(firstEnabled);
       } catch {
-        setError("حدث خطأ أثناء تحميل بيانات الدفع.");
+        setError(bi("حدث خطأ أثناء تحميل بيانات الدفع.", "An error occurred while loading payment data."));
       } finally {
         setLoading(false);
       }
@@ -96,7 +99,7 @@ function PaymentPageInner() {
         body: JSON.stringify({ orgId, planId: plan.id, billingCycle: cycle }),
       });
       const checkoutData = await checkoutRes.json();
-      if (!checkoutData.ok) throw new Error(checkoutData.error || "فشل إنشاء طلب الدفع");
+      if (!checkoutData.ok) throw new Error(checkoutData.error || bi("فشل إنشاء طلب الدفع", "Failed to create the payment order"));
 
       const payRes = await fetch("/api/public/payment/initiate", {
         method: "POST",
@@ -104,7 +107,7 @@ function PaymentPageInner() {
         body: JSON.stringify({
           orderId: checkoutData.orderId,
           amount: checkoutData.amount,
-          description: `اشتراك خطة ${plan.name}`,
+          description: bi(`اشتراك خطة ${plan.name}`, `${plan.name} plan subscription`),
           gateway: selectedGateway,
         }),
       });
@@ -113,15 +116,15 @@ function PaymentPageInner() {
         window.location.href = payData.paymentUrl;
         return;
       }
-      throw new Error(payData.error || "فشل في تهيئة الدفع");
+      throw new Error(payData.error || bi("فشل في تهيئة الدفع", "Failed to initiate payment"));
     } catch (err: any) {
-      toast({ variant: "destructive", title: "خطأ", description: err.message || "حدث خطأ، حاول مرة أخرى." });
+      toast({ variant: "destructive", title: bi("خطأ", "Error"), description: err.message || bi("حدث خطأ، حاول مرة أخرى.", "An error occurred, please try again.") });
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4" dir="rtl">
+    <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4" dir={dir}>
       <div className="w-full max-w-md">
         <div className="flex justify-center mb-6">
           {platformLogo
@@ -132,7 +135,7 @@ function PaymentPageInner() {
         {loading && (
           <div className="flex flex-col items-center gap-3 py-16">
             <Loader2 className="h-10 w-10 animate-spin text-primary" />
-            <p className="text-muted-foreground text-sm">جاري تحميل بيانات الدفع...</p>
+            <p className="text-muted-foreground text-sm">{bi('جاري تحميل بيانات الدفع...', 'Loading payment data...')}</p>
           </div>
         )}
 
@@ -141,7 +144,7 @@ function PaymentPageInner() {
             <CardContent className="py-10 text-center space-y-4">
               <p className="text-destructive">{error}</p>
               <Button asChild variant="outline">
-                <Link href="/register?role=organization">العودة للتسجيل</Link>
+                <Link href="/register?role=organization">{bi('العودة للتسجيل', 'Back to sign up')}</Link>
               </Button>
             </CardContent>
           </Card>
@@ -150,17 +153,17 @@ function PaymentPageInner() {
         {!loading && !error && plan && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-xl">إتمام الاشتراك</CardTitle>
+              <CardTitle className="text-xl">{bi('إتمام الاشتراك', 'Complete subscription')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="rounded-xl border p-4 bg-card">
                 <div className="flex items-center justify-between mb-3">
                   <div>
                     <span className="font-semibold">{plan.name}</span>
-                    <Badge variant="outline" className="mr-2 text-xs">{cycle === "annual" ? "سنوي" : "شهري"}</Badge>
+                    <Badge variant="outline" className="mr-2 text-xs">{cycle === "annual" ? bi("سنوي", "Annual") : bi("شهري", "Monthly")}</Badge>
                   </div>
                   <span className="text-lg font-bold text-primary">
-                    {(cycle === "annual" ? plan.priceAnnual : plan.priceMonthly).toLocaleString()} {plan.currency} / {cycle === "annual" ? "سنة" : "شهر"}
+                    {(cycle === "annual" ? plan.priceAnnual : plan.priceMonthly).toLocaleString()} {plan.currency} / {cycle === "annual" ? bi("سنة", "year") : bi("شهر", "month")}
                   </span>
                 </div>
                 <ul className="space-y-1.5">
@@ -175,11 +178,11 @@ function PaymentPageInner() {
 
               {Object.keys(gateways).length === 0 ? (
                 <p className="text-sm text-destructive text-center">
-                  لا توجد وسيلة دفع مفعّلة حالياً. تواصل مع الدعم الفني.
+                  {bi('لا توجد وسيلة دفع مفعّلة حالياً. تواصل مع الدعم الفني.', 'No payment method is currently enabled. Please contact support.')}
                 </p>
               ) : (
                 <div className="space-y-2">
-                  <Label>وسيلة الدفع</Label>
+                  <Label>{bi('وسيلة الدفع', 'Payment method')}</Label>
                   <RadioGroup value={selectedGateway} onValueChange={(v) => setSelectedGateway(v as GatewayKey)} className="space-y-2">
                     {(Object.entries(gateways) as [GatewayKey, GatewayInfo][]).map(([key, gw]) => (
                       <div key={key} className="flex items-center gap-3 rounded-lg border p-3">
@@ -205,7 +208,7 @@ function PaymentPageInner() {
                 ) : (
                   <CreditCard className="h-4 w-4 ml-2" />
                 )}
-                الدفع الآن
+                {bi('الدفع الآن', 'Pay now')}
               </Button>
             </CardContent>
           </Card>

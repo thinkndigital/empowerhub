@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, Users, DollarSign, ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { useLanguage } from "@/components/language-provider";
 
 interface LiveSession {
   id: string;
@@ -23,6 +24,8 @@ interface LiveSession {
 }
 
 export default function LiveSessionDetailPage() {
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const { id } = useParams<{ id: string }>();
   const [session, setSession] = useState<LiveSession | null>(null);
   const [loading, setLoading] = useState(true);
@@ -55,7 +58,7 @@ export default function LiveSessionDetailPage() {
         body: JSON.stringify(form),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'خطأ في التسجيل');
+      if (!res.ok) throw new Error(json.error || bi('خطأ في التسجيل', 'Error registering'));
       setSuccess(true);
     } catch (err: any) {
       setError(err.message);
@@ -66,7 +69,7 @@ export default function LiveSessionDetailPage() {
 
   function formatDate(d: string | null) {
     if (!d) return '';
-    return new Date(d).toLocaleString('ar-SA', {
+    return new Date(d).toLocaleString(lang === 'en' ? 'en-US' : 'ar-SA', {
       weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
       hour: '2-digit', minute: '2-digit',
     });
@@ -88,19 +91,19 @@ export default function LiveSessionDetailPage() {
 
   if (notFound || !session) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4" dir="rtl">
-        <p className="text-xl font-semibold text-foreground">الجلسة غير موجودة</p>
-        <Link href="/" className="text-primary hover:underline text-sm">العودة للرئيسية</Link>
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4" dir={dir}>
+        <p className="text-xl font-semibold text-foreground">{bi('الجلسة غير موجودة', 'Session not found')}</p>
+        <Link href="/" className="text-primary hover:underline text-sm">{bi('العودة للرئيسية', 'Back to home')}</Link>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
+    <div className="min-h-screen bg-background" dir={dir}>
       <div className="container py-10">
         <Link href="/" className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground text-sm mb-6 transition-colors">
           <ArrowRight className="h-4 w-4 rotate-180" />
-          العودة
+          {bi('العودة', 'Back')}
         </Link>
 
         <div className="grid gap-8 lg:grid-cols-3">
@@ -119,7 +122,7 @@ export default function LiveSessionDetailPage() {
             <div>
               <h1 className="text-2xl font-bold text-foreground mb-2">{session.title}</h1>
               {session.coachName && (
-                <p className="text-muted-foreground text-sm">بقيادة: {session.coachName}</p>
+                <p className="text-muted-foreground text-sm">{bi('بقيادة:', 'Led by:')} {session.coachName}</p>
               )}
             </div>
             <div className="flex flex-wrap gap-4 text-sm">
@@ -131,23 +134,23 @@ export default function LiveSessionDetailPage() {
               )}
               <div className="flex items-center gap-2 text-foreground">
                 <Clock className="h-4 w-4 text-primary shrink-0" />
-                <span>{session.duration} دقيقة</span>
+                <span>{bi(`${session.duration} دقيقة`, `${session.duration} min`)}</span>
               </div>
               <div className="flex items-center gap-2 text-foreground">
                 <Users className="h-4 w-4 text-primary shrink-0" />
                 <span>
-                  {session.registrationsCount} مسجل
-                  {session.maxParticipants ? ` من ${session.maxParticipants}` : ''}
+                  {bi(`${session.registrationsCount} مسجل`, `${session.registrationsCount} registered`)}
+                  {session.maxParticipants ? ` ${bi(`من ${session.maxParticipants}`, `of ${session.maxParticipants}`)}` : ''}
                 </span>
               </div>
               <div className="flex items-center gap-2 font-semibold text-foreground">
                 <DollarSign className="h-4 w-4 text-primary shrink-0" />
-                <span>{session.price > 0 ? `${session.price} د.أ` : 'مجاني'}</span>
+                <span>{session.price > 0 ? bi(`${session.price} د.أ`, `${session.price} JOD`) : bi('مجاني', 'Free')}</span>
               </div>
             </div>
             {session.description && (
               <div className="prose prose-sm max-w-none text-foreground">
-                <h2 className="text-base font-semibold mb-2">عن الجلسة</h2>
+                <h2 className="text-base font-semibold mb-2">{bi('عن الجلسة', 'About the session')}</h2>
                 <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{session.description}</p>
               </div>
             )}
@@ -158,13 +161,13 @@ export default function LiveSessionDetailPage() {
             <div className="rounded-2xl border border-border bg-card p-6 sticky top-24 space-y-4">
               <div className="text-center">
                 <div className="text-2xl font-bold text-foreground">
-                  {session.price > 0 ? `${session.price} د.أ` : 'مجاني'}
+                  {session.price > 0 ? bi(`${session.price} د.أ`, `${session.price} JOD`) : bi('مجاني', 'Free')}
                 </div>
                 {isPast ? (
-                  <div className="text-xs mt-1 text-destructive">انتهت هذه الجلسة</div>
+                  <div className="text-xs mt-1 text-destructive">{bi('انتهت هذه الجلسة', 'This session has ended')}</div>
                 ) : spotsLeft !== null && (
                   <div className={`text-xs mt-1 ${isFull ? 'text-destructive' : 'text-muted-foreground'}`}>
-                    {isFull ? 'اكتملت الأماكن' : `${spotsLeft} مكان متبقي`}
+                    {isFull ? bi('اكتملت الأماكن', 'Spots full') : bi(`${spotsLeft} مكان متبقي`, `${spotsLeft} spots left`)}
                   </div>
                 )}
               </div>
@@ -172,29 +175,29 @@ export default function LiveSessionDetailPage() {
               {success ? (
                 <div className="text-center space-y-2 py-4">
                   <div className="text-4xl">✅</div>
-                  <p className="font-semibold text-foreground">تم تسجيلك بنجاح!</p>
-                  <p className="text-sm text-muted-foreground">ستصلك تفاصيل الجلسة على بريدك الإلكتروني</p>
+                  <p className="font-semibold text-foreground">{bi('تم تسجيلك بنجاح!', 'You have registered successfully!')}</p>
+                  <p className="text-sm text-muted-foreground">{bi('ستصلك تفاصيل الجلسة على بريدك الإلكتروني', 'Session details will be sent to your email')}</p>
                 </div>
               ) : isPast ? (
                 <div className="text-center space-y-2 py-4">
-                  <p className="font-semibold text-foreground">انتهت هذه الجلسة</p>
-                  <p className="text-sm text-muted-foreground">لم يعد التسجيل متاحاً لأن موعد الجلسة قد مضى.</p>
+                  <p className="font-semibold text-foreground">{bi('انتهت هذه الجلسة', 'This session has ended')}</p>
+                  <p className="text-sm text-muted-foreground">{bi('لم يعد التسجيل متاحاً لأن موعد الجلسة قد مضى.', 'Registration is no longer available because the session date has passed.')}</p>
                 </div>
               ) : (
                 <form onSubmit={handleRegister} className="space-y-3">
                   <div className="space-y-1.5">
-                    <Label htmlFor="reg-name">الاسم *</Label>
+                    <Label htmlFor="reg-name">{bi('الاسم *', 'Name *')}</Label>
                     <Input
                       id="reg-name"
                       value={form.name}
                       onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                      placeholder="اسمك الكامل"
+                      placeholder={bi('اسمك الكامل', 'Your full name')}
                       required
                       disabled={isFull}
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="reg-email">البريد الإلكتروني *</Label>
+                    <Label htmlFor="reg-email">{bi('البريد الإلكتروني *', 'Email *')}</Label>
                     <Input
                       id="reg-email"
                       type="email"
@@ -207,7 +210,7 @@ export default function LiveSessionDetailPage() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="reg-phone">رقم الهاتف</Label>
+                    <Label htmlFor="reg-phone">{bi('رقم الهاتف', 'Phone number')}</Label>
                     <Input
                       id="reg-phone"
                       type="tel"
@@ -222,11 +225,11 @@ export default function LiveSessionDetailPage() {
                     <p className="text-destructive text-sm text-center">{error}</p>
                   )}
                   <Button type="submit" className="w-full" disabled={submitting || isFull}>
-                    {isFull ? 'اكتملت الأماكن' : submitting ? 'جاري التسجيل...' : 'سجّل الآن'}
+                    {isFull ? bi('اكتملت الأماكن', 'Spots full') : submitting ? bi('جاري التسجيل...', 'Registering...') : bi('سجّل الآن', 'Register now')}
                   </Button>
                   {session.price > 0 && !isFull && (
                     <p className="text-xs text-muted-foreground text-center">
-                      سيتم التواصل معك لإتمام الدفع بعد التسجيل
+                      {bi('سيتم التواصل معك لإتمام الدفع بعد التسجيل', 'We will contact you to complete payment after registering')}
                     </p>
                   )}
                 </form>

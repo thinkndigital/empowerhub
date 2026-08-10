@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useUser } from "@/firebase/auth/use-user";
 import { Logo } from "@/components/logo";
 import { usePlatformBrand } from "@/components/platform-brand-provider";
+import { useLanguage } from "@/components/language-provider";
 
 function getRoleDashboard(role: string) {
   switch (role) {
@@ -19,6 +20,8 @@ function getRoleDashboard(role: string) {
 }
 
 export default function AuthRedirectPage() {
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const router = useRouter();
   const { user, loading } = useUser();
   const { logoUrl: platformLogo } = usePlatformBrand();
@@ -48,12 +51,12 @@ export default function AuthRedirectPage() {
   }, [loading, user, router]);
 
   return (
-    <div className="flex h-screen w-full items-center justify-center bg-background">
+    <div className="flex h-screen w-full items-center justify-center bg-background" dir={dir}>
       <div className="flex flex-col items-center gap-4">
         {platformLogo
           ? <img src={platformLogo} alt="logo" className="h-24 w-24 object-contain animate-pulse" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
           : <Logo className="h-24 w-24 animate-pulse" />}
-        <p className="text-muted-foreground">جاري تحميل حسابك...</p>
+        <p className="text-muted-foreground">{bi('جاري تحميل حسابك...', 'Loading your account...')}</p>
       </div>
     </div>
   );

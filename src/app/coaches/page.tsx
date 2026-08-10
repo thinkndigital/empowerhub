@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Users } from "lucide-react";
+import { useLanguage } from "@/components/language-provider";
 
 interface Coach {
   id: string;
@@ -21,6 +22,8 @@ interface Coach {
 }
 
 export default function CoachesListPage() {
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const [coaches, setCoaches] = useState<Coach[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -43,24 +46,24 @@ export default function CoachesListPage() {
   });
 
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
+    <div className="min-h-screen bg-background" dir={dir}>
       {/* Header */}
       <div className="border-b border-border bg-muted/30">
         <div className="container py-10 sm:py-14">
           <nav className="flex items-center gap-1.5 text-xs text-muted-foreground mb-5" aria-label="breadcrumb">
-            <Link href="/" className="hover:text-primary transition-colors">الرئيسية</Link>
+            <Link href="/" className="hover:text-primary transition-colors">{bi('الرئيسية', 'Home')}</Link>
             <span className="text-border/80 select-none">/</span>
-            <span className="text-foreground font-medium">المدربون</span>
+            <span className="text-foreground font-medium">{bi('المدربون', 'Coaches')}</span>
           </nav>
-          <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">تدريب احترافي</p>
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground mb-3">المدربون</h1>
+          <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">{bi('تدريب احترافي', 'Professional coaching')}</p>
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground mb-3">{bi('المدربون', 'Coaches')}</h1>
           <p className="text-muted-foreground text-sm sm:text-base max-w-xl leading-relaxed mb-6">
-            اكتشف مدربين متخصصين يساعدونك على بناء مهاراتك وتطوير مسيرتك المهنية.
+            {bi('اكتشف مدربين متخصصين يساعدونك على بناء مهاراتك وتطوير مسيرتك المهنية.', 'Discover specialized coaches who help you build your skills and develop your career.')}
           </p>
           <div className="relative max-w-md">
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
             <Input
-              placeholder="ابحث عن مدرب..."
+              placeholder={bi('ابحث عن مدرب...', 'Search for a coach...')}
               className="pr-10 h-11 bg-card"
               value={search}
               onChange={e => setSearch(e.target.value)}
@@ -85,16 +88,16 @@ export default function CoachesListPage() {
           <div className="text-center py-20 text-muted-foreground">
             <Users className="h-12 w-12 mx-auto mb-4 opacity-20" />
             <p className="text-lg font-semibold mb-1">
-              {search ? `لا نتائج لـ "${search}"` : 'لا يوجد مدربون حالياً'}
+              {search ? bi(`لا نتائج لـ "${search}"`, `No results for "${search}"`) : bi('لا يوجد مدربون حالياً', 'No coaches available yet')}
             </p>
             {search && (
-              <Button variant="outline" size="sm" onClick={() => setSearch('')} className="mt-4">مسح البحث</Button>
+              <Button variant="outline" size="sm" onClick={() => setSearch('')} className="mt-4">{bi('مسح البحث', 'Clear search')}</Button>
             )}
           </div>
         ) : (
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
             {filtered.map(c => {
-              const name = c.displayName || c.name || 'بدون اسم';
+              const name = c.displayName || c.name || bi('بدون اسم', 'No name');
               const bio = c.bio || c.description || '';
               const specs = c.specializations || [];
               const subtitle = specs.length > 0 ? specs[0] : bio;
@@ -117,7 +120,7 @@ export default function CoachesListPage() {
                   <div>
                     <h3 className="font-bold text-base text-foreground group-hover:text-primary transition-colors">{name}</h3>
                     {c.yearsOfExperience && (
-                      <p className="text-xs text-muted-foreground mt-0.5">{c.yearsOfExperience} سنوات خبرة</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{bi(`${c.yearsOfExperience} سنوات خبرة`, `${c.yearsOfExperience} years of experience`)}</p>
                     )}
                   </div>
 
@@ -130,7 +133,7 @@ export default function CoachesListPage() {
 
                   {/* CTA */}
                   <Button size="sm" className="w-full mt-2" asChild>
-                    <Link href={`/coaches/${c.id}`}>الملف الشخصي</Link>
+                    <Link href={`/coaches/${c.id}`}>{bi('الملف الشخصي', 'View profile')}</Link>
                   </Button>
                 </div>
               );

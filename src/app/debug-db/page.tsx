@@ -2,8 +2,11 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/firebase/provider";
 import { useUser } from "@/firebase/auth/use-user";
+import { useLanguage } from "@/components/language-provider";
 
 export default function DebugPage() {
+  const { lang } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const auth = useAuth();
   const { user, userProfile, loading } = useUser();
   const [dbData, setDbData] = useState<any>(null);
@@ -40,8 +43,8 @@ export default function DebugPage() {
     ).then(r => r.json()).then(setDbData).catch(e => setError(e.message));
   }, [user]);
 
-  if (loading) return <div className="p-8">جاري التحميل...</div>;
-  if (!user) return <div className="p-8 text-red-500">غير مسجّل الدخول</div>;
+  if (loading) return <div className="p-8">{bi('جاري التحميل...', 'Loading...')}</div>;
+  if (!user) return <div className="p-8 text-red-500">{bi('غير مسجّل الدخول', 'Not logged in')}</div>;
 
   return (
     <div className="p-8 font-mono text-sm" dir="ltr">
@@ -64,7 +67,7 @@ export default function DebugPage() {
           disabled={cleaning}
           className="px-4 py-2 bg-red-600 text-white rounded font-bold hover:bg-red-700 disabled:opacity-50"
         >
-          {cleaning ? "⏳ جاري التنظيف..." : "🧹 تنظيف البيانات المكررة وإصلاح الـ Claims"}
+          {cleaning ? bi("⏳ جاري التنظيف...", "⏳ Cleaning...") : bi("🧹 تنظيف البيانات المكررة وإصلاح الـ Claims", "🧹 Clean up duplicate data and fix Claims")}
         </button>
         {cleanResult && (
           <div className="mt-2 p-3 bg-yellow-50 rounded text-sm">

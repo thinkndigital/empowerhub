@@ -7,8 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Shield, Eye, EyeOff } from "lucide-react";
+import { useLanguage } from "@/components/language-provider";
 
 export default function AdminLoginPage() {
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -30,17 +33,17 @@ export default function AdminLoginPage() {
         router.push("/admin/dashboard");
       } else {
         const data = await res.json();
-        setError(data.error || "فشل تسجيل الدخول");
+        setError(data.error || bi("فشل تسجيل الدخول", "Login failed"));
       }
     } catch {
-      setError("حدث خطأ في الاتصال");
+      setError(bi("حدث خطأ في الاتصال", "A connection error occurred"));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900" dir="rtl">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900" dir={dir}>
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-transparent" />
       <div className="relative w-full max-w-md px-4">
         <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl">
@@ -50,7 +53,7 @@ export default function AdminLoginPage() {
               <Shield className="h-10 w-10 text-primary" />
             </div>
             <div className="text-center">
-              <h1 className="text-2xl font-bold text-white">لوحة الإدارة</h1>
+              <h1 className="text-2xl font-bold text-white">{bi('لوحة الإدارة', 'Admin Panel')}</h1>
               <p className="text-slate-400 text-sm mt-1">EmpowerHub Control Panel</p>
             </div>
           </div>
@@ -58,7 +61,7 @@ export default function AdminLoginPage() {
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
-              <Label className="text-slate-300 text-sm">اسم المستخدم</Label>
+              <Label className="text-slate-300 text-sm">{bi('اسم المستخدم', 'Username')}</Label>
               <Input
                 value={username}
                 onChange={e => setUsername(e.target.value)}
@@ -69,7 +72,7 @@ export default function AdminLoginPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-slate-300 text-sm">كلمة المرور</Label>
+              <Label className="text-slate-300 text-sm">{bi('كلمة المرور', 'Password')}</Label>
               <div className="relative">
                 <Input
                   type={showPass ? "text" : "password"}
@@ -101,7 +104,7 @@ export default function AdminLoginPage() {
               className="w-full h-11 bg-primary hover:bg-primary-hover text-white font-semibold text-base mt-2"
               disabled={loading}
             >
-              {loading ? "جاري الدخول..." : "دخول"}
+              {loading ? bi("جاري الدخول...", "Logging in...") : bi("دخول", "Log in")}
             </Button>
           </form>
         </div>

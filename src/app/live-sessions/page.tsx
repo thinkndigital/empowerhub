@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Calendar, Clock, Users, Video, ArrowLeft, DollarSign } from "lucide-react";
 import { useCurrency } from "@/hooks/use-currency";
+import { useLanguage } from "@/components/language-provider";
 
 interface LiveSession {
   id: string;
@@ -21,15 +22,18 @@ interface LiveSession {
   registrationsCount: number;
 }
 
-function formatDate(d: string | null) {
+function formatDate(d: string | null, locale: string) {
   if (!d) return '';
-  return new Date(d).toLocaleString('ar-SA', {
+  return new Date(d).toLocaleString(locale, {
     year: 'numeric', month: 'long', day: 'numeric',
     hour: '2-digit', minute: '2-digit',
   });
 }
 
 export default function PublicLiveSessionsPage() {
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
+  const locale = lang === 'en' ? 'en-US' : 'ar-SA';
   const { symbol: currencySymbol } = useCurrency();
   const [sessions, setSessions] = useState<LiveSession[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,21 +48,21 @@ export default function PublicLiveSessionsPage() {
   }, []);
 
   return (
-    <div className="bg-background text-foreground min-h-screen" dir="rtl">
+    <div className="bg-background text-foreground min-h-screen" dir={dir}>
       <div className="container py-12 sm:py-16">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10 sm:mb-14">
           <div>
             <nav className="flex items-center gap-1.5 text-xs text-muted-foreground mb-5" aria-label="breadcrumb">
-              <Link href="/" className="hover:text-primary transition-colors">الرئيسية</Link>
+              <Link href="/" className="hover:text-primary transition-colors">{bi('الرئيسية', 'Home')}</Link>
               <span className="text-border/80 select-none">/</span>
-              <span className="text-foreground font-medium">الجلسات المباشرة</span>
+              <span className="text-foreground font-medium">{bi('الجلسات المباشرة', 'Live Sessions')}</span>
             </nav>
-            <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">مباشر ومتاح</p>
+            <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">{bi('مباشر ومتاح', 'Live & available')}</p>
             <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground mb-3">
-              الجلسات المباشرة
+              {bi('الجلسات المباشرة', 'Live Sessions')}
             </h1>
             <p className="text-muted-foreground text-sm sm:text-base max-w-xl leading-relaxed">
-              انضم إلى جلسات تدريبية مباشرة مع مدربين متخصصين — تفاعلية، مجدولة، ومناسبة لجميع المستويات.
+              {bi('انضم إلى جلسات تدريبية مباشرة مع مدربين متخصصين — تفاعلية، مجدولة، ومناسبة لجميع المستويات.', 'Join live training sessions with specialized coaches — interactive, scheduled, and suitable for all levels.')}
             </p>
           </div>
           {!loading && sessions.length > 0 && (
@@ -66,7 +70,7 @@ export default function PublicLiveSessionsPage() {
               {(['all', 'free', 'paid'] as const).map(f => (
                 <button key={f} onClick={() => setFilter(f)}
                   className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${filter === f ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
-                  {f === 'all' ? 'الكل' : f === 'free' ? 'مجاني' : 'مدفوع'}
+                  {f === 'all' ? bi('الكل', 'All') : f === 'free' ? bi('مجاني', 'Free') : bi('مدفوع', 'Paid')}
                 </button>
               ))}
             </div>
@@ -80,10 +84,10 @@ export default function PublicLiveSessionsPage() {
         ) : sessions.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-muted-foreground">
             <Video className="h-14 w-14 mb-4 opacity-20" />
-            <p className="text-lg font-semibold mb-1">لا توجد جلسات مباشرة حالياً</p>
-            <p className="text-sm mb-6">تفقّد لاحقاً — يضيف المدربون جلسات جديدة باستمرار.</p>
+            <p className="text-lg font-semibold mb-1">{bi('لا توجد جلسات مباشرة حالياً', 'No live sessions available yet')}</p>
+            <p className="text-sm mb-6">{bi('تفقّد لاحقاً — يضيف المدربون جلسات جديدة باستمرار.', 'Check back later — coaches keep adding new sessions.')}</p>
             <Button asChild variant="outline">
-              <Link href="/">العودة للرئيسية</Link>
+              <Link href="/">{bi('العودة للرئيسية', 'Back to home')}</Link>
             </Button>
           </div>
         ) : (() => {
@@ -95,7 +99,13 @@ export default function PublicLiveSessionsPage() {
           return filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
               <Video className="h-12 w-12 mb-3 opacity-20" />
-              <p className="text-base font-medium">لا توجد جلسات {filter === 'free' ? 'مجانية' : 'مدفوعة'} حالياً.</p>
+              <p className="text-base font-medium">
+                {filter === 'free'
+                  ? bi('لا توجد جلسات مجانية حالياً.', 'No free sessions available yet.')
+                  : filter === 'paid'
+                  ? bi('لا توجد جلسات مدفوعة حالياً.', 'No paid sessions available yet.')
+                  : bi('لا توجد جلسات حالياً.', 'No sessions available yet.')}
+              </p>
             </div>
           ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
@@ -122,10 +132,10 @@ export default function PublicLiveSessionsPage() {
                       <h3 className="font-semibold text-base text-foreground line-clamp-2 flex-1 group-hover:text-primary transition-colors">
                         {session.title}
                       </h3>
-                      {isFull && <Badge variant="destructive" className="shrink-0 text-xs">اكتملت الأماكن</Badge>}
+                      {isFull && <Badge variant="destructive" className="shrink-0 text-xs">{bi('اكتملت الأماكن', 'Spots full')}</Badge>}
                     </div>
                     {session.coachName && (
-                      <p className="text-xs text-muted-foreground">المدرب: {session.coachName}</p>
+                      <p className="text-xs text-muted-foreground">{bi('المدرب:', 'Coach:')} {session.coachName}</p>
                     )}
                     {session.description && (
                       <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{session.description}</p>
@@ -133,24 +143,24 @@ export default function PublicLiveSessionsPage() {
                     <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-muted-foreground mt-auto">
                       {session.date && (
                         <span className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />{formatDate(session.date)}
+                          <Calendar className="h-3 w-3" />{formatDate(session.date, locale)}
                         </span>
                       )}
                       <span className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />{session.duration} دقيقة
+                        <Clock className="h-3 w-3" />{bi(`${session.duration} دقيقة`, `${session.duration} min`)}
                       </span>
                       <span className="flex items-center gap-1">
                         <Users className="h-3 w-3" />{session.registrationsCount}
-                        {session.maxParticipants ? ` / ${session.maxParticipants}` : ''} مسجل
+                        {session.maxParticipants ? ` / ${session.maxParticipants}` : ''} {bi('مسجل', 'registered')}
                       </span>
                     </div>
                     <div className="flex items-center justify-between pt-3 border-t border-border">
                       <span className="font-bold text-base text-foreground">
-                        {session.price > 0 ? `${session.price} ${currencySymbol}` : 'مجاني'}
+                        {session.price > 0 ? `${session.price} ${currencySymbol}` : bi('مجاني', 'Free')}
                       </span>
                       <Button size="sm" asChild disabled={isFull}>
                         <Link href={`/live-sessions/${session.id}`}>
-                          {isFull ? 'اكتملت' : 'التسجيل'}
+                          {isFull ? bi('اكتملت', 'Full') : bi('التسجيل', 'Register')}
                           {!isFull && <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />}
                         </Link>
                       </Button>

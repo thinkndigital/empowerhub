@@ -6,37 +6,40 @@ import { SiteHeader } from "@/components/site-header";
 import { useCart } from "@/components/cart-provider";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, ShoppingCart, Minus, Plus, Trash2 } from "lucide-react";
+import { useLanguage } from "@/components/language-provider";
 
 const currency = "JOD";
 
 export default function CartPage() {
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const router = useRouter();
   const { items, subtotal, deliveryTotal, total, updateQuantity, removeItem } = useCart();
 
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
+    <div className="min-h-screen bg-background" dir={dir}>
       <SiteHeader />
 
       <div className="container py-8 sm:py-10 max-w-3xl">
         <nav className="flex items-center gap-1.5 text-xs text-muted-foreground mb-6" aria-label="breadcrumb">
-          <Link href="/" className="hover:text-primary transition-colors">الرئيسية</Link>
+          <Link href="/" className="hover:text-primary transition-colors">{bi('الرئيسية', 'Home')}</Link>
           <span className="text-border/80 select-none">/</span>
-          <Link href="/market" className="hover:text-primary transition-colors">المتجر</Link>
+          <Link href="/market" className="hover:text-primary transition-colors">{bi('المتجر', 'Store')}</Link>
           <span className="text-border/80 select-none">/</span>
-          <span className="text-foreground font-medium">سلة المشتريات</span>
+          <span className="text-foreground font-medium">{bi('سلة المشتريات', 'Shopping cart')}</span>
         </nav>
 
         <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-6 flex items-center gap-2.5">
           <ShoppingCart className="h-6 w-6 text-primary" />
-          سلة المشتريات {items.length > 0 && `(${items.length})`}
+          {bi('سلة المشتريات', 'Shopping cart')} {items.length > 0 && `(${items.length})`}
         </h1>
 
         {items.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-3 py-24 text-center text-muted-foreground">
             <ShoppingCart className="h-14 w-14 opacity-30" />
-            <p className="text-base">سلتك فارغة</p>
+            <p className="text-base">{bi('سلتك فارغة', 'Your cart is empty')}</p>
             <Button asChild variant="outline" className="mt-2">
-              <Link href="/market">تصفح المتجر</Link>
+              <Link href="/market">{bi('تصفح المتجر', 'Browse the store')}</Link>
             </Button>
           </div>
         ) : (
@@ -64,12 +67,12 @@ export default function CartPage() {
                     <button
                       onClick={() => removeItem(item.productId)}
                       className="text-muted-foreground hover:text-destructive transition-colors"
-                      aria-label="إزالة"
+                      aria-label={bi('إزالة', 'Remove')}
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
                     {item.type === 'course' ? (
-                      <span className="text-xs text-muted-foreground">دورة</span>
+                      <span className="text-xs text-muted-foreground">{bi('دورة', 'Course')}</span>
                     ) : (
                       <div className="flex items-center gap-1.5">
                         <button
@@ -92,32 +95,32 @@ export default function CartPage() {
                 </div>
               ))}
               <Button variant="ghost" asChild className="gap-1.5 text-muted-foreground">
-                <Link href="/market"><ArrowRight className="h-4 w-4" />متابعة التسوق</Link>
+                <Link href="/market"><ArrowRight className="h-4 w-4" />{bi('متابعة التسوق', 'Continue shopping')}</Link>
               </Button>
             </div>
 
             {/* Summary */}
             <div className="lg:col-span-1">
               <div className="rounded-xl border border-border bg-card p-5 space-y-3 sticky top-20">
-                <h2 className="font-semibold text-foreground">ملخص الطلب</h2>
+                <h2 className="font-semibold text-foreground">{bi('ملخص الطلب', 'Order summary')}</h2>
                 <div className="space-y-1.5 text-sm">
                   <div className="flex justify-between text-muted-foreground">
-                    <span>المجموع الفرعي</span>
+                    <span>{bi('المجموع الفرعي', 'Subtotal')}</span>
                     <span>{subtotal.toFixed(2)} {currency}</span>
                   </div>
                   {deliveryTotal > 0 && (
                     <div className="flex justify-between text-muted-foreground">
-                      <span>التوصيل</span>
+                      <span>{bi('التوصيل', 'Delivery')}</span>
                       <span>{deliveryTotal.toFixed(2)} {currency}</span>
                     </div>
                   )}
                   <div className="flex justify-between font-bold text-base pt-2 border-t border-border">
-                    <span>الإجمالي</span>
+                    <span>{bi('الإجمالي', 'Total')}</span>
                     <span className="text-primary">{total.toFixed(2)} {currency}</span>
                   </div>
                 </div>
                 <Button className="w-full" size="lg" onClick={() => router.push('/checkout')}>
-                  إتمام الشراء
+                  {bi('إتمام الشراء', 'Checkout')}
                 </Button>
               </div>
             </div>
