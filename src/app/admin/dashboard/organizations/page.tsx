@@ -30,6 +30,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useLanguage } from "@/components/language-provider";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -60,6 +61,7 @@ interface OrgSections {
 const fallbackPlanColor = "bg-muted-foreground/20 text-foreground/90 border-muted-foreground/30";
 const statusBadge: Record<string, string> = { active: "bg-emerald-500/20 text-emerald-400", suspended: "bg-red-500/20 text-red-400", pending: "bg-yellow-500/20 text-yellow-400" };
 const statusLabel: Record<string, string> = { active: "نشط", suspended: "موقوف", pending: "معلق" };
+const statusLabelEn: Record<string, string> = { active: "Active", suspended: "Suspended", pending: "Pending" };
 
 const sectionLabels: Record<string, Record<string, string>> = {
   organization: {
@@ -81,11 +83,31 @@ const sectionLabels: Record<string, Record<string, string>> = {
   },
 };
 
+const sectionLabelsEn: Record<string, Record<string, string>> = {
+  organization: {
+    beneficiaries: 'Beneficiaries', team: 'Team', mentors: 'Mentors',
+    coaches: 'Coaches', courses: 'Courses', stores: 'Stores',
+    orders: 'Orders', reports: 'Reports', messages: 'Messages',
+  },
+  beneficiary: {
+    progress: 'My progress', courses: 'My courses', sessions: 'My sessions',
+    messages: 'Messages', store: 'My store', orders: 'My orders',
+  },
+  mentor: {
+    my_beneficiaries: 'Beneficiaries', sessions: 'Sessions', analytics: 'Analytics',
+    messages: 'Messages', invitations: 'Invitations',
+  },
+  coach: {
+    courses: 'Courses', sessions: 'Sessions', analytics: 'Analytics',
+    messages: 'Messages', invitations: 'Invitations',
+  },
+};
+
 const dashboardMeta = [
-  { key: 'organization' as const, label: 'لوحة المنظمة', color: 'text-blue-400', bg: 'bg-blue-500/10' },
-  { key: 'beneficiary' as const, label: 'لوحة المستفيد', color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
-  { key: 'mentor' as const, label: 'لوحة المرشد', color: 'text-purple-400', bg: 'bg-purple-500/10' },
-  { key: 'coach' as const, label: 'لوحة المدرب', color: 'text-orange-400', bg: 'bg-orange-500/10' },
+  { key: 'organization' as const, labelAr: 'لوحة المنظمة', labelEn: 'Organization dashboard', color: 'text-blue-400', bg: 'bg-blue-500/10' },
+  { key: 'beneficiary' as const, labelAr: 'لوحة المستفيد', labelEn: 'Beneficiary dashboard', color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+  { key: 'mentor' as const, labelAr: 'لوحة المرشد', labelEn: 'Mentor dashboard', color: 'text-purple-400', bg: 'bg-purple-500/10' },
+  { key: 'coach' as const, labelAr: 'لوحة المدرب', labelEn: 'Coach dashboard', color: 'text-orange-400', bg: 'bg-orange-500/10' },
 ];
 
 const defaultSections: OrgSections = {
@@ -102,6 +124,8 @@ const emptyForm: OrgForm = { name: "", plan: "", primaryColor: "#6366f1", logoUr
 function LogoUploadField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const { user } = useUser();
   const { toast } = useToast();
+  const { lang } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const [uploading, setUploading] = useState(false);
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -116,26 +140,26 @@ function LogoUploadField({ value, onChange }: { value: string; onChange: (v: str
       const token = user ? await user.getIdToken() : undefined;
       onChange(await uploadToStorage(file, 'organizations', token));
     } catch (err: any) {
-      toast({ variant: 'destructive', title: 'فشل رفع الصورة', description: err?.message || 'حدث خطأ غير متوقع' });
+      toast({ variant: 'destructive', title: bi('فشل رفع الصورة', 'Failed to upload image'), description: err?.message || bi('حدث خطأ غير متوقع', 'An unexpected error occurred') });
     }
     setUploading(false);
   };
 
   return (
     <div className="space-y-2">
-      <Label>شعار المنظمة</Label>
+      <Label>{bi('شعار المنظمة', 'Organization logo')}</Label>
       <div className="flex gap-3 items-center">
         <div className="h-16 w-16 rounded-xl border border-border overflow-hidden bg-muted/60 flex items-center justify-center flex-shrink-0">
           {value
             ? <img src={value} alt="" className="h-full w-full object-contain" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-            : <span className="text-muted-foreground text-xs text-center">لا شعار</span>}
+            : <span className="text-muted-foreground text-xs text-center">{bi('لا شعار', 'No logo')}</span>}
         </div>
         <div className="flex-1 space-y-2 min-w-0">
           <Input value={value} onChange={e => onChange(e.target.value)} placeholder="https://..." dir="ltr" className="font-mono text-sm" />
           <label className="cursor-pointer">
             <Button type="button" variant="outline" size="sm" disabled={uploading} asChild>
               <span className="border-border text-foreground/90 hover:text-foreground hover:bg-accent gap-2">
-                {uploading ? <span className="text-xs">جاري الرفع...</span> : <><Upload className="h-3 w-3" />رفع صورة</>}
+                {uploading ? <span className="text-xs">{bi('جاري الرفع...', 'Uploading...')}</span> : <><Upload className="h-3 w-3" />{bi('رفع صورة', 'Upload image')}</>}
               </span>
             </Button>
             <input type="file" accept="image/*" className="hidden" onChange={handleFile} />
@@ -143,7 +167,7 @@ function LogoUploadField({ value, onChange }: { value: string; onChange: (v: str
         </div>
         {value && (
           <Button type="button" variant="ghost" size="sm" onClick={() => onChange('')} className="text-red-400 hover:text-red-300 flex-shrink-0 text-xs">
-            حذف
+            {bi('حذف', 'Remove')}
           </Button>
         )}
       </div>
@@ -155,51 +179,56 @@ function LogoUploadField({ value, onChange }: { value: string; onChange: (v: str
 
 function OrgFormFields({ form, onChange, plans }: { form: OrgForm; onChange: (f: OrgForm) => void; plans: PlanOption[] }) {
   const currentPlan = plans.find(p => p.key === form.plan);
+  const { lang } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label>اسم المنظمة</Label>
-        <Input value={form.name} onChange={e => onChange({ ...form, name: e.target.value })} placeholder="اسم المنظمة" />
+        <Label>{bi('اسم المنظمة', 'Organization name')}</Label>
+        <Input value={form.name} onChange={e => onChange({ ...form, name: e.target.value })} placeholder={bi('اسم المنظمة', 'Organization name')} />
       </div>
       <div className="space-y-2">
-        <Label>الخطة</Label>
+        <Label>{bi('الخطة', 'Plan')}</Label>
         <Select value={form.plan} onValueChange={v => onChange({ ...form, plan: v })}>
-          <SelectTrigger><SelectValue placeholder="اختر خطة..." /></SelectTrigger>
+          <SelectTrigger><SelectValue placeholder={bi('اختر خطة...', 'Choose a plan...')} /></SelectTrigger>
           <SelectContent>
             {plans.length === 0
-              ? <div className="px-3 py-2 text-xs text-muted-foreground">لا توجد خطط — أضفها من صفحة "خطط الاشتراك"</div>
+              ? <div className="px-3 py-2 text-xs text-muted-foreground">{bi('لا توجد خطط — أضفها من صفحة "خطط الاشتراك"', 'No plans — add them from the "Subscription Plans" page')}</div>
               : plans.map(p => <SelectItem key={p.id} value={p.key}>{p.name}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
       <div className="space-y-2 rounded-lg border border-border p-3">
-        <Label className="text-sm">تجاوز حدود الخطة لهذه المنظمة (اختياري)</Label>
+        <Label className="text-sm">{bi('تجاوز حدود الخطة لهذه المنظمة (اختياري)', 'Override plan limits for this organization (optional)')}</Label>
         <p className="text-xs text-muted-foreground">
-          اترك الحقل فارغاً لاستخدام حد الخطة الافتراضي{currentPlan?.limits ? ` (المستفيدون: ${currentPlan.limits.maxUsers ?? '—'}، المرشدون/المدربون: ${currentPlan.limits.maxMentors ?? '—'})` : ''}.
+          {bi(
+            `اترك الحقل فارغاً لاستخدام حد الخطة الافتراضي${currentPlan?.limits ? ` (المستفيدون: ${currentPlan.limits.maxUsers ?? '—'}، المرشدون/المدربون: ${currentPlan.limits.maxMentors ?? '—'})` : ''}.`,
+            `Leave the field empty to use the plan's default limit${currentPlan?.limits ? ` (beneficiaries: ${currentPlan.limits.maxUsers ?? '—'}, mentors/coaches: ${currentPlan.limits.maxMentors ?? '—'})` : ''}.`
+          )}
         </p>
         <div className="grid grid-cols-2 gap-3 mt-2">
           <div className="space-y-1">
-            <Label className="text-xs">أقصى عدد مستفيدين</Label>
+            <Label className="text-xs">{bi('أقصى عدد مستفيدين', 'Max beneficiaries')}</Label>
             <Input
               type="number" min={0}
               value={form.limitOverrides.maxUsers ?? ''}
               onChange={e => onChange({ ...form, limitOverrides: { ...form.limitOverrides, maxUsers: e.target.value === '' ? undefined : Number(e.target.value) } })}
-              placeholder="افتراضي الخطة"
+              placeholder={bi('افتراضي الخطة', "Plan default")}
             />
           </div>
           <div className="space-y-1">
-            <Label className="text-xs">أقصى عدد مرشدين/مدربين</Label>
+            <Label className="text-xs">{bi('أقصى عدد مرشدين/مدربين', 'Max mentors/coaches')}</Label>
             <Input
               type="number" min={0}
               value={form.limitOverrides.maxMentors ?? ''}
               onChange={e => onChange({ ...form, limitOverrides: { ...form.limitOverrides, maxMentors: e.target.value === '' ? undefined : Number(e.target.value) } })}
-              placeholder="افتراضي الخطة"
+              placeholder={bi('افتراضي الخطة', "Plan default")}
             />
           </div>
         </div>
       </div>
       <div className="space-y-2">
-        <Label>اللون الرئيسي</Label>
+        <Label>{bi('اللون الرئيسي', 'Primary color')}</Label>
         <div className="flex items-center gap-3">
           <input type="color" value={form.primaryColor || '#6366f1'} onChange={e => onChange({ ...form, primaryColor: e.target.value })} className="h-10 w-12 rounded cursor-pointer border border-border bg-transparent" />
           <div className="h-10 w-10 rounded-lg border border-border flex-shrink-0" style={{ backgroundColor: form.primaryColor || '#6366f1' }} />
@@ -214,6 +243,8 @@ function OrgFormFields({ form, onChange, plans }: { form: OrgForm; onChange: (f:
 // ─── Person Row ───────────────────────────────────────────────────────────────
 
 function PersonRow({ person }: { person: Person }) {
+  const { lang } = useLanguage();
+  const tStatus = lang === 'en' ? statusLabelEn : statusLabel;
   return (
     <div className="flex items-center gap-3 py-2 border-b border-border last:border-0">
       <Avatar className="h-8 w-8 flex-shrink-0">
@@ -225,7 +256,7 @@ function PersonRow({ person }: { person: Person }) {
         <p className="text-muted-foreground text-xs truncate">{person.email}</p>
       </div>
       <Badge className={`text-xs border-0 ${statusBadge[person.status || 'active']}`}>
-        {statusLabel[person.status || 'active']}
+        {tStatus[person.status || 'active']}
       </Badge>
     </div>
   );
@@ -236,6 +267,8 @@ function PersonRow({ person }: { person: Person }) {
 function OrgOverviewModal({ org, onClose, planName }: { org: Org; onClose: () => void; planName: (key: string) => string }) {
   const [overview, setOverview] = useState<OrgOverview | null>(null);
   const [loading, setLoading] = useState(true);
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -251,7 +284,7 @@ function OrgOverviewModal({ org, onClose, planName }: { org: Org; onClose: () =>
 
   return (
     <Dialog open onOpenChange={o => !o && onClose()}>
-      <DialogContent dir="rtl" className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent dir={dir} className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-3">
             <div className="h-12 w-12 rounded-xl flex items-center justify-center text-foreground font-bold text-xl flex-shrink-0 overflow-hidden" style={{ backgroundColor: color }}>
@@ -270,17 +303,17 @@ function OrgOverviewModal({ org, onClose, planName }: { org: Org; onClose: () =>
         </DialogHeader>
 
         {loading ? (
-          <div className="text-center py-12 text-muted-foreground">جاري التحميل...</div>
+          <div className="text-center py-12 text-muted-foreground">{bi('جاري التحميل...', 'Loading...')}</div>
         ) : !overview ? (
-          <div className="text-center py-12 text-red-400">فشل تحميل البيانات</div>
+          <div className="text-center py-12 text-red-400">{bi('فشل تحميل البيانات', 'Failed to load data')}</div>
         ) : (
           <>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
-                { label: 'مستفيد', value: overview.beneficiaries.length, icon: Users, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
-                { label: 'مرشد', value: overview.mentors.length, icon: GraduationCap, color: 'text-purple-400', bg: 'bg-purple-500/10' },
-                { label: 'مدرب', value: overview.coaches.length, icon: UserCheck, color: 'text-orange-400', bg: 'bg-orange-500/10' },
-                { label: 'متجر', value: overview.stores.length, icon: Store, color: 'text-blue-400', bg: 'bg-blue-500/10' },
+                { label: bi('مستفيد', 'Beneficiary'), value: overview.beneficiaries.length, icon: Users, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+                { label: bi('مرشد', 'Mentor'), value: overview.mentors.length, icon: GraduationCap, color: 'text-purple-400', bg: 'bg-purple-500/10' },
+                { label: bi('مدرب', 'Coach'), value: overview.coaches.length, icon: UserCheck, color: 'text-orange-400', bg: 'bg-orange-500/10' },
+                { label: bi('متجر', 'Store'), value: overview.stores.length, icon: Store, color: 'text-blue-400', bg: 'bg-blue-500/10' },
               ].map(s => {
                 const SIcon = s.icon;
                 return (
@@ -299,21 +332,21 @@ function OrgOverviewModal({ org, onClose, planName }: { org: Org; onClose: () =>
 
             <Tabs defaultValue="beneficiaries">
               <TabsList className="w-full">
-                <TabsTrigger value="beneficiaries" className="flex-1 text-xs">مستفيدون ({overview.beneficiaries.length})</TabsTrigger>
-                <TabsTrigger value="mentors" className="flex-1 text-xs">مرشدون ({overview.mentors.length})</TabsTrigger>
-                <TabsTrigger value="coaches" className="flex-1 text-xs">مدربون ({overview.coaches.length})</TabsTrigger>
-                <TabsTrigger value="stores" className="flex-1 text-xs">متاجر ({overview.stores.length})</TabsTrigger>
+                <TabsTrigger value="beneficiaries" className="flex-1 text-xs">{bi('مستفيدون', 'Beneficiaries')} ({overview.beneficiaries.length})</TabsTrigger>
+                <TabsTrigger value="mentors" className="flex-1 text-xs">{bi('مرشدون', 'Mentors')} ({overview.mentors.length})</TabsTrigger>
+                <TabsTrigger value="coaches" className="flex-1 text-xs">{bi('مدربون', 'Coaches')} ({overview.coaches.length})</TabsTrigger>
+                <TabsTrigger value="stores" className="flex-1 text-xs">{bi('متاجر', 'Stores')} ({overview.stores.length})</TabsTrigger>
               </TabsList>
               {(['beneficiaries', 'mentors', 'coaches'] as const).map(tab => (
                 <TabsContent key={tab} value={tab} className="mt-3">
                   {overview[tab].length === 0
-                    ? <p className="text-center text-muted-foreground py-8">لا يوجد بيانات</p>
+                    ? <p className="text-center text-muted-foreground py-8">{bi('لا يوجد بيانات', 'No data')}</p>
                     : <div className="divide-y divide-border rounded-xl border border-border px-3">{overview[tab].map(p => <PersonRow key={p.id} person={p} />)}</div>}
                 </TabsContent>
               ))}
               <TabsContent value="stores" className="mt-3">
                 {overview.stores.length === 0
-                  ? <p className="text-center text-muted-foreground py-8">لا توجد متاجر</p>
+                  ? <p className="text-center text-muted-foreground py-8">{bi('لا توجد متاجر', 'No stores')}</p>
                   : (
                     <div className="divide-y divide-border rounded-xl border border-border px-3">
                       {overview.stores.map(s => (
@@ -322,7 +355,7 @@ function OrgOverviewModal({ org, onClose, planName }: { org: Org; onClose: () =>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium truncate">{s.name || '—'}</p>
                           </div>
-                          {s.hidden && <Badge variant="secondary" className="text-xs">مخفي</Badge>}
+                          {s.hidden && <Badge variant="secondary" className="text-xs">{bi('مخفي', 'Hidden')}</Badge>}
                         </div>
                       ))}
                     </div>
@@ -350,6 +383,9 @@ function OrgSectionsModal({ org, onClose }: { org: Org; onClose: () => void }) {
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
+  const tSectionLabels = lang === 'en' ? sectionLabelsEn : sectionLabels;
 
   const toggle = (dash: keyof OrgSections, key: string) =>
     setSections(s => ({ ...s, [dash]: { ...s[dash], [key]: !s[dash][key] } }));
@@ -373,15 +409,15 @@ function OrgSectionsModal({ org, onClose }: { org: Org; onClose: () => void }) {
 
   return (
     <Dialog open onOpenChange={o => !o && onClose()}>
-      <DialogContent dir="rtl" className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent dir={dir} className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-xl flex items-center justify-center bg-primary/20 flex-shrink-0">
               <Sliders className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <DialogTitle>تخصيص أقسام: {org.name}</DialogTitle>
-              <p className="text-muted-foreground text-xs mt-0.5">فعّل أو أوقف أقسام لوحات التحكم لهذه المنظمة</p>
+              <DialogTitle>{bi('تخصيص أقسام:', 'Customize sections:')} {org.name}</DialogTitle>
+              <p className="text-muted-foreground text-xs mt-0.5">{bi('فعّل أو أوقف أقسام لوحات التحكم لهذه المنظمة', 'Enable or disable dashboard sections for this organization')}</p>
             </div>
           </div>
         </DialogHeader>
@@ -393,17 +429,17 @@ function OrgSectionsModal({ org, onClose }: { org: Org; onClose: () => void }) {
             return (
               <div key={dash.key} className="rounded-xl border border-border p-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <p className={`font-semibold text-sm ${dash.color}`}>{dash.label}</p>
+                  <p className={`font-semibold text-sm ${dash.color}`}>{bi(dash.labelAr, dash.labelEn)}</p>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">{enabledCount} من {keys.length}</span>
-                    <Button variant="ghost" size="sm" className="text-xs h-7 px-2" onClick={() => toggleAll(dash.key, true)}>تفعيل الكل</Button>
-                    <Button variant="ghost" size="sm" className="text-xs h-7 px-2 text-muted-foreground" onClick={() => toggleAll(dash.key, false)}>إيقاف الكل</Button>
+                    <span className="text-xs text-muted-foreground">{bi(`${enabledCount} من ${keys.length}`, `${enabledCount} of ${keys.length}`)}</span>
+                    <Button variant="ghost" size="sm" className="text-xs h-7 px-2" onClick={() => toggleAll(dash.key, true)}>{bi('تفعيل الكل', 'Enable all')}</Button>
+                    <Button variant="ghost" size="sm" className="text-xs h-7 px-2 text-muted-foreground" onClick={() => toggleAll(dash.key, false)}>{bi('إيقاف الكل', 'Disable all')}</Button>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {keys.map(key => (
                     <div key={key} className="flex items-center justify-between gap-2 bg-muted/30 rounded-lg px-3 py-2">
-                      <span className="text-xs">{sectionLabels[dash.key][key]}</span>
+                      <span className="text-xs">{tSectionLabels[dash.key][key]}</span>
                       <Switch
                         checked={sections[dash.key][key] !== false}
                         onCheckedChange={() => toggle(dash.key, key)}
@@ -418,9 +454,9 @@ function OrgSectionsModal({ org, onClose }: { org: Org; onClose: () => void }) {
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>إلغاء</Button>
+          <Button variant="outline" onClick={onClose}>{bi('إلغاء', 'Cancel')}</Button>
           <Button onClick={handleSave} disabled={saving} className={saved ? 'bg-emerald-600 hover:bg-emerald-700' : ''}>
-            {saving ? 'جاري الحفظ...' : saved ? 'تم الحفظ ✓' : 'حفظ الأقسام'}
+            {saving ? bi('جاري الحفظ...', 'Saving...') : saved ? bi('تم الحفظ ✓', 'Saved ✓') : bi('حفظ الأقسام', 'Save sections')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -443,6 +479,8 @@ export default function OrganizationsPage() {
   const [addForm, setAddForm] = useState<OrgForm>(emptyForm);
   const [editForm, setEditForm] = useState<OrgForm>(emptyForm);
   const [saving, setSaving] = useState(false);
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
 
   const load = () => {
     setLoading(true);
@@ -460,7 +498,7 @@ export default function OrganizationsPage() {
       .then(d => setPlans((d.plans || []).map((p: any) => ({ ...p, key: p.key || p.id }))));
   }, []);
 
-  const planName = (key: string) => plans.find(p => p.key === key)?.name || key || "بدون خطة";
+  const planName = (key: string) => plans.find(p => p.key === key)?.name || key || bi("بدون خطة", "No plan");
 
   const openEdit = (org: Org) => {
     setEditOrg(org);
@@ -499,26 +537,26 @@ export default function OrganizationsPage() {
   const filtered = orgs.filter(o => (o.name || "").toLowerCase().includes(search.toLowerCase()));
 
   return (
-    <div className="space-y-6 max-w-full" dir="rtl">
+    <div className="space-y-6 max-w-full" dir={dir}>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">المنظمات</h1>
-          <p className="text-muted-foreground text-sm">إدارة جميع المنظمات المسجلة — {orgs.length} منظمة</p>
+          <h1 className="text-2xl font-bold text-foreground">{bi('المنظمات', 'Organizations')}</h1>
+          <p className="text-muted-foreground text-sm">{bi(`إدارة جميع المنظمات المسجلة — ${orgs.length} منظمة`, `Manage all registered organizations — ${orgs.length} organizations`)}</p>
         </div>
         <Button onClick={() => setAddOpen(true)} className="bg-primary hover:bg-primary-hover gap-2 w-full sm:w-auto">
-          <Plus className="h-4 w-4" />إضافة منظمة
+          <Plus className="h-4 w-4" />{bi('إضافة منظمة', 'Add organization')}
         </Button>
       </div>
 
       <div className="relative">
         <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-        <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="بحث عن منظمة..." className="bg-muted border-border text-foreground pr-10" />
+        <Input value={search} onChange={e => setSearch(e.target.value)} placeholder={bi('بحث عن منظمة...', 'Search for an organization...')} className="bg-muted border-border text-foreground pr-10" />
       </div>
 
       {loading ? (
-        <p className="text-muted-foreground text-center py-16">جاري التحميل...</p>
+        <p className="text-muted-foreground text-center py-16">{bi('جاري التحميل...', 'Loading...')}</p>
       ) : filtered.length === 0 ? (
-        <p className="text-muted-foreground text-center py-16">لا توجد منظمات</p>
+        <p className="text-muted-foreground text-center py-16">{bi('لا توجد منظمات', 'No organizations')}</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 w-full">
           {filtered.map(org => {
@@ -545,7 +583,7 @@ export default function OrganizationsPage() {
                           <span className="truncate font-mono">{color}</span>
                         </span>
                       </div>
-                      {org.inviteCode && <p className="text-muted-foreground text-xs mt-0.5 font-mono truncate">كود: {org.inviteCode}</p>}
+                      {org.inviteCode && <p className="text-muted-foreground text-xs mt-0.5 font-mono truncate">{bi('كود:', 'Code:')} {org.inviteCode}</p>}
                     </div>
 
                     {/* Dropdown menu */}
@@ -556,20 +594,20 @@ export default function OrganizationsPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-48">
-                        <DropdownMenuLabel className="text-xs text-muted-foreground">خيارات المنظمة</DropdownMenuLabel>
+                        <DropdownMenuLabel className="text-xs text-muted-foreground">{bi('خيارات المنظمة', 'Organization options')}</DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => setOverviewOrg(org)} className="gap-2 cursor-pointer">
-                          <Eye className="h-4 w-4" />عرض الأعضاء
+                          <Eye className="h-4 w-4" />{bi('عرض الأعضاء', 'View members')}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => openEdit(org)} className="gap-2 cursor-pointer">
-                          <Pencil className="h-4 w-4" />تعديل البيانات
+                          <Pencil className="h-4 w-4" />{bi('تعديل البيانات', 'Edit details')}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => setSectionsOrg(org)} className="gap-2 cursor-pointer">
-                          <Sliders className="h-4 w-4" />تخصيص الأقسام
+                          <Sliders className="h-4 w-4" />{bi('تخصيص الأقسام', 'Customize sections')}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => setDeleteOrg(org)} className="gap-2 cursor-pointer text-red-400 focus:text-red-400 focus:bg-red-500/10">
-                          <Trash2 className="h-4 w-4" />حذف المنظمة
+                          <Trash2 className="h-4 w-4" />{bi('حذف المنظمة', 'Delete organization')}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -578,13 +616,13 @@ export default function OrganizationsPage() {
                   {/* Quick action buttons */}
                   <div className="grid grid-cols-3 gap-1.5">
                     <Button size="sm" variant="outline" onClick={() => setOverviewOrg(org)} className="border-border text-foreground/90 hover:text-foreground hover:bg-accent gap-1 text-xs px-2">
-                      <Eye className="h-3 w-3 flex-shrink-0" /><span className="truncate">عرض</span>
+                      <Eye className="h-3 w-3 flex-shrink-0" /><span className="truncate">{bi('عرض', 'View')}</span>
                     </Button>
                     <Button size="sm" variant="outline" onClick={() => setSectionsOrg(org)} className="border-border text-foreground/90 hover:text-foreground hover:bg-accent gap-1 text-xs px-2">
-                      <Sliders className="h-3 w-3 flex-shrink-0" /><span className="truncate">الأقسام</span>
+                      <Sliders className="h-3 w-3 flex-shrink-0" /><span className="truncate">{bi('الأقسام', 'Sections')}</span>
                     </Button>
                     <Button size="sm" variant="outline" onClick={() => openEdit(org)} className="border-border text-foreground/90 hover:text-foreground hover:bg-accent gap-1 text-xs px-2">
-                      <Pencil className="h-3 w-3 flex-shrink-0" /><span className="truncate">تعديل</span>
+                      <Pencil className="h-3 w-3 flex-shrink-0" /><span className="truncate">{bi('تعديل', 'Edit')}</span>
                     </Button>
                   </div>
                 </CardContent>
@@ -600,38 +638,38 @@ export default function OrganizationsPage() {
 
       {/* Add Dialog */}
       <Dialog open={addOpen} onOpenChange={open => { if (!open) { setAddOpen(false); setAddForm(emptyForm); } }}>
-        <DialogContent dir="rtl" className="sm:max-w-md">
-          <DialogHeader><DialogTitle>إضافة منظمة جديدة</DialogTitle></DialogHeader>
+        <DialogContent dir={dir} className="sm:max-w-md">
+          <DialogHeader><DialogTitle>{bi('إضافة منظمة جديدة', 'Add New Organization')}</DialogTitle></DialogHeader>
           <OrgFormFields form={addForm} onChange={setAddForm} plans={plans} />
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setAddOpen(false); setAddForm(emptyForm); }}>إلغاء</Button>
-            <Button onClick={handleAdd} disabled={!addForm.name.trim() || saving}>{saving ? "جاري الحفظ..." : "إضافة"}</Button>
+            <Button variant="outline" onClick={() => { setAddOpen(false); setAddForm(emptyForm); }}>{bi('إلغاء', 'Cancel')}</Button>
+            <Button onClick={handleAdd} disabled={!addForm.name.trim() || saving}>{saving ? bi("جاري الحفظ...", "Saving...") : bi("إضافة", "Add")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Edit Dialog */}
       <Dialog open={!!editOrg} onOpenChange={open => { if (!open) setEditOrg(null); }}>
-        <DialogContent dir="rtl" className="sm:max-w-md">
-          <DialogHeader><DialogTitle>تعديل: {editOrg?.name}</DialogTitle></DialogHeader>
+        <DialogContent dir={dir} className="sm:max-w-md">
+          <DialogHeader><DialogTitle>{bi('تعديل:', 'Edit:')} {editOrg?.name}</DialogTitle></DialogHeader>
           <OrgFormFields form={editForm} onChange={setEditForm} plans={plans} />
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditOrg(null)}>إلغاء</Button>
-            <Button onClick={handleEdit} disabled={saving}>{saving ? "جاري الحفظ..." : "حفظ التغييرات"}</Button>
+            <Button variant="outline" onClick={() => setEditOrg(null)}>{bi('إلغاء', 'Cancel')}</Button>
+            <Button onClick={handleEdit} disabled={saving}>{saving ? bi("جاري الحفظ...", "Saving...") : bi("حفظ التغييرات", "Save changes")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Delete Confirm */}
       <AlertDialog open={!!deleteOrg} onOpenChange={open => { if (!open) setDeleteOrg(null); }}>
-        <AlertDialogContent dir="rtl">
+        <AlertDialogContent dir={dir}>
           <AlertDialogHeader>
-            <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
-            <AlertDialogDescription>هل أنت متأكد من حذف منظمة "{deleteOrg?.name}"؟ لا يمكن التراجع عن هذا الإجراء.</AlertDialogDescription>
+            <AlertDialogTitle>{bi('تأكيد الحذف', 'Confirm Deletion')}</AlertDialogTitle>
+            <AlertDialogDescription>{bi(`هل أنت متأكد من حذف منظمة "${deleteOrg?.name}"؟ لا يمكن التراجع عن هذا الإجراء.`, `Are you sure you want to delete "${deleteOrg?.name}"? This action cannot be undone.`)}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>إلغاء</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">حذف</AlertDialogAction>
+            <AlertDialogCancel>{bi('إلغاء', 'Cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">{bi('حذف', 'Delete')}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
