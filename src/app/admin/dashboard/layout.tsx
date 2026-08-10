@@ -10,38 +10,44 @@ import {
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { usePlatformBrand } from "@/components/platform-brand-provider";
+import { useLanguage } from "@/components/language-provider";
+import { LanguageSwitcher } from "@/components/language-switcher";
 
 const navGroups = [
   {
-    label: 'الإدارة',
+    labelAr: 'الإدارة',
+    labelEn: 'Administration',
     items: [
-      { href: "/admin/dashboard", label: "الرئيسية", icon: LayoutGrid, exact: true },
-      { href: "/admin/dashboard/organizations", label: "المنظمات", icon: Building2 },
-      { href: "/admin/dashboard/users", label: "المستخدمون", icon: Users },
-      { href: "/admin/dashboard/mentors", label: "المرشدون والمدربون", icon: GraduationCap },
+      { href: "/admin/dashboard", labelAr: "الرئيسية", labelEn: "Home", icon: LayoutGrid, exact: true },
+      { href: "/admin/dashboard/organizations", labelAr: "المنظمات", labelEn: "Organizations", icon: Building2 },
+      { href: "/admin/dashboard/users", labelAr: "المستخدمون", labelEn: "Users", icon: Users },
+      { href: "/admin/dashboard/mentors", labelAr: "المرشدون والمدربون", labelEn: "Mentors & coaches", icon: GraduationCap },
     ],
   },
   {
-    label: 'الاشتراكات',
+    labelAr: 'الاشتراكات',
+    labelEn: 'Subscriptions',
     items: [
-      { href: "/admin/dashboard/plans", label: "خطط التسعير", icon: Star },
-      { href: "/admin/dashboard/subscriptions", label: "الاشتراكات", icon: CreditCard },
+      { href: "/admin/dashboard/plans", labelAr: "خطط التسعير", labelEn: "Pricing plans", icon: Star },
+      { href: "/admin/dashboard/subscriptions", labelAr: "الاشتراكات", labelEn: "Subscriptions", icon: CreditCard },
     ],
   },
   {
-    label: 'المحتوى',
+    labelAr: 'المحتوى',
+    labelEn: 'Content',
     items: [
-      { href: "/admin/dashboard/content", label: "إدارة المحتوى", icon: FileText },
-      { href: "/admin/dashboard/stores", label: "المتاجر والمنتجات", icon: Store },
-      { href: "/admin/dashboard/payment", label: "بوابة الدفع", icon: Wallet },
+      { href: "/admin/dashboard/content", labelAr: "إدارة المحتوى", labelEn: "Content management", icon: FileText },
+      { href: "/admin/dashboard/stores", labelAr: "المتاجر والمنتجات", labelEn: "Stores & products", icon: Store },
+      { href: "/admin/dashboard/payment", labelAr: "بوابة الدفع", labelEn: "Payment gateway", icon: Wallet },
     ],
   },
   {
-    label: 'الموقع',
+    labelAr: 'الموقع',
+    labelEn: 'Site',
     items: [
-      { href: "/admin/dashboard/site", label: "تعديل الموقع", icon: PenSquare },
-      { href: "/admin/dashboard/platform", label: "تخصيص المنصة", icon: Sliders },
-      { href: "/admin/dashboard/settings", label: "الإعدادات", icon: Settings },
+      { href: "/admin/dashboard/site", labelAr: "تعديل الموقع", labelEn: "Site editor", icon: PenSquare },
+      { href: "/admin/dashboard/platform", labelAr: "تخصيص المنصة", labelEn: "Platform customization", icon: Sliders },
+      { href: "/admin/dashboard/settings", labelAr: "الإعدادات", labelEn: "Settings", icon: Settings },
     ],
   },
 ];
@@ -54,6 +60,8 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [checking, setChecking] = useState(true);
   const { logoUrl: platformLogo } = usePlatformBrand();
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
 
   useEffect(() => {
     fetch("/api/admin-panel/stats").then(r => {
@@ -70,7 +78,7 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
   if (checking) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-foreground text-lg animate-pulse">جاري التحقق...</div>
+        <div className="text-foreground text-lg animate-pulse">{bi('جاري التحقق...', 'Verifying...')}</div>
       </div>
     );
   }
@@ -91,7 +99,7 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
             </div>
             <div>
               <p className="text-sidebar-accent-foreground font-bold text-sm tracking-tight">EmpowerHub</p>
-              <p className="text-sidebar-foreground/70 text-xs">لوحة الإدارة</p>
+              <p className="text-sidebar-foreground/70 text-xs">{bi('لوحة الإدارة', 'Admin panel')}</p>
             </div>
           </div>
         </div>
@@ -99,8 +107,8 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
         {/* Nav */}
         <nav className="flex-1 p-3 overflow-y-auto space-y-5">
           {navGroups.map(group => (
-            <div key={group.label}>
-              <p className="text-sidebar-foreground/60 text-[11px] font-semibold uppercase tracking-widest px-3 mb-1.5">{group.label}</p>
+            <div key={group.labelAr}>
+              <p className="text-sidebar-foreground/60 text-[11px] font-semibold uppercase tracking-widest px-3 mb-1.5">{bi(group.labelAr, group.labelEn)}</p>
               <div className="space-y-0.5">
                 {group.items.map(item => (
                   <Link
@@ -115,7 +123,7 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
                     )}
                   >
                     <item.icon className="h-4 w-4 flex-shrink-0" />
-                    <span>{item.label}</span>
+                    <span>{bi(item.labelAr, item.labelEn)}</span>
                   </Link>
                 ))}
               </div>
@@ -130,7 +138,7 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
             className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-sidebar-foreground hover:text-red-500 hover:bg-red-500/10 transition-all w-full"
           >
             <LogOut className="h-4 w-4" />
-            <span>تسجيل الخروج</span>
+            <span>{bi('تسجيل الخروج', 'Log out')}</span>
           </button>
         </div>
       </div>
@@ -141,7 +149,7 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
     <div
       className="min-h-screen bg-background flex"
       style={{ backgroundImage: 'radial-gradient(ellipse 80% 50% at 50% -10%, hsl(var(--primary) / 0.12), transparent)' }}
-      dir="rtl"
+      dir={dir}
     >
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex w-64 flex-shrink-0 bg-sidebar/80 backdrop-blur-xl border-l border-sidebar-border flex-col">
@@ -171,9 +179,10 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
                 ? <img src={platformLogo} alt="شعار" className="h-full w-full object-contain" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                 : <Shield className="h-4 w-4 text-primary" />}
             </div>
-            <span className="text-foreground text-sm hidden sm:block">المشرف العام</span>
+            <span className="text-foreground text-sm hidden sm:block">{bi('المشرف العام', 'Super admin')}</span>
           </div>
           <div className="flex-1" />
+          <LanguageSwitcher />
           <ThemeToggle />
           <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-muted-foreground hover:text-foreground">
             <Menu className="h-5 w-5" />
