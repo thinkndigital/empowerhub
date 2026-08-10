@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { BookOpen, Users } from "lucide-react";
 import Link from "next/link";
+import { useLanguage } from "@/components/language-provider";
 
 type Enrollment = {
   userId: string;
@@ -31,6 +32,8 @@ type Course = {
 export default function BeneficiaryCoursesPage() {
   const { user: authUser } = useUser();
   const { toast } = useToast();
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [enrollingId, setEnrollingId] = useState<string | null>(null);
@@ -73,20 +76,20 @@ export default function BeneficiaryCoursesPage() {
         body: JSON.stringify({}),
       });
       if (!res.ok) throw new Error((await res.json()).error);
-      toast({ title: "تم التسجيل!", description: `تم تسجيلك في دورة "${course.title}" بنجاح.` });
+      toast({ title: bi("تم التسجيل!", "Enrolled!"), description: bi(`تم تسجيلك في دورة "${course.title}" بنجاح.`, `You've successfully enrolled in "${course.title}".`) });
       fetchCourses();
     } catch (e: any) {
-      toast({ variant: "destructive", title: "خطأ!", description: e.message || "فشل التسجيل في الدورة." });
+      toast({ variant: "destructive", title: bi("خطأ!", "Error!"), description: e.message || bi("فشل التسجيل في الدورة.", "Failed to enroll in the course.") });
     } finally {
       setEnrollingId(null);
     }
   };
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={dir}>
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">الدورات التدريبية</h1>
-        <p className="text-sm text-muted-foreground">تصفح الدورات المتاحة وانضم إليها</p>
+        <h1 className="text-2xl font-bold tracking-tight">{bi("الدورات التدريبية", "Training courses")}</h1>
+        <p className="text-sm text-muted-foreground">{bi("تصفح الدورات المتاحة وانضم إليها", "Browse available courses and enroll")}</p>
       </div>
 
       {loading ? (
@@ -111,8 +114,8 @@ export default function BeneficiaryCoursesPage() {
       ) : courses.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-muted-foreground gap-3">
           <BookOpen className="h-12 w-12 opacity-50" />
-          <p className="text-lg">لا توجد دورات منشورة حالياً</p>
-          <p className="text-sm">تواصل مع مدربك لمزيد من المعلومات</p>
+          <p className="text-lg">{bi("لا توجد دورات منشورة حالياً", "No published courses right now")}</p>
+          <p className="text-sm">{bi("تواصل مع مدربك لمزيد من المعلومات", "Contact your coach for more information")}</p>
         </div>
       ) : (
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
@@ -128,7 +131,7 @@ export default function BeneficiaryCoursesPage() {
                   <div className="flex items-start justify-between gap-2">
                     <CardTitle className="text-base leading-tight">{course.title}</CardTitle>
                     {enrolled && (
-                      <Badge className="shrink-0 bg-green-100 text-green-700 border-green-200">مسجل</Badge>
+                      <Badge className="shrink-0 bg-green-100 text-green-700 border-green-200">{bi("مسجل", "Enrolled")}</Badge>
                     )}
                   </div>
                   {course.category && (
@@ -140,16 +143,16 @@ export default function BeneficiaryCoursesPage() {
                     <p className="text-sm text-muted-foreground line-clamp-2">{course.description}</p>
                   )}
                   {course.coachName && (
-                    <p className="text-sm"><span className="text-muted-foreground">المدرب: </span>{course.coachName}</p>
+                    <p className="text-sm"><span className="text-muted-foreground">{bi("المدرب: ", "Coach: ")}</span>{course.coachName}</p>
                   )}
                   <div className="flex items-center gap-1 text-sm text-muted-foreground">
                     <Users className="h-4 w-4" />
-                    <span>{course.enrolledCount ?? 0} مسجل</span>
+                    <span>{course.enrolledCount ?? 0} {bi("مسجل", "enrolled")}</span>
                   </div>
                   {enrolled && (
                     <div className="space-y-1">
                       <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>التقدم</span>
+                        <span>{bi("التقدم", "Progress")}</span>
                         <span>{progress}%</span>
                       </div>
                       <Progress value={progress} className="h-2" />
@@ -159,7 +162,7 @@ export default function BeneficiaryCoursesPage() {
                 <CardFooter className="pt-3">
                   {enrolled ? (
                     <Button asChild variant="outline" className="w-full">
-                      <Link href={`/beneficiary-dashboard/courses/${course.id}`}>متابعة الدورة</Link>
+                      <Link href={`/beneficiary-dashboard/courses/${course.id}`}>{bi("متابعة الدورة", "Continue course")}</Link>
                     </Button>
                   ) : (
                     <Button
@@ -167,7 +170,7 @@ export default function BeneficiaryCoursesPage() {
                       onClick={() => handleEnroll(course)}
                       disabled={enrollingId === course.id}
                     >
-                      {enrollingId === course.id ? 'جاري التسجيل...' : 'انضم للدورة'}
+                      {enrollingId === course.id ? bi('جاري التسجيل...', 'Enrolling...') : bi('انضم للدورة', 'Enroll in course')}
                     </Button>
                   )}
                 </CardFooter>

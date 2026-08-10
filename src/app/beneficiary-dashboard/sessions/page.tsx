@@ -7,24 +7,27 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Calendar, Clock, Video, CheckCircle } from "lucide-react";
 import { useUser } from "@/firebase/auth/use-user";
+import { useLanguage } from "@/components/language-provider";
 
 type Session = {
   id: string; title: string; date: string; status: string; meetLink?: string; duration?: number;
 };
 
-function fmtDate(d?: string) {
+function fmtDate(d?: string, lang: 'ar' | 'en' = 'ar') {
   if (!d) return "—";
-  try { return new Date(d).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' }); }
+  try { return new Date(d).toLocaleDateString(lang === 'en' ? 'en-US' : 'ar-EG', { year: 'numeric', month: 'long', day: 'numeric' }); }
   catch { return d; }
 }
-function fmtTime(d?: string) {
+function fmtTime(d?: string, lang: 'ar' | 'en' = 'ar') {
   if (!d) return "";
-  try { return new Date(d).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }); }
+  try { return new Date(d).toLocaleTimeString(lang === 'en' ? 'en-US' : 'ar-EG', { hour: '2-digit', minute: '2-digit' }); }
   catch { return ""; }
 }
 
 export default function BeneficiarySessionsPage() {
   const { user: authUser } = useUser();
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -46,29 +49,29 @@ export default function BeneficiarySessionsPage() {
   const past = sessions.filter(s => s.status !== 'scheduled' || (s.date || '') < now);
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={dir}>
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">جلساتي</h1>
-        <p className="text-muted-foreground text-sm mt-1">جلسات الإرشاد والتدريب المجدولة لك</p>
+        <h1 className="text-2xl font-bold tracking-tight">{bi("جلساتي", "My sessions")}</h1>
+        <p className="text-muted-foreground text-sm mt-1">{bi("جلسات الإرشاد والتدريب المجدولة لك", "Your scheduled mentoring and coaching sessions")}</p>
       </div>
 
       <Card className="border-0 shadow-sm">
-        <CardHeader><CardTitle className="text-base">الجلسات القادمة ({loading ? "..." : upcoming.length})</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-base">{bi("الجلسات القادمة", "Upcoming sessions")} ({loading ? "..." : upcoming.length})</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           {loading && [...Array(2)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
-          {!loading && upcoming.length === 0 && <p className="text-center text-muted-foreground py-6 text-sm">لا توجد جلسات قادمة.</p>}
+          {!loading && upcoming.length === 0 && <p className="text-center text-muted-foreground py-6 text-sm">{bi("لا توجد جلسات قادمة.", "No upcoming sessions.")}</p>}
           {!loading && upcoming.map(s => (
             <div key={s.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-4 border rounded-lg">
               <div>
                 <p className="font-semibold">{s.title}</p>
                 <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-sm text-muted-foreground mt-1">
-                  <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{fmtDate(s.date)}</span>
-                  <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{fmtTime(s.date)}</span>
+                  <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{fmtDate(s.date, lang)}</span>
+                  <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{fmtTime(s.date, lang)}</span>
                 </div>
               </div>
               {s.meetLink && (
                 <Button size="sm" asChild>
-                  <a href={s.meetLink} target="_blank" rel="noopener noreferrer"><Video className="ml-1 h-4 w-4" />انضم</a>
+                  <a href={s.meetLink} target="_blank" rel="noopener noreferrer"><Video className="ml-1 h-4 w-4" />{bi('انضم', 'Join')}</a>
                 </Button>
               )}
             </div>
@@ -77,19 +80,19 @@ export default function BeneficiarySessionsPage() {
       </Card>
 
       <Card className="border-0 shadow-sm">
-        <CardHeader><CardTitle className="text-base">الجلسات السابقة ({loading ? "..." : past.length})</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-base">{bi("الجلسات السابقة", "Past sessions")} ({loading ? "..." : past.length})</CardTitle></CardHeader>
         <CardContent className="space-y-2">
           {loading && [...Array(2)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
-          {!loading && past.length === 0 && <p className="text-center text-muted-foreground py-6 text-sm">لا توجد جلسات سابقة.</p>}
+          {!loading && past.length === 0 && <p className="text-center text-muted-foreground py-6 text-sm">{bi("لا توجد جلسات سابقة.", "No past sessions.")}</p>}
           {!loading && past.map(s => (
             <div key={s.id} className="flex items-center justify-between p-3 border rounded-lg">
               <div>
                 <p className="font-medium">{s.title}</p>
-                <p className="text-xs text-muted-foreground">{fmtDate(s.date)} {fmtTime(s.date)}</p>
+                <p className="text-xs text-muted-foreground">{fmtDate(s.date, lang)} {fmtTime(s.date, lang)}</p>
               </div>
               <Badge variant={s.status === 'completed' ? 'default' : 'secondary'} className="gap-1">
                 {s.status === 'completed' && <CheckCircle className="h-3 w-3" />}
-                {s.status === 'completed' ? 'مكتملة' : 'ملغاة'}
+                {s.status === 'completed' ? bi('مكتملة', 'Completed') : bi('ملغاة', 'Cancelled')}
               </Badge>
             </div>
           ))}

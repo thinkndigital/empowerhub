@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ClipboardCheck, CheckCircle2, Star, Clock, User } from "lucide-react";
+import { useLanguage } from "@/components/language-provider";
 
 type QuestionType = 'text' | 'rating' | 'choice';
 type AssessmentType = 'pre' | 'post' | 'both';
@@ -37,12 +38,16 @@ interface Assessment {
   submittedPhases: string[];
 }
 
-const typeLabels: Record<AssessmentType, string> = { pre: 'قبلي', post: 'بعدي', both: 'قبلي وبعدي' };
+const typeLabelsAr: Record<AssessmentType, string> = { pre: 'قبلي', post: 'بعدي', both: 'قبلي وبعدي' };
+const typeLabelsEn: Record<AssessmentType, string> = { pre: 'Pre', post: 'Post', both: 'Pre & post' };
 const typeBadgeColor: Record<AssessmentType, string> = {
   pre: 'bg-blue-100 text-blue-700', post: 'bg-emerald-100 text-emerald-700', both: 'bg-purple-100 text-purple-700',
 };
 
-function phaseLabel(phase: 'pre' | 'post') { return phase === 'pre' ? 'القبلي' : 'البعدي'; }
+function phaseLabel(phase: 'pre' | 'post', lang: 'ar' | 'en') {
+  if (lang === 'en') return phase === 'pre' ? 'Pre' : 'Post';
+  return phase === 'pre' ? 'القبلي' : 'البعدي';
+}
 
 function getPendingPhases(assessment: Assessment): Array<'pre' | 'post'> {
   const { type, submittedPhases } = assessment;
@@ -58,6 +63,9 @@ function getPendingPhases(assessment: Assessment): Array<'pre' | 'post'> {
 export default function BeneficiaryAssessmentsPage() {
   const { user: authUser, userProfile } = useUser();
   const { toast } = useToast();
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
+  const typeLabels = lang === 'en' ? typeLabelsEn : typeLabelsAr;
 
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,10 +87,10 @@ export default function BeneficiaryAssessmentsPage() {
       const token = await authUser.getIdToken();
       const res = await fetch('/api/beneficiary/assessments', { headers: { authorization: `Bearer ${token}` } });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'فشل تحميل النماذج');
+      if (!res.ok) throw new Error(data.error || bi('فشل تحميل النماذج', 'Failed to load forms'));
       setAssessments(data.assessments || []);
     } catch (e: any) {
-      setFetchError(e.message || 'حدث خطأ');
+      setFetchError(e.message || bi('حدث خطأ', 'An error occurred'));
     } finally { setLoading(false); }
   }, [authUser]);
 
@@ -109,7 +117,7 @@ export default function BeneficiaryAssessmentsPage() {
     // Validate required
     const missing = fillAssessment.questions.filter(q => q.required && !answers[q.id]);
     if (missing.length > 0) {
-      toast({ variant: 'destructive', title: 'يرجى الإجابة على جميع الأسئلة المطلوبة' }); return;
+      toast({ variant: 'destructive', title: bi('يرجى الإجابة على جميع الأسئلة المطلوبة', 'Please answer all required questions') }); return;
     }
 
     setSubmitting(true);
@@ -123,11 +131,11 @@ export default function BeneficiaryAssessmentsPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      toast({ title: 'تم إرسال إجاباتك بنجاح' });
+      toast({ title: bi('تم إرسال إجاباتك بنجاح', 'Your answers were submitted successfully') });
       setFillOpen(false);
       fetchAssessments();
     } catch (e: any) {
-      toast({ variant: 'destructive', title: 'خطأ', description: e.message });
+      toast({ variant: 'destructive', title: bi('خطأ', 'Error'), description: e.message });
     } finally { setSubmitting(false); }
   };
 
@@ -135,10 +143,10 @@ export default function BeneficiaryAssessmentsPage() {
   const completed = assessments.filter(a => getPendingPhases(a).length === 0);
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={dir}>
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">نماذج التقييم</h1>
-        <p className="text-sm text-muted-foreground mt-1">النماذج المرسلة إليك من المنظمة</p>
+        <h1 className="text-2xl font-bold tracking-tight">{bi("نماذج التقييم", "Assessment forms")}</h1>
+        <p className="text-sm text-muted-foreground mt-1">{bi("النماذج المرسلة إليك من المنظمة", "Forms sent to you by the organization")}</p>
       </div>
 
       {fetchError && (
@@ -155,8 +163,8 @@ export default function BeneficiaryAssessmentsPage() {
         <Card className="border-dashed border-2">
           <CardContent className="py-16 flex flex-col items-center gap-3 text-center">
             <ClipboardCheck className="h-12 w-12 text-muted-foreground/30" />
-            <p className="font-medium text-muted-foreground">لا توجد نماذج حالياً</p>
-            <p className="text-sm text-muted-foreground/70">ستظهر هنا النماذج التي ترسلها لك المنظمة</p>
+            <p className="font-medium text-muted-foreground">{bi("لا توجد نماذج حالياً", "No forms right now")}</p>
+            <p className="text-sm text-muted-foreground/70">{bi("ستظهر هنا النماذج التي ترسلها لك المنظمة", "Forms sent to you by the organization will show up here")}</p>
           </CardContent>
         </Card>
       ) : (
@@ -165,7 +173,7 @@ export default function BeneficiaryAssessmentsPage() {
           {pending.length > 0 && (
             <div className="space-y-3">
               <h2 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
-                <Clock className="h-4 w-4 text-amber-500" /> بانتظار إجابتك ({pending.length})
+                <Clock className="h-4 w-4 text-amber-500" /> {bi("بانتظار إجابتك", "Awaiting your response")} ({pending.length})
               </h2>
               <div className="grid gap-4 md:grid-cols-2">
                 {pending.map(a => {
@@ -193,14 +201,14 @@ export default function BeneficiaryAssessmentsPage() {
                       </CardHeader>
                       <CardContent className="pt-0 space-y-2">
                         {a.description && <p className="text-xs text-muted-foreground line-clamp-2">{a.description}</p>}
-                        <p className="text-xs text-muted-foreground">{a.questions.length} سؤال</p>
+                        <p className="text-xs text-muted-foreground">{a.questions.length} {bi("سؤال", "questions")}</p>
                         <div className="flex gap-2 flex-wrap pt-1">
                           {phases.map(phase => (
                             <Button key={phase} size="sm" className="h-8 gap-1.5 text-xs"
                               style={{ background: a.orgColor || undefined }}
                               onClick={() => openFill(a, phase)}>
                               <ClipboardCheck className="h-3.5 w-3.5" />
-                              أجب على التقييم {phaseLabel(phase)}
+                              {bi(`أجب على التقييم ${phaseLabel(phase, lang)}`, `Answer the ${phaseLabel(phase, lang)} assessment`)}
                             </Button>
                           ))}
                         </div>
@@ -216,7 +224,7 @@ export default function BeneficiaryAssessmentsPage() {
           {completed.length > 0 && (
             <div className="space-y-3">
               <h2 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-emerald-500" /> مكتملة ({completed.length})
+                <CheckCircle2 className="h-4 w-4 text-emerald-500" /> {bi("مكتملة", "Completed")} ({completed.length})
               </h2>
               <div className="grid gap-4 md:grid-cols-2">
                 {completed.map(a => (
@@ -236,7 +244,7 @@ export default function BeneficiaryAssessmentsPage() {
                           <CardTitle className="text-sm leading-snug">{a.title}</CardTitle>
                         </div>
                         <Badge variant="outline" className="text-[10px] text-emerald-600 border-emerald-200 bg-emerald-50">
-                          <CheckCircle2 className="h-3 w-3 ml-1" />مكتمل
+                          <CheckCircle2 className="h-3 w-3 ml-1" />{bi("مكتمل", "Complete")}
                         </Badge>
                       </div>
                     </CardHeader>
@@ -251,7 +259,7 @@ export default function BeneficiaryAssessmentsPage() {
       {/* Fill Dialog */}
       {fillAssessment && (
         <Dialog open={fillOpen} onOpenChange={setFillOpen}>
-          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto p-0" dir="rtl">
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto p-0" dir={dir}>
             {/* Branded header */}
             <div className="px-6 py-5 flex items-center gap-3"
               style={{
@@ -270,7 +278,7 @@ export default function BeneficiaryAssessmentsPage() {
                 <p className="text-xs text-muted-foreground">{fillAssessment.orgName}</p>
                 <h2 className="font-bold text-base">{fillAssessment.title}</h2>
                 <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${fillPhase === 'pre' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                  التقييم {phaseLabel(fillPhase)}
+                  {bi(`التقييم ${phaseLabel(fillPhase, lang)}`, `${phaseLabel(fillPhase, lang)} assessment`)}
                 </span>
               </div>
             </div>
@@ -283,24 +291,24 @@ export default function BeneficiaryAssessmentsPage() {
               {/* Personal info — pre-filled, editable */}
               <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-3">
                 <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
-                  <User className="h-3.5 w-3.5" />معلوماتك الشخصية
+                  <User className="h-3.5 w-3.5" />{bi("معلوماتك الشخصية", "Your personal information")}
                 </p>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <Label className="text-xs">الاسم الكامل</Label>
-                    <Input value={info.name} onChange={e => setInfo(p => ({ ...p, name: e.target.value }))} placeholder="الاسم" className="h-8 text-sm bg-background" />
+                    <Label className="text-xs">{bi("الاسم الكامل", "Full name")}</Label>
+                    <Input value={info.name} onChange={e => setInfo(p => ({ ...p, name: e.target.value }))} placeholder={bi("الاسم", "Name")} className="h-8 text-sm bg-background" />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs">التخصص / المجال</Label>
-                    <Input value={info.specialization} onChange={e => setInfo(p => ({ ...p, specialization: e.target.value }))} placeholder="التخصص" className="h-8 text-sm bg-background" />
+                    <Label className="text-xs">{bi("التخصص / المجال", "Specialization / field")}</Label>
+                    <Input value={info.specialization} onChange={e => setInfo(p => ({ ...p, specialization: e.target.value }))} placeholder={bi("التخصص", "Specialization")} className="h-8 text-sm bg-background" />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs">رقم الجوال</Label>
+                    <Label className="text-xs">{bi("رقم الجوال", "Mobile number")}</Label>
                     <Input value={info.phone} onChange={e => setInfo(p => ({ ...p, phone: e.target.value }))} placeholder="05xxxxxxxx" dir="ltr" className="h-8 text-sm bg-background" />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs">العنوان</Label>
-                    <Input value={info.address} onChange={e => setInfo(p => ({ ...p, address: e.target.value }))} placeholder="المدينة / المنطقة" className="h-8 text-sm bg-background" />
+                    <Label className="text-xs">{bi("العنوان", "Address")}</Label>
+                    <Input value={info.address} onChange={e => setInfo(p => ({ ...p, address: e.target.value }))} placeholder={bi("المدينة / المنطقة", "City / area")} className="h-8 text-sm bg-background" />
                   </div>
                 </div>
               </div>
@@ -315,7 +323,7 @@ export default function BeneficiaryAssessmentsPage() {
                   {q.type === 'text' && (
                     <Textarea
                       rows={3}
-                      placeholder="اكتب إجابتك هنا..."
+                      placeholder={bi("اكتب إجابتك هنا...", "Write your answer here...")}
                       value={(answers[q.id] as string) || ''}
                       onChange={e => setAnswers(p => ({ ...p, [q.id]: e.target.value }))}
                       className="resize-none"
@@ -360,12 +368,12 @@ export default function BeneficiaryAssessmentsPage() {
             </div>
 
             <DialogFooter className="px-6 pb-6 pt-2 gap-2">
-              <Button variant="ghost" onClick={() => setFillOpen(false)}>إلغاء</Button>
+              <Button variant="ghost" onClick={() => setFillOpen(false)}>{bi("إلغاء", "Cancel")}</Button>
               <Button onClick={handleSubmit} disabled={submitting}
                 style={{ background: fillAssessment.orgColor || undefined }}
                 className="gap-2">
                 <CheckCircle2 className="h-4 w-4" />
-                {submitting ? 'جاري الإرسال...' : 'إرسال الإجابات'}
+                {submitting ? bi('جاري الإرسال...', 'Submitting...') : bi('إرسال الإجابات', 'Submit answers')}
               </Button>
             </DialogFooter>
           </DialogContent>

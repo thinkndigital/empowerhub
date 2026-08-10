@@ -17,6 +17,7 @@ import {
 import { useUser } from "@/firebase/auth/use-user";
 import { useCurrency } from "@/hooks/use-currency";
 import { exportToExcel, exportToPDF } from "@/lib/export-utils";
+import { useLanguage } from "@/components/language-provider";
 
 interface Order {
   id: string;
@@ -44,6 +45,8 @@ interface Customer {
 export default function BeneficiaryCustomersPage() {
   const { user } = useUser();
   const { symbol: currencySymbol } = useCurrency();
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -79,7 +82,7 @@ export default function BeneficiaryCustomersPage() {
       } else {
         map.set(key, {
           key,
-          name: o.buyerName || 'غير معروف',
+          name: o.buyerName || bi('غير معروف', 'Unknown'),
           phone: o.buyerPhone || '',
           address: o.buyerAddress || '',
           ordersCount: 1,
@@ -101,49 +104,49 @@ export default function BeneficiaryCustomersPage() {
     revenue: customers.reduce((s, c) => s + c.totalSpent, 0),
   };
 
-  const exportHeaders = ["اسم العميل", "الهاتف", "العنوان", "عدد الطلبات", `إجمالي الإنفاق (${currencySymbol})`, "آخر طلب"];
+  const exportHeaders = [bi("اسم العميل", "Customer name"), bi("الهاتف", "Phone"), bi("العنوان", "Address"), bi("عدد الطلبات", "Orders"), bi(`إجمالي الإنفاق (${currencySymbol})`, `Total spent (${currencySymbol})`), bi("آخر طلب", "Last order")];
   const exportRows = filtered.map(c => [
     c.name,
     c.phone || '—',
     c.address || '—',
     c.ordersCount,
     c.totalSpent.toFixed(2),
-    c.lastOrderAt ? new Date(c.lastOrderAt).toLocaleDateString('ar-EG', { day: 'numeric', month: 'short', year: 'numeric' }) : '—',
+    c.lastOrderAt ? new Date(c.lastOrderAt).toLocaleDateString(lang === 'en' ? 'en-US' : 'ar-EG', { day: 'numeric', month: 'short', year: 'numeric' }) : '—',
   ]);
 
   const handleExportExcel = () => {
-    exportToExcel('عملاء_متجري', exportHeaders, exportRows, { sheetName: 'العملاء' });
+    exportToExcel(bi('عملاء_متجري', 'my-store-customers'), exportHeaders, exportRows, { sheetName: bi('العملاء', 'Customers') });
   };
 
   const handleExportPDF = () => {
-    exportToPDF('قائمة العملاء - متجري', exportHeaders, exportRows, {
+    exportToPDF(bi('قائمة العملاء - متجري', 'My Store — Customers'), exportHeaders, exportRows, {
       summary: {
-        'إجمالي العملاء': String(stats.total),
-        'عملاء متكررون': String(stats.repeat),
-        'إجمالي المبيعات': `${stats.revenue.toFixed(2)} ${currencySymbol}`,
+        [bi('إجمالي العملاء', 'Total customers')]: String(stats.total),
+        [bi('عملاء متكررون', 'Repeat customers')]: String(stats.repeat),
+        [bi('إجمالي المبيعات', 'Total sales')]: `${stats.revenue.toFixed(2)} ${currencySymbol}`,
       },
     });
   };
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={dir}>
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">العملاء</h1>
-          <p className="text-muted-foreground text-sm">قائمة العملاء الذين طلبوا من متجرك</p>
+          <h1 className="text-2xl font-bold tracking-tight">{bi("العملاء", "Customers")}</h1>
+          <p className="text-muted-foreground text-sm">{bi("قائمة العملاء الذين طلبوا من متجرك", "Customers who've ordered from your store")}</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={load} disabled={loading} className="gap-2">
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            تحديث
+            {bi("تحديث", "Refresh")}
           </Button>
           <Button variant="outline" onClick={handleExportExcel} disabled={loading || filtered.length === 0} className="gap-2">
             <Download className="h-4 w-4" />
-            تصدير Excel
+            {bi("تصدير Excel", "Export Excel")}
           </Button>
           <Button variant="outline" onClick={handleExportPDF} disabled={loading || filtered.length === 0} className="gap-2">
             <Printer className="h-4 w-4" />
-            طباعة/PDF
+            {bi("طباعة/PDF", "Print/PDF")}
           </Button>
         </div>
       </div>
@@ -151,9 +154,9 @@ export default function BeneficiaryCustomersPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
         {[
-          { label: 'إجمالي العملاء', value: stats.total, icon: Users, color: 'text-primary' },
-          { label: 'عملاء متكررون', value: stats.repeat, icon: Repeat, color: 'text-blue-500' },
-          { label: 'إجمالي المبيعات', value: `${stats.revenue.toFixed(0)} ${currencySymbol}`, icon: ShoppingBag, color: 'text-emerald-500' },
+          { label: bi('إجمالي العملاء', 'Total customers'), value: stats.total, icon: Users, color: 'text-primary' },
+          { label: bi('عملاء متكررون', 'Repeat customers'), value: stats.repeat, icon: Repeat, color: 'text-blue-500' },
+          { label: bi('إجمالي المبيعات', 'Total sales'), value: `${stats.revenue.toFixed(0)} ${currencySymbol}`, icon: ShoppingBag, color: 'text-emerald-500' },
         ].map((s, i) => (
           <Card key={i} className="border-0 shadow-sm">
             <CardContent className="pt-4 pb-4">
@@ -169,7 +172,7 @@ export default function BeneficiaryCustomersPage() {
       <div className="relative max-w-sm">
         <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/60 pointer-events-none" />
         <Input
-          placeholder="بحث بالاسم أو رقم الهاتف..."
+          placeholder={bi("بحث بالاسم أو رقم الهاتف...", "Search by name or phone number...")}
           value={search}
           onChange={e => setSearch(e.target.value)}
           className="pr-9"
@@ -177,12 +180,12 @@ export default function BeneficiaryCustomersPage() {
       </div>
 
       {loading ? (
-        <div className="text-center py-16 text-muted-foreground">جاري التحميل...</div>
+        <div className="text-center py-16 text-muted-foreground">{bi("جاري التحميل...", "Loading...")}</div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">
           <Users className="h-12 w-12 mx-auto mb-3 opacity-20" />
-          <p className="text-lg">لا يوجد عملاء بعد</p>
-          <p className="text-sm">سيظهر عملاؤك هنا عند ورود طلبات جديدة</p>
+          <p className="text-lg">{bi("لا يوجد عملاء بعد", "No customers yet")}</p>
+          <p className="text-sm">{bi("سيظهر عملاؤك هنا عند ورود طلبات جديدة", "Your customers will show up here once new orders come in")}</p>
         </div>
       ) : (
         <Card className="border-0 shadow-sm">
@@ -191,12 +194,12 @@ export default function BeneficiaryCustomersPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-right">العميل</TableHead>
-                    <TableHead className="text-right">الهاتف</TableHead>
-                    <TableHead className="text-right">العنوان</TableHead>
-                    <TableHead className="text-right">عدد الطلبات</TableHead>
-                    <TableHead className="text-right">إجمالي الإنفاق</TableHead>
-                    <TableHead className="text-right">آخر طلب</TableHead>
+                    <TableHead className="text-right">{bi("العميل", "Customer")}</TableHead>
+                    <TableHead className="text-right">{bi("الهاتف", "Phone")}</TableHead>
+                    <TableHead className="text-right">{bi("العنوان", "Address")}</TableHead>
+                    <TableHead className="text-right">{bi("عدد الطلبات", "Orders")}</TableHead>
+                    <TableHead className="text-right">{bi("إجمالي الإنفاق", "Total spent")}</TableHead>
+                    <TableHead className="text-right">{bi("آخر طلب", "Last order")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -226,7 +229,7 @@ export default function BeneficiaryCustomersPage() {
                       </TableCell>
                       <TableCell className="font-bold text-primary">{c.totalSpent.toFixed(2)} {currencySymbol}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">
-                        {c.lastOrderAt ? new Date(c.lastOrderAt).toLocaleDateString('ar-EG', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+                        {c.lastOrderAt ? new Date(c.lastOrderAt).toLocaleDateString(lang === 'en' ? 'en-US' : 'ar-EG', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
                       </TableCell>
                     </TableRow>
                   ))}

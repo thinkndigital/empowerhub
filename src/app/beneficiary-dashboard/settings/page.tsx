@@ -20,6 +20,7 @@ import { useUser } from "@/firebase/auth/use-user";
 import { uploadFile as uploadToStorage } from "@/lib/upload-file";
 import { User, Bell, Shield, Palette, Globe, Camera, Loader2, Save, BookOpen, Target, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/components/language-provider";
 
 interface OrgHistoryEntry {
   id: string;
@@ -29,11 +30,11 @@ interface OrgHistoryEntry {
   leftAt: string | null;
 }
 
-function formatOrgDate(dateVal?: string | null): string {
+function formatOrgDate(dateVal: string | null | undefined, lang: 'ar' | 'en'): string {
   if (!dateVal) return "—";
   const d = new Date(dateVal);
   if (isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric' });
+  return d.toLocaleDateString(lang === 'en' ? 'en-US' : 'ar-EG', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 const profileSchema = z.object({
@@ -54,6 +55,8 @@ type ProfileFormValues = z.infer<typeof profileSchema>;
 export default function BeneficiarySettingsPage() {
   const { userProfile, user: authUser } = useUser();
   const { toast } = useToast();
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const [isSaving, setIsSaving] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
@@ -64,7 +67,7 @@ export default function BeneficiarySettingsPage() {
   const [orgHistory, setOrgHistory] = useState<OrgHistoryEntry[]>([]);
   const [orgHistoryLoading, setOrgHistoryLoading] = useState(true);
 
-  const name = userProfile?.name || "مستفيد";
+  const name = userProfile?.name || bi("مستفيد", "Beneficiary");
   const email = userProfile?.email || "";
 
   const form = useForm<ProfileFormValues>({
@@ -121,9 +124,9 @@ export default function BeneficiarySettingsPage() {
         headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
         body: JSON.stringify({ avatarUrl: downloadUrl }),
       });
-      toast({ title: 'تم تحديث الصورة الشخصية', description: 'تم رفع صورتك الشخصية بنجاح.' });
+      toast({ title: bi('تم تحديث الصورة الشخصية', 'Profile photo updated'), description: bi('تم رفع صورتك الشخصية بنجاح.', 'Your profile photo was uploaded successfully.') });
     } catch {
-      toast({ variant: 'destructive', title: 'خطأ!', description: 'فشل رفع الصورة الشخصية.' });
+      toast({ variant: 'destructive', title: bi('خطأ!', 'Error!'), description: bi('فشل رفع الصورة الشخصية.', 'Failed to upload profile photo.') });
       setAvatarPreview(null);
     } finally {
       setAvatarUploading(false);
@@ -140,19 +143,19 @@ export default function BeneficiarySettingsPage() {
         headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
         body: JSON.stringify(values),
       });
-      toast({ title: "تم الحفظ!", description: "تم تحديث ملفك الشخصي بنجاح." });
+      toast({ title: bi("تم الحفظ!", "Saved!"), description: bi("تم تحديث ملفك الشخصي بنجاح.", "Your profile was updated successfully.") });
     } catch {
-      toast({ variant: "destructive", title: "خطأ", description: "فشل حفظ البيانات." });
+      toast({ variant: "destructive", title: bi("خطأ", "Error"), description: bi("فشل حفظ البيانات.", "Failed to save data.") });
     } finally {
       setIsSaving(false);
     }
   }
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={dir}>
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">الإعدادات</h1>
-        <p className="text-muted-foreground mt-1">إدارة ملفك الشخصي وتفضيلات حسابك.</p>
+        <h1 className="text-2xl font-bold tracking-tight">{bi("الإعدادات", "Settings")}</h1>
+        <p className="text-muted-foreground mt-1">{bi("إدارة ملفك الشخصي وتفضيلات حسابك.", "Manage your profile and account preferences.")}</p>
       </div>
 
       <Form {...form}>
@@ -161,9 +164,9 @@ export default function BeneficiarySettingsPage() {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <User className="h-4 w-4 text-primary" />
-                المعلومات الأساسية
+                {bi("المعلومات الأساسية", "Basic information")}
               </CardTitle>
-              <CardDescription>معلوماتك الأساسية المعروضة على المنصة</CardDescription>
+              <CardDescription>{bi("معلوماتك الأساسية المعروضة على المنصة", "Your basic information shown on the platform")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
               <div className="flex items-center gap-4">
@@ -188,7 +191,7 @@ export default function BeneficiarySettingsPage() {
                     onClick={() => fileInputRef.current?.click()}
                   >
                     <Camera className="h-4 w-4" />
-                    تغيير الصورة
+                    {bi("تغيير الصورة", "Change photo")}
                   </Button>
                   <input
                     ref={fileInputRef}
@@ -197,46 +200,46 @@ export default function BeneficiarySettingsPage() {
                     className="hidden"
                     onChange={handleAvatarChange}
                   />
-                  <p className="text-xs text-muted-foreground mt-1">PNG، JPG — حد أقصى 2MB</p>
+                  <p className="text-xs text-muted-foreground mt-1">{bi("PNG، JPG — حد أقصى 2MB", "PNG, JPG — 2MB max")}</p>
                 </div>
               </div>
               <Separator />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField control={form.control} name="name" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>الاسم الكامل</FormLabel>
+                    <FormLabel>{bi("الاسم الكامل", "Full name")}</FormLabel>
                     <FormControl><Input {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
                 <div className="space-y-2">
-                  <Label>البريد الإلكتروني</Label>
+                  <Label>{bi("البريد الإلكتروني", "Email")}</Label>
                   <Input defaultValue={email} dir="ltr" type="email" disabled className="opacity-60" />
                 </div>
                 <FormField control={form.control} name="phone" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>رقم الهاتف</FormLabel>
+                    <FormLabel>{bi("رقم الهاتف", "Phone number")}</FormLabel>
                     <FormControl><Input placeholder="+966 5XX XXX XXXX" dir="ltr" type="tel" {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
                 <FormField control={form.control} name="idNumber" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>رقم الهوية الوطنية</FormLabel>
+                    <FormLabel>{bi("رقم الهوية الوطنية", "National ID number")}</FormLabel>
                     <FormControl><Input placeholder="10XXXXXXXX" dir="ltr" {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
                 <FormField control={form.control} name="gender" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>الجنس</FormLabel>
+                    <FormLabel>{bi("الجنس", "Gender")}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger><SelectValue placeholder="اختر..." /></SelectTrigger>
+                        <SelectTrigger><SelectValue placeholder={bi("اختر...", "Select...")} /></SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="male">ذكر</SelectItem>
-                        <SelectItem value="female">أنثى</SelectItem>
+                        <SelectItem value="male">{bi("ذكر", "Male")}</SelectItem>
+                        <SelectItem value="female">{bi("أنثى", "Female")}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -244,15 +247,15 @@ export default function BeneficiarySettingsPage() {
                 )} />
                 <FormField control={form.control} name="dateOfBirth" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>تاريخ الميلاد</FormLabel>
+                    <FormLabel>{bi("تاريخ الميلاد", "Date of birth")}</FormLabel>
                     <FormControl><Input type="date" dir="ltr" {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
                 <FormField control={form.control} name="address" render={({ field }) => (
                   <FormItem className="sm:col-span-2">
-                    <FormLabel>العنوان</FormLabel>
-                    <FormControl><Input placeholder="المدينة، الحي، الشارع..." {...field} /></FormControl>
+                    <FormLabel>{bi("العنوان", "Address")}</FormLabel>
+                    <FormControl><Input placeholder={bi("المدينة، الحي، الشارع...", "City, neighborhood, street...")} {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -264,15 +267,15 @@ export default function BeneficiarySettingsPage() {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <Building2 className="h-4 w-4 text-primary" />
-                منظمتي
+                {bi("منظمتي", "My organization")}
               </CardTitle>
-              <CardDescription>المنظمة التي تنتمي إليها حالياً وسجل انضمامك السابق</CardDescription>
+              <CardDescription>{bi("المنظمة التي تنتمي إليها حالياً وسجل انضمامك السابق", "Your current organization and your prior membership history")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               {orgHistoryLoading ? (
                 <Skeleton className="h-16 w-full" />
               ) : orgHistory.length === 0 ? (
-                <p className="text-sm text-muted-foreground">لست منضماً لأي منظمة حالياً.</p>
+                <p className="text-sm text-muted-foreground">{bi("لست منضماً لأي منظمة حالياً.", "You're not part of any organization right now.")}</p>
               ) : (
                 orgHistory.map(entry => (
                   <div
@@ -280,14 +283,16 @@ export default function BeneficiarySettingsPage() {
                     className={`flex items-center justify-between p-3 rounded-lg ${entry.leftAt ? 'bg-muted/40' : 'bg-primary/5 border border-primary/15'}`}
                   >
                     <div>
-                      <p className="text-sm font-semibold">{entry.organizationName || 'منظمة'}</p>
+                      <p className="text-sm font-semibold">{entry.organizationName || bi('منظمة', 'Organization')}</p>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        انضممت في {formatOrgDate(entry.joinedAt)}
-                        {entry.leftAt ? ` — غادرت في ${formatOrgDate(entry.leftAt)}` : ''}
+                        {bi(
+                          `انضممت في ${formatOrgDate(entry.joinedAt, lang)}${entry.leftAt ? ` — غادرت في ${formatOrgDate(entry.leftAt, lang)}` : ''}`,
+                          `Joined ${formatOrgDate(entry.joinedAt, lang)}${entry.leftAt ? ` — left ${formatOrgDate(entry.leftAt, lang)}` : ''}`
+                        )}
                       </p>
                     </div>
                     <Badge variant={entry.leftAt ? 'secondary' : 'default'} className="text-xs shrink-0">
-                      {entry.leftAt ? 'سابقة' : 'حالية'}
+                      {entry.leftAt ? bi('سابقة', 'Past') : bi('حالية', 'Current')}
                     </Badge>
                   </div>
                 ))
@@ -299,26 +304,26 @@ export default function BeneficiarySettingsPage() {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <BookOpen className="h-4 w-4 text-primary" />
-                التعليم والعمل
+                {bi("التعليم والعمل", "Education & employment")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField control={form.control} name="educationLevel" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>المستوى التعليمي</FormLabel>
+                    <FormLabel>{bi("المستوى التعليمي", "Education level")}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger><SelectValue placeholder="اختر..." /></SelectTrigger>
+                        <SelectTrigger><SelectValue placeholder={bi("اختر...", "Select...")} /></SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="primary">ابتدائي</SelectItem>
-                        <SelectItem value="intermediate">متوسط</SelectItem>
-                        <SelectItem value="secondary">ثانوي</SelectItem>
-                        <SelectItem value="diploma">دبلوم</SelectItem>
-                        <SelectItem value="bachelor">بكالوريوس</SelectItem>
-                        <SelectItem value="master">ماجستير</SelectItem>
-                        <SelectItem value="phd">دكتوراه</SelectItem>
+                        <SelectItem value="primary">{bi("ابتدائي", "Primary")}</SelectItem>
+                        <SelectItem value="intermediate">{bi("متوسط", "Intermediate")}</SelectItem>
+                        <SelectItem value="secondary">{bi("ثانوي", "Secondary")}</SelectItem>
+                        <SelectItem value="diploma">{bi("دبلوم", "Diploma")}</SelectItem>
+                        <SelectItem value="bachelor">{bi("بكالوريوس", "Bachelor's")}</SelectItem>
+                        <SelectItem value="master">{bi("ماجستير", "Master's")}</SelectItem>
+                        <SelectItem value="phd">{bi("دكتوراه", "PhD")}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -326,17 +331,17 @@ export default function BeneficiarySettingsPage() {
                 )} />
                 <FormField control={form.control} name="employmentStatus" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>الحالة الوظيفية</FormLabel>
+                    <FormLabel>{bi("الحالة الوظيفية", "Employment status")}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger><SelectValue placeholder="اختر..." /></SelectTrigger>
+                        <SelectTrigger><SelectValue placeholder={bi("اختر...", "Select...")} /></SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="employed">موظف</SelectItem>
-                        <SelectItem value="self_employed">عمل حر</SelectItem>
-                        <SelectItem value="unemployed">باحث عن عمل</SelectItem>
-                        <SelectItem value="student">طالب</SelectItem>
-                        <SelectItem value="retired">متقاعد</SelectItem>
+                        <SelectItem value="employed">{bi("موظف", "Employed")}</SelectItem>
+                        <SelectItem value="self_employed">{bi("عمل حر", "Self-employed")}</SelectItem>
+                        <SelectItem value="unemployed">{bi("باحث عن عمل", "Job seeker")}</SelectItem>
+                        <SelectItem value="student">{bi("طالب", "Student")}</SelectItem>
+                        <SelectItem value="retired">{bi("متقاعد", "Retired")}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -350,24 +355,24 @@ export default function BeneficiarySettingsPage() {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <Target className="h-4 w-4 text-primary" />
-                المهارات والأهداف
+                {bi("المهارات والأهداف", "Skills & goals")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <FormField control={form.control} name="skills" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>المهارات (افصل بينها بفاصلة)</FormLabel>
+                  <FormLabel>{bi("المهارات (افصل بينها بفاصلة)", "Skills (comma-separated)")}</FormLabel>
                   <FormControl>
-                    <Input placeholder="مثال: تصميم جرافيك، تسويق رقمي، خياطة..." {...field} />
+                    <Input placeholder={bi("مثال: تصميم جرافيك، تسويق رقمي، خياطة...", "e.g. Graphic design, digital marketing, sewing...")} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
               <FormField control={form.control} name="goals" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>الأهداف والطموحات</FormLabel>
+                  <FormLabel>{bi("الأهداف والطموحات", "Goals & aspirations")}</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="ما هي أهدافك التي تسعى لتحقيقها من خلال المنصة؟" rows={3} {...field} />
+                    <Textarea placeholder={bi("ما هي أهدافك التي تسعى لتحقيقها من خلال المنصة؟", "What goals are you hoping to achieve through the platform?")} rows={3} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -378,7 +383,7 @@ export default function BeneficiarySettingsPage() {
           <div className="flex justify-end">
             <Button type="submit" disabled={isSaving} className="shadow-md">
               <Save className="ml-2 h-4 w-4" />
-              {isSaving ? "جاري الحفظ..." : "حفظ التغييرات"}
+              {isSaving ? bi("جاري الحفظ...", "Saving...") : bi("حفظ التغييرات", "Save changes")}
             </Button>
           </div>
         </form>
@@ -388,16 +393,16 @@ export default function BeneficiarySettingsPage() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
             <Bell className="h-4 w-4 text-primary" />
-            الإشعارات
+            {bi("الإشعارات", "Notifications")}
           </CardTitle>
-          <CardDescription>تحكم في الإشعارات التي تريد استقبالها</CardDescription>
+          <CardDescription>{bi("تحكم في الإشعارات التي تريد استقبالها", "Control which notifications you want to receive")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {[
-            { key: "email" as const, label: "إشعارات البريد الإلكتروني", desc: "استقبال الإشعارات عبر البريد الإلكتروني" },
-            { key: "sessions" as const, label: "تذكير بالجلسات", desc: "تنبيه قبل 30 دقيقة من موعد الجلسة" },
-            { key: "courses" as const, label: "تحديثات الدورات", desc: "إشعار عند إضافة محتوى جديد للدورات" },
-            { key: "store" as const, label: "طلبات المتجر", desc: "إشعار فوري عند ورود طلب جديد" },
+            { key: "email" as const, label: bi("إشعارات البريد الإلكتروني", "Email notifications"), desc: bi("استقبال الإشعارات عبر البريد الإلكتروني", "Receive notifications via email") },
+            { key: "sessions" as const, label: bi("تذكير بالجلسات", "Session reminders"), desc: bi("تنبيه قبل 30 دقيقة من موعد الجلسة", "Alert 30 minutes before your session") },
+            { key: "courses" as const, label: bi("تحديثات الدورات", "Course updates"), desc: bi("إشعار عند إضافة محتوى جديد للدورات", "Notify when new course content is added") },
+            { key: "store" as const, label: bi("طلبات المتجر", "Store orders"), desc: bi("إشعار فوري عند ورود طلب جديد", "Instant notification when a new order arrives") },
           ].map(item => (
             <div key={item.key} className="flex items-center justify-between py-2">
               <div>
@@ -417,19 +422,19 @@ export default function BeneficiarySettingsPage() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
             <Shield className="h-4 w-4 text-primary" />
-            الأمان
+            {bi("الأمان", "Security")}
           </CardTitle>
-          <CardDescription>إدارة كلمة المرور وأمان حسابك</CardDescription>
+          <CardDescription>{bi("إدارة كلمة المرور وأمان حسابك", "Manage your password and account security")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between p-3 rounded-lg bg-muted/40">
             <div>
-              <p className="text-sm font-medium">التحقق الثنائي</p>
-              <p className="text-xs text-muted-foreground">طبقة أمان إضافية لحسابك</p>
+              <p className="text-sm font-medium">{bi("التحقق الثنائي", "Two-factor authentication")}</p>
+              <p className="text-xs text-muted-foreground">{bi("طبقة أمان إضافية لحسابك", "An extra layer of security for your account")}</p>
             </div>
             <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="text-xs">غير مفعّل</Badge>
-              <Button size="sm" variant="outline" type="button" onClick={() => toast({ title: "قريباً", description: "هذه الميزة ستتوفر قريباً." })}>تفعيل</Button>
+              <Badge variant="secondary" className="text-xs">{bi("غير مفعّل", "Not enabled")}</Badge>
+              <Button size="sm" variant="outline" type="button" onClick={() => toast({ title: bi("قريباً", "Coming soon"), description: bi("هذه الميزة ستتوفر قريباً.", "This feature will be available soon.") })}>{bi("تفعيل", "Enable")}</Button>
             </div>
           </div>
         </CardContent>
@@ -439,7 +444,7 @@ export default function BeneficiarySettingsPage() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
             <Palette className="h-4 w-4 text-primary" />
-            التفضيلات
+            {bi("التفضيلات", "Preferences")}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -447,11 +452,11 @@ export default function BeneficiarySettingsPage() {
             <div className="flex items-center gap-2">
               <Globe className="h-4 w-4 text-muted-foreground" />
               <div>
-                <p className="text-sm font-medium">اللغة</p>
-                <p className="text-xs text-muted-foreground">لغة واجهة المستخدم</p>
+                <p className="text-sm font-medium">{bi("اللغة", "Language")}</p>
+                <p className="text-xs text-muted-foreground">{bi("لغة واجهة المستخدم", "Interface language")}</p>
               </div>
             </div>
-            <Badge variant="outline">العربية</Badge>
+            <Badge variant="outline">{bi("العربية", "English")}</Badge>
           </div>
         </CardContent>
       </Card>

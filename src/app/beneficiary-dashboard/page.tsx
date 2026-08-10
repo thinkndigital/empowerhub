@@ -10,6 +10,7 @@ import { TrendingUp, BookOpen, Calendar, Users, MessageSquare } from "lucide-rea
 import { useUser } from "@/firebase/auth/use-user";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/components/language-provider";
 
 type Profile = {
   id: string; name?: string; email?: string; progress?: number;
@@ -27,14 +28,20 @@ const statColors = [
 const progressColor = (v: number) =>
   v >= 70 ? "[&>div]:bg-emerald-500" : v >= 30 ? "[&>div]:bg-amber-500" : "[&>div]:bg-primary";
 
-const progressMessage = (p: number) =>
-  p === 0    ? "لم تبدأ بعد — تواصل مع مرشدك لبدء رحلتك." :
-  p < 50     ? "أنت في بداية الطريق، استمر!" :
-  p < 100    ? "رائع، أنت في منتصف الطريق!" :
-               "تهانينا! أكملت البرنامج بالكامل 🎉";
+const progressMessage = (p: number, lang: 'ar' | 'en') => lang === 'en'
+  ? (p === 0 ? "You haven't started yet — reach out to your mentor to begin." :
+     p < 50 ? "You're just getting started, keep going!" :
+     p < 100 ? "Great progress, you're halfway there!" :
+               "Congratulations! You've completed the program 🎉")
+  : (p === 0    ? "لم تبدأ بعد — تواصل مع مرشدك لبدء رحلتك." :
+     p < 50     ? "أنت في بداية الطريق، استمر!" :
+     p < 100    ? "رائع، أنت في منتصف الطريق!" :
+                  "تهانينا! أكملت البرنامج بالكامل 🎉");
 
 export default function BeneficiaryDashboardPage() {
   const { user: authUser, userProfile } = useUser();
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [upcomingSessions, setUpcomingSessions] = useState<number | null>(null);
@@ -66,25 +73,25 @@ export default function BeneficiaryDashboardPage() {
 
   useEffect(() => { fetchProfile(); }, [fetchProfile]);
 
-  const displayName = profile?.name || userProfile?.name || authUser?.displayName || 'مستفيد';
+  const displayName = profile?.name || userProfile?.name || authUser?.displayName || bi('مستفيد', 'Beneficiary');
   const progress = profile?.progress || 0;
 
   const statItems = [
-    { title: "تقدمي العام",   value: `${progress}%`,                                sub: "نسبة الإنجاز",    icon: <TrendingUp /> },
-    { title: "الدورات",        value: enrolledCourses !== null ? String(enrolledCourses) : "—", sub: "دورة مسجلة", icon: <BookOpen /> },
-    { title: "الجلسات",        value: upcomingSessions !== null ? String(upcomingSessions) : "—", sub: "جلسة قادمة", icon: <Calendar /> },
-    { title: "المجموعة",       value: profile?.groupId ? "مُنضم" : "—",             sub: "حالة المجموعة",   icon: <Users /> },
+    { title: bi("تقدمي العام", "My overall progress"), value: `${progress}%`, sub: bi("نسبة الإنجاز", "Completion rate"), icon: <TrendingUp /> },
+    { title: bi("الدورات", "Courses"), value: enrolledCourses !== null ? String(enrolledCourses) : "—", sub: bi("دورة مسجلة", "Enrolled"), icon: <BookOpen /> },
+    { title: bi("الجلسات", "Sessions"), value: upcomingSessions !== null ? String(upcomingSessions) : "—", sub: bi("جلسة قادمة", "Upcoming"), icon: <Calendar /> },
+    { title: bi("المجموعة", "Group"), value: profile?.groupId ? bi("مُنضم", "Joined") : "—", sub: bi("حالة المجموعة", "Group status"), icon: <Users /> },
   ];
 
   return (
-    <div className="space-y-6 animate-fade-in-up" dir="rtl">
+    <div className="space-y-6 animate-fade-in-up" dir={dir}>
       {/* ── Page header ── */}
       <div className="page-header">
         <div>
-          <h1 className="page-title">أهلاً، {displayName}</h1>
-          <p className="page-subtitle">تابع تقدمك وجلساتك ودوراتك من هنا</p>
+          <h1 className="page-title">{bi(`أهلاً، ${displayName}`, `Welcome, ${displayName}`)}</h1>
+          <p className="page-subtitle">{bi("تابع تقدمك وجلساتك ودوراتك من هنا", "Track your progress, sessions, and courses here")}</p>
         </div>
-        <Badge className="bg-primary/10 text-primary border-primary/20 w-fit h-fit">مستفيد</Badge>
+        <Badge className="bg-primary/10 text-primary border-primary/20 w-fit h-fit">{bi('مستفيد', 'Beneficiary')}</Badge>
       </div>
 
       {/* ── KPI Cards ── */}
@@ -116,8 +123,8 @@ export default function BeneficiaryDashboardPage() {
         {/* Progress card */}
         <Card className="lg:col-span-2 border-0 shadow-sm">
           <CardHeader className="pb-4">
-            <CardTitle>تقدمي العام</CardTitle>
-            <CardDescription className="mt-1">نسبة إنجازك في البرنامج</CardDescription>
+            <CardTitle>{bi("تقدمي العام", "My overall progress")}</CardTitle>
+            <CardDescription className="mt-1">{bi("نسبة إنجازك في البرنامج", "Your completion rate in the program")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
             {loading ? (
@@ -129,13 +136,13 @@ export default function BeneficiaryDashboardPage() {
               <>
                 <div className="space-y-2">
                   <div className="flex justify-between items-center text-sm">
-                    <span className="font-semibold">الإنجاز الكلي</span>
+                    <span className="font-semibold">{bi("الإنجاز الكلي", "Overall completion")}</span>
                     <span className="text-2xl font-bold tabular-nums">{progress}%</span>
                   </div>
                   <Progress value={progress} className={cn("h-3 rounded-full", progressColor(progress))} />
                 </div>
                 <p className="text-sm text-muted-foreground bg-muted/40 rounded-xl px-4 py-3">
-                  {progressMessage(progress)}
+                  {progressMessage(progress, lang)}
                 </p>
               </>
             )}
@@ -146,7 +153,7 @@ export default function BeneficiaryDashboardPage() {
         <div className="space-y-4">
           {/* Support team */}
           <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-3"><CardTitle>فريق الدعم</CardTitle></CardHeader>
+            <CardHeader className="pb-3"><CardTitle>{bi("فريق الدعم", "Support team")}</CardTitle></CardHeader>
             <CardContent className="space-y-3">
               {loading ? (
                 <div className="space-y-3">
@@ -161,12 +168,12 @@ export default function BeneficiaryDashboardPage() {
                         <AvatarFallback className="rounded-xl bg-primary/15 text-primary text-xs font-bold">م</AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="text-sm font-semibold">{profile.mentorName || 'المرشد'}</p>
-                        <p className="text-xs text-muted-foreground">مرشدك</p>
+                        <p className="text-sm font-semibold">{profile.mentorName || bi('المرشد', 'Mentor')}</p>
+                        <p className="text-xs text-muted-foreground">{bi("مرشدك", "Your mentor")}</p>
                       </div>
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground bg-muted/30 rounded-lg px-3 py-2">لم يُعيَّن لك مرشد بعد</p>
+                    <p className="text-sm text-muted-foreground bg-muted/30 rounded-lg px-3 py-2">{bi("لم يُعيَّن لك مرشد بعد", "No mentor assigned yet")}</p>
                   )}
                   {profile?.coachId ? (
                     <div className="flex items-center gap-3">
@@ -174,12 +181,12 @@ export default function BeneficiaryDashboardPage() {
                         <AvatarFallback className="rounded-xl bg-sky-500/15 text-sky-600 text-xs font-bold">ت</AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="text-sm font-semibold">{profile.coachName || 'المدرب'}</p>
-                        <p className="text-xs text-muted-foreground">مدربك</p>
+                        <p className="text-sm font-semibold">{profile.coachName || bi('المدرب', 'Coach')}</p>
+                        <p className="text-xs text-muted-foreground">{bi("مدربك", "Your coach")}</p>
                       </div>
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground bg-muted/30 rounded-lg px-3 py-2">لم يُعيَّن لك مدرب بعد</p>
+                    <p className="text-sm text-muted-foreground bg-muted/30 rounded-lg px-3 py-2">{bi("لم يُعيَّن لك مدرب بعد", "No coach assigned yet")}</p>
                   )}
                 </>
               )}
@@ -188,13 +195,13 @@ export default function BeneficiaryDashboardPage() {
 
           {/* Quick actions */}
           <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-3"><CardTitle>إجراءات سريعة</CardTitle></CardHeader>
+            <CardHeader className="pb-3"><CardTitle>{bi("إجراءات سريعة", "Quick actions")}</CardTitle></CardHeader>
             <CardContent className="grid grid-cols-2 gap-2">
               {[
-                { href: "/beneficiary-dashboard/courses",  icon: <BookOpen className="h-4 w-4" />,    label: "الدورات",  color: "text-purple-500 bg-purple-500/10" },
-                { href: "/beneficiary-dashboard/sessions", icon: <Calendar className="h-4 w-4" />,    label: "الجلسات",  color: "text-sky-500 bg-sky-500/10" },
-                { href: "/beneficiary-dashboard/messages", icon: <MessageSquare className="h-4 w-4" />,label: "الرسائل", color: "text-primary bg-primary/10" },
-                { href: "/beneficiary-dashboard/progress", icon: <TrendingUp className="h-4 w-4" />,  label: "تقدمي",    color: "text-emerald-600 bg-emerald-500/10" },
+                { href: "/beneficiary-dashboard/courses",  icon: <BookOpen className="h-4 w-4" />,    label: bi("الدورات", "Courses"),  color: "text-purple-500 bg-purple-500/10" },
+                { href: "/beneficiary-dashboard/sessions", icon: <Calendar className="h-4 w-4" />,    label: bi("الجلسات", "Sessions"),  color: "text-sky-500 bg-sky-500/10" },
+                { href: "/beneficiary-dashboard/messages", icon: <MessageSquare className="h-4 w-4" />,label: bi("الرسائل", "Messages"), color: "text-primary bg-primary/10" },
+                { href: "/beneficiary-dashboard/progress", icon: <TrendingUp className="h-4 w-4" />,  label: bi("تقدمي", "My progress"),    color: "text-emerald-600 bg-emerald-500/10" },
               ].map(item => (
                 <Link key={item.href} href={item.href} className="quick-action-card">
                   <span className={cn("h-9 w-9 rounded-xl flex items-center justify-center", item.color)}>
