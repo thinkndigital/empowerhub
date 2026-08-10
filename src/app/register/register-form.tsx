@@ -26,6 +26,8 @@ import type { BrandingBlock } from "@/lib/site-branding-cache";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { useAuth, useFirestore } from "@/firebase/provider";
+import { useLanguage } from "@/components/language-provider";
+import { LanguageSwitcher } from "@/components/language-switcher";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -86,6 +88,7 @@ export function RegisterForm({ initialBranding }: { initialBranding: BrandingBlo
   const [billingCycle, setBillingCycle] = useState<BillingCycle>("monthly");
   const [pendingValues, setPendingValues] = useState<z.infer<typeof formSchema> | null>(null);
   const { logoUrl: platformLogo, platformName } = usePlatformBrand();
+  const { lang, dir, t } = useLanguage();
 
   useEffect(() => {
     // Pricing cards on the landing page link here with ?plan=<key> to preselect
@@ -103,8 +106,8 @@ export function RegisterForm({ initialBranding }: { initialBranding: BrandingBlo
   }, [searchParams]);
 
   const brandingImageUrl = initialBranding.imageUrl || registerImage?.imageUrl;
-  const brandingTitle = initialBranding.title || 'ابدأ رحلتك نحو النجاح';
-  const brandingSubtitle = initialBranding.subtitle || 'انضم إلى منصة EmpowerHub وابدأ التغيير اليوم';
+  const brandingTitle = initialBranding.title || (lang === 'en' ? 'Start your journey to success' : 'ابدأ رحلتك نحو النجاح');
+  const brandingSubtitle = initialBranding.subtitle || (lang === 'en' ? 'Join EmpowerHub and start the change today' : 'انضم إلى منصة EmpowerHub وابدأ التغيير اليوم');
 
   const roleFromQuery = searchParams.get("role");
   const orgInviteParam = searchParams.get("orgInvite");
@@ -268,8 +271,11 @@ export function RegisterForm({ initialBranding }: { initialBranding: BrandingBlo
   }
 
   return (
-    <div className="flex min-h-screen" dir="rtl">
-      <div className="flex flex-1 items-center justify-center py-12 px-4">
+    <div className="flex min-h-screen" dir={dir}>
+      <div className="relative flex flex-1 items-center justify-center py-12 px-4">
+        <div className="absolute top-4 left-4">
+          <LanguageSwitcher />
+        </div>
         <div className="mx-auto grid w-full max-w-[420px] gap-6">
           <div className="grid gap-2 text-center">
             <Link href="/" className="flex justify-center items-center gap-2 mb-2">
@@ -278,12 +284,12 @@ export function RegisterForm({ initialBranding }: { initialBranding: BrandingBlo
                 : <Logo className="w-12 h-12 mx-auto" />}
             </Link>
             <h1 className="text-3xl font-bold">
-              {step === "plan" ? "اختر خطتك" : "إنشاء حساب جديد"}
+              {step === "plan" ? t('register.planHeading') : t('register.heading')}
             </h1>
             <p className="text-balance text-muted-foreground">
               {step === "plan"
-                ? "اختر الخطة المناسبة للبدء"
-                : "انضم إلى منصة EmpowerHub"}
+                ? t('register.planSubtitle')
+                : t('register.subtitle')}
             </p>
           </div>
 
@@ -293,7 +299,7 @@ export function RegisterForm({ initialBranding }: { initialBranding: BrandingBlo
               <form onSubmit={form.handleSubmit(onFormSubmit)} className="grid gap-4">
                 <FormField control={form.control} name="name" render={({ field }) => (
                   <FormItem className="text-right">
-                    <FormLabel>الاسم الكامل</FormLabel>
+                    <FormLabel>{t('common.fullName')}</FormLabel>
                     <FormControl><Input placeholder="محمد أحمد" {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
@@ -301,7 +307,7 @@ export function RegisterForm({ initialBranding }: { initialBranding: BrandingBlo
 
                 <FormField control={form.control} name="email" render={({ field }) => (
                   <FormItem className="text-right">
-                    <FormLabel>البريد الإلكتروني</FormLabel>
+                    <FormLabel>{t('common.email')}</FormLabel>
                     <FormControl>
                       <Input type="email" dir="ltr" placeholder="mail@example.com" {...field} />
                     </FormControl>
@@ -311,9 +317,9 @@ export function RegisterForm({ initialBranding }: { initialBranding: BrandingBlo
 
                 <FormField control={form.control} name="password" render={({ field }) => (
                   <FormItem className="text-right">
-                    <FormLabel>كلمة المرور</FormLabel>
+                    <FormLabel>{t('common.password')}</FormLabel>
                     <FormControl>
-                      <Input type="password" dir="ltr" placeholder="6 أحرف على الأقل" {...field} />
+                      <Input type="password" dir="ltr" placeholder={lang === 'en' ? 'At least 6 characters' : '6 أحرف على الأقل'} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -321,17 +327,17 @@ export function RegisterForm({ initialBranding }: { initialBranding: BrandingBlo
 
                 <FormField control={form.control} name="role" render={({ field }) => (
                   <FormItem className="text-right">
-                    <FormLabel>نوع الحساب</FormLabel>
+                    <FormLabel>{t('register.accountType')}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value} disabled={!!roleFromQuery}>
                       <FormControl>
-                        <SelectTrigger><SelectValue placeholder="اختر نوع حسابك" /></SelectTrigger>
+                        <SelectTrigger><SelectValue placeholder={t('register.accountTypePlaceholder')} /></SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="beneficiary">مستفيد</SelectItem>
-                        <SelectItem value="merchant">تاجر</SelectItem>
-                        <SelectItem value="organization">مدير منظمة / جهة</SelectItem>
-                        <SelectItem value="mentor">مرشد</SelectItem>
-                        <SelectItem value="coach">مدرب / مدربة</SelectItem>
+                        <SelectItem value="beneficiary">{t('register.roleBeneficiary')}</SelectItem>
+                        <SelectItem value="merchant">{t('register.roleMerchant')}</SelectItem>
+                        <SelectItem value="organization">{t('register.roleOrganization')}</SelectItem>
+                        <SelectItem value="mentor">{t('register.roleMentor')}</SelectItem>
+                        <SelectItem value="coach">{t('register.roleCoach')}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -342,10 +348,10 @@ export function RegisterForm({ initialBranding }: { initialBranding: BrandingBlo
                   <>
                     <FormField control={form.control} name="orgType" render={({ field }) => (
                       <FormItem className="text-right">
-                        <FormLabel>تصنيف الجهة</FormLabel>
+                        <FormLabel>{t('register.orgTypeLabel')}</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value || "organization"}>
                           <FormControl>
-                            <SelectTrigger><SelectValue placeholder="اختر تصنيف جهتك" /></SelectTrigger>
+                            <SelectTrigger><SelectValue placeholder={t('register.orgTypePlaceholder')} /></SelectTrigger>
                           </FormControl>
                           <SelectContent>
                             {Object.entries(ORG_TYPES).map(([val, label]) => (
@@ -353,16 +359,16 @@ export function RegisterForm({ initialBranding }: { initialBranding: BrandingBlo
                             ))}
                           </SelectContent>
                         </Select>
-                        <FormDescription className="text-xs">اختر النوع الذي يمثل جهتك.</FormDescription>
+                        <FormDescription className="text-xs">{t('register.orgTypeHint')}</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )} />
 
                     <FormField control={form.control} name="organizationName" render={({ field }) => (
                       <FormItem className="text-right">
-                        <FormLabel>اسم الجهة</FormLabel>
+                        <FormLabel>{t('register.orgNameLabel')}</FormLabel>
                         <FormControl><Input placeholder="مثال: مؤسسة الأمل" {...field} /></FormControl>
-                        <FormDescription className="text-xs">سيتم إنشاء حساب جهتك تلقائياً.</FormDescription>
+                        <FormDescription className="text-xs">{t('register.orgNameHint')}</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )} />
@@ -372,9 +378,9 @@ export function RegisterForm({ initialBranding }: { initialBranding: BrandingBlo
                 {(selectedRole === "mentor" || selectedRole === "coach") && (
                   <FormField control={form.control} name="orgInviteCode" render={({ field }) => (
                     <FormItem className="text-right">
-                      <FormLabel>كود دعوة المنظمة <span className="text-muted-foreground font-normal">(اختياري)</span></FormLabel>
+                      <FormLabel>{t('register.inviteCodeLabel')} <span className="text-muted-foreground font-normal">{t('register.inviteCodeOptional')}</span></FormLabel>
                       <FormControl>
-                        <Input dir="ltr" placeholder="أدخل كود الدعوة إن وجد" {...field} />
+                        <Input dir="ltr" placeholder={t('register.inviteCodePlaceholder')} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -383,10 +389,10 @@ export function RegisterForm({ initialBranding }: { initialBranding: BrandingBlo
 
                 <Button type="submit" className="w-full shadow-md" disabled={isLoading}>
                   {isLoading
-                    ? "جاري إنشاء الحساب..."
+                    ? t('auth.creatingAccount')
                     : selectedRole === "organization"
-                    ? "التالي — اختيار الخطة"
-                    : "إنشاء حساب مجاناً"}
+                    ? t('register.nextChoosePlan')
+                    : t('register.createFreeAccount')}
                 </Button>
               </form>
             </Form>
@@ -396,9 +402,9 @@ export function RegisterForm({ initialBranding }: { initialBranding: BrandingBlo
           {step === "plan" && (
             <div className="space-y-4">
               {plansLoading ? (
-                <p className="text-center text-sm text-muted-foreground py-8">جاري تحميل الخطط...</p>
+                <p className="text-center text-sm text-muted-foreground py-8">{t('register.loadingPlans')}</p>
               ) : plans.length === 0 ? (
-                <p className="text-center text-sm text-muted-foreground py-8">لا توجد خطط متاحة حالياً — سيتم إنشاء حسابك بدون خطة محددة.</p>
+                <p className="text-center text-sm text-muted-foreground py-8">{t('register.noPlans')}</p>
               ) : (
                 <>
                   <div className="flex items-center justify-center gap-1 rounded-lg bg-muted p-1 w-fit mx-auto">
@@ -409,7 +415,7 @@ export function RegisterForm({ initialBranding }: { initialBranding: BrandingBlo
                         billingCycle === "monthly" ? "bg-background shadow-sm" : "text-muted-foreground"
                       }`}
                     >
-                      شهري
+                      {t('register.monthly')}
                     </button>
                     <button
                       type="button"
@@ -418,7 +424,7 @@ export function RegisterForm({ initialBranding }: { initialBranding: BrandingBlo
                         billingCycle === "annual" ? "bg-background shadow-sm" : "text-muted-foreground"
                       }`}
                     >
-                      سنوي
+                      {t('register.annual')}
                     </button>
                   </div>
 
@@ -443,12 +449,12 @@ export function RegisterForm({ initialBranding }: { initialBranding: BrandingBlo
                                 <span className="font-semibold text-sm">{plan.name}</span>
                                 {plan.highlighted && (
                                   <Badge variant="secondary" className="text-xs">
-                                    الأكثر شيوعاً
+                                    {t('register.popular')}
                                   </Badge>
                                 )}
                               </div>
                               <p className="text-primary font-bold mt-0.5">
-                                {isFree ? "مجاني" : `${price.toLocaleString()} ${plan.currency} / ${billingCycle === "annual" ? "سنة" : "شهر"}`}
+                                {isFree ? t('register.free') : `${price.toLocaleString()} ${plan.currency} / ${billingCycle === "annual" ? t('register.perYear') : t('register.perMonth')}`}
                               </p>
                               <ul className="mt-2 space-y-0.5">
                                 {plan.features.map((f) => (
@@ -480,7 +486,7 @@ export function RegisterForm({ initialBranding }: { initialBranding: BrandingBlo
                   onClick={() => setStep("form")}
                   disabled={isLoading}
                 >
-                  رجوع
+                  {t('common.back')}
                 </Button>
                 <Button
                   className="flex-1"
@@ -488,30 +494,30 @@ export function RegisterForm({ initialBranding }: { initialBranding: BrandingBlo
                   disabled={isLoading || plansLoading}
                 >
                   {isLoading
-                    ? "جاري الإنشاء..."
+                    ? t('register.creatingPlan')
                     : plans.find((p) => p.key === selectedPlan)?.priceMonthly === 0 || plans.length === 0
-                    ? "إنشاء الحساب مجاناً"
-                    : "إنشاء الحساب والانتقال للدفع"}
+                    ? t('register.createFreeAccount')
+                    : t('register.createAndPay')}
                 </Button>
               </div>
 
               <p className="text-xs text-center text-muted-foreground">
-                الخطط المجانية تبدأ بفترة تجريبية محدودة. الخطط المدفوعة تُفعَّل بعد إتمام الدفع.
+                {t('register.trialHint')}
               </p>
             </div>
           )}
 
           <p className="text-xs text-center text-muted-foreground">
-            بالتسجيل أنت توافق على{" "}
-            <Link href="#" className="underline hover:text-primary">شروط الاستخدام</Link>
-            {" "}و{" "}
-            <Link href="#" className="underline hover:text-primary">سياسة الخصوصية</Link>
+            {t('register.termsAgree')}{" "}
+            <Link href="#" className="underline hover:text-primary">{t('footer.terms')}</Link>
+            {" "}{t('register.and')}{" "}
+            <Link href="#" className="underline hover:text-primary">{t('footer.privacy')}</Link>
           </p>
 
           <div className="text-center text-sm">
-            لديك حساب بالفعل؟{" "}
+            {t('auth.haveAccount')}{" "}
             <Link href="/login" className="underline font-medium text-primary">
-              تسجيل الدخول
+              {t('common.signIn')}
             </Link>
           </div>
         </div>

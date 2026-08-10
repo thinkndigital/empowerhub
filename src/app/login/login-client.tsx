@@ -16,6 +16,8 @@ import { Logo } from '@/components/logo';
 import { usePlatformBrand } from '@/components/platform-brand-provider';
 import { useToast } from "@/hooks/use-toast";
 import type { BrandingBlock } from '@/lib/site-branding-cache';
+import { useLanguage } from '@/components/language-provider';
+import { LanguageSwitcher } from '@/components/language-switcher';
 
 import { GoogleAuthProvider, signInWithPopup, getRedirectResult, signInWithRedirect, signInWithEmailAndPassword } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
@@ -34,10 +36,13 @@ export function LoginClient({ initialBranding }: { initialBranding: BrandingBloc
   const firestore = useFirestore();
   const [isLoading, setIsLoading] = useState(false);
   const { logoUrl: platformLogo, platformName } = usePlatformBrand();
+  const { lang, dir, t } = useLanguage();
 
   const brandingImageUrl = initialBranding.imageUrl || loginImage?.imageUrl;
-  const brandingTitle = initialBranding.title || 'منصة التمكين الرقمي';
-  const brandingSubtitle = initialBranding.subtitle || 'نربط المستفيدين بالمرشدين والمدربين المتخصصين لدعم نموهم المهني والشخصي';
+  const brandingTitle = initialBranding.title || (lang === 'en' ? 'The digital empowerment platform' : 'منصة التمكين الرقمي');
+  const brandingSubtitle = initialBranding.subtitle || (lang === 'en'
+    ? 'Connecting beneficiaries with specialized mentors and coaches to support their professional and personal growth'
+    : 'نربط المستفيدين بالمرشدين والمدربين المتخصصين لدعم نموهم المهني والشخصي');
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -138,9 +143,12 @@ export function LoginClient({ initialBranding }: { initialBranding: BrandingBloc
   }
 
   return (
-    <div className="flex min-h-screen" dir="rtl">
+    <div className="flex min-h-screen" dir={dir}>
       {/* Form panel */}
-      <div className="flex flex-1 flex-col items-center justify-center px-6 py-12 bg-background">
+      <div className="relative flex flex-1 flex-col items-center justify-center px-6 py-12 bg-background">
+        <div className="absolute top-4 left-4">
+          <LanguageSwitcher />
+        </div>
         <div className="w-full max-w-[400px] space-y-8">
           {/* Logo + title */}
           <div className="flex flex-col items-center gap-4 text-center">
@@ -152,9 +160,9 @@ export function LoginClient({ initialBranding }: { initialBranding: BrandingBloc
               </div>
             </Link>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">مرحبًا بعودتك</h1>
+              <h1 className="text-2xl font-bold tracking-tight">{t('auth.welcomeBack')}</h1>
               <p className="mt-1.5 text-sm text-muted-foreground">
-                سجّل دخولك للوصول إلى حسابك
+                {t('auth.loginHint')}
               </p>
             </div>
           </div>
@@ -165,7 +173,7 @@ export function LoginClient({ initialBranding }: { initialBranding: BrandingBloc
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField control={form.control} name="email" render={({ field }) => (
                   <FormItem className="text-right">
-                    <FormLabel className="text-sm font-medium">البريد الإلكتروني</FormLabel>
+                    <FormLabel className="text-sm font-medium">{t('common.email')}</FormLabel>
                     <FormControl>
                       <Input
                         type="email"
@@ -181,9 +189,9 @@ export function LoginClient({ initialBranding }: { initialBranding: BrandingBloc
                 <FormField control={form.control} name="password" render={({ field }) => (
                   <FormItem className="text-right">
                     <div className="flex items-center justify-between">
-                      <FormLabel className="text-sm font-medium">كلمة المرور</FormLabel>
+                      <FormLabel className="text-sm font-medium">{t('common.password')}</FormLabel>
                       <Link href="/forgot-password" className="text-xs text-primary hover:underline">
-                        نسيت كلمة المرور؟
+                        {t('auth.forgotPassword')}
                       </Link>
                     </div>
                     <FormControl>
@@ -199,7 +207,7 @@ export function LoginClient({ initialBranding }: { initialBranding: BrandingBloc
                   </FormItem>
                 )}/>
                 <Button type="submit" className="w-full h-10 font-medium" disabled={isLoading}>
-                  {isLoading ? 'جاري تسجيل الدخول...' : 'تسجيل الدخول'}
+                  {isLoading ? t('auth.signingIn') : t('common.signIn')}
                 </Button>
               </form>
             </Form>
@@ -209,7 +217,7 @@ export function LoginClient({ initialBranding }: { initialBranding: BrandingBloc
                 <span className="w-full border-t" />
               </div>
               <div className="relative flex justify-center text-xs">
-                <span className="bg-card px-3 text-muted-foreground">أو</span>
+                <span className="bg-card px-3 text-muted-foreground">{t('common.or')}</span>
               </div>
             </div>
 
@@ -226,14 +234,14 @@ export function LoginClient({ initialBranding }: { initialBranding: BrandingBloc
                 <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
                 <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
               </svg>
-              تسجيل الدخول بـ Google
+              {t('auth.continueWithGoogle')}
             </Button>
           </div>
 
           <p className="text-center text-sm text-muted-foreground">
-            ليس لديك حساب؟{' '}
+            {t('auth.noAccount')}{' '}
             <Link href="/register" className="font-medium text-primary hover:underline">
-              أنشئ حسابًا مجانًا
+              {t('auth.createFreeAccountLink')}
             </Link>
           </p>
         </div>
@@ -266,12 +274,20 @@ export function LoginClient({ initialBranding }: { initialBranding: BrandingBloc
               {brandingSubtitle}
             </p>
             <div className="space-y-3">
-              {[
-                'تدريب احترافي مع خبراء معتمدين',
-                'إرشاد شخصي لتطوير المهارات',
-                'متجر إلكتروني مدمج للمنتجات',
-                'تقارير وتحليلات متقدمة',
-              ].map(feature => (
+              {(lang === 'en'
+                ? [
+                    'Professional training with certified experts',
+                    'Personal mentoring to build your skills',
+                    'A built-in online store for your products',
+                    'Advanced reports and analytics',
+                  ]
+                : [
+                    'تدريب احترافي مع خبراء معتمدين',
+                    'إرشاد شخصي لتطوير المهارات',
+                    'متجر إلكتروني مدمج للمنتجات',
+                    'تقارير وتحليلات متقدمة',
+                  ]
+              ).map(feature => (
                 <div key={feature} className="flex items-center gap-3 text-sm text-white/75">
                   <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-blue-400" />
                   {feature}

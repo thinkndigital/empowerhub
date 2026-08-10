@@ -4,6 +4,7 @@ import { Toaster } from '@/components/ui/toaster';
 import './globals.css';
 import { FirebaseProviderDynamic } from '@/components/firebase-provider-dynamic';
 import { ThemeProvider } from '@/components/theme-provider';
+import { LanguageProvider } from '@/components/language-provider';
 import { PlatformBrandProvider } from '@/components/platform-brand-provider';
 import { CartProvider } from '@/components/cart-provider';
 import { adminDb } from '@/lib/firebase-admin';
@@ -161,17 +162,24 @@ export default async function RootLayout({
         {brandStyle && (
           <style dangerouslySetInnerHTML={{ __html: brandStyle }} />
         )}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var l=localStorage.getItem('empowerhub-lang');if(l==='en'){document.documentElement.lang='en';document.documentElement.dir='ltr';}}catch(e){}`,
+          }}
+        />
       </head>
       <body className="font-body antialiased">
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} storageKey="empowerhub-theme">
-          <PlatformBrandProvider logoUrl={platformBrand.logoUrl} platformName={platformBrand.platformName} header={platformBrand.header}>
-            <FirebaseProviderDynamic>
-              <CartProvider>
-                {children}
-                <Toaster />
-              </CartProvider>
-            </FirebaseProviderDynamic>
-          </PlatformBrandProvider>
+          <LanguageProvider>
+            <PlatformBrandProvider logoUrl={platformBrand.logoUrl} platformName={platformBrand.platformName} header={platformBrand.header}>
+              <FirebaseProviderDynamic>
+                <CartProvider>
+                  {children}
+                  <Toaster />
+                </CartProvider>
+              </FirebaseProviderDynamic>
+            </PlatformBrandProvider>
+          </LanguageProvider>
         </ThemeProvider>
       </body>
     </html>
