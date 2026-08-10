@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
 
+function normalizeDate(date: any): string | undefined {
+  if (!date || typeof date === 'string') return date;
+  if (date._seconds || date.seconds) {
+    return new Date((date._seconds ?? date.seconds) * 1000).toISOString();
+  }
+  return date;
+}
+
 export async function GET(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
@@ -14,8 +22,14 @@ export async function GET(req: NextRequest) {
     ]);
 
     const store = storeSnap.empty ? null : { id: storeSnap.docs[0].id, ...storeSnap.docs[0].data() };
-    const products = productsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-    const orders = ordersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const products = productsSnap.docs.map(d => {
+      const data = d.data();
+      return { id: d.id, ...data, createdAt: normalizeDate(data.createdAt) };
+    });
+    const orders = ordersSnap.docs.map(d => {
+      const data = d.data();
+      return { id: d.id, ...data, createdAt: normalizeDate(data.createdAt) };
+    });
 
     return NextResponse.json({ store, products, orders });
   } catch (e: any) {
