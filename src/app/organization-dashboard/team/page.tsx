@@ -44,6 +44,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useUser } from "@/firebase/auth/use-user";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useLanguage } from "@/components/language-provider";
 
 type TeamMember = { id: string; name?: string; email?: string; role?: string; status?: string; avatarUrl?: string };
 
@@ -58,11 +59,18 @@ const roleMap: { [key: string]: string } = {
     team_member: "عضو فريق",
 };
 
+const roleMapEn: { [key: string]: string } = {
+    organization: "Organization admin",
+    team_member: "Team member",
+};
+
 export default function TeamPage() {
     const { toast } = useToast();
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [memberToDelete, setMemberToDelete] = useState<TeamMember | null>(null);
     const { user, userProfile } = useUser();
+    const { lang, dir } = useLanguage();
+    const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
     const ORG_ID = userProfile?.organizationId;
     const [team, setTeam] = useState<TeamMember[]>([]);
     const [loading, setLoading] = useState(true);
@@ -108,17 +116,17 @@ export default function TeamPage() {
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error);
-            toast({ title: "تم بنجاح!", description: `تمت إضافة "${values.name}". كلمة المرور: EmpowerHub@2024` });
+            toast({ title: bi("تم بنجاح!", "Success!"), description: bi(`تمت إضافة "${values.name}". كلمة المرور: EmpowerHub@2024`, `"${values.name}" was added. Password: EmpowerHub@2024`) });
             form.reset();
             setIsAddDialogOpen(false);
             fetchTeam();
         } catch (err: any) {
-            toast({ variant: "destructive", title: "خطأ!", description: err.message });
+            toast({ variant: "destructive", title: bi("خطأ!", "Error!"), description: err.message });
         }
     }
 
     const handleExport = () => {
-        toast({ title: "جاري تصدير قائمة الفريق...", description: "سيتم تنزيل ملف CSV قريبًا." });
+        toast({ title: bi("جاري تصدير قائمة الفريق...", "Exporting team list..."), description: bi("سيتم تنزيل ملف CSV قريبًا.", "A CSV file will download shortly.") });
     }
 
     const handleDelete = async () => {
@@ -131,63 +139,63 @@ export default function TeamPage() {
                 body: JSON.stringify({ memberId: memberToDelete.id }),
             });
             if (!res.ok) throw new Error('Failed to delete');
-            toast({ variant: "destructive", title: "تمت الإزالة!", description: `تمت إزالة "${memberToDelete.name}" من الفريق.` });
+            toast({ variant: "destructive", title: bi("تمت الإزالة!", "Removed!"), description: bi(`تمت إزالة "${memberToDelete.name}" من الفريق.`, `"${memberToDelete.name}" was removed from the team.`) });
             setMemberToDelete(null);
             fetchTeam();
         } catch {
-            toast({ variant: "destructive", title: "خطأ!", description: "فشلت إزالة العضو." });
+            toast({ variant: "destructive", title: bi("خطأ!", "Error!"), description: bi("فشلت إزالة العضو.", "Failed to remove member.") });
             setMemberToDelete(null);
         }
     }
 
   return (
-    <div dir="rtl" className="space-y-6 animate-fade-in-up">
+    <div dir={dir} className="space-y-6 animate-fade-in-up">
       <div className="page-header">
         <div>
-          <h1 className="page-title">فريق العمل</h1>
-          <p className="page-subtitle">إدارة أعضاء فريق منظمتك وأدوارهم.</p>
+          <h1 className="page-title">{bi("فريق العمل", "Team")}</h1>
+          <p className="page-subtitle">{bi("إدارة أعضاء فريق منظمتك وأدوارهم.", "Manage your organization's team members and their roles.")}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <Button variant="outline" onClick={handleExport}>
             <Download className="ml-2 h-4 w-4" />
-            تصدير
+            {bi("تصدير", "Export")}
           </Button>
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
               <Button>
                 <PlusCircle className="ml-2 h-4 w-4" />
-                إضافة عضو
+                {bi("إضافة عضو", "Add member")}
               </Button>
             </DialogTrigger>
-            <DialogContent dir="rtl">
+            <DialogContent dir={dir}>
               <DialogHeader>
-                <DialogTitle>إضافة عضو جديد للفريق</DialogTitle>
-                <DialogDescription>أدخل معلومات العضو الجديد وأرسل له دعوة.</DialogDescription>
+                <DialogTitle>{bi("إضافة عضو جديد للفريق", "Add a new team member")}</DialogTitle>
+                <DialogDescription>{bi("أدخل معلومات العضو الجديد وأرسل له دعوة.", "Enter the new member's information and send them an invitation.")}</DialogDescription>
               </DialogHeader>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
                   <FormField control={form.control} name="name" render={({ field }) => (
-                    <FormItem><FormLabel>الاسم الكامل</FormLabel><FormControl><Input placeholder="مثال: خالد الأحمد" {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>{bi("الاسم الكامل", "Full name")}</FormLabel><FormControl><Input placeholder={bi("مثال: خالد الأحمد", "e.g. Khaled Al-Ahmad")} {...field} /></FormControl><FormMessage /></FormItem>
                   )}/>
                   <FormField control={form.control} name="email" render={({ field }) => (
-                    <FormItem><FormLabel>البريد الإلكتروني</FormLabel><FormControl><Input dir="ltr" placeholder="khaled@example.com" {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>{bi("البريد الإلكتروني", "Email")}</FormLabel><FormControl><Input dir="ltr" placeholder="khaled@example.com" {...field} /></FormControl><FormMessage /></FormItem>
                   )}/>
                   <FormField control={form.control} name="role" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>الدور</FormLabel>
+                      <FormLabel>{bi("الدور", "Role")}</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl><SelectTrigger><SelectValue placeholder="اختر دورًا" /></SelectTrigger></FormControl>
+                        <FormControl><SelectTrigger><SelectValue placeholder={bi("اختر دورًا", "Choose a role")} /></SelectTrigger></FormControl>
                         <SelectContent>
-                          <SelectItem value="organization">مدير منظمة</SelectItem>
-                          <SelectItem value="team_member">عضو فريق</SelectItem>
+                          <SelectItem value="organization">{bi("مدير منظمة", "Organization admin")}</SelectItem>
+                          <SelectItem value="team_member">{bi("عضو فريق", "Team member")}</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
                     </FormItem>
                   )}/>
                   <DialogFooter>
-                    <DialogClose asChild><Button variant="ghost">إلغاء</Button></DialogClose>
-                    <Button type="submit">إرسال دعوة</Button>
+                    <DialogClose asChild><Button variant="ghost">{bi("إلغاء", "Cancel")}</Button></DialogClose>
+                    <Button type="submit">{bi("إرسال دعوة", "Send invitation")}</Button>
                   </DialogFooter>
                 </form>
               </Form>
@@ -198,20 +206,20 @@ export default function TeamPage() {
 
       <Card className="border-0 shadow-sm">
         <CardHeader>
-          <CardTitle className="text-base">قائمة أعضاء الفريق</CardTitle>
-          <CardDescription>{!loading ? `${team.length} عضو` : 'جاري التحميل...'}</CardDescription>
+          <CardTitle className="text-base">{bi("قائمة أعضاء الفريق", "Team members list")}</CardTitle>
+          <CardDescription>{!loading ? bi(`${team.length} عضو`, `${team.length} member${team.length === 1 ? '' : 's'}`) : bi('جاري التحميل...', 'Loading...')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
           <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>الاسم</TableHead>
-              <TableHead className="hidden md:table-cell">البريد الإلكتروني</TableHead>
-              <TableHead>الدور</TableHead>
-              <TableHead className="text-center">الحالة</TableHead>
+              <TableHead>{bi("الاسم", "Name")}</TableHead>
+              <TableHead className="hidden md:table-cell">{bi("البريد الإلكتروني", "Email")}</TableHead>
+              <TableHead>{bi("الدور", "Role")}</TableHead>
+              <TableHead className="text-center">{bi("الحالة", "Status")}</TableHead>
               <TableHead>
-                <span className="sr-only">الإجراءات</span>
+                <span className="sr-only">{bi("الإجراءات", "Actions")}</span>
               </TableHead>
             </TableRow>
           </TableHeader>
@@ -226,7 +234,7 @@ export default function TeamPage() {
                 </TableRow>
             ))}
             {!loading && team.map((user) => {
-              const userName = user.name || 'عضو فريق بلا اسم';
+              const userName = user.name || bi('عضو فريق بلا اسم', 'Unnamed team member');
               return (
               <TableRow key={user.id}>
                 <TableCell className="font-medium">
@@ -239,7 +247,7 @@ export default function TeamPage() {
                   </div>
                 </TableCell>
                 <TableCell className="hidden md:table-cell">{user.email || '-'}</TableCell>
-                <TableCell>{roleMap[user.role || ''] || user.role || 'غير محدد'}</TableCell>
+                <TableCell>{(lang === 'en' ? roleMapEn : roleMap)[user.role || ''] || user.role || bi('غير محدد', 'Unspecified')}</TableCell>
                 <TableCell className="text-center">
                   <StatusBadge status={user.status || 'active'} />
                 </TableCell>
@@ -248,18 +256,18 @@ export default function TeamPage() {
                     <DropdownMenuTrigger asChild>
                       <Button aria-haspopup="true" size="icon" variant="ghost">
                         <MoreHorizontal className="h-4 w-4" />
-                        <span className="sr-only">قائمة</span>
+                        <span className="sr-only">{bi("قائمة", "Menu")}</span>
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
-                      <DropdownMenuItem onClick={() => toast({ title: "سيتم فتح نافذة تعديل الدور قريبًا."})}>
+                      <DropdownMenuLabel>{bi("الإجراءات", "Actions")}</DropdownMenuLabel>
+                      <DropdownMenuItem onClick={() => toast({ title: bi("سيتم فتح نافذة تعديل الدور قريبًا.", "The role-edit dialog will open soon.")})}>
                         <Edit className="ml-2 h-4 w-4" />
-                        تعديل الدور
+                        {bi("تعديل الدور", "Edit role")}
                       </DropdownMenuItem>
                       <DropdownMenuItem className="text-red-500" onSelect={(e) => { e.preventDefault(); setMemberToDelete(user);}}>
                         <Trash2 className="ml-2 h-4 w-4" />
-                        إزالة من الفريق
+                        {bi("إزالة من الفريق", "Remove from team")}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -271,8 +279,8 @@ export default function TeamPage() {
                 <TableCell colSpan={5}>
                   <div className="empty-state">
                     <div className="empty-state-icon"><Users className="h-6 w-6" /></div>
-                    <p className="empty-state-title">لا يوجد أعضاء في الفريق</p>
-                    <p className="empty-state-desc">أضف أعضاء لفريق عمل منظمتك</p>
+                    <p className="empty-state-title">{bi("لا يوجد أعضاء في الفريق", "No team members")}</p>
+                    <p className="empty-state-desc">{bi("أضف أعضاء لفريق عمل منظمتك", "Add members to your organization's team")}</p>
                   </div>
                 </TableCell>
               </TableRow>
@@ -283,16 +291,16 @@ export default function TeamPage() {
       </CardContent>
     </Card>
      <AlertDialog open={!!memberToDelete} onOpenChange={(isOpen) => !isOpen && setMemberToDelete(null)}>
-        <AlertDialogContent dir="rtl">
+        <AlertDialogContent dir={dir}>
             <AlertDialogHeader>
-                <AlertDialogTitle>هل أنت متأكد تمامًا؟</AlertDialogTitle>
+                <AlertDialogTitle>{bi("هل أنت متأكد تمامًا؟", "Are you absolutely sure?")}</AlertDialogTitle>
                 <AlertDialogDescription>
-                    هذا الإجراء سيقوم بإزالة "{memberToDelete?.name || 'العضو'}" من فريق العمل.
+                    {bi(`هذا الإجراء سيقوم بإزالة "${memberToDelete?.name || 'العضو'}" من فريق العمل.`, `This action will remove "${memberToDelete?.name || 'the member'}" from the team.`)}
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-                <AlertDialogCancel>إلغاء</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDelete}>نعم، قم بالإزالة</AlertDialogAction>
+                <AlertDialogCancel>{bi("إلغاء", "Cancel")}</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDelete}>{bi("نعم، قم بالإزالة", "Yes, remove")}</AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>
     </AlertDialog>

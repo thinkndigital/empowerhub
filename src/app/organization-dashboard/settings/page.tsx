@@ -17,6 +17,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useUser } from "@/firebase/auth/use-user";
 import { uploadFile as uploadToStorage } from "@/lib/upload-file";
+import { useLanguage } from "@/components/language-provider";
 
 interface SubscriptionPlan {
   id: string;
@@ -48,9 +49,17 @@ const SUB_STATUS_LABELS: Record<string, { label: string; variant: "default" | "s
   cancelled: { label: "ملغي", variant: "destructive" },
 };
 
-function formatDate(d?: string) {
+const SUB_STATUS_LABELS_EN: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+  trial: { label: "Trial", variant: "secondary" },
+  active: { label: "Active", variant: "default" },
+  expired: { label: "Expired", variant: "destructive" },
+  pending: { label: "Awaiting payment", variant: "outline" },
+  cancelled: { label: "Cancelled", variant: "destructive" },
+};
+
+function formatDate(d?: string, locale: string = "ar-EG") {
   if (!d) return "—";
-  return new Date(d).toLocaleDateString("ar-EG", { year: "numeric", month: "long", day: "numeric" });
+  return new Date(d).toLocaleDateString(locale, { year: "numeric", month: "long", day: "numeric" });
 }
 
 const settingsSchema = z.object({
@@ -71,9 +80,20 @@ const NOTIF_CATEGORIES: { key: string; label: string; description: string }[] = 
   { key: "assessments", label: "نماذج التقييم", description: "إشعار بريدي عند إرسال نموذج تقييم جديد" },
 ];
 
+const NOTIF_CATEGORIES_EN: { key: string; label: string; description: string }[] = [
+  { key: "messages", label: "Messages", description: "Email notification when a new message is received" },
+  { key: "courses", label: "Courses", description: "Email notification on course enrollment or subscription confirmation" },
+  { key: "sessions", label: "Sessions", description: "Email notification when a session is created or you're invited to attend" },
+  { key: "membership", label: "Membership & invitations", description: "Email notification for join invitations and mentor/coach assignment" },
+  { key: "assessments", label: "Assessment forms", description: "Email notification when a new assessment form is sent" },
+];
+
 export default function OrgSettingsPage() {
   const { toast } = useToast();
   const { user, userProfile } = useUser();
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
+  const locale = lang === 'en' ? 'en-US' : 'ar-EG';
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [logoUploading, setLogoUploading] = useState(false);
@@ -142,7 +162,7 @@ export default function OrgSettingsPage() {
 
   async function onSubmit(values: z.infer<typeof settingsSchema>) {
     if (!user) {
-      toast({ variant: "destructive", title: "خطأ", description: "لم يتم تحديد الحساب." });
+      toast({ variant: "destructive", title: bi("خطأ", "Error"), description: bi("لم يتم تحديد الحساب.", "No account was identified.") });
       return;
     }
 
@@ -186,11 +206,11 @@ export default function OrgSettingsPage() {
       window.dispatchEvent(new Event('org-settings-change'));
 
       toast({
-        title: "تم حفظ الإعدادات",
-        description: "تم تحديث الإعدادات وستنعكس على جميع الأقسام.",
+        title: bi("تم حفظ الإعدادات", "Settings saved"),
+        description: bi("تم تحديث الإعدادات وستنعكس على جميع الأقسام.", "Settings updated and will reflect across all sections."),
       });
     } catch (err: any) {
-      toast({ variant: "destructive", title: "فشل الحفظ", description: err.message });
+      toast({ variant: "destructive", title: bi("فشل الحفظ", "Save failed"), description: err.message });
     } finally {
       setIsSaving(false);
     }
@@ -206,10 +226,10 @@ export default function OrgSettingsPage() {
   };
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={dir}>
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">الإعدادات</h1>
-        <p className="text-sm text-muted-foreground">إدارة التفاصيل والمظهر وإعدادات الحساب.</p>
+        <h1 className="text-2xl font-bold tracking-tight">{bi("الإعدادات", "Settings")}</h1>
+        <p className="text-sm text-muted-foreground">{bi("إدارة التفاصيل والمظهر وإعدادات الحساب.", "Manage details, appearance, and account settings.")}</p>
       </div>
 
       {subscription && (
@@ -217,56 +237,56 @@ export default function OrgSettingsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CreditCard className="h-5 w-5" />
-              الاشتراك
+              {bi("الاشتراك", "Subscription")}
             </CardTitle>
-            <CardDescription>خطة اشتراكك الحالية وتفاصيلها.</CardDescription>
+            <CardDescription>{bi("خطة اشتراكك الحالية وتفاصيلها.", "Your current subscription plan and its details.")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
             <div className="rounded-lg border p-4 bg-muted/30 space-y-3">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant={subscription.isFree ? "secondary" : "default"} className="text-sm">
-                  {subscription.isFree ? "خطة مجانية" : subscription.currentPlan?.name || "خطة مدفوعة"}
+                  {subscription.isFree ? bi("خطة مجانية", "Free plan") : subscription.currentPlan?.name || bi("خطة مدفوعة", "Paid plan")}
                 </Badge>
                 {subscription.permanentFree ? (
-                  <Badge variant="secondary">منظمة مجانية دائمًا</Badge>
+                  <Badge variant="secondary">{bi("منظمة مجانية دائمًا", "Permanently free organization")}</Badge>
                 ) : (
-                  subscription.status && SUB_STATUS_LABELS[subscription.status] && (
-                    <Badge variant={SUB_STATUS_LABELS[subscription.status].variant}>
-                      {SUB_STATUS_LABELS[subscription.status].label}
+                  subscription.status && (lang === 'en' ? SUB_STATUS_LABELS_EN : SUB_STATUS_LABELS)[subscription.status] && (
+                    <Badge variant={(lang === 'en' ? SUB_STATUS_LABELS_EN : SUB_STATUS_LABELS)[subscription.status].variant}>
+                      {(lang === 'en' ? SUB_STATUS_LABELS_EN : SUB_STATUS_LABELS)[subscription.status].label}
                     </Badge>
                   )
                 )}
                 {!subscription.isFree && (
-                  <Badge variant="outline">{subscription.billingCycle === "annual" ? "سنوي" : "شهري"}</Badge>
+                  <Badge variant="outline">{subscription.billingCycle === "annual" ? bi("سنوي", "Annual") : bi("شهري", "Monthly")}</Badge>
                 )}
                 {(subscription.status === "expired" || subscription.status === "pending") && !subscription.permanentFree && (
                   <Button asChild size="sm" className="mr-auto">
                     <Link href={`/payment?plan=${subscription.currentPlan?.key || ""}&orgId=${subscription.orgId}&cycle=${subscription.billingCycle}`}>
-                      {subscription.status === "pending" ? "إتمام الدفع الآن" : "تجديد الاشتراك الآن"}
+                      {subscription.status === "pending" ? bi("إتمام الدفع الآن", "Complete payment now") : bi("تجديد الاشتراك الآن", "Renew subscription now")}
                     </Link>
                   </Button>
                 )}
               </div>
 
               {subscription.permanentFree ? (
-                <p className="text-sm text-muted-foreground">منح المشرف العام منظمتك وصولاً مجانيًا دائمًا — لا حاجة للدفع.</p>
+                <p className="text-sm text-muted-foreground">{bi("منح المشرف العام منظمتك وصولاً مجانيًا دائمًا — لا حاجة للدفع.", "The platform admin granted your organization permanent free access — no payment needed.")}</p>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
                   <div>
-                    <p className="text-muted-foreground text-xs">تاريخ البدء</p>
-                    <p className="font-medium">{formatDate(subscription.startDate)}</p>
+                    <p className="text-muted-foreground text-xs">{bi("تاريخ البدء", "Start date")}</p>
+                    <p className="font-medium">{formatDate(subscription.startDate, locale)}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground text-xs">
-                      {subscription.status === "trial" ? "نهاية الفترة التجريبية" : "تاريخ الانتهاء"}
+                      {subscription.status === "trial" ? bi("نهاية الفترة التجريبية", "Trial period end") : bi("تاريخ الانتهاء", "Expiration date")}
                     </p>
-                    <p className="font-medium">{formatDate(subscription.endDate)}</p>
+                    <p className="font-medium">{formatDate(subscription.endDate, locale)}</p>
                   </div>
                   {subscription.daysLeft != null && (
                     <div>
-                      <p className="text-muted-foreground text-xs">الأيام المتبقية</p>
+                      <p className="text-muted-foreground text-xs">{bi("الأيام المتبقية", "Days remaining")}</p>
                       <p className={`font-medium ${subscription.daysLeft <= 7 ? "text-destructive" : ""}`}>
-                        {subscription.daysLeft > 0 ? `${subscription.daysLeft} يوم` : "منتهية"}
+                        {subscription.daysLeft > 0 ? bi(`${subscription.daysLeft} يوم`, `${subscription.daysLeft} days`) : bi("منتهية", "Expired")}
                       </p>
                     </div>
                   )}
@@ -278,7 +298,7 @@ export default function OrgSettingsPage() {
               <div className="space-y-3">
                 <p className="text-sm font-medium flex items-center gap-2">
                   <ArrowUpCircle className="h-4 w-4" />
-                  ترقية الخطة لفتح مزايا إضافية
+                  {bi("ترقية الخطة لفتح مزايا إضافية", "Upgrade your plan to unlock more features")}
                 </p>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {subscription.upgradablePlans.map((plan) => (
@@ -286,7 +306,7 @@ export default function OrgSettingsPage() {
                       <div className="flex items-center justify-between">
                         <span className="font-semibold">{plan.name}</span>
                         <span className="text-primary font-bold">
-                          {plan.priceMonthly.toLocaleString()} {plan.currency}/شهر
+                          {plan.priceMonthly.toLocaleString()} {plan.currency}/{bi("شهر", "mo")}
                         </span>
                       </div>
                       {plan.features.length > 0 && (
@@ -301,7 +321,7 @@ export default function OrgSettingsPage() {
                       )}
                       <Button asChild size="sm" variant="outline">
                         <Link href={`/payment?plan=${plan.key}&orgId=${subscription.orgId}`}>
-                          الترقية لهذه الخطة
+                          {bi("الترقية لهذه الخطة", "Upgrade to this plan")}
                         </Link>
                       </Button>
                     </div>
@@ -319,10 +339,10 @@ export default function OrgSettingsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Palette className="h-5 w-5" />
-                تخصيص المظهر
+                {bi("تخصيص المظهر", "Customize appearance")}
               </CardTitle>
               <CardDescription>
-                قم بتخصيص مظهر المنصة ليتناسب مع هويتك — ستنعكس التغييرات على جميع الأقسام.
+                {bi("قم بتخصيص مظهر المنصة ليتناسب مع هويتك — ستنعكس التغييرات على جميع الأقسام.", "Customize the platform's appearance to match your brand — changes reflect across all sections.")}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -331,12 +351,12 @@ export default function OrgSettingsPage() {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>اسم المنصة</FormLabel>
+                    <FormLabel>{bi("اسم المنصة", "Platform name")}</FormLabel>
                     <FormControl>
-                      <Input placeholder="اسم المنصة" {...field} />
+                      <Input placeholder={bi("اسم المنصة", "Platform name")} {...field} />
                     </FormControl>
                     <FormDescription>
-                      سيظهر هذا الاسم في رأس الشريط الجانبي لجميع الأعضاء.
+                      {bi("سيظهر هذا الاسم في رأس الشريط الجانبي لجميع الأعضاء.", "This name will appear in the sidebar header for all members.")}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -347,18 +367,18 @@ export default function OrgSettingsPage() {
                 name="logo"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>الشعار</FormLabel>
+                    <FormLabel>{bi("الشعار", "Logo")}</FormLabel>
                     <FormControl>
                       <Input type="file" accept="image/png, image/jpeg, image/svg+xml" onChange={handleLogoChange} />
                     </FormControl>
                     {logoPreview && (
                       <div className="mt-4">
-                        <p className="text-sm text-muted-foreground">معاينة الشعار:</p>
-                        <Image src={logoPreview} alt="معاينة الشعار" width={80} height={80} className="rounded-md border p-2 mt-2 object-contain" />
+                        <p className="text-sm text-muted-foreground">{bi("معاينة الشعار:", "Logo preview:")}</p>
+                        <Image src={logoPreview} alt={bi("معاينة الشعار", "Logo preview")} width={80} height={80} className="rounded-md border p-2 mt-2 object-contain" />
                       </div>
                     )}
                     <FormDescription>
-                      ارفع الشعار (يفضل أن يكون بصيغة SVG أو PNG). سيظهر في الشريط الجانبي.
+                      {bi("ارفع الشعار (يفضل أن يكون بصيغة SVG أو PNG). سيظهر في الشريط الجانبي.", "Upload the logo (SVG or PNG preferred). It will appear in the sidebar.")}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -369,9 +389,9 @@ export default function OrgSettingsPage() {
 
           <Card className="border-0 shadow-sm">
             <CardHeader>
-              <CardTitle>تسعير الخدمات والمحاسبة</CardTitle>
+              <CardTitle>{bi("تسعير الخدمات والمحاسبة", "Service pricing & billing")}</CardTitle>
               <CardDescription>
-                تحديد أسعار الساعة بالدينار الأردني (د.أ) للجلسات التي يقدمها المدربون والمرشدون، ونسبة المنظمة من هذه الجلسات — تُحتسب مستحقاتهم تلقائياً وتظهر في لوحاتهم الخاصة.
+                {bi("تحديد أسعار الساعة بالدينار الأردني (د.أ) للجلسات التي يقدمها المدربون والمرشدون، ونسبة المنظمة من هذه الجلسات — تُحتسب مستحقاتهم تلقائياً وتظهر في لوحاتهم الخاصة.", "Set hourly rates in Jordanian dinar (JOD) for sessions provided by coaches and mentors, and the organization's cut of those sessions — their earnings are calculated automatically and shown on their own dashboards.")}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -380,12 +400,12 @@ export default function OrgSettingsPage() {
                 name="courseSessionPrice"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="flex items-center gap-2"><BookOpen className="h-4 w-4" /> سعر ساعة التدريب</FormLabel>
+                    <FormLabel className="flex items-center gap-2"><BookOpen className="h-4 w-4" /> {bi("سعر ساعة التدريب", "Coaching hourly rate")}</FormLabel>
                     <FormControl>
                       <Input type="number" step="0.5" min="0" placeholder="50" {...field} />
                     </FormControl>
                     <FormDescription>
-                      المبلغ المحتسب لكل ساعة من جلسات التدريب التي يقدمها المدرب (يُحسب حسب مدة الجلسة الفعلية).
+                      {bi("المبلغ المحتسب لكل ساعة من جلسات التدريب التي يقدمها المدرب (يُحسب حسب مدة الجلسة الفعلية).", "The amount charged per hour of coaching sessions provided by the coach (calculated by the session's actual duration).")}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -396,12 +416,12 @@ export default function OrgSettingsPage() {
                 name="mentorshipSessionPrice"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="flex items-center gap-2"><Users className="h-4 w-4" /> سعر ساعة الإرشاد</FormLabel>
+                    <FormLabel className="flex items-center gap-2"><Users className="h-4 w-4" /> {bi("سعر ساعة الإرشاد", "Mentoring hourly rate")}</FormLabel>
                     <FormControl>
                       <Input type="number" step="0.5" min="0" placeholder="30" {...field} />
                     </FormControl>
                     <FormDescription>
-                      المبلغ المحتسب لكل ساعة من جلسات الإرشاد التي يقدمها المرشد (يُحسب حسب مدة الجلسة الفعلية).
+                      {bi("المبلغ المحتسب لكل ساعة من جلسات الإرشاد التي يقدمها المرشد (يُحسب حسب مدة الجلسة الفعلية).", "The amount charged per hour of mentoring sessions provided by the mentor (calculated by the session's actual duration).")}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -412,12 +432,12 @@ export default function OrgSettingsPage() {
                 name="orgCommissionPercent"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="flex items-center gap-2"><CreditCard className="h-4 w-4" /> نسبة المنظمة من الجلسات (%)</FormLabel>
+                    <FormLabel className="flex items-center gap-2"><CreditCard className="h-4 w-4" /> {bi("نسبة المنظمة من الجلسات (%)", "Organization's cut of sessions (%)")}</FormLabel>
                     <FormControl>
                       <Input type="number" step="1" min="0" max="100" placeholder="0" {...field} />
                     </FormControl>
                     <FormDescription>
-                      النسبة التي تخصمها المنظمة من مستحقات المدربين والمرشدين قبل صرفها — الباقي هو صافي مستحقاتهم.
+                      {bi("النسبة التي تخصمها المنظمة من مستحقات المدربين والمرشدين قبل صرفها — الباقي هو صافي مستحقاتهم.", "The percentage the organization deducts from coach/mentor earnings before payout — the remainder is their net earnings.")}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -430,10 +450,10 @@ export default function OrgSettingsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Mail className="h-5 w-5" />
-                البريد الإلكتروني والإشعارات
+                {bi("البريد الإلكتروني والإشعارات", "Email & notifications")}
               </CardTitle>
               <CardDescription>
-                عند الرد على إيميلات الإشعارات الصادرة من منظمتك، سيصل الرد إلى بريدك أدناه بدل بريد المنصة. يمكنك أيضاً التحكم بأي نوع إشعارات يصل بريدياً لأعضاء منظمتك.
+                {bi("عند الرد على إيميلات الإشعارات الصادرة من منظمتك، سيصل الرد إلى بريدك أدناه بدل بريد المنصة. يمكنك أيضاً التحكم بأي نوع إشعارات يصل بريدياً لأعضاء منظمتك.", "When someone replies to notification emails sent from your organization, the reply will go to the email below instead of the platform's email. You can also control which notification types are sent by email to your organization's members.")}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -442,12 +462,12 @@ export default function OrgSettingsPage() {
                 name="emailReplyTo"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>بريد الرد (Reply-To)</FormLabel>
+                    <FormLabel>{bi("بريد الرد (Reply-To)", "Reply-to email")}</FormLabel>
                     <FormControl>
                       <Input type="email" dir="ltr" placeholder="info@yourorg.com" {...field} />
                     </FormControl>
                     <FormDescription>
-                      عندما يرد أحد على إيميل صادر عن منظمتك، سيصل الرد لهذا البريد مباشرة.
+                      {bi("عندما يرد أحد على إيميل صادر عن منظمتك، سيصل الرد لهذا البريد مباشرة.", "When someone replies to an email from your organization, the reply goes directly to this address.")}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -458,21 +478,21 @@ export default function OrgSettingsPage() {
                 name="emailSenderName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>اسم المرسل الظاهر</FormLabel>
+                    <FormLabel>{bi("اسم المرسل الظاهر", "Displayed sender name")}</FormLabel>
                     <FormControl>
-                      <Input placeholder="اسم منظمتك" {...field} />
+                      <Input placeholder={bi("اسم منظمتك", "Your organization's name")} {...field} />
                     </FormControl>
                     <FormDescription>
-                      يظهر كاسم المرسل في الإيميلات الصادرة عن منظمتك بدلاً من الاسم الافتراضي للمنصة (يتطلب أن يكون المشرف العام قد فعّل بريد المنصة).
+                      {bi("يظهر كاسم المرسل في الإيميلات الصادرة عن منظمتك بدلاً من الاسم الافتراضي للمنصة (يتطلب أن يكون المشرف العام قد فعّل بريد المنصة).", "Appears as the sender name on emails from your organization instead of the platform's default name (requires the platform admin to have enabled platform email).")}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
               <div className="space-y-3">
-                <Label className="text-sm font-medium">أنواع الإشعارات المرسلة بالبريد لأعضاء منظمتك</Label>
+                <Label className="text-sm font-medium">{bi("أنواع الإشعارات المرسلة بالبريد لأعضاء منظمتك", "Notification types sent by email to your organization's members")}</Label>
                 <div className="space-y-1 rounded-lg border divide-y">
-                  {NOTIF_CATEGORIES.map(cat => (
+                  {(lang === 'en' ? NOTIF_CATEGORIES_EN : NOTIF_CATEGORIES).map(cat => (
                     <div key={cat.key} className="flex items-center justify-between p-3">
                       <div>
                         <p className="text-sm font-medium">{cat.label}</p>
@@ -492,7 +512,7 @@ export default function OrgSettingsPage() {
           <div>
             <Button type="submit" disabled={isSaving}>
               <Save className="ml-2 h-4 w-4" />
-              {isSaving ? "جاري الحفظ..." : "حفظ الإعدادات"}
+              {isSaving ? bi("جاري الحفظ...", "Saving...") : bi("حفظ الإعدادات", "Save settings")}
             </Button>
           </div>
         </form>
@@ -502,13 +522,13 @@ export default function OrgSettingsPage() {
       {inviteCode && (
         <Card className="border-primary/20 bg-primary/5">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-primary"><Key className="h-5 w-5" /> كود دعوة المرشدين والمدربين</CardTitle>
-            <CardDescription>شارك هذا الكود مع المرشدين والمدربين حتى يتمكنوا من التسجيل وربط حساباتهم.</CardDescription>
+            <CardTitle className="flex items-center gap-2 text-primary"><Key className="h-5 w-5" /> {bi("كود دعوة المرشدين والمدربين", "Mentor & coach invite code")}</CardTitle>
+            <CardDescription>{bi("شارك هذا الكود مع المرشدين والمدربين حتى يتمكنوا من التسجيل وربط حساباتهم.", "Share this code with mentors and coaches so they can register and link their accounts.")}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-3">
               <div className="text-2xl font-mono font-bold tracking-widest bg-card border rounded-lg px-6 py-3">{inviteCode}</div>
-              <Button variant="outline" size="icon" onClick={() => { navigator.clipboard.writeText(inviteCode); toast({ title: "تم النسخ!", description: "تم نسخ كود الدعوة." }); }}>
+              <Button variant="outline" size="icon" onClick={() => { navigator.clipboard.writeText(inviteCode); toast({ title: bi("تم النسخ!", "Copied!"), description: bi("تم نسخ كود الدعوة.", "The invite code was copied.") }); }}>
                 <Copy className="h-4 w-4" />
               </Button>
             </div>

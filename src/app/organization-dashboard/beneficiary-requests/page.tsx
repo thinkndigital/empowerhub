@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
-import { ar } from "date-fns/locale";
+import { ar, enUS } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/firebase/auth/use-user";
 import { Inbox, CheckCircle, Clock, Eye, UserCircle2 } from "lucide-react";
 import { StatCard, StatGrid } from "@/components/dashboard/stat-card";
+import { useLanguage } from "@/components/language-provider";
 
 type ContactRequest = {
   id: string;
@@ -32,6 +33,8 @@ type ContactRequest = {
 export default function BeneficiaryRequestsPage() {
   const { user } = useUser();
   const { toast } = useToast();
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const [requests, setRequests] = useState<ContactRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewing, setViewing] = useState<ContactRequest | null>(null);
@@ -71,33 +74,33 @@ export default function BeneficiaryRequestsPage() {
         headers: { authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: req.id, status: nextStatus }),
       });
-      if (!res.ok) throw new Error((await res.json()).error || 'فشل التحديث');
+      if (!res.ok) throw new Error((await res.json()).error || bi('فشل التحديث', 'Update failed'));
       setRequests(prev => prev.map(r => (r.id === req.id ? { ...r, status: nextStatus } : r)));
-      toast({ title: nextStatus === 'resolved' ? 'تم تمييز الطلب كمُعالَج' : 'تمت إعادة فتح الطلب' });
+      toast({ title: nextStatus === 'resolved' ? bi('تم تمييز الطلب كمُعالَج', 'Request marked as resolved') : bi('تمت إعادة فتح الطلب', 'Request reopened') });
     } catch (e: any) {
-      toast({ variant: "destructive", title: "خطأ", description: e.message });
+      toast({ variant: "destructive", title: bi("خطأ", "Error"), description: e.message });
     } finally {
       setUpdating(prev => ({ ...prev, [req.id]: false }));
     }
   }
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={dir}>
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">طلبات المستفيدين</h1>
-        <p className="text-sm text-muted-foreground">الطلبات والاستفسارات التي يرسلها المستفيدون من لوحات تحكمهم.</p>
+        <h1 className="text-2xl font-bold tracking-tight">{bi("طلبات المستفيدين", "Beneficiary requests")}</h1>
+        <p className="text-sm text-muted-foreground">{bi("الطلبات والاستفسارات التي يرسلها المستفيدون من لوحات تحكمهم.", "Requests and inquiries sent by beneficiaries from their dashboards.")}</p>
       </div>
 
       <StatGrid>
-        <StatCard title="إجمالي الطلبات" value={`${stats.total}`} icon={Inbox} loading={loading} />
-        <StatCard title="قيد الانتظار" value={`${stats.pending}`} icon={Clock} loading={loading} active={stats.pending > 0} />
-        <StatCard title="تم الحل" value={`${stats.resolved}`} icon={CheckCircle} loading={loading} />
+        <StatCard title={bi("إجمالي الطلبات", "Total requests")} value={`${stats.total}`} icon={Inbox} loading={loading} />
+        <StatCard title={bi("قيد الانتظار", "Pending")} value={`${stats.pending}`} icon={Clock} loading={loading} active={stats.pending > 0} />
+        <StatCard title={bi("تم الحل", "Resolved")} value={`${stats.resolved}`} icon={CheckCircle} loading={loading} />
       </StatGrid>
 
       <Card className="border-0 shadow-sm">
         <CardHeader>
-          <CardTitle className="text-base">الطلبات الواردة</CardTitle>
-          <CardDescription>راجع الطلبات وتابع حالتها.</CardDescription>
+          <CardTitle className="text-base">{bi("الطلبات الواردة", "Incoming requests")}</CardTitle>
+          <CardDescription>{bi("راجع الطلبات وتابع حالتها.", "Review requests and track their status.")}</CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -105,18 +108,18 @@ export default function BeneficiaryRequestsPage() {
           ) : requests.length === 0 ? (
             <div className="text-center py-16 text-muted-foreground space-y-2">
               <Inbox className="h-12 w-12 mx-auto opacity-30" />
-              <p>لا توجد طلبات حالياً.</p>
+              <p>{bi("لا توجد طلبات حالياً.", "No requests at the moment.")}</p>
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>المرسل</TableHead>
-                  <TableHead>الموضوع</TableHead>
-                  <TableHead>الرسالة</TableHead>
-                  <TableHead>التاريخ</TableHead>
-                  <TableHead>الحالة</TableHead>
-                  <TableHead className="text-right"><span className="sr-only">إجراءات</span></TableHead>
+                  <TableHead>{bi("المرسل", "Sender")}</TableHead>
+                  <TableHead>{bi("الموضوع", "Subject")}</TableHead>
+                  <TableHead>{bi("الرسالة", "Message")}</TableHead>
+                  <TableHead>{bi("التاريخ", "Date")}</TableHead>
+                  <TableHead>{bi("الحالة", "Status")}</TableHead>
+                  <TableHead className="text-right"><span className="sr-only">{bi("إجراءات", "Actions")}</span></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -125,10 +128,10 @@ export default function BeneficiaryRequestsPage() {
                     <TableCell className="font-medium">
                       {req.senderId ? (
                         <Link href={`/organization-dashboard/beneficiaries/${req.senderId}`} className="hover:text-primary hover:underline">
-                          {req.senderName || 'مستفيد'}
+                          {req.senderName || bi('مستفيد', 'Beneficiary')}
                         </Link>
                       ) : (
-                        req.senderName || 'مستفيد'
+                        req.senderName || bi('مستفيد', 'Beneficiary')
                       )}
                     </TableCell>
                     <TableCell><Badge variant="outline" className="text-xs">{req.subject}</Badge></TableCell>
@@ -138,18 +141,18 @@ export default function BeneficiaryRequestsPage() {
                       </button>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {req.createdAt ? format(new Date(req.createdAt), "d MMMM yyyy", { locale: ar }) : 'غير محدد'}
+                      {req.createdAt ? format(new Date(req.createdAt), "d MMMM yyyy", { locale: lang === 'en' ? enUS : ar }) : bi('غير محدد', 'Unspecified')}
                     </TableCell>
                     <TableCell>
                       <Badge variant={req.status === 'resolved' ? 'outline' : 'secondary'} className={req.status === 'resolved' ? 'text-green-600 border-green-600 text-xs' : 'text-xs'}>
-                        {req.status === 'resolved' ? 'تم الحل' : 'قيد الانتظار'}
+                        {req.status === 'resolved' ? bi('تم الحل', 'Resolved') : bi('قيد الانتظار', 'Pending')}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         {req.senderId && (
                           <Button size="sm" variant="ghost" className="h-8 w-8 p-0" asChild>
-                            <Link href={`/organization-dashboard/beneficiaries/${req.senderId}`} title="عرض ملف المستفيد">
+                            <Link href={`/organization-dashboard/beneficiaries/${req.senderId}`} title={bi("عرض ملف المستفيد", "View beneficiary profile")}>
                               <UserCircle2 className="h-4 w-4" />
                             </Link>
                           </Button>
@@ -164,7 +167,7 @@ export default function BeneficiaryRequestsPage() {
                           disabled={updating[req.id]}
                           onClick={() => toggleStatus(req)}
                         >
-                          {req.status === 'resolved' ? 'إعادة فتح' : 'تمييز كمُعالَج'}
+                          {req.status === 'resolved' ? bi('إعادة فتح', 'Reopen') : bi('تمييز كمُعالَج', 'Mark resolved')}
                         </Button>
                       </div>
                     </TableCell>
@@ -177,17 +180,17 @@ export default function BeneficiaryRequestsPage() {
       </Card>
 
       <Dialog open={!!viewing} onOpenChange={o => !o && setViewing(null)}>
-        <DialogContent dir="rtl" className="sm:max-w-md">
+        <DialogContent dir={dir} className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{viewing?.subject}</DialogTitle>
-            <DialogDescription>من {viewing?.senderName || 'مستفيد'}</DialogDescription>
+            <DialogDescription>{bi("من", "From")} {viewing?.senderName || bi('مستفيد', 'Beneficiary')}</DialogDescription>
           </DialogHeader>
           <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{viewing?.message}</p>
           <DialogFooter className="gap-2 sm:justify-between">
             {viewing?.senderId && (
               <Button variant="ghost" className="gap-1.5" asChild>
                 <Link href={`/organization-dashboard/beneficiaries/${viewing.senderId}`}>
-                  <UserCircle2 className="h-4 w-4" />عرض ملف المستفيد
+                  <UserCircle2 className="h-4 w-4" />{bi("عرض ملف المستفيد", "View beneficiary profile")}
                 </Link>
               </Button>
             )}
@@ -197,7 +200,7 @@ export default function BeneficiaryRequestsPage() {
                 disabled={updating[viewing.id]}
                 onClick={() => { toggleStatus(viewing); setViewing(null); }}
               >
-                {viewing.status === 'resolved' ? 'إعادة فتح' : 'تمييز كمُعالَج'}
+                {viewing.status === 'resolved' ? bi('إعادة فتح', 'Reopen') : bi('تمييز كمُعالَج', 'Mark resolved')}
               </Button>
             )}
           </DialogFooter>

@@ -1,5 +1,7 @@
 'use client';
 import MessagesCenter from '@/components/messages-center';
+import { useLanguage } from '@/components/language-provider';
 export default function OrgMessagesPage() {
-  return <MessagesCenter title="مركز الرسائل" />;
+  const { lang } = useLanguage();
+  return <MessagesCenter title={lang === 'en' ? 'Message center' : 'مركز الرسائل'} />;
 }

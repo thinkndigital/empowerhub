@@ -11,6 +11,7 @@ import {
   ArrowRight, Users, CheckCircle2, Star, FileText, List,
   ChevronDown, ChevronUp, TrendingUp, TrendingDown, Minus,
 } from "lucide-react";
+import { useLanguage } from "@/components/language-provider";
 
 type QuestionType = 'text' | 'rating' | 'choice';
 type AssessmentType = 'pre' | 'post' | 'both';
@@ -35,14 +36,16 @@ interface AssessmentInfo {
 }
 
 const typeLabels: Record<AssessmentType, string> = { pre: 'قبلي', post: 'بعدي', both: 'قبلي وبعدي' };
+const typeLabelsEn: Record<AssessmentType, string> = { pre: 'Pre', post: 'Post', both: 'Pre & post' };
 const roleLabels: Record<RespondentRole, string> = { beneficiary: 'مستفيد', coach: 'مدرب', mentor: 'مرشد' };
+const roleLabelsEn: Record<RespondentRole, string> = { beneficiary: 'Beneficiary', coach: 'Coach', mentor: 'Mentor' };
 const roleBadgeColor: Record<RespondentRole, string> = {
   beneficiary: 'bg-blue-100 text-blue-700', coach: 'bg-purple-100 text-purple-700', mentor: 'bg-amber-100 text-amber-700',
 };
 
-function formatDate(d: string | null) {
+function formatDate(d: string | null, locale: string = 'ar-EG') {
   if (!d) return '';
-  return new Date(d).toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric' });
+  return new Date(d).toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 function answerFor(r: ResponseEntry, questionId: string): string | number | undefined {
@@ -68,7 +71,7 @@ function computeQuestionStats(question: Question, responses: ResponseEntry[]) {
   return { kind: 'text' as const, answers: values.map(v => String(v)) };
 }
 
-function QuestionStatsBlock({ question, responses }: { question: Question; responses: ResponseEntry[] }) {
+function QuestionStatsBlock({ question, responses, bi }: { question: Question; responses: ResponseEntry[]; bi: (ar: string, en: string) => string }) {
   const stats = computeQuestionStats(question, responses);
   return (
     <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
@@ -84,10 +87,10 @@ function QuestionStatsBlock({ question, responses }: { question: Question; respo
                   <Star key={n} className={`h-4 w-4 ${n <= Math.round(stats.avg!) ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground/30'}`} />
                 ))}
               </div>
-              <span className="text-xs text-muted-foreground">({stats.count} إجابة)</span>
+              <span className="text-xs text-muted-foreground">({stats.count} {bi("إجابة", "responses")})</span>
             </div>
           ) : (
-            <p className="text-xs text-muted-foreground">لا توجد إجابات بعد</p>
+            <p className="text-xs text-muted-foreground">{bi("لا توجد إجابات بعد", "No answers yet")}</p>
           )}
           {stats.count > 0 && (
             <div className="space-y-1">
@@ -112,7 +115,7 @@ function QuestionStatsBlock({ question, responses }: { question: Question; respo
       {stats.kind === 'choice' && (
         <div className="space-y-1.5">
           {stats.total === 0 ? (
-            <p className="text-xs text-muted-foreground">لا توجد إجابات بعد</p>
+            <p className="text-xs text-muted-foreground">{bi("لا توجد إجابات بعد", "No answers yet")}</p>
           ) : stats.options.map((opt, i) => {
             const c = stats.counts[i];
             const pct = stats.total ? Math.round((c / stats.total) * 100) : 0;
@@ -133,7 +136,7 @@ function QuestionStatsBlock({ question, responses }: { question: Question; respo
 
       {stats.kind === 'text' && (
         stats.answers.length === 0 ? (
-          <p className="text-xs text-muted-foreground">لا توجد إجابات بعد</p>
+          <p className="text-xs text-muted-foreground">{bi("لا توجد إجابات بعد", "No answers yet")}</p>
         ) : (
           <div className="space-y-1.5 max-h-40 overflow-y-auto">
             {stats.answers.map((a, i) => (
@@ -146,7 +149,7 @@ function QuestionStatsBlock({ question, responses }: { question: Question; respo
   );
 }
 
-function PhaseComparisonRow({ question, pre, post }: { question: Question; pre: ResponseEntry[]; post: ResponseEntry[] }) {
+function PhaseComparisonRow({ question, pre, post, bi }: { question: Question; pre: ResponseEntry[]; post: ResponseEntry[]; bi: (ar: string, en: string) => string }) {
   if (question.type !== 'rating') return null;
   const preStats = computeQuestionStats(question, pre);
   const postStats = computeQuestionStats(question, post);
@@ -156,9 +159,9 @@ function PhaseComparisonRow({ question, pre, post }: { question: Question; pre: 
   return (
     <div className="flex items-center justify-between rounded-lg bg-muted/30 px-3 py-2 text-xs">
       <span className="font-medium flex-1">{question.text}</span>
-      <span className="text-muted-foreground">{preStats.avg.toFixed(1)} ← قبلي</span>
+      <span className="text-muted-foreground">{preStats.avg.toFixed(1)} ← {bi("قبلي", "pre")}</span>
       <span className="mx-2 text-muted-foreground">/</span>
-      <span className="text-muted-foreground">بعدي → {postStats.avg.toFixed(1)}</span>
+      <span className="text-muted-foreground">{bi("بعدي", "post")} → {postStats.avg.toFixed(1)}</span>
       <span className={`mr-3 flex items-center gap-0.5 font-bold ${delta > 0 ? 'text-emerald-600' : delta < 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
         {delta > 0 ? <TrendingUp className="h-3.5 w-3.5" /> : delta < 0 ? <TrendingDown className="h-3.5 w-3.5" /> : <Minus className="h-3.5 w-3.5" />}
         {delta > 0 ? '+' : ''}{delta.toFixed(1)}
@@ -172,6 +175,9 @@ export default function AssessmentResultsPage() {
   const params = useParams();
   const router = useRouter();
   const id = params?.id as string;
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
+  const locale = lang === 'en' ? 'en-US' : 'ar-EG';
 
   const [assessment, setAssessment] = useState<AssessmentInfo | null>(null);
   const [responses, setResponses] = useState<ResponseEntry[]>([]);
@@ -193,7 +199,7 @@ export default function AssessmentResultsPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6" dir="rtl">
+      <div className="space-y-6" dir={dir}>
         <Skeleton className="h-8 w-64" />
         <div className="grid gap-4 md:grid-cols-3">
           {[1, 2, 3].map(i => <Skeleton key={i} className="h-24 rounded-xl" />)}
@@ -205,10 +211,10 @@ export default function AssessmentResultsPage() {
 
   if (!assessment) {
     return (
-      <div className="space-y-4 text-center py-16" dir="rtl">
-        <p className="text-muted-foreground">النموذج غير موجود</p>
+      <div className="space-y-4 text-center py-16" dir={dir}>
+        <p className="text-muted-foreground">{bi("النموذج غير موجود", "Form not found")}</p>
         <Button variant="outline" onClick={() => router.push('/organization-dashboard/assessments')}>
-          <ArrowRight className="h-4 w-4 ml-2" />العودة للنماذج
+          <ArrowRight className="h-4 w-4 ml-2" />{bi("العودة للنماذج", "Back to forms")}
         </Button>
       </div>
     );
@@ -225,14 +231,14 @@ export default function AssessmentResultsPage() {
   const isBoth = assessment.type === 'both';
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={dir}>
       <div>
         <Button variant="ghost" onClick={() => router.push('/organization-dashboard/assessments')} className="mb-3 gap-2 text-muted-foreground -mr-3">
-          <ArrowRight className="h-4 w-4" />العودة للنماذج
+          <ArrowRight className="h-4 w-4" />{bi("العودة للنماذج", "Back to forms")}
         </Button>
         <div className="flex items-center gap-2 flex-wrap">
           <h1 className="text-2xl font-bold tracking-tight">{assessment.title}</h1>
-          <Badge variant="secondary" className="text-xs">{typeLabels[assessment.type]}</Badge>
+          <Badge variant="secondary" className="text-xs">{(lang === 'en' ? typeLabelsEn : typeLabels)[assessment.type]}</Badge>
         </div>
         {assessment.description && <p className="text-sm text-muted-foreground mt-1">{assessment.description}</p>}
       </div>
@@ -242,19 +248,19 @@ export default function AssessmentResultsPage() {
         <Card className="border-0 shadow-sm">
           <CardContent className="py-4 flex items-center gap-3">
             <div className="h-10 w-10 rounded-xl bg-blue-100 flex items-center justify-center shrink-0"><Users className="h-5 w-5 text-blue-600" /></div>
-            <div><p className="text-xl font-bold">{totalSent}</p><p className="text-xs text-muted-foreground">تم الإرسال إليهم</p></div>
+            <div><p className="text-xl font-bold">{totalSent}</p><p className="text-xs text-muted-foreground">{bi("تم الإرسال إليهم", "Sent to")}</p></div>
           </CardContent>
         </Card>
         <Card className="border-0 shadow-sm">
           <CardContent className="py-4 flex items-center gap-3">
             <div className="h-10 w-10 rounded-xl bg-emerald-100 flex items-center justify-center shrink-0"><CheckCircle2 className="h-5 w-5 text-emerald-600" /></div>
-            <div><p className="text-xl font-bold">{totalResponses}</p><p className="text-xs text-muted-foreground">الردود المستلمة</p></div>
+            <div><p className="text-xl font-bold">{totalResponses}</p><p className="text-xs text-muted-foreground">{bi("الردود المستلمة", "Responses received")}</p></div>
           </CardContent>
         </Card>
         <Card className="border-0 shadow-sm">
           <CardContent className="py-4 flex items-center gap-3">
             <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0"><TrendingUp className="h-5 w-5 text-primary" /></div>
-            <div><p className="text-xl font-bold">{responseRate}%</p><p className="text-xs text-muted-foreground">نسبة الاستجابة</p></div>
+            <div><p className="text-xl font-bold">{responseRate}%</p><p className="text-xs text-muted-foreground">{bi("نسبة الاستجابة", "Response rate")}</p></div>
           </CardContent>
         </Card>
       </div>
@@ -263,8 +269,8 @@ export default function AssessmentResultsPage() {
         <Card className="border-dashed border-2">
           <CardContent className="py-16 flex flex-col items-center gap-2 text-center">
             <FileText className="h-10 w-10 text-muted-foreground/30" />
-            <p className="font-medium text-muted-foreground">لا توجد ردود بعد</p>
-            <p className="text-sm text-muted-foreground/70">ستظهر التحليلات هنا فور بدء المستلمين بالإجابة</p>
+            <p className="font-medium text-muted-foreground">{bi("لا توجد ردود بعد", "No responses yet")}</p>
+            <p className="text-sm text-muted-foreground/70">{bi("ستظهر التحليلات هنا فور بدء المستلمين بالإجابة", "Analytics will appear here once recipients start responding")}</p>
           </CardContent>
         </Card>
       ) : (
@@ -272,10 +278,10 @@ export default function AssessmentResultsPage() {
           {/* Pre/Post comparison (rating questions only) */}
           {isBoth && preResponses.length > 0 && postResponses.length > 0 && (
             <Card className="border-0 shadow-sm">
-              <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><TrendingUp className="h-4 w-4 text-primary" />مقارنة قبلي / بعدي</CardTitle></CardHeader>
+              <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><TrendingUp className="h-4 w-4 text-primary" />{bi("مقارنة قبلي / بعدي", "Pre / post comparison")}</CardTitle></CardHeader>
               <CardContent className="space-y-2">
                 {assessment.questions.filter(q => q.type === 'rating').map(q => (
-                  <PhaseComparisonRow key={q.id} question={q} pre={preResponses} post={postResponses} />
+                  <PhaseComparisonRow key={q.id} question={q} pre={preResponses} post={postResponses} bi={bi} />
                 ))}
               </CardContent>
             </Card>
@@ -284,25 +290,25 @@ export default function AssessmentResultsPage() {
           {/* Beneficiary analytics */}
           {beneficiaryResponses.length > 0 && (
             <Card className="border-0 shadow-sm">
-              <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Users className="h-4 w-4 text-primary" />تحليل إجابات المستفيدين</CardTitle></CardHeader>
+              <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Users className="h-4 w-4 text-primary" />{bi("تحليل إجابات المستفيدين", "Beneficiary response analysis")}</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 {isBoth ? (
                   <>
                     {preResponses.length > 0 && (
                       <div className="space-y-2">
-                        <p className="text-xs font-semibold text-muted-foreground">التقييم القبلي ({preResponses.length})</p>
-                        {assessment.questions.map(q => <QuestionStatsBlock key={`pre-${q.id}`} question={q} responses={preResponses} />)}
+                        <p className="text-xs font-semibold text-muted-foreground">{bi("التقييم القبلي", "Pre-assessment")} ({preResponses.length})</p>
+                        {assessment.questions.map(q => <QuestionStatsBlock key={`pre-${q.id}`} question={q} responses={preResponses} bi={bi} />)}
                       </div>
                     )}
                     {postResponses.length > 0 && (
                       <div className="space-y-2">
-                        <p className="text-xs font-semibold text-muted-foreground">التقييم البعدي ({postResponses.length})</p>
-                        {assessment.questions.map(q => <QuestionStatsBlock key={`post-${q.id}`} question={q} responses={postResponses} />)}
+                        <p className="text-xs font-semibold text-muted-foreground">{bi("التقييم البعدي", "Post-assessment")} ({postResponses.length})</p>
+                        {assessment.questions.map(q => <QuestionStatsBlock key={`post-${q.id}`} question={q} responses={postResponses} bi={bi} />)}
                       </div>
                     )}
                   </>
                 ) : (
-                  assessment.questions.map(q => <QuestionStatsBlock key={q.id} question={q} responses={beneficiaryResponses} />)
+                  assessment.questions.map(q => <QuestionStatsBlock key={q.id} question={q} responses={beneficiaryResponses} bi={bi} />)
                 )}
               </CardContent>
             </Card>
@@ -311,16 +317,16 @@ export default function AssessmentResultsPage() {
           {/* Staff analytics */}
           {staffResponses.length > 0 && (
             <Card className="border-0 shadow-sm">
-              <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><List className="h-4 w-4 text-primary" />تحليل إجابات المدربين والمرشدين</CardTitle></CardHeader>
+              <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><List className="h-4 w-4 text-primary" />{bi("تحليل إجابات المدربين والمرشدين", "Coach & mentor response analysis")}</CardTitle></CardHeader>
               <CardContent className="space-y-2">
-                {assessment.questions.map(q => <QuestionStatsBlock key={q.id} question={q} responses={staffResponses} />)}
+                {assessment.questions.map(q => <QuestionStatsBlock key={q.id} question={q} responses={staffResponses} bi={bi} />)}
               </CardContent>
             </Card>
           )}
 
           {/* Individual responses */}
           <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-2"><CardTitle className="text-base">الردود الفردية ({responses.length})</CardTitle></CardHeader>
+            <CardHeader className="pb-2"><CardTitle className="text-base">{bi("الردود الفردية", "Individual responses")} ({responses.length})</CardTitle></CardHeader>
             <CardContent className="space-y-2">
               {responses.map(r => {
                 const isOpen = expandedId === r.id;
@@ -333,13 +339,13 @@ export default function AssessmentResultsPage() {
                     >
                       <div className="flex items-center gap-2 min-w-0">
                         <span className="text-sm font-medium truncate">{r.respondentName}</span>
-                        <Badge className={`text-[10px] px-1.5 py-0 border-0 ${roleBadgeColor[r.respondentRole]}`}>{roleLabels[r.respondentRole]}</Badge>
+                        <Badge className={`text-[10px] px-1.5 py-0 border-0 ${roleBadgeColor[r.respondentRole]}`}>{(lang === 'en' ? roleLabelsEn : roleLabels)[r.respondentRole]}</Badge>
                         {r.phase && (
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">{r.phase === 'pre' ? 'قبلي' : 'بعدي'}</Badge>
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">{r.phase === 'pre' ? bi('قبلي', 'Pre') : bi('بعدي', 'Post')}</Badge>
                         )}
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
-                        <span className="text-xs text-muted-foreground">{formatDate(r.submittedAt)}</span>
+                        <span className="text-xs text-muted-foreground">{formatDate(r.submittedAt, locale)}</span>
                         {isOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
                       </div>
                     </button>

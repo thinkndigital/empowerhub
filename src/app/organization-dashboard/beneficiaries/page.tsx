@@ -40,6 +40,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/firebase/auth/use-user";
 import { useOrgUsers } from "@/hooks/use-org-users";
 import { useOrgGroups } from "@/hooks/use-org-groups";
+import { useLanguage } from "@/components/language-provider";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -101,6 +102,9 @@ function SkeletonRows({ cols }: { cols: number }) {
 export default function BeneficiariesPage() {
   const { toast } = useToast();
   const { user, userProfile } = useUser();
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
+  const statusLabelEn = (s: string) => s === 'مكتمل' ? 'Completed' : s === 'نشط' ? 'Active' : 'New';
   const orgId = userProfile?.organizationId || "";
 
   // ── Data hooks ──
@@ -183,11 +187,11 @@ export default function BeneficiariesPage() {
     setRemovingUser(true);
     try {
       await apiAction(user, { action: "removeFromOrg", userId: removeTarget.id });
-      toast({ title: "تمت الإزالة", description: `تمت إزالة ${removeTarget.name}.` });
+      toast({ title: bi("تمت الإزالة", "Removed"), description: bi(`تمت إزالة ${removeTarget.name}.`, `${removeTarget.name} was removed.`) });
       refetchOrg();
       refetchAll();
     } catch {
-      toast({ variant: "destructive", title: "خطأ", description: "فشلت عملية الإزالة." });
+      toast({ variant: "destructive", title: bi("خطأ", "Error"), description: bi("فشلت عملية الإزالة.", "The removal failed.") });
     } finally {
       setRemovingUser(false);
       setRemoveTarget(null);
@@ -199,11 +203,11 @@ export default function BeneficiariesPage() {
     setAddingUserId(u.id);
     try {
       await apiAction(user, { action: "addToOrg", userId: u.id });
-      toast({ title: "تمت الإضافة", description: `تمت إضافة ${u.name}.` });
+      toast({ title: bi("تمت الإضافة", "Added"), description: bi(`تمت إضافة ${u.name}.`, `${u.name} was added.`) });
       refetchOrg();
       refetchAll();
     } catch {
-      toast({ variant: "destructive", title: "خطأ", description: "فشل إضافة المستفيد." });
+      toast({ variant: "destructive", title: bi("خطأ", "Error"), description: bi("فشل إضافة المستفيد.", "Failed to add the beneficiary.") });
     } finally {
       setAddingUserId(null);
     }
@@ -214,11 +218,11 @@ export default function BeneficiariesPage() {
     setAssigningGroup(true);
     try {
       await apiAction(user, { action: "assignGroup", userId: assignGroupTarget.id, groupId: assignGroupId });
-      toast({ title: "تم التعيين", description: `تم تعيين ${assignGroupTarget.name} للمجموعة.` });
+      toast({ title: bi("تم التعيين", "Assigned"), description: bi(`تم تعيين ${assignGroupTarget.name} للمجموعة.`, `${assignGroupTarget.name} was assigned to the group.`) });
       refetchOrg();
       refetchGroups();
     } catch {
-      toast({ variant: "destructive", title: "خطأ", description: "فشل تعيين المجموعة." });
+      toast({ variant: "destructive", title: bi("خطأ", "Error"), description: bi("فشل تعيين المجموعة.", "Failed to assign the group.") });
     } finally {
       setAssigningGroup(false);
       setAssignGroupTarget(null);
@@ -231,12 +235,12 @@ export default function BeneficiariesPage() {
     setIsCreatingGroup(true);
     try {
       await apiAction(user, { action: "createGroup", name: newGroupName.trim() });
-      toast({ title: "تم إنشاء المجموعة", description: `تم إنشاء مجموعة "${newGroupName}".` });
+      toast({ title: bi("تم إنشاء المجموعة", "Group created"), description: bi(`تم إنشاء مجموعة "${newGroupName}".`, `Group "${newGroupName}" was created.`) });
       setNewGroupName("");
       setIsCreateGroupOpen(false);
       refetchGroups();
     } catch {
-      toast({ variant: "destructive", title: "خطأ", description: "فشل إنشاء المجموعة." });
+      toast({ variant: "destructive", title: bi("خطأ", "Error"), description: bi("فشل إنشاء المجموعة.", "Failed to create the group.") });
     } finally {
       setIsCreatingGroup(false);
     }
@@ -253,11 +257,11 @@ export default function BeneficiariesPage() {
         body: JSON.stringify({ email: inviteEmail, orgId, groupName: inviteGroup || undefined }),
       });
       if (!res.ok) throw new Error();
-      toast({ title: "تم إرسال الدعوة", description: `تم إرسال دعوة إلى ${inviteEmail}.` });
+      toast({ title: bi("تم إرسال الدعوة", "Invitation sent"), description: bi(`تم إرسال دعوة إلى ${inviteEmail}.`, `An invitation was sent to ${inviteEmail}.`) });
       setInviteEmail("");
       setInviteGroup("");
     } catch {
-      toast({ variant: "destructive", title: "خطأ", description: "فشل إرسال الدعوة." });
+      toast({ variant: "destructive", title: bi("خطأ", "Error"), description: bi("فشل إرسال الدعوة.", "Failed to send the invitation.") });
     } finally {
       setIsSendingInvite(false);
     }
@@ -304,15 +308,15 @@ export default function BeneficiariesPage() {
     setCsvResult({ success, error });
     setCsvImporting(false);
     toast({
-      title: "اكتمل الاستيراد",
-      description: `${success} دعوة ناجحة، ${error} فشلت.`,
+      title: bi("اكتمل الاستيراد", "Import complete"),
+      description: bi(`${success} دعوة ناجحة، ${error} فشلت.`, `${success} invitations succeeded, ${error} failed.`),
     });
   }
 
   async function handleAssignMentor() {
     if (!user || !assignMentorTarget || !assignMentorId) return;
     await apiAction(user, { action: 'assignMentor', userId: assignMentorTarget.id, mentorId: assignMentorId });
-    toast({ title: 'تم التعيين', description: 'تم تعيين المرشد للمستفيد.' });
+    toast({ title: bi('تم التعيين', 'Assigned'), description: bi('تم تعيين المرشد للمستفيد.', 'The mentor was assigned to the beneficiary.') });
     setAssignMentorTarget(null); setAssignMentorId('');
     refetchOrg();
   }
@@ -320,7 +324,7 @@ export default function BeneficiariesPage() {
   async function handleAssignCoach() {
     if (!user || !assignCoachTarget || !assignCoachId) return;
     await apiAction(user, { action: 'assignCoach', userId: assignCoachTarget.id, coachId: assignCoachId });
-    toast({ title: 'تم التعيين', description: 'تم تعيين المدرب للمستفيد.' });
+    toast({ title: bi('تم التعيين', 'Assigned'), description: bi('تم تعيين المدرب للمستفيد.', 'The coach was assigned to the beneficiary.') });
     setAssignCoachTarget(null); setAssignCoachId('');
     refetchOrg();
   }
@@ -343,19 +347,19 @@ export default function BeneficiariesPage() {
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
-    <div dir="rtl" className="space-y-6 animate-fade-in-up">
+    <div dir={dir} className="space-y-6 animate-fade-in-up">
       <div className="page-header">
         <div>
-          <h1 className="page-title">إدارة المستفيدين</h1>
-          <p className="page-subtitle">عرض وإدارة المستفيدين وإضافتهم ودعوتهم لمنظمتك.</p>
+          <h1 className="page-title">{bi("إدارة المستفيدين", "Manage beneficiaries")}</h1>
+          <p className="page-subtitle">{bi("عرض وإدارة المستفيدين وإضافتهم ودعوتهم لمنظمتك.", "View and manage beneficiaries, add and invite them to your organization.")}</p>
         </div>
       </div>
 
-      <Tabs defaultValue="org" dir="rtl">
+      <Tabs defaultValue="org" dir={dir}>
         <TabsList className="mb-4 w-full justify-start">
-          <TabsTrigger value="org">المستفيدون</TabsTrigger>
-          <TabsTrigger value="explore">استكشاف المستفيدين</TabsTrigger>
-          <TabsTrigger value="invite">دعوة ومجموعات</TabsTrigger>
+          <TabsTrigger value="org">{bi("المستفيدون", "Beneficiaries")}</TabsTrigger>
+          <TabsTrigger value="explore">{bi("استكشاف المستفيدين", "Explore beneficiaries")}</TabsTrigger>
+          <TabsTrigger value="invite">{bi("دعوة ومجموعات", "Invite & groups")}</TabsTrigger>
         </TabsList>
 
         {/* ── Tab 1: Org Beneficiaries ── */}
@@ -365,30 +369,33 @@ export default function BeneficiariesPage() {
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div>
                   <CardTitle className="flex items-center gap-2">
-                    <Users className="h-5 w-5" /> المستفيدون
+                    <Users className="h-5 w-5" /> {bi("المستفيدون", "Beneficiaries")}
                   </CardTitle>
-                  <CardDescription>قائمة بجميع المستفيدين المسجلين.</CardDescription>
+                  <CardDescription>{bi("قائمة بجميع المستفيدين المسجلين.", "A list of all registered beneficiaries.")}</CardDescription>
                 </div>
                 <div className="flex gap-2 flex-wrap">
                   <ExportButton
-                    title="قائمة المستفيدين"
+                    title={bi("قائمة المستفيدين", "Beneficiaries list")}
                     filename={`beneficiaries-${new Date().toISOString().slice(0,10)}`}
-                    headers={['الاسم', 'البريد الإلكتروني', 'الحالة', 'التقدم %', 'المجموعة']}
-                    rows={(orgUsers ?? []).map(u => [
-                      u.name || '',
-                      u.email || '',
-                      u.status || derivedStatus(u.progress),
-                      u.progress ?? 0,
-                      (groups ?? []).find(g => g.id === u.groupId)?.name || '',
-                    ])}
-                    options={{ summary: { 'إجمالي المستفيدين': String((orgUsers ?? []).length), 'نشطون': String((orgUsers ?? []).filter(u => (u.progress ?? 0) > 0 && (u.progress ?? 0) < 100).length), 'أكملوا البرنامج': String((orgUsers ?? []).filter(u => (u.progress ?? 0) >= 100).length) } }}
+                    headers={lang === 'en' ? ['Name', 'Email', 'Status', 'Progress %', 'Group'] : ['الاسم', 'البريد الإلكتروني', 'الحالة', 'التقدم %', 'المجموعة']}
+                    rows={(orgUsers ?? []).map(u => {
+                      const statusVal = u.status || derivedStatus(u.progress);
+                      return [
+                        u.name || '',
+                        u.email || '',
+                        lang === 'en' ? statusLabelEn(statusVal) : statusVal,
+                        u.progress ?? 0,
+                        (groups ?? []).find(g => g.id === u.groupId)?.name || '',
+                      ];
+                    })}
+                    options={{ summary: { [bi('إجمالي المستفيدين', 'Total beneficiaries')]: String((orgUsers ?? []).length), [bi('نشطون', 'Active')]: String((orgUsers ?? []).filter(u => (u.progress ?? 0) > 0 && (u.progress ?? 0) < 100).length), [bi('أكملوا البرنامج', 'Completed the program')]: String((orgUsers ?? []).filter(u => (u.progress ?? 0) >= 100).length) } }}
                   />
                   <Select value={groupFilter} onValueChange={setGroupFilter}>
                   <SelectTrigger className="w-44">
-                    <SelectValue placeholder="تصفية بالمجموعة" />
+                    <SelectValue placeholder={bi("تصفية بالمجموعة", "Filter by group")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="الكل">الكل</SelectItem>
+                    <SelectItem value="الكل">{bi("الكل", "All")}</SelectItem>
                     {(groups ?? []).map((g) => (
                       <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
                     ))}
@@ -402,12 +409,12 @@ export default function BeneficiariesPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>المستفيد</TableHead>
-                    <TableHead className="hidden md:table-cell">البريد الإلكتروني</TableHead>
-                    <TableHead>المجموعة</TableHead>
-                    <TableHead>الحالة</TableHead>
-                    <TableHead>التقدم</TableHead>
-                    <TableHead><span className="sr-only">إجراءات</span></TableHead>
+                    <TableHead>{bi("المستفيد", "Beneficiary")}</TableHead>
+                    <TableHead className="hidden md:table-cell">{bi("البريد الإلكتروني", "Email")}</TableHead>
+                    <TableHead>{bi("المجموعة", "Group")}</TableHead>
+                    <TableHead>{bi("الحالة", "Status")}</TableHead>
+                    <TableHead>{bi("التقدم", "Progress")}</TableHead>
+                    <TableHead><span className="sr-only">{bi("إجراءات", "Actions")}</span></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -417,8 +424,8 @@ export default function BeneficiariesPage() {
                       <TableCell colSpan={6}>
                         <div className="empty-state">
                           <div className="empty-state-icon"><Users className="h-6 w-6" /></div>
-                          <p className="empty-state-title">لا يوجد مستفيدون بعد</p>
-                          <p className="empty-state-desc">ابدأ بدعوة مستفيدين أو إضافتهم لمنظمتك</p>
+                          <p className="empty-state-title">{bi("لا يوجد مستفيدون بعد", "No beneficiaries yet")}</p>
+                          <p className="empty-state-desc">{bi("ابدأ بدعوة مستفيدين أو إضافتهم لمنظمتك", "Start by inviting or adding beneficiaries to your organization")}</p>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -436,15 +443,15 @@ export default function BeneficiariesPage() {
                             </Avatar>
                             <div>
                               <Link href={`/organization-dashboard/beneficiaries/${u.id}`} className="font-medium hover:underline text-primary">
-                                {u.name || "بلا اسم"}
+                                {u.name || bi("بلا اسم", "No name")}
                               </Link>
                               {(mentorName(u.mentorId) || coachName(u.coachId)) && (
                                 <div className="flex gap-2 mt-0.5">
                                   {mentorName(u.mentorId) && (
-                                    <Link href={`/organization-dashboard/mentors/${u.mentorId}`} className="text-xs text-muted-foreground hover:text-primary hover:underline">مرشد: {mentorName(u.mentorId)}</Link>
+                                    <Link href={`/organization-dashboard/mentors/${u.mentorId}`} className="text-xs text-muted-foreground hover:text-primary hover:underline">{bi("مرشد:", "Mentor:")} {mentorName(u.mentorId)}</Link>
                                   )}
                                   {coachName(u.coachId) && (
-                                    <Link href={`/organization-dashboard/coaches/${u.coachId}`} className="text-xs text-muted-foreground hover:text-primary hover:underline">مدرب: {coachName(u.coachId)}</Link>
+                                    <Link href={`/organization-dashboard/coaches/${u.coachId}`} className="text-xs text-muted-foreground hover:text-primary hover:underline">{bi("مدرب:", "Coach:")} {coachName(u.coachId)}</Link>
                                   )}
                                 </div>
                               )}
@@ -456,7 +463,7 @@ export default function BeneficiariesPage() {
                           {groupName(u.groupId) ? (
                             <Badge variant="outline">{groupName(u.groupId)}</Badge>
                           ) : (
-                            <span className="text-muted-foreground text-xs">غير محدد</span>
+                            <span className="text-muted-foreground text-xs">{bi("غير محدد", "Unspecified")}</span>
                           )}
                         </TableCell>
                         <TableCell>
@@ -473,30 +480,30 @@ export default function BeneficiariesPage() {
                             <DropdownMenuTrigger asChild>
                               <Button size="icon" variant="ghost">
                                 <MoreHorizontal className="h-4 w-4" />
-                                <span className="sr-only">قائمة</span>
+                                <span className="sr-only">{bi("قائمة", "Menu")}</span>
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
+                              <DropdownMenuLabel>{bi("الإجراءات", "Actions")}</DropdownMenuLabel>
                               <DropdownMenuItem
                                 onSelect={() => {
                                   setAssignGroupTarget(u);
                                   setAssignGroupId(u.groupId || "");
                                 }}
                               >
-                                تعيين لمجموعة
+                                {bi("تعيين لمجموعة", "Assign to group")}
                               </DropdownMenuItem>
                               <DropdownMenuItem onSelect={() => { setAssignMentorTarget(u); setAssignMentorId(''); }}>
-                                تعيين مرشد
+                                {bi("تعيين مرشد", "Assign mentor")}
                               </DropdownMenuItem>
                               <DropdownMenuItem onSelect={() => { setAssignCoachTarget(u); setAssignCoachId(''); }}>
-                                تعيين مدرب
+                                {bi("تعيين مدرب", "Assign coach")}
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 className="text-red-500"
                                 onSelect={() => setRemoveTarget(u)}
                               >
-                                إزالة
+                                {bi("إزالة", "Remove")}
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -518,15 +525,15 @@ export default function BeneficiariesPage() {
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div>
                   <CardTitle className="flex items-center gap-2">
-                    <Search className="h-5 w-5" /> استكشاف المستفيدين
+                    <Search className="h-5 w-5" /> {bi("استكشاف المستفيدين", "Explore beneficiaries")}
                   </CardTitle>
-                  <CardDescription>ابحث عن مستفيدين وأضفهم.</CardDescription>
+                  <CardDescription>{bi("ابحث عن مستفيدين وأضفهم.", "Search for beneficiaries and add them.")}</CardDescription>
                 </div>
                 <div className="relative">
                   <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     className="pr-9 w-64"
-                    placeholder="ابحث بالاسم أو البريد..."
+                    placeholder={bi("ابحث بالاسم أو البريد...", "Search by name or email...")}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
@@ -538,8 +545,8 @@ export default function BeneficiariesPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>المستفيد</TableHead>
-                    <TableHead className="hidden md:table-cell">البريد الإلكتروني</TableHead>
+                    <TableHead>{bi("المستفيد", "Beneficiary")}</TableHead>
+                    <TableHead className="hidden md:table-cell">{bi("البريد الإلكتروني", "Email")}</TableHead>
                     <TableHead></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -550,8 +557,8 @@ export default function BeneficiariesPage() {
                       <TableCell colSpan={3}>
                         <div className="empty-state">
                           <div className="empty-state-icon"><Search className="h-6 w-6" /></div>
-                          <p className="empty-state-title">لا توجد نتائج</p>
-                          <p className="empty-state-desc">جرّب كلمة بحث أخرى</p>
+                          <p className="empty-state-title">{bi("لا توجد نتائج", "No results")}</p>
+                          <p className="empty-state-desc">{bi("جرّب كلمة بحث أخرى", "Try a different search term")}</p>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -564,7 +571,7 @@ export default function BeneficiariesPage() {
                             <AvatarImage src={u.avatarUrl || ""} alt={u.name || ""} />
                             <AvatarFallback className="rounded-xl bg-muted text-foreground text-xs font-bold">{(u.name || "م").charAt(0)}</AvatarFallback>
                           </Avatar>
-                          <span className="font-medium">{u.name || "بلا اسم"}</span>
+                          <span className="font-medium">{u.name || bi("بلا اسم", "No name")}</span>
                         </div>
                       </TableCell>
                       <TableCell className="hidden md:table-cell">{u.email || "-"}</TableCell>
@@ -579,7 +586,7 @@ export default function BeneficiariesPage() {
                             <Loader2 className="h-4 w-4 animate-spin" />
                           ) : (
                             <>
-                              <UserPlus className="ml-1 h-4 w-4" /> إضافة للمنظمة
+                              <UserPlus className="ml-1 h-4 w-4" /> {bi("إضافة للمنظمة", "Add to organization")}
                             </>
                           )}
                         </Button>
@@ -600,14 +607,14 @@ export default function BeneficiariesPage() {
           <Card className="border-0 shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Mail className="h-5 w-5" /> دعوة عبر البريد
+                <Mail className="h-5 w-5" /> {bi("دعوة عبر البريد", "Invite by email")}
               </CardTitle>
-              <CardDescription>أرسل دعوة بالبريد الإلكتروني لمستفيد جديد للانضمام.</CardDescription>
+              <CardDescription>{bi("أرسل دعوة بالبريد الإلكتروني لمستفيد جديد للانضمام.", "Send an email invitation for a new beneficiary to join.")}</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSendInvite} className="flex flex-wrap gap-3 items-end">
                 <div className="space-y-1.5 flex-1 min-w-[200px]">
-                  <Label htmlFor="invite-email">البريد الإلكتروني</Label>
+                  <Label htmlFor="invite-email">{bi("البريد الإلكتروني", "Email")}</Label>
                   <Input
                     id="invite-email"
                     type="email"
@@ -619,16 +626,16 @@ export default function BeneficiariesPage() {
                   />
                 </div>
                 <div className="space-y-1.5 flex-1 min-w-[160px]">
-                  <Label htmlFor="invite-group">المجموعة (اختياري)</Label>
+                  <Label htmlFor="invite-group">{bi("المجموعة (اختياري)", "Group (optional)")}</Label>
                   <Input
                     id="invite-group"
-                    placeholder="اسم المجموعة"
+                    placeholder={bi("اسم المجموعة", "Group name")}
                     value={inviteGroup}
                     onChange={(e) => setInviteGroup(e.target.value)}
                   />
                 </div>
                 <Button type="submit" disabled={isSendingInvite}>
-                  {isSendingInvite ? <Loader2 className="h-4 w-4 animate-spin" /> : "إرسال الدعوة"}
+                  {isSendingInvite ? <Loader2 className="h-4 w-4 animate-spin" /> : bi("إرسال الدعوة", "Send invitation")}
                 </Button>
               </form>
             </CardContent>
@@ -638,15 +645,15 @@ export default function BeneficiariesPage() {
           <Card className="border-0 shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Upload className="h-5 w-5" /> استيراد CSV
+                <Upload className="h-5 w-5" /> {bi("استيراد CSV", "Import CSV")}
               </CardTitle>
               <CardDescription>
-                ارفع ملف CSV بأعمدة: name, email (الصف الأول عنوان).
+                {bi("ارفع ملف CSV بأعمدة: name, email (الصف الأول عنوان).", "Upload a CSV file with columns: name, email (first row is the header).")}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-1.5">
-                <Label htmlFor="csv-file">اختر ملف CSV</Label>
+                <Label htmlFor="csv-file">{bi("اختر ملف CSV", "Choose a CSV file")}</Label>
                 <Input
                   id="csv-file"
                   type="file"
@@ -659,13 +666,13 @@ export default function BeneficiariesPage() {
               {csvRows.length > 0 && (
                 <>
                   <div>
-                    <p className="text-sm font-medium mb-2">معاينة ({csvRows.length} سجل)</p>
+                    <p className="text-sm font-medium mb-2">{bi("معاينة", "Preview")} ({csvRows.length} {bi("سجل", "records")})</p>
                     <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>الاسم</TableHead>
-                          <TableHead>البريد الإلكتروني</TableHead>
+                          <TableHead>{bi("الاسم", "Name")}</TableHead>
+                          <TableHead>{bi("البريد الإلكتروني", "Email")}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -678,7 +685,7 @@ export default function BeneficiariesPage() {
                         {csvRows.length > 10 && (
                           <TableRow>
                             <TableCell colSpan={2} className="text-muted-foreground text-center">
-                              و {csvRows.length - 10} سجلات أخرى...
+                              {bi(`و ${csvRows.length - 10} سجلات أخرى...`, `and ${csvRows.length - 10} more records...`)}
                             </TableCell>
                           </TableRow>
                         )}
@@ -688,9 +695,9 @@ export default function BeneficiariesPage() {
                   </div>
                   <Button onClick={handleCsvImport} disabled={csvImporting}>
                     {csvImporting ? (
-                      <><Loader2 className="ml-2 h-4 w-4 animate-spin" /> جاري الاستيراد...</>
+                      <><Loader2 className="ml-2 h-4 w-4 animate-spin" /> {bi("جاري الاستيراد...", "Importing...")}</>
                     ) : (
-                      "استيراد"
+                      bi("استيراد", "Import")
                     )}
                   </Button>
                 </>
@@ -698,9 +705,9 @@ export default function BeneficiariesPage() {
 
               {csvResult && (
                 <div className="rounded-md bg-muted p-3 text-sm space-y-1">
-                  <p className="text-green-600">نجحت: {csvResult.success} دعوة</p>
+                  <p className="text-green-600">{bi("نجحت:", "Succeeded:")} {csvResult.success} {bi("دعوة", "invitations")}</p>
                   {csvResult.error > 0 && (
-                    <p className="text-red-500">فشلت: {csvResult.error} دعوة</p>
+                    <p className="text-red-500">{bi("فشلت:", "Failed:")} {csvResult.error} {bi("دعوة", "invitations")}</p>
                   )}
                 </div>
               )}
@@ -712,11 +719,11 @@ export default function BeneficiariesPage() {
             <CardHeader>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                  <CardTitle>المجموعات</CardTitle>
-                  <CardDescription>إدارة مجموعات المستفيدين.</CardDescription>
+                  <CardTitle>{bi("المجموعات", "Groups")}</CardTitle>
+                  <CardDescription>{bi("إدارة مجموعات المستفيدين.", "Manage beneficiary groups.")}</CardDescription>
                 </div>
                 <Button onClick={() => setIsCreateGroupOpen(true)}>
-                  <PlusCircle className="ml-2 h-4 w-4" /> إنشاء مجموعة
+                  <PlusCircle className="ml-2 h-4 w-4" /> {bi("إنشاء مجموعة", "Create group")}
                 </Button>
               </div>
             </CardHeader>
@@ -729,8 +736,8 @@ export default function BeneficiariesPage() {
               {!groupsLoading && (groups ?? []).length === 0 && (
                 <div className="empty-state py-10">
                   <div className="empty-state-icon"><Users className="h-6 w-6" /></div>
-                  <p className="empty-state-title">لا توجد مجموعات بعد</p>
-                  <p className="empty-state-desc">أنشئ مجموعتك الأولى لتنظيم المستفيدين</p>
+                  <p className="empty-state-title">{bi("لا توجد مجموعات بعد", "No groups yet")}</p>
+                  <p className="empty-state-desc">{bi("أنشئ مجموعتك الأولى لتنظيم المستفيدين", "Create your first group to organize beneficiaries")}</p>
                 </div>
               )}
               {!groupsLoading && (groups ?? []).length > 0 && (
@@ -741,7 +748,7 @@ export default function BeneficiariesPage() {
                       className="flex items-center justify-between rounded-xl border border-border/60 px-4 py-3 hover:bg-muted/30 transition-colors"
                     >
                       <span className="font-medium">{g.name}</span>
-                      <Badge variant="secondary">{g.memberIds.length} عضو</Badge>
+                      <Badge variant="secondary">{g.memberIds.length} {bi("عضو", "members")}</Badge>
                     </div>
                   ))}
                 </div>
@@ -758,17 +765,17 @@ export default function BeneficiariesPage() {
         open={!!removeTarget}
         onOpenChange={(open) => !open && setRemoveTarget(null)}
       >
-        <AlertDialogContent dir="rtl">
+        <AlertDialogContent dir={dir}>
           <AlertDialogHeader>
-            <AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle>
+            <AlertDialogTitle>{bi("هل أنت متأكد؟", "Are you sure?")}</AlertDialogTitle>
             <AlertDialogDescription>
-              سيتم إزالة "{removeTarget?.name}". يمكنه إعادة الانضمام لاحقاً.
+              {bi(`سيتم إزالة "${removeTarget?.name}". يمكنه إعادة الانضمام لاحقاً.`, `"${removeTarget?.name}" will be removed. They can rejoin later.`)}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogCancel>{bi("إلغاء", "Cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={handleRemove} disabled={removingUser}>
-              {removingUser ? <Loader2 className="h-4 w-4 animate-spin" /> : "نعم، إزالة"}
+              {removingUser ? <Loader2 className="h-4 w-4 animate-spin" /> : bi("نعم، إزالة", "Yes, remove")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -779,18 +786,18 @@ export default function BeneficiariesPage() {
         open={!!assignGroupTarget}
         onOpenChange={(open) => !open && setAssignGroupTarget(null)}
       >
-        <DialogContent dir="rtl">
+        <DialogContent dir={dir}>
           <DialogHeader>
-            <DialogTitle>تعيين لمجموعة</DialogTitle>
+            <DialogTitle>{bi("تعيين لمجموعة", "Assign to group")}</DialogTitle>
             <DialogDescription>
-              اختر مجموعة لتعيين {assignGroupTarget?.name} إليها.
+              {bi("اختر مجموعة لتعيين", "Choose a group to assign")} {assignGroupTarget?.name} {bi("إليها.", "to.")}
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-3">
-            <Label>المجموعة</Label>
+            <Label>{bi("المجموعة", "Group")}</Label>
             <Select value={assignGroupId} onValueChange={setAssignGroupId}>
               <SelectTrigger>
-                <SelectValue placeholder="اختر مجموعة" />
+                <SelectValue placeholder={bi("اختر مجموعة", "Choose a group")} />
               </SelectTrigger>
               <SelectContent>
                 {(groups ?? []).map((g) => (
@@ -801,10 +808,10 @@ export default function BeneficiariesPage() {
           </div>
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="ghost">إلغاء</Button>
+              <Button variant="ghost">{bi("إلغاء", "Cancel")}</Button>
             </DialogClose>
             <Button onClick={handleAssignGroup} disabled={!assignGroupId || assigningGroup}>
-              {assigningGroup ? <Loader2 className="h-4 w-4 animate-spin" /> : "حفظ"}
+              {assigningGroup ? <Loader2 className="h-4 w-4 animate-spin" /> : bi("حفظ", "Save")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -812,26 +819,26 @@ export default function BeneficiariesPage() {
 
       {/* Create group */}
       <Dialog open={isCreateGroupOpen} onOpenChange={setIsCreateGroupOpen}>
-        <DialogContent dir="rtl">
+        <DialogContent dir={dir}>
           <DialogHeader>
-            <DialogTitle>إنشاء مجموعة جديدة</DialogTitle>
-            <DialogDescription>أدخل اسم المجموعة الجديدة.</DialogDescription>
+            <DialogTitle>{bi("إنشاء مجموعة جديدة", "Create a new group")}</DialogTitle>
+            <DialogDescription>{bi("أدخل اسم المجموعة الجديدة.", "Enter the new group's name.")}</DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-3">
-            <Label htmlFor="group-name">اسم المجموعة</Label>
+            <Label htmlFor="group-name">{bi("اسم المجموعة", "Group name")}</Label>
             <Input
               id="group-name"
-              placeholder="مثال: مجموعة التدريب المهني"
+              placeholder={bi("مثال: مجموعة التدريب المهني", "e.g. Vocational training group")}
               value={newGroupName}
               onChange={(e) => setNewGroupName(e.target.value)}
             />
           </div>
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="ghost">إلغاء</Button>
+              <Button variant="ghost">{bi("إلغاء", "Cancel")}</Button>
             </DialogClose>
             <Button onClick={handleCreateGroup} disabled={isCreatingGroup || !newGroupName.trim()}>
-              {isCreatingGroup ? <Loader2 className="h-4 w-4 animate-spin" /> : "إنشاء"}
+              {isCreatingGroup ? <Loader2 className="h-4 w-4 animate-spin" /> : bi("إنشاء", "Create")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -839,16 +846,16 @@ export default function BeneficiariesPage() {
 
       {/* Assign mentor */}
       <Dialog open={!!assignMentorTarget} onOpenChange={(open) => !open && setAssignMentorTarget(null)}>
-        <DialogContent dir="rtl">
+        <DialogContent dir={dir}>
           <DialogHeader>
-            <DialogTitle>تعيين مرشد</DialogTitle>
-            <DialogDescription>اختر مرشداً لتعيينه للمستفيد {assignMentorTarget?.name}.</DialogDescription>
+            <DialogTitle>{bi("تعيين مرشد", "Assign mentor")}</DialogTitle>
+            <DialogDescription>{bi("اختر مرشداً لتعيينه للمستفيد", "Choose a mentor to assign to beneficiary")} {assignMentorTarget?.name}.</DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-3">
-            <Label>المرشد</Label>
+            <Label>{bi("المرشد", "Mentor")}</Label>
             <Select value={assignMentorId} onValueChange={setAssignMentorId}>
               <SelectTrigger>
-                <SelectValue placeholder="اختر مرشداً" />
+                <SelectValue placeholder={bi("اختر مرشداً", "Choose a mentor")} />
               </SelectTrigger>
               <SelectContent>
                 {(orgMentors ?? []).map((m) => (
@@ -859,10 +866,10 @@ export default function BeneficiariesPage() {
           </div>
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="ghost">إلغاء</Button>
+              <Button variant="ghost">{bi("إلغاء", "Cancel")}</Button>
             </DialogClose>
             <Button onClick={handleAssignMentor} disabled={!assignMentorId}>
-              تعيين
+              {bi("تعيين", "Assign")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -870,16 +877,16 @@ export default function BeneficiariesPage() {
 
       {/* Assign coach */}
       <Dialog open={!!assignCoachTarget} onOpenChange={(open) => !open && setAssignCoachTarget(null)}>
-        <DialogContent dir="rtl">
+        <DialogContent dir={dir}>
           <DialogHeader>
-            <DialogTitle>تعيين مدرب</DialogTitle>
-            <DialogDescription>اختر مدرباً لتعيينه للمستفيد {assignCoachTarget?.name}.</DialogDescription>
+            <DialogTitle>{bi("تعيين مدرب", "Assign coach")}</DialogTitle>
+            <DialogDescription>{bi("اختر مدرباً لتعيينه للمستفيد", "Choose a coach to assign to beneficiary")} {assignCoachTarget?.name}.</DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-3">
-            <Label>المدرب</Label>
+            <Label>{bi("المدرب", "Coach")}</Label>
             <Select value={assignCoachId} onValueChange={setAssignCoachId}>
               <SelectTrigger>
-                <SelectValue placeholder="اختر مدرباً" />
+                <SelectValue placeholder={bi("اختر مدرباً", "Choose a coach")} />
               </SelectTrigger>
               <SelectContent>
                 {(orgCoaches ?? []).map((c) => (
@@ -890,10 +897,10 @@ export default function BeneficiariesPage() {
           </div>
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="ghost">إلغاء</Button>
+              <Button variant="ghost">{bi("إلغاء", "Cancel")}</Button>
             </DialogClose>
             <Button onClick={handleAssignCoach} disabled={!assignCoachId}>
-              تعيين
+              {bi("تعيين", "Assign")}
             </Button>
           </DialogFooter>
         </DialogContent>

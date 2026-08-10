@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { uploadFile } from "@/lib/upload-file";
+import { useLanguage } from "@/components/language-provider";
 
 interface FieldConfig {
   enabled: boolean;
@@ -101,6 +102,9 @@ const emptyForm = {
 export default function OrgProjectsPage() {
   const { user } = useUser();
   const { toast } = useToast();
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
+  const locale = lang === 'en' ? 'en-US' : 'ar-SA';
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -127,7 +131,7 @@ export default function OrgProjectsPage() {
       const json = await res.json();
       setProjects(json.projects || []);
     } catch {
-      toast({ variant: 'destructive', title: 'خطأ', description: 'فشل تحميل المشاريع' });
+      toast({ variant: 'destructive', title: bi('خطأ', 'Error'), description: bi('فشل تحميل المشاريع', 'Failed to load projects') });
     } finally {
       setLoading(false);
     }
@@ -146,7 +150,7 @@ export default function OrgProjectsPage() {
       const json = await res.json();
       setRegistrations(json.registrations || []);
     } catch {
-      toast({ variant: 'destructive', title: 'خطأ', description: 'فشل تحميل التسجيلات' });
+      toast({ variant: 'destructive', title: bi('خطأ', 'Error'), description: bi('فشل تحميل التسجيلات', 'Failed to load registrations') });
     } finally {
       setLoadingRegs(false);
     }
@@ -201,7 +205,7 @@ export default function OrgProjectsPage() {
       const url = await uploadFile(file, 'projects', token);
       setForm(f => ({ ...f, coverImageUrl: url }));
     } catch (err: any) {
-      toast({ variant: 'destructive', title: 'خطأ', description: err.message || 'فشل رفع الصورة' });
+      toast({ variant: 'destructive', title: bi('خطأ', 'Error'), description: err.message || bi('فشل رفع الصورة', 'Failed to upload the image') });
     } finally {
       setUploadingCover(false);
     }
@@ -211,7 +215,7 @@ export default function OrgProjectsPage() {
     e.preventDefault();
     if (!user) return;
     if (!form.title || !form.description) {
-      toast({ variant: 'destructive', title: 'خطأ', description: 'العنوان والوصف مطلوبان' });
+      toast({ variant: 'destructive', title: bi('خطأ', 'Error'), description: bi('العنوان والوصف مطلوبان', 'Title and description are required') });
       return;
     }
     setSubmitting(true);
@@ -226,13 +230,13 @@ export default function OrgProjectsPage() {
       });
       if (!res.ok) {
         const json = await res.json();
-        throw new Error(json.error || 'خطأ');
+        throw new Error(json.error || bi('خطأ', 'Error'));
       }
-      toast({ title: editingId ? 'تم التحديث' : 'تم الإنشاء' });
+      toast({ title: editingId ? bi('تم التحديث', 'Updated') : bi('تم الإنشاء', 'Created') });
       setDialogOpen(false);
       fetchProjects();
     } catch (err: any) {
-      toast({ variant: 'destructive', title: 'خطأ', description: err.message });
+      toast({ variant: 'destructive', title: bi('خطأ', 'Error'), description: err.message });
     } finally {
       setSubmitting(false);
     }
@@ -247,11 +251,11 @@ export default function OrgProjectsPage() {
         method: 'DELETE',
         headers: { authorization: `Bearer ${token}` },
       });
-      toast({ title: 'تم الحذف' });
+      toast({ title: bi('تم الحذف', 'Deleted') });
       setDeleteId(null);
       fetchProjects();
     } catch {
-      toast({ variant: 'destructive', title: 'خطأ', description: 'فشل حذف المشروع' });
+      toast({ variant: 'destructive', title: bi('خطأ', 'Error'), description: bi('فشل حذف المشروع', 'Failed to delete the project') });
     } finally {
       setDeleting(false);
     }
@@ -264,38 +268,38 @@ export default function OrgProjectsPage() {
 
   function formatDate(d: string | null) {
     if (!d) return '';
-    return new Date(d).toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' });
+    return new Date(d).toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' });
   }
 
   function deadlineLabel(deadline: string) {
     if (!deadline) return '';
     const diff = Math.ceil((new Date(deadline).getTime() - Date.now()) / 86400000);
-    if (diff < 0) return 'انتهى';
-    if (diff === 0) return 'اليوم';
-    return `${diff} يوم متبقي`;
+    if (diff < 0) return bi('انتهى', 'Ended');
+    if (diff === 0) return bi('اليوم', 'Today');
+    return bi(`${diff} يوم متبقي`, `${diff} days left`);
   }
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={dir}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">المشاريع والفرص</h1>
-          <p className="text-muted-foreground text-sm mt-1">انشر مشاريع وفرص التقديم للجمهور</p>
+          <h1 className="text-2xl font-bold tracking-tight">{bi("المشاريع والفرص", "Projects & opportunities")}</h1>
+          <p className="text-muted-foreground text-sm mt-1">{bi("انشر مشاريع وفرص التقديم للجمهور", "Publish projects and application opportunities to the public")}</p>
         </div>
         <Button onClick={openCreate} className="gap-2">
           <PlusCircle className="h-4 w-4" />
-          مشروع جديد
+          {bi("مشروع جديد", "New project")}
         </Button>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: 'إجمالي المشاريع', value: total, icon: Briefcase },
-          { label: 'منشور', value: published, icon: Globe },
-          { label: 'مسودات', value: drafts, icon: FileEdit },
-          { label: 'إجمالي التسجيلات', value: totalRegs, icon: Users },
+          { label: bi('إجمالي المشاريع', 'Total projects'), value: total, icon: Briefcase },
+          { label: bi('منشور', 'Published'), value: published, icon: Globe },
+          { label: bi('مسودات', 'Drafts'), value: drafts, icon: FileEdit },
+          { label: bi('إجمالي التسجيلات', 'Total registrations'), value: totalRegs, icon: Users },
         ].map(stat => (
           <div key={stat.label} className="rounded-xl border border-border bg-card p-4 flex items-center gap-3">
             <div className="bg-muted rounded-lg p-2 shrink-0">
@@ -317,8 +321,8 @@ export default function OrgProjectsPage() {
       ) : projects.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
           <Briefcase className="h-12 w-12 mb-3 opacity-30" />
-          <p className="text-lg font-medium">لا توجد مشاريع بعد</p>
-          <p className="text-sm mt-1">أنشئ أول مشروع أو فرصة</p>
+          <p className="text-lg font-medium">{bi("لا توجد مشاريع بعد", "No projects yet")}</p>
+          <p className="text-sm mt-1">{bi("أنشئ أول مشروع أو فرصة", "Create your first project or opportunity")}</p>
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -342,7 +346,7 @@ export default function OrgProjectsPage() {
                       {project.type}
                     </Badge>
                     <Badge variant={project.status === 'published' ? 'default' : 'secondary'} className="text-xs">
-                      {project.status === 'published' ? 'منشور' : 'مسودة'}
+                      {project.status === 'published' ? bi('منشور', 'Published') : bi('مسودة', 'Draft')}
                     </Badge>
                   </div>
                 </div>
@@ -359,7 +363,7 @@ export default function OrgProjectsPage() {
                     </span>
                   )}
                   <span className="flex items-center gap-1">
-                    <Users className="h-3 w-3" />{project.registrationsCount || 0} تسجيل
+                    <Users className="h-3 w-3" />{project.registrationsCount || 0} {bi("تسجيل", "registrations")}
                   </span>
                 </div>
                 <div className="flex gap-2 pt-1">
@@ -370,7 +374,7 @@ export default function OrgProjectsPage() {
                     onClick={() => openViewRegs(project)}
                   >
                     <Eye className="h-3.5 w-3.5 ml-1.5" />
-                    التسجيلات
+                    {bi("التسجيلات", "Registrations")}
                   </Button>
                   <Button
                     variant="outline"
@@ -379,7 +383,7 @@ export default function OrgProjectsPage() {
                     onClick={() => openEdit(project)}
                   >
                     <Edit2 className="h-3.5 w-3.5 ml-1.5" />
-                    تعديل
+                    {bi("تعديل", "Edit")}
                   </Button>
                   <Button
                     variant="outline"
@@ -398,9 +402,9 @@ export default function OrgProjectsPage() {
 
       {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent dir="rtl" className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent dir={dir} className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingId ? 'تعديل المشروع' : 'إنشاء مشروع جديد'}</DialogTitle>
+            <DialogTitle>{editingId ? bi('تعديل المشروع', 'Edit project') : bi('إنشاء مشروع جديد', 'Create a new project')}</DialogTitle>
           </DialogHeader>
 
           {/* Tabs */}
@@ -410,14 +414,14 @@ export default function OrgProjectsPage() {
               onClick={() => setActiveTab('basic')}
               className={`flex-1 py-1.5 px-3 rounded-md text-sm font-medium transition-all ${activeTab === 'basic' ? 'bg-background shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
             >
-              المعلومات الأساسية
+              {bi("المعلومات الأساسية", "Basic information")}
             </button>
             <button
               type="button"
               onClick={() => setActiveTab('form')}
               className={`flex-1 py-1.5 px-3 rounded-md text-sm font-medium transition-all ${activeTab === 'form' ? 'bg-background shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
             >
-              نموذج التسجيل
+              {bi("نموذج التسجيل", "Registration form")}
             </button>
           </div>
 
@@ -425,29 +429,29 @@ export default function OrgProjectsPage() {
             {activeTab === 'basic' && (
               <>
                 <div className="space-y-1.5">
-                  <Label htmlFor="proj-title">العنوان *</Label>
+                  <Label htmlFor="proj-title">{bi("العنوان *", "Title *")}</Label>
                   <Input
                     id="proj-title"
                     value={form.title}
                     onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
-                    placeholder="عنوان المشروع أو الفرصة"
+                    placeholder={bi("عنوان المشروع أو الفرصة", "Project or opportunity title")}
                     required
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="proj-description">الوصف *</Label>
+                  <Label htmlFor="proj-description">{bi("الوصف *", "Description *")}</Label>
                   <Textarea
                     id="proj-description"
                     value={form.description}
                     onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                    placeholder="وصف تفصيلي للمشروع أو الفرصة..."
+                    placeholder={bi("وصف تفصيلي للمشروع أو الفرصة...", "A detailed description of the project or opportunity...")}
                     rows={5}
                     required
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label>النوع</Label>
+                    <Label>{bi("النوع", "Type")}</Label>
                     <Select
                       value={form.type}
                       onValueChange={v => setForm(f => ({ ...f, type: v }))}
@@ -463,18 +467,18 @@ export default function OrgProjectsPage() {
                     </Select>
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="proj-location">الموقع</Label>
+                    <Label htmlFor="proj-location">{bi("الموقع", "Location")}</Label>
                     <Input
                       id="proj-location"
                       value={form.location}
                       onChange={e => setForm(f => ({ ...f, location: e.target.value }))}
-                      placeholder="الرياض / عن بُعد"
+                      placeholder={bi("الرياض / عن بُعد", "Riyadh / Remote")}
                     />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label htmlFor="proj-deadline">آخر موعد للتقديم</Label>
+                    <Label htmlFor="proj-deadline">{bi("آخر موعد للتقديم", "Application deadline")}</Label>
                     <Input
                       id="proj-deadline"
                       type="date"
@@ -483,7 +487,7 @@ export default function OrgProjectsPage() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label>الحالة</Label>
+                    <Label>{bi("الحالة", "Status")}</Label>
                     <Select
                       value={form.status}
                       onValueChange={v => setForm(f => ({ ...f, status: v as 'draft' | 'published' }))}
@@ -492,14 +496,14 @@ export default function OrgProjectsPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="draft">مسودة</SelectItem>
-                        <SelectItem value="published">منشور</SelectItem>
+                        <SelectItem value="draft">{bi("مسودة", "Draft")}</SelectItem>
+                        <SelectItem value="published">{bi("منشور", "Published")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="proj-cover">صورة الغلاف</Label>
+                  <Label htmlFor="proj-cover">{bi("صورة الغلاف", "Cover image")}</Label>
                   <div className="flex gap-2 items-center">
                     <Input
                       id="proj-cover"
@@ -530,7 +534,7 @@ export default function OrgProjectsPage() {
             {activeTab === 'form' && (
               <div className="space-y-3">
                 <p className="text-sm text-muted-foreground">
-                  حقلا الاسم والبريد الإلكتروني مطلوبان دائمًا. فعّل الحقول الإضافية التي تريدها.
+                  {bi("حقلا الاسم والبريد الإلكتروني مطلوبان دائمًا. فعّل الحقول الإضافية التي تريدها.", "The name and email fields are always required. Enable any additional fields you want.")}
                 </p>
                 <div className="divide-y divide-border rounded-lg border overflow-hidden">
                   {OPTIONAL_FIELDS.map(field => {
@@ -561,7 +565,7 @@ export default function OrgProjectsPage() {
                               checked={!!config.required}
                               onCheckedChange={v => updateFieldConfig(field.key, { required: v })}
                             />
-                            <span className="text-xs text-muted-foreground">مطلوب</span>
+                            <span className="text-xs text-muted-foreground">{bi("مطلوب", "Required")}</span>
                           </div>
                         )}
                       </div>
@@ -574,10 +578,10 @@ export default function OrgProjectsPage() {
 
           <DialogFooter className="gap-2">
             <Button variant="ghost" onClick={() => setDialogOpen(false)} disabled={submitting}>
-              إلغاء
+              {bi("إلغاء", "Cancel")}
             </Button>
             <Button type="submit" form="project-form" disabled={submitting}>
-              {submitting ? 'جاري الحفظ...' : editingId ? 'حفظ التغييرات' : 'إنشاء المشروع'}
+              {submitting ? bi('جاري الحفظ...', 'Saving...') : editingId ? bi('حفظ التغييرات', 'Save changes') : bi('إنشاء المشروع', 'Create project')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -585,25 +589,25 @@ export default function OrgProjectsPage() {
 
       {/* Registrations Dialog */}
       <Dialog open={!!viewProject} onOpenChange={(open) => !open && setViewProject(null)}>
-        <DialogContent dir="rtl" className="sm:max-w-4xl max-h-[85vh] overflow-y-auto">
+        <DialogContent dir={dir} className="sm:max-w-4xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>تسجيلات: {viewProject?.title}</DialogTitle>
+            <DialogTitle>{bi("تسجيلات:", "Registrations:")} {viewProject?.title}</DialogTitle>
           </DialogHeader>
           {loadingRegs ? (
             <div className="space-y-2">
               {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-10" />)}
             </div>
           ) : registrations.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">لا توجد تسجيلات بعد</p>
+            <p className="text-center text-muted-foreground py-8">{bi("لا توجد تسجيلات بعد", "No registrations yet")}</p>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-right">الاسم</TableHead>
-                    <TableHead className="text-right">البريد الإلكتروني</TableHead>
-                    <TableHead className="text-right">تاريخ التسجيل</TableHead>
-                    <TableHead className="text-right">بيانات إضافية</TableHead>
+                    <TableHead className="text-right">{bi("الاسم", "Name")}</TableHead>
+                    <TableHead className="text-right">{bi("البريد الإلكتروني", "Email")}</TableHead>
+                    <TableHead className="text-right">{bi("تاريخ التسجيل", "Registration date")}</TableHead>
+                    <TableHead className="text-right">{bi("بيانات إضافية", "Additional data")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -612,7 +616,7 @@ export default function OrgProjectsPage() {
                       <TableCell className="font-medium">{reg.name}</TableCell>
                       <TableCell dir="ltr">{reg.email}</TableCell>
                       <TableCell>
-                        {reg.submittedAt ? new Date(reg.submittedAt).toLocaleDateString('ar-SA') : ''}
+                        {reg.submittedAt ? new Date(reg.submittedAt).toLocaleDateString(locale) : ''}
                       </TableCell>
                       <TableCell>
                         <div className="text-xs text-muted-foreground space-y-0.5">
@@ -628,24 +632,24 @@ export default function OrgProjectsPage() {
             </div>
           )}
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setViewProject(null)}>إغلاق</Button>
+            <Button variant="ghost" onClick={() => setViewProject(null)}>{bi("إغلاق", "Close")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
-        <DialogContent dir="rtl" className="sm:max-w-md">
+        <DialogContent dir={dir} className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>حذف المشروع</DialogTitle>
+            <DialogTitle>{bi("حذف المشروع", "Delete project")}</DialogTitle>
           </DialogHeader>
-          <p className="text-slate-500 text-sm">هل أنت متأكد من حذف هذا المشروع؟ لا يمكن التراجع عن هذا الإجراء.</p>
+          <p className="text-slate-500 text-sm">{bi("هل أنت متأكد من حذف هذا المشروع؟ لا يمكن التراجع عن هذا الإجراء.", "Are you sure you want to delete this project? This action cannot be undone.")}</p>
           <DialogFooter className="gap-2">
             <Button variant="ghost" onClick={() => setDeleteId(null)} disabled={deleting}>
-              إلغاء
+              {bi("إلغاء", "Cancel")}
             </Button>
             <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
-              {deleting ? 'جاري الحذف...' : 'حذف'}
+              {deleting ? bi('جاري الحذف...', 'Deleting...') : bi('حذف', 'Delete')}
             </Button>
           </DialogFooter>
         </DialogContent>

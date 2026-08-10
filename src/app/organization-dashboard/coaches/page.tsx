@@ -33,6 +33,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { useLanguage } from "@/components/language-provider";
 
 async function apiAction(user: User, body: object) {
   const token = await user.getIdToken();
@@ -63,6 +64,8 @@ export default function OrgCoachesPage() {
   const { user, userProfile } = useUser();
   const { toast } = useToast();
   const router = useRouter();
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [sentInvites, setSentInvites] = useState<Set<string>>(new Set());
 
@@ -113,7 +116,7 @@ export default function OrgCoachesPage() {
       });
       setEditingRates(rates);
     } catch {
-      toast({ variant: 'destructive', title: 'خطأ', description: 'فشل تحميل بيانات المحاسبة.' });
+      toast({ variant: 'destructive', title: bi('خطأ', 'Error'), description: bi('فشل تحميل بيانات المحاسبة.', 'Failed to load billing data.') });
     } finally {
       setBillingLoading(false);
     }
@@ -137,10 +140,10 @@ export default function OrgCoachesPage() {
         }),
       });
       if (!res.ok) throw new Error();
-      toast({ title: 'تم الحفظ', description: 'تم تحديث معدل الساعة بنجاح.' });
+      toast({ title: bi('تم الحفظ', 'Saved'), description: bi('تم تحديث معدل الساعة بنجاح.', 'Hourly rate updated successfully.') });
       fetchBilling();
     } catch {
-      toast({ variant: 'destructive', title: 'خطأ', description: 'فشل حفظ معدل الساعة.' });
+      toast({ variant: 'destructive', title: bi('خطأ', 'Error'), description: bi('فشل حفظ معدل الساعة.', 'Failed to save hourly rate.') });
     } finally {
       setSavingRate(null);
     }
@@ -152,10 +155,10 @@ export default function OrgCoachesPage() {
     try {
       const result = await apiAction(user, { action: "removeFromOrg", userId: coachId });
       if (result.error) throw new Error(result.error);
-      toast({ title: "تمت الإزالة", description: "تم إزالة المدرب." });
+      toast({ title: bi("تمت الإزالة", "Removed"), description: bi("تم إزالة المدرب.", "The coach was removed.") });
       refetchOrg();
     } catch {
-      toast({ title: "خطأ", description: "فشل في إزالة المدرب.", variant: "destructive" });
+      toast({ title: bi("خطأ", "Error"), description: bi("فشل في إزالة المدرب.", "Failed to remove the coach."), variant: "destructive" });
     } finally {
       setLoadingAction(null);
     }
@@ -173,9 +176,9 @@ export default function OrgCoachesPage() {
       });
       if (result.error) throw new Error(result.error);
       setSentInvites((prev) => new Set(prev).add(coach.id));
-      toast({ title: "تم الإرسال", description: "تم إرسال الدعوة للمدرب." });
+      toast({ title: bi("تم الإرسال", "Sent"), description: bi("تم إرسال الدعوة للمدرب.", "The invitation was sent to the coach.") });
     } catch {
-      toast({ title: "خطأ", description: "فشل في إرسال الدعوة.", variant: "destructive" });
+      toast({ title: bi("خطأ", "Error"), description: bi("فشل في إرسال الدعوة.", "Failed to send the invitation."), variant: "destructive" });
     } finally {
       setLoadingAction(null);
     }
@@ -201,7 +204,7 @@ export default function OrgCoachesPage() {
     const items = offerForm.offerType === 'course' ? coachContent.courses : coachContent.liveSessions;
     const selected = items.find(i => i.id === offerForm.contentId);
     if (!selected) {
-      toast({ variant: 'destructive', title: 'خطأ', description: 'اختر المحتوى أولاً' });
+      toast({ variant: 'destructive', title: bi('خطأ', 'Error'), description: bi('اختر المحتوى أولاً', 'Choose content first') });
       return;
     }
     setSendingOffer(true);
@@ -222,10 +225,10 @@ export default function OrgCoachesPage() {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
-      toast({ title: 'تم الإرسال', description: 'تم إرسال العرض للمدرب.' });
+      toast({ title: bi('تم الإرسال', 'Sent'), description: bi('تم إرسال العرض للمدرب.', 'The offer was sent to the coach.') });
       setOfferCoach(null);
     } catch (e: any) {
-      toast({ variant: 'destructive', title: 'خطأ', description: e.message });
+      toast({ variant: 'destructive', title: bi('خطأ', 'Error'), description: e.message });
     } finally {
       setSendingOffer(false);
     }
@@ -235,19 +238,19 @@ export default function OrgCoachesPage() {
   const totalHours = billingCoaches.reduce((s, c) => s + c.totalHours, 0);
 
   return (
-    <div className="space-y-6 animate-fade-in-up" dir="rtl">
+    <div className="space-y-6 animate-fade-in-up" dir={dir}>
       <div className="page-header">
         <div>
-          <h1 className="page-title">إدارة المدربين</h1>
-          <p className="page-subtitle">استعرض مدربي منظمتك أو ادعُ مدربين جدد</p>
+          <h1 className="page-title">{bi("إدارة المدربين", "Manage coaches")}</h1>
+          <p className="page-subtitle">{bi("استعرض مدربي منظمتك أو ادعُ مدربين جدد", "Browse your organization's coaches or invite new ones")}</p>
         </div>
       </div>
 
-      <Tabs defaultValue="org-coaches" dir="rtl">
+      <Tabs defaultValue="org-coaches" dir={dir}>
         <TabsList className="mb-4 w-full justify-start">
-          <TabsTrigger value="org-coaches">المدربون</TabsTrigger>
-          <TabsTrigger value="billing" onClick={fetchBilling}>محاسبة المدربين</TabsTrigger>
-          <TabsTrigger value="explore">استكشاف المدربين</TabsTrigger>
+          <TabsTrigger value="org-coaches">{bi("المدربون", "Coaches")}</TabsTrigger>
+          <TabsTrigger value="billing" onClick={fetchBilling}>{bi("محاسبة المدربين", "Coach billing")}</TabsTrigger>
+          <TabsTrigger value="explore">{bi("استكشاف المدربين", "Explore coaches")}</TabsTrigger>
         </TabsList>
 
         {/* Tab 1: org coaches */}
@@ -261,18 +264,18 @@ export default function OrgCoachesPage() {
           ) : !orgCoaches || orgCoaches.length === 0 ? (
             <div className="empty-state">
               <div className="empty-state-icon"><UserX className="h-6 w-6" /></div>
-              <p className="empty-state-title">لا يوجد مدربون بعد</p>
-              <p className="empty-state-desc">استكشف المدربين وادعُهم للانضمام لمنظمتك</p>
+              <p className="empty-state-title">{bi("لا يوجد مدربون بعد", "No coaches yet")}</p>
+              <p className="empty-state-desc">{bi("استكشف المدربين وادعُهم للانضمام لمنظمتك", "Explore coaches and invite them to join your organization")}</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-right">المدرب</TableHead>
-                  <TableHead className="text-right hidden md:table-cell">التخصص</TableHead>
-                  <TableHead className="text-right hidden md:table-cell">الحالة</TableHead>
-                  <TableHead className="text-right">الإجراءات</TableHead>
+                  <TableHead className="text-right">{bi("المدرب", "Coach")}</TableHead>
+                  <TableHead className="text-right hidden md:table-cell">{bi("التخصص", "Specialization")}</TableHead>
+                  <TableHead className="text-right hidden md:table-cell">{bi("الحالة", "Status")}</TableHead>
+                  <TableHead className="text-right">{bi("الإجراءات", "Actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -312,7 +315,7 @@ export default function OrgCoachesPage() {
                           onClick={() => router.push(`/organization-dashboard/coaches/${coach.id}`)}
                         >
                           <Eye className="h-4 w-4 ml-1" />
-                          عرض
+                          {bi("عرض", "View")}
                         </Button>
                         <Button
                           variant="destructive"
@@ -321,7 +324,7 @@ export default function OrgCoachesPage() {
                           onClick={() => handleRemove(coach.id)}
                         >
                           <UserX className="h-4 w-4 ml-1" />
-                          إزالة
+                          {bi("إزالة", "Remove")}
                         </Button>
                       </div>
                     </TableCell>
@@ -344,7 +347,7 @@ export default function OrgCoachesPage() {
                     <Clock className="h-5 w-5 text-white" />
                   </div>
                   <div className="text-3xl font-bold tracking-tight">{totalHours.toFixed(1)}</div>
-                  <p className="text-xs text-muted-foreground mt-1.5 font-medium">إجمالي الساعات المنجزة</p>
+                  <p className="text-xs text-muted-foreground mt-1.5 font-medium">{bi("إجمالي الساعات المنجزة", "Total completed hours")}</p>
                 </CardContent>
               </Card>
               <Card className="stat-card border-0 bg-emerald-500/10">
@@ -353,7 +356,7 @@ export default function OrgCoachesPage() {
                     <DollarSign className="h-5 w-5 text-white" />
                   </div>
                   <div className="text-3xl font-bold tracking-tight">{totalCost.toFixed(2)}</div>
-                  <p className="text-xs text-muted-foreground mt-1.5 font-medium">إجمالي التكلفة (د.أ)</p>
+                  <p className="text-xs text-muted-foreground mt-1.5 font-medium">{bi("إجمالي التكلفة (د.أ)", "Total cost (JOD)")}</p>
                 </CardContent>
               </Card>
               <Card className="stat-card border-0 bg-purple-500/10">
@@ -362,7 +365,7 @@ export default function OrgCoachesPage() {
                     <UserX className="h-5 w-5 text-white" />
                   </div>
                   <div className="text-3xl font-bold tracking-tight">{billingCoaches.length}</div>
-                  <p className="text-xs text-muted-foreground mt-1.5 font-medium">عدد المدربين</p>
+                  <p className="text-xs text-muted-foreground mt-1.5 font-medium">{bi("عدد المدربين", "Number of coaches")}</p>
                 </CardContent>
               </Card>
             </div>
@@ -370,12 +373,12 @@ export default function OrgCoachesPage() {
             <Card className="border-0 shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                  <CardTitle>تفاصيل محاسبة المدربين</CardTitle>
-                  <CardDescription>حدد معدل الساعة لكل مدرب واحتسب التكلفة بناءً على الجلسات المنجزة</CardDescription>
+                  <CardTitle>{bi("تفاصيل محاسبة المدربين", "Coach billing details")}</CardTitle>
+                  <CardDescription>{bi("حدد معدل الساعة لكل مدرب واحتسب التكلفة بناءً على الجلسات المنجزة", "Set an hourly rate for each coach and calculate cost based on completed sessions")}</CardDescription>
                 </div>
                 <Button variant="outline" size="sm" onClick={fetchBilling} disabled={billingLoading}>
                   <RefreshCw className={`h-4 w-4 ml-1 ${billingLoading ? 'animate-spin' : ''}`} />
-                  تحديث
+                  {bi("تحديث", "Refresh")}
                 </Button>
               </CardHeader>
               <CardContent>
@@ -388,19 +391,19 @@ export default function OrgCoachesPage() {
                 ) : billingCoaches.length === 0 ? (
                   <div className="empty-state">
                     <div className="empty-state-icon"><UserX className="h-6 w-6" /></div>
-                    <p className="empty-state-title">لا يوجد مدربون</p>
+                    <p className="empty-state-title">{bi("لا يوجد مدربون", "No coaches")}</p>
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="text-right">المدرب</TableHead>
-                        <TableHead className="text-center hidden sm:table-cell">الساعات المنجزة</TableHead>
-                        <TableHead className="text-center">معدل الساعة (د.أ)</TableHead>
-                        <TableHead className="text-center hidden md:table-cell">الساعات المتعاقدة</TableHead>
-                        <TableHead className="text-center">التكلفة الإجمالية</TableHead>
-                        <TableHead className="text-center">حفظ</TableHead>
+                        <TableHead className="text-right">{bi("المدرب", "Coach")}</TableHead>
+                        <TableHead className="text-center hidden sm:table-cell">{bi("الساعات المنجزة", "Completed hours")}</TableHead>
+                        <TableHead className="text-center">{bi("معدل الساعة (د.أ)", "Hourly rate (JOD)")}</TableHead>
+                        <TableHead className="text-center hidden md:table-cell">{bi("الساعات المتعاقدة", "Contracted hours")}</TableHead>
+                        <TableHead className="text-center">{bi("التكلفة الإجمالية", "Total cost")}</TableHead>
+                        <TableHead className="text-center">{bi("حفظ", "Save")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -454,7 +457,7 @@ export default function OrgCoachesPage() {
                             </TableCell>
                             <TableCell className="text-center">
                               <span className="font-semibold text-primary">
-                                {previewCost.toFixed(2)} د.أ
+                                {previewCost.toFixed(2)} {bi("د.أ", "JOD")}
                               </span>
                             </TableCell>
                             <TableCell className="text-center">
@@ -490,8 +493,8 @@ export default function OrgCoachesPage() {
           ) : availableCoaches.length === 0 ? (
             <div className="empty-state">
               <div className="empty-state-icon"><UserX className="h-6 w-6" /></div>
-              <p className="empty-state-title">لا يوجد مدربون متاحون</p>
-              <p className="empty-state-desc">جميع المدربين المتاحين أعضاء في منظمتك بالفعل</p>
+              <p className="empty-state-title">{bi("لا يوجد مدربون متاحون", "No available coaches")}</p>
+              <p className="empty-state-desc">{bi("جميع المدربين المتاحين أعضاء في منظمتك بالفعل", "All available coaches are already members of your organization")}</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -509,21 +512,21 @@ export default function OrgCoachesPage() {
                       <div>
                         <p className="font-semibold">{coach.name}</p>
                         <p className="text-sm text-muted-foreground">
-                          {coach.expertise ?? "لا يوجد تخصص محدد"}
+                          {coach.expertise ?? bi("لا يوجد تخصص محدد", "No specialization specified")}
                         </p>
                       </div>
                       <div className="flex gap-2 justify-center flex-wrap">
                         {isSent ? (
-                          <Button variant="outline" size="sm" disabled>تم الإرسال</Button>
+                          <Button variant="outline" size="sm" disabled>{bi("تم الإرسال", "Sent")}</Button>
                         ) : (
                           <Button size="sm" variant="outline" disabled={loadingAction === coach.id} onClick={() => handleInvite(coach)}>
                             <Send className="h-4 w-4 ml-1" />
-                            دعوة
+                            {bi("دعوة", "Invite")}
                           </Button>
                         )}
                         <Button size="sm" onClick={() => openOfferModal(coach)}>
                           <Gift className="h-4 w-4 ml-1" />
-                          إرسال عرض
+                          {bi("إرسال عرض", "Send offer")}
                         </Button>
                       </div>
                     </CardContent>
@@ -537,13 +540,13 @@ export default function OrgCoachesPage() {
 
       {/* Content Offer Modal */}
       <Dialog open={!!offerCoach} onOpenChange={(open) => !open && setOfferCoach(null)}>
-        <DialogContent dir="rtl" className="sm:max-w-md">
+        <DialogContent dir={dir} className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>إرسال عرض للمدرب {offerCoach?.name}</DialogTitle>
+            <DialogTitle>{bi("إرسال عرض للمدرب", "Send offer to coach")} {offerCoach?.name}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
-              <Label>نوع المحتوى</Label>
+              <Label>{bi("نوع المحتوى", "Content type")}</Label>
               <Select
                 value={offerForm.offerType}
                 onValueChange={(v) => setOfferForm(f => ({ ...f, offerType: v as 'course'|'live_session', contentId: '' }))}
@@ -553,16 +556,16 @@ export default function OrgCoachesPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="course">
-                    <span className="flex items-center gap-2"><BookOpen className="h-4 w-4" /> دورة مسجلة</span>
+                    <span className="flex items-center gap-2"><BookOpen className="h-4 w-4" /> {bi("دورة مسجلة", "Recorded course")}</span>
                   </SelectItem>
                   <SelectItem value="live_session">
-                    <span className="flex items-center gap-2"><Video className="h-4 w-4" /> جلسة مباشرة</span>
+                    <span className="flex items-center gap-2"><Video className="h-4 w-4" /> {bi("جلسة مباشرة", "Live session")}</span>
                   </SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label>المحتوى</Label>
+              <Label>{bi("المحتوى", "Content")}</Label>
               {offerLoading ? (
                 <div className="h-10 rounded-md bg-muted animate-pulse" />
               ) : (
@@ -571,12 +574,12 @@ export default function OrgCoachesPage() {
                   onValueChange={(v) => setOfferForm(f => ({ ...f, contentId: v }))}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="اختر..." />
+                    <SelectValue placeholder={bi("اختر...", "Choose...")} />
                   </SelectTrigger>
                   <SelectContent>
                     {(offerForm.offerType === 'course' ? coachContent.courses : coachContent.liveSessions).length === 0 ? (
                       <SelectItem value="__none" disabled>
-                        {offerForm.offerType === 'course' ? 'لا توجد دورات منشورة' : 'لا توجد جلسات مباشرة منشورة'}
+                        {offerForm.offerType === 'course' ? bi('لا توجد دورات منشورة', 'No published courses') : bi('لا توجد جلسات مباشرة منشورة', 'No published live sessions')}
                       </SelectItem>
                     ) : (
                       (offerForm.offerType === 'course' ? coachContent.courses : coachContent.liveSessions).map(item => (
@@ -588,20 +591,20 @@ export default function OrgCoachesPage() {
               )}
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="offer-note">ملاحظة (اختياري)</Label>
+              <Label htmlFor="offer-note">{bi("ملاحظة (اختياري)", "Note (optional)")}</Label>
               <Textarea
                 id="offer-note"
                 value={offerForm.note}
                 onChange={e => setOfferForm(f => ({ ...f, note: e.target.value }))}
-                placeholder="رسالة للمدرب حول العرض..."
+                placeholder={bi("رسالة للمدرب حول العرض...", "A message to the coach about the offer...")}
                 rows={3}
               />
             </div>
           </div>
           <DialogFooter className="gap-2">
-            <Button variant="ghost" onClick={() => setOfferCoach(null)} disabled={sendingOffer}>إلغاء</Button>
+            <Button variant="ghost" onClick={() => setOfferCoach(null)} disabled={sendingOffer}>{bi("إلغاء", "Cancel")}</Button>
             <Button onClick={handleSendOffer} disabled={sendingOffer || !offerForm.contentId}>
-              {sendingOffer ? 'جاري الإرسال...' : 'إرسال العرض'}
+              {sendingOffer ? bi('جاري الإرسال...', 'Sending...') : bi('إرسال العرض', 'Send offer')}
             </Button>
           </DialogFooter>
         </DialogContent>

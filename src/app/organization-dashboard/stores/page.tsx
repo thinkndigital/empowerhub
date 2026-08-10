@@ -25,6 +25,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useLanguage } from "@/components/language-provider";
 
 type StoreData = {
   id: string;
@@ -76,9 +77,17 @@ const statusConfig: Record<string, { label: string; variant: "secondary" | "defa
   rejected: { label: "مرفوض",        variant: "destructive" },
 };
 
+const statusConfigEn: Record<string, { label: string; variant: "secondary" | "default" | "destructive" }> = {
+  pending:  { label: "Under review", variant: "secondary" },
+  approved: { label: "Approved",     variant: "default"   },
+  rejected: { label: "Rejected",     variant: "destructive" },
+};
+
 export default function OrgStoresPage() {
   const { user, loading: userLoading } = useUser();
   const { toast } = useToast();
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const [stores, setStores] = useState<StoreWithStats[]>([]);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [allOrders, setAllOrders] = useState<Order[]>([]);
@@ -94,7 +103,7 @@ export default function OrgStoresPage() {
       const res = await fetch('/api/org/stores', {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error('فشل تحميل البيانات');
+      if (!res.ok) throw new Error(bi('فشل تحميل البيانات', 'Failed to load data'));
       const json = await res.json();
 
       const rawStores: StoreData[] = json.stores || [];
@@ -125,7 +134,7 @@ export default function OrgStoresPage() {
 
       setStores(storesWithStats);
     } catch (e: any) {
-      toast({ title: "خطأ", description: e.message, variant: "destructive" });
+      toast({ title: bi("خطأ", "Error"), description: e.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -145,9 +154,9 @@ export default function OrgStoresPage() {
       });
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.error || 'فشل تحديث الحالة');
+        throw new Error(err.error || bi('فشل تحديث الحالة', 'Failed to update status'));
       }
-      toast({ title: status === 'approved' ? "تمت الموافقة" : "تم الرفض" });
+      toast({ title: status === 'approved' ? bi("تمت الموافقة", "Approved") : bi("تم الرفض", "Rejected") });
       // Update local state
       setAllProducts(prev => prev.map(p => p.id === id ? { ...p, status } : p));
       setStores(prev => prev.map(s => ({
@@ -161,7 +170,7 @@ export default function OrgStoresPage() {
         } : null);
       }
     } catch (e: any) {
-      toast({ title: "خطأ", description: e.message, variant: "destructive" });
+      toast({ title: bi("خطأ", "Error"), description: e.message, variant: "destructive" });
     } finally {
       setUpdating(null);
     }
@@ -177,10 +186,10 @@ export default function OrgStoresPage() {
     .reduce((sum, o) => sum + (o.totalAmount ?? o.total ?? 0), 0);
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={dir}>
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">المتاجر والمنتجات</h1>
-        <p className="text-muted-foreground text-sm">إدارة متاجر المستفيدين ومنتجاتهم وطلباتهم.</p>
+        <h1 className="text-2xl font-bold tracking-tight">{bi("المتاجر والمنتجات", "Stores & products")}</h1>
+        <p className="text-muted-foreground text-sm">{bi("إدارة متاجر المستفيدين ومنتجاتهم وطلباتهم.", "Manage beneficiary stores, products, and orders.")}</p>
       </div>
 
       {/* Summary Stats */}
@@ -196,7 +205,7 @@ export default function OrgStoresPage() {
                 <Store className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">إجمالي المتاجر</p>
+                <p className="text-sm text-muted-foreground">{bi("إجمالي المتاجر", "Total stores")}</p>
                 <p className="text-2xl font-bold">{totalStores}</p>
               </div>
             </CardContent>
@@ -207,7 +216,7 @@ export default function OrgStoresPage() {
                 <Package className="h-6 w-6 text-blue-600" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">إجمالي المنتجات</p>
+                <p className="text-sm text-muted-foreground">{bi("إجمالي المنتجات", "Total products")}</p>
                 <p className="text-2xl font-bold">{totalProducts}</p>
               </div>
             </CardContent>
@@ -218,8 +227,8 @@ export default function OrgStoresPage() {
                 <TrendingUp className="h-6 w-6 text-green-600" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">إجمالي الإيرادات</p>
-                <p className="text-2xl font-bold">{totalRevenue.toFixed(2)} د.أ</p>
+                <p className="text-sm text-muted-foreground">{bi("إجمالي الإيرادات", "Total revenue")}</p>
+                <p className="text-2xl font-bold">{totalRevenue.toFixed(2)} {bi("د.أ", "JOD")}</p>
               </div>
             </CardContent>
           </Card>
@@ -236,7 +245,7 @@ export default function OrgStoresPage() {
       {!isLoading && stores.length === 0 && (
         <div className="text-center py-16 space-y-3">
           <Store className="h-12 w-12 mx-auto text-muted-foreground" />
-          <p className="text-muted-foreground">لا توجد متاجر بعد.</p>
+          <p className="text-muted-foreground">{bi("لا توجد متاجر بعد.", "No stores yet.")}</p>
         </div>
       )}
 
@@ -269,16 +278,16 @@ export default function OrgStoresPage() {
                 )}
                 <div className="flex gap-3 mt-2">
                   <Badge variant="outline" className="gap-1 text-xs">
-                    <Package className="h-3 w-3" /> {store.productCount} منتج
+                    <Package className="h-3 w-3" /> {store.productCount} {bi("منتج", "products")}
                   </Badge>
                   <Badge variant="outline" className="gap-1 text-xs text-green-700 border-green-300">
-                    <TrendingUp className="h-3 w-3" /> {store.revenue.toFixed(0)} د.أ
+                    <TrendingUp className="h-3 w-3" /> {store.revenue.toFixed(0)} {bi("د.أ", "JOD")}
                   </Badge>
                 </div>
               </CardContent>
               <CardFooter>
                 <Button size="sm" variant="outline" className="w-full" onClick={() => setSelectedStore(store)}>
-                  عرض التفاصيل
+                  {bi("عرض التفاصيل", "View details")}
                 </Button>
               </CardFooter>
             </Card>
@@ -288,41 +297,41 @@ export default function OrgStoresPage() {
 
       {/* Store Detail Dialog */}
       <Dialog open={!!selectedStore} onOpenChange={(open) => !open && setSelectedStore(null)}>
-        <DialogContent dir="rtl" className="sm:max-w-[90vw] md:max-w-3xl max-h-[80vh] overflow-y-auto">
+        <DialogContent dir={dir} className="sm:max-w-[90vw] md:max-w-3xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Store className="h-5 w-5" />
               {selectedStore?.name}
             </DialogTitle>
             <DialogDescription>
-              {selectedStore?.beneficiaryName && `المستفيد: ${selectedStore.beneficiaryName}`}
-              {selectedStore?.location && ` | الموقع: ${selectedStore.location}`}
+              {selectedStore?.beneficiaryName && bi(`المستفيد: ${selectedStore.beneficiaryName}`, `Beneficiary: ${selectedStore.beneficiaryName}`)}
+              {selectedStore?.location && bi(` | الموقع: ${selectedStore.location}`, ` | Location: ${selectedStore.location}`)}
             </DialogDescription>
           </DialogHeader>
 
           <Tabs defaultValue="products">
             <TabsList className="w-full">
               <TabsTrigger value="products" className="flex-1">
-                المنتجات ({selectedStore?.products.length || 0})
+                {bi("المنتجات", "Products")} ({selectedStore?.products.length || 0})
               </TabsTrigger>
               <TabsTrigger value="orders" className="flex-1">
-                الطلبات ({selectedStore?.orders.length || 0})
+                {bi("الطلبات", "Orders")} ({selectedStore?.orders.length || 0})
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="products" className="mt-4">
               {(selectedStore?.products.length || 0) === 0 ? (
-                <p className="text-center text-muted-foreground py-8">لا توجد منتجات</p>
+                <p className="text-center text-muted-foreground py-8">{bi("لا توجد منتجات", "No products")}</p>
               ) : (
                 <div className="space-y-3">
                   {selectedStore?.products.map(product => {
-                    const cfg = statusConfig[product.status] || statusConfig.pending;
+                    const cfg = (lang === 'en' ? statusConfigEn : statusConfig)[product.status] || (lang === 'en' ? statusConfigEn : statusConfig).pending;
                     const isPending = product.status === 'pending';
                     return (
                       <div key={product.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50 gap-3">
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-sm truncate">{product.name}</p>
-                          <p className="text-xs text-muted-foreground">{translateCategory(product.category)} — {product.price?.toFixed(2)} د.أ</p>
+                          <p className="text-xs text-muted-foreground">{translateCategory(product.category)} — {product.price?.toFixed(2)} {bi("د.أ", "JOD")}</p>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           <Badge variant={cfg.variant} className="text-xs">{cfg.label}</Badge>
@@ -334,7 +343,7 @@ export default function OrgStoresPage() {
                                 disabled={updating === product.id}
                                 onClick={() => updateProductStatus(product.id, 'approved')}
                               >
-                                <CheckCircle className="h-3 w-3 ml-1" /> موافقة
+                                <CheckCircle className="h-3 w-3 ml-1" /> {bi("موافقة", "Approve")}
                               </Button>
                               <Button
                                 size="sm"
@@ -343,7 +352,7 @@ export default function OrgStoresPage() {
                                 disabled={updating === product.id}
                                 onClick={() => updateProductStatus(product.id, 'rejected')}
                               >
-                                <XCircle className="h-3 w-3 ml-1" /> رفض
+                                <XCircle className="h-3 w-3 ml-1" /> {bi("رفض", "Reject")}
                               </Button>
                             </>
                           )}
@@ -357,16 +366,16 @@ export default function OrgStoresPage() {
 
             <TabsContent value="orders" className="mt-4">
               {(selectedStore?.orders.length || 0) === 0 ? (
-                <p className="text-center text-muted-foreground py-8">لا توجد طلبات</p>
+                <p className="text-center text-muted-foreground py-8">{bi("لا توجد طلبات", "No orders")}</p>
               ) : (
                 <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-right">المنتج</TableHead>
-                      <TableHead className="text-right hidden md:table-cell">المشتري</TableHead>
-                      <TableHead className="text-right">المبلغ</TableHead>
-                      <TableHead className="text-right">الحالة</TableHead>
+                      <TableHead className="text-right">{bi("المنتج", "Product")}</TableHead>
+                      <TableHead className="text-right hidden md:table-cell">{bi("المشتري", "Buyer")}</TableHead>
+                      <TableHead className="text-right">{bi("المبلغ", "Amount")}</TableHead>
+                      <TableHead className="text-right">{bi("الحالة", "Status")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -374,10 +383,10 @@ export default function OrgStoresPage() {
                       <TableRow key={order.id}>
                         <TableCell className="text-sm">{order.productName || '—'}</TableCell>
                         <TableCell className="text-sm hidden md:table-cell">{order.buyerName || '—'}</TableCell>
-                        <TableCell className="text-sm">{(order.totalAmount ?? order.total)?.toFixed(2) || '—'} د.أ</TableCell>
+                        <TableCell className="text-sm">{(order.totalAmount ?? order.total)?.toFixed(2) || '—'} {bi("د.أ", "JOD")}</TableCell>
                         <TableCell>
                           <Badge variant={order.status === 'delivered' || order.status === 'مكتمل' ? 'default' : 'secondary'} className="text-xs">
-                            {order.status || 'قيد المعالجة'}
+                            {order.status || bi('قيد المعالجة', 'Processing')}
                           </Badge>
                         </TableCell>
                       </TableRow>

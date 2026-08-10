@@ -11,6 +11,7 @@ import { StatusBadge } from "@/components/status-badge";
 import Link from "next/link";
 import { useUser } from "@/firebase/auth/use-user";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/components/language-provider";
 
 type Beneficiary = { id: string; name?: string; progress?: number; status?: string };
 type StatsData = {
@@ -64,6 +65,8 @@ const progressColor = (v: number) =>
 
 export default function OrganizationDashboardPage() {
   const { user } = useUser();
+  const { lang } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const [data, setData] = useState<StatsData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -99,19 +102,19 @@ export default function OrganizationDashboardPage() {
       {/* ── Page header ── */}
       <div className="page-header">
         <div>
-          <h1 className="page-title">لوحة تحكم المنظمة</h1>
-          <p className="page-subtitle">نظرة عامة على أداء المستفيدين في منظمتك</p>
+          <h1 className="page-title">{bi("لوحة تحكم المنظمة", "Organization dashboard")}</h1>
+          <p className="page-subtitle">{bi("نظرة عامة على أداء المستفيدين في منظمتك", "An overview of your organization's beneficiary performance")}</p>
         </div>
-        <Badge className="bg-primary/10 text-primary border-primary/20 w-fit h-fit">مدير المنظمة</Badge>
+        <Badge className="bg-primary/10 text-primary border-primary/20 w-fit h-fit">{bi("مدير المنظمة", "Organization admin")}</Badge>
       </div>
 
       {/* ── KPI Cards ── */}
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-        <StatCard loading={loading} colorIdx={0} title="إجمالي المستفيدين" value={String(stats.total)} sub="مستفيد مسجل" icon={<Users />} />
-        <StatCard loading={loading} colorIdx={1} title="المستفيدون النشطون" value={String(stats.active)}
-          sub={`${stats.total > 0 ? Math.round((stats.active / stats.total) * 100) : 0}% من الإجمالي`} icon={<UserCheck />} />
-        <StatCard loading={loading} colorIdx={2} title="متوسط التقدم" value={`${stats.avgProgress}%`} sub="في جميع الدورات" icon={<BarChart3 />} />
-        <StatCard loading={loading} colorIdx={3} title="المستفيدون المكتملون" value={String(stats.completed)} sub="أكملوا برنامجهم" icon={<TrendingUp />} />
+        <StatCard loading={loading} colorIdx={0} title={bi("إجمالي المستفيدين", "Total beneficiaries")} value={String(stats.total)} sub={bi("مستفيد مسجل", "registered")} icon={<Users />} />
+        <StatCard loading={loading} colorIdx={1} title={bi("المستفيدون النشطون", "Active beneficiaries")} value={String(stats.active)}
+          sub={bi(`${stats.total > 0 ? Math.round((stats.active / stats.total) * 100) : 0}% من الإجمالي`, `${stats.total > 0 ? Math.round((stats.active / stats.total) * 100) : 0}% of total`)} icon={<UserCheck />} />
+        <StatCard loading={loading} colorIdx={2} title={bi("متوسط التقدم", "Average progress")} value={`${stats.avgProgress}%`} sub={bi("في جميع الدورات", "across all courses")} icon={<BarChart3 />} />
+        <StatCard loading={loading} colorIdx={3} title={bi("المستفيدون المكتملون", "Completed beneficiaries")} value={String(stats.completed)} sub={bi("أكملوا برنامجهم", "finished their program")} icon={<TrendingUp />} />
       </div>
 
       {/* ── Main content ── */}
@@ -121,11 +124,11 @@ export default function OrganizationDashboardPage() {
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>تقدم المستفيدين</CardTitle>
-                <CardDescription className="mt-1">أعلى المستفيدين تقدماً</CardDescription>
+                <CardTitle>{bi("تقدم المستفيدين", "Beneficiary progress")}</CardTitle>
+                <CardDescription className="mt-1">{bi("أعلى المستفيدين تقدماً", "Top-progressing beneficiaries")}</CardDescription>
               </div>
               <Button variant="outline" size="sm" asChild>
-                <Link href="/organization-dashboard/beneficiaries">عرض الكل</Link>
+                <Link href="/organization-dashboard/beneficiaries">{bi("عرض الكل", "View all")}</Link>
               </Button>
             </div>
           </CardHeader>
@@ -142,10 +145,10 @@ export default function OrganizationDashboardPage() {
             {!loading && topBeneficiaries.length === 0 && (
               <div className="empty-state">
                 <div className="empty-state-icon"><Users className="h-6 w-6" /></div>
-                <p className="empty-state-title">لا يوجد مستفيدون بعد</p>
-                <p className="empty-state-desc">ابدأ بإضافة مستفيدين لمتابعة تقدمهم</p>
+                <p className="empty-state-title">{bi("لا يوجد مستفيدون بعد", "No beneficiaries yet")}</p>
+                <p className="empty-state-desc">{bi("ابدأ بإضافة مستفيدين لمتابعة تقدمهم", "Start adding beneficiaries to track their progress")}</p>
                 <Button size="sm" asChild className="mt-2">
-                  <Link href="/organization-dashboard/beneficiaries">إضافة مستفيد</Link>
+                  <Link href="/organization-dashboard/beneficiaries">{bi("إضافة مستفيد", "Add beneficiary")}</Link>
                 </Button>
               </div>
             )}
@@ -159,7 +162,7 @@ export default function OrganizationDashboardPage() {
                       <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary text-xs font-bold shrink-0">
                         {(b.name || 'م')[0]}
                       </div>
-                      <span className="text-sm font-medium truncate">{b.name || 'مستفيد'}</span>
+                      <span className="text-sm font-medium truncate">{b.name || bi('مستفيد', 'Beneficiary')}</span>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <StatusBadge status={statusKey} />
@@ -183,14 +186,14 @@ export default function OrganizationDashboardPage() {
           {/* Summary */}
           <Card className="border-0 shadow-sm">
             <CardHeader className="pb-3">
-              <CardTitle>ملخص المنظمة</CardTitle>
+              <CardTitle>{bi("ملخص المنظمة", "Organization summary")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-0.5">
               {[
-                { label: "المستفيدون",   value: data?.beneficiariesCount ?? 0, icon: <Users className="h-4 w-4 text-primary" /> },
-                { label: "المرشدون",     value: data?.mentorsCount ?? 0,       icon: <GraduationCap className="h-4 w-4 text-sky-500" /> },
-                { label: "المدربون",     value: data?.coachesCount ?? 0,       icon: <BookOpen className="h-4 w-4 text-purple-500" /> },
-                { label: "معدل الإكمال", value: `${stats.avgProgress}%`,       icon: <TrendingUp className="h-4 w-4 text-amber-500" /> },
+                { label: bi("المستفيدون", "Beneficiaries"),   value: data?.beneficiariesCount ?? 0, icon: <Users className="h-4 w-4 text-primary" /> },
+                { label: bi("المرشدون", "Mentors"),     value: data?.mentorsCount ?? 0,       icon: <GraduationCap className="h-4 w-4 text-sky-500" /> },
+                { label: bi("المدربون", "Coaches"),     value: data?.coachesCount ?? 0,       icon: <BookOpen className="h-4 w-4 text-purple-500" /> },
+                { label: bi("معدل الإكمال", "Completion rate"), value: `${stats.avgProgress}%`,       icon: <TrendingUp className="h-4 w-4 text-amber-500" /> },
               ].map((item, i) => (
                 <div key={i} className="flex items-center justify-between py-2.5 border-b border-border/50 last:border-0">
                   <div className="flex items-center gap-2.5 text-sm">
@@ -209,14 +212,14 @@ export default function OrganizationDashboardPage() {
           {/* Quick actions */}
           <Card className="border-0 shadow-sm">
             <CardHeader className="pb-3">
-              <CardTitle>إجراءات سريعة</CardTitle>
+              <CardTitle>{bi("إجراءات سريعة", "Quick actions")}</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-2 gap-2">
               {[
-                { href: "/organization-dashboard/beneficiaries", icon: <Users className="h-4 w-4" />,         label: "المستفيدون" },
-                { href: "/organization-dashboard/coaches",       icon: <BookOpen className="h-4 w-4" />,      label: "المدربون" },
-                { href: "/organization-dashboard/mentors",       icon: <GraduationCap className="h-4 w-4" />, label: "المرشدون" },
-                { href: "/organization-dashboard/reports",       icon: <BarChart3 className="h-4 w-4" />,     label: "التقارير" },
+                { href: "/organization-dashboard/beneficiaries", icon: <Users className="h-4 w-4" />,         label: bi("المستفيدون", "Beneficiaries") },
+                { href: "/organization-dashboard/coaches",       icon: <BookOpen className="h-4 w-4" />,      label: bi("المدربون", "Coaches") },
+                { href: "/organization-dashboard/mentors",       icon: <GraduationCap className="h-4 w-4" />, label: bi("المرشدون", "Mentors") },
+                { href: "/organization-dashboard/reports",       icon: <BarChart3 className="h-4 w-4" />,     label: bi("التقارير", "Reports") },
               ].map(item => (
                 <Link
                   key={item.href}
@@ -237,17 +240,19 @@ export default function OrganizationDashboardPage() {
             <div className="rounded-xl bg-primary/5 border border-primary/10 p-4">
               <div className="flex items-center gap-2 mb-2">
                 <ArrowUpRight className="h-4 w-4 text-primary" />
-                <span className="text-xs font-semibold text-primary">نظرة سريعة</span>
+                <span className="text-xs font-semibold text-primary">{bi("نظرة سريعة", "Quick insight")}</span>
               </div>
               <p className="text-sm text-foreground font-medium leading-relaxed">
-                {stats.active} من {stats.total} مستفيد نشط حالياً
-                {stats.avgProgress > 0 && ` بمتوسط تقدم ${stats.avgProgress}%`}.
+                {bi(
+                  `${stats.active} من ${stats.total} مستفيد نشط حالياً${stats.avgProgress > 0 ? ` بمتوسط تقدم ${stats.avgProgress}%` : ''}.`,
+                  `${stats.active} of ${stats.total} beneficiaries are currently active${stats.avgProgress > 0 ? ` with an average progress of ${stats.avgProgress}%` : ''}.`
+                )}
               </p>
               <Link
                 href="/organization-dashboard/reports"
                 className="text-xs text-primary font-medium mt-2 inline-flex items-center gap-1 hover:gap-2 transition-all"
               >
-                عرض التقارير الكاملة <ChevronLeft className="h-3.5 w-3.5" />
+                {bi("عرض التقارير الكاملة", "View full reports")} <ChevronLeft className="h-3.5 w-3.5" />
               </Link>
             </div>
           )}

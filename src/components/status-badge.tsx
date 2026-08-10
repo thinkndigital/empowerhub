@@ -1,6 +1,7 @@
 "use client";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/components/language-provider";
 
 type StatusKey =
   | "active" | "نشط"
@@ -16,45 +17,46 @@ type StatusKey =
 
 const statusMap: Record<string, {
   label: string;
+  labelEn: string;
   variant: "active" | "pending" | "completed" | "new" | "inactive" | "cancelled";
 }> = {
   // Active states
-  active:       { label: "نشط",            variant: "active" },
-  "نشط":        { label: "نشط",            variant: "active" },
-  published:    { label: "منشور",          variant: "active" },
-  "منشورة":     { label: "منشور",          variant: "active" },
-  paid:         { label: "مدفوع",          variant: "active" },
-  "مدفوع":      { label: "مدفوع",          variant: "active" },
+  active:       { label: "نشط",            labelEn: "Active",    variant: "active" },
+  "نشط":        { label: "نشط",            labelEn: "Active",    variant: "active" },
+  published:    { label: "منشور",          labelEn: "Published", variant: "active" },
+  "منشورة":     { label: "منشور",          labelEn: "Published", variant: "active" },
+  paid:         { label: "مدفوع",          labelEn: "Paid",      variant: "active" },
+  "مدفوع":      { label: "مدفوع",          labelEn: "Paid",      variant: "active" },
 
   // Pending states
-  pending:         { label: "معلق",         variant: "pending" },
-  "معلق":          { label: "معلق",         variant: "pending" },
-  "قيد الانتظار":  { label: "قيد الانتظار", variant: "pending" },
-  pending_payment: { label: "بانتظار الدفع", variant: "pending" },
-  processing:      { label: "قيد المعالجة", variant: "pending" },
-  "قيد المعالجة":  { label: "قيد المعالجة", variant: "pending" },
+  pending:         { label: "معلق",         labelEn: "Pending",         variant: "pending" },
+  "معلق":          { label: "معلق",         labelEn: "Pending",         variant: "pending" },
+  "قيد الانتظار":  { label: "قيد الانتظار", labelEn: "Pending",         variant: "pending" },
+  pending_payment: { label: "بانتظار الدفع", labelEn: "Awaiting payment", variant: "pending" },
+  processing:      { label: "قيد المعالجة", labelEn: "Processing",      variant: "pending" },
+  "قيد المعالجة":  { label: "قيد المعالجة", labelEn: "Processing",      variant: "pending" },
 
   // Completed states
-  completed:  { label: "مكتمل",  variant: "completed" },
-  "مكتمل":    { label: "مكتمل",  variant: "completed" },
-  delivered:  { label: "مُسلَّم", variant: "completed" },
+  completed:  { label: "مكتمل",  labelEn: "Completed", variant: "completed" },
+  "مكتمل":    { label: "مكتمل",  labelEn: "Completed", variant: "completed" },
+  delivered:  { label: "مُسلَّم", labelEn: "Delivered", variant: "completed" },
 
   // New states
-  new:    { label: "جديد",  variant: "new" },
-  "جديد": { label: "جديد",  variant: "new" },
-  draft:  { label: "مسودة", variant: "new" },
-  "مسودة":{ label: "مسودة", variant: "new" },
+  new:    { label: "جديد",  labelEn: "New",   variant: "new" },
+  "جديد": { label: "جديد",  labelEn: "New",   variant: "new" },
+  draft:  { label: "مسودة", labelEn: "Draft", variant: "new" },
+  "مسودة":{ label: "مسودة", labelEn: "Draft", variant: "new" },
 
   // Inactive states
-  inactive:  { label: "غير نشط", variant: "inactive" },
-  "غير نشط": { label: "غير نشط", variant: "inactive" },
-  "موقوف":   { label: "موقوف",   variant: "inactive" },
+  inactive:  { label: "غير نشط", labelEn: "Inactive", variant: "inactive" },
+  "غير نشط": { label: "غير نشط", labelEn: "Inactive", variant: "inactive" },
+  "موقوف":   { label: "موقوف",   labelEn: "Suspended", variant: "inactive" },
 
   // Cancelled states
-  cancelled: { label: "ملغي",  variant: "cancelled" },
-  "ملغي":    { label: "ملغي",  variant: "cancelled" },
-  "ملغى":    { label: "ملغى",  variant: "cancelled" },
-  refunded:  { label: "مسترد", variant: "cancelled" },
+  cancelled: { label: "ملغي",  labelEn: "Cancelled", variant: "cancelled" },
+  "ملغي":    { label: "ملغي",  labelEn: "Cancelled", variant: "cancelled" },
+  "ملغى":    { label: "ملغى",  labelEn: "Cancelled", variant: "cancelled" },
+  refunded:  { label: "مسترد", labelEn: "Refunded",  variant: "cancelled" },
 };
 
 interface StatusBadgeProps {
@@ -73,7 +75,8 @@ const dotColors = {
 };
 
 export function StatusBadge({ status, className, showDot = false }: StatusBadgeProps) {
-  const mapped = statusMap[status] ?? { label: status, variant: "inactive" as const };
+  const { lang } = useLanguage();
+  const mapped = statusMap[status] ?? { label: status, labelEn: status, variant: "inactive" as const };
 
   return (
     <Badge
@@ -85,7 +88,7 @@ export function StatusBadge({ status, className, showDot = false }: StatusBadgeP
           className={cn("h-1.5 w-1.5 rounded-full shrink-0", dotColors[mapped.variant])}
         />
       )}
-      {mapped.label}
+      {lang === 'en' ? mapped.labelEn : mapped.label}
     </Badge>
   );
 }

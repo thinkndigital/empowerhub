@@ -25,6 +25,7 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/components/language-provider";
 
 interface Enrollment {
   userId: string;
@@ -52,6 +53,8 @@ interface Beneficiary {
 export default function OrgCoursesPage() {
   const { user } = useUser();
   const { toast } = useToast();
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const [courses, setCourses] = useState<Course[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [viewCourse, setViewCourse] = useState<Course | null>(null);
@@ -125,14 +128,14 @@ export default function OrgCoursesPage() {
       });
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.error || 'فشل التعيين');
+        throw new Error(err.error || bi('فشل التعيين', 'Assignment failed'));
       }
-      toast({ title: "تم التعيين بنجاح", description: `تم تسجيل ${selectedBeneficiaryIds.length} مستفيد في الدورة.` });
+      toast({ title: bi("تم التعيين بنجاح", "Assigned successfully"), description: bi(`تم تسجيل ${selectedBeneficiaryIds.length} مستفيد في الدورة.`, `${selectedBeneficiaryIds.length} beneficiaries were enrolled in the course.`) });
       setAssignCourse(null);
       setSelectedBeneficiaryIds([]);
       fetchCourses();
     } catch (e: any) {
-      toast({ title: "خطأ", description: e.message, variant: "destructive" });
+      toast({ title: bi("خطأ", "Error"), description: e.message, variant: "destructive" });
     } finally {
       setAssigning(false);
     }
@@ -149,10 +152,10 @@ export default function OrgCoursesPage() {
     course.status === 'published' || course.status === 'منشورة';
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={dir}>
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">الدورات التدريبية</h1>
-        <p className="text-sm text-muted-foreground">جميع الدورات التدريبية</p>
+        <h1 className="text-2xl font-bold tracking-tight">{bi("الدورات التدريبية", "Training courses")}</h1>
+        <p className="text-sm text-muted-foreground">{bi("جميع الدورات التدريبية", "All training courses")}</p>
       </div>
 
       {isLoading ? (
@@ -164,21 +167,21 @@ export default function OrgCoursesPage() {
       ) : !courses || courses.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-muted-foreground gap-3">
           <BookOpen className="h-12 w-12 opacity-50" />
-          <p className="text-lg">لا توجد دورات بعد</p>
-          <p className="text-sm">ستظهر هنا الدورات عند إضافتها</p>
+          <p className="text-lg">{bi("لا توجد دورات بعد", "No courses yet")}</p>
+          <p className="text-sm">{bi("ستظهر هنا الدورات عند إضافتها", "Courses will appear here once added")}</p>
         </div>
       ) : (
         <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="text-right">عنوان الدورة</TableHead>
-              <TableHead className="text-right hidden md:table-cell">الفئة</TableHead>
-              <TableHead className="text-right hidden md:table-cell">المدرب</TableHead>
-              <TableHead className="text-right">المسجلون</TableHead>
-              <TableHead className="text-right hidden lg:table-cell">متوسط التقدم</TableHead>
-              <TableHead className="text-right">الحالة</TableHead>
-              <TableHead className="text-right">إجراءات</TableHead>
+              <TableHead className="text-right">{bi("عنوان الدورة", "Course title")}</TableHead>
+              <TableHead className="text-right hidden md:table-cell">{bi("الفئة", "Category")}</TableHead>
+              <TableHead className="text-right hidden md:table-cell">{bi("المدرب", "Coach")}</TableHead>
+              <TableHead className="text-right">{bi("المسجلون", "Enrollees")}</TableHead>
+              <TableHead className="text-right hidden lg:table-cell">{bi("متوسط التقدم", "Average progress")}</TableHead>
+              <TableHead className="text-right">{bi("الحالة", "Status")}</TableHead>
+              <TableHead className="text-right">{bi("إجراءات", "Actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -201,7 +204,7 @@ export default function OrgCoursesPage() {
                 </TableCell>
                 <TableCell>
                   <Badge variant={isPublished(course) ? "default" : "secondary"}>
-                    {isPublished(course) ? "منشور" : "مسودة"}
+                    {isPublished(course) ? bi("منشور", "Published") : bi("مسودة", "Draft")}
                   </Badge>
                 </TableCell>
                 <TableCell>
@@ -212,7 +215,7 @@ export default function OrgCoursesPage() {
                       onClick={() => setViewCourse(course)}
                       disabled={(course.enrolledCount ?? 0) === 0}
                     >
-                      عرض المسجلين
+                      {bi("عرض المسجلين", "View enrollees")}
                     </Button>
                     <Button
                       size="sm"
@@ -220,7 +223,7 @@ export default function OrgCoursesPage() {
                       onClick={() => openAssignDialog(course)}
                     >
                       <UserPlus className="h-3 w-3 ml-1" />
-                      تعيين لمستفيد
+                      {bi("تعيين لمستفيد", "Assign to beneficiary")}
                     </Button>
                   </div>
                 </TableCell>
@@ -233,16 +236,16 @@ export default function OrgCoursesPage() {
 
       {/* Enrollments Dialog */}
       <Dialog open={!!viewCourse} onOpenChange={(open) => !open && setViewCourse(null)}>
-        <DialogContent dir="rtl" className="sm:max-w-[90vw] md:max-w-lg">
+        <DialogContent dir={dir} className="sm:max-w-[90vw] md:max-w-lg">
           <DialogHeader>
-            <DialogTitle>المسجلون في: {viewCourse?.title}</DialogTitle>
+            <DialogTitle>{bi("المسجلون في:", "Enrollees in:")} {viewCourse?.title}</DialogTitle>
             <DialogDescription>
-              قائمة المستفيدين المسجلين في هذه الدورة وتقدمهم
+              {bi("قائمة المستفيدين المسجلين في هذه الدورة وتقدمهم", "The list of beneficiaries enrolled in this course and their progress")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 max-h-96 overflow-y-auto py-2">
             {(viewCourse?.enrollments ?? []).length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">لا يوجد مسجلون</p>
+              <p className="text-center text-muted-foreground py-8">{bi("لا يوجد مسجلون", "No enrollees")}</p>
             ) : (
               (viewCourse?.enrollments ?? []).map((e) => (
                 <div key={e.userId} className="flex items-center justify-between gap-4 p-3 rounded-lg bg-muted/50">
@@ -260,14 +263,14 @@ export default function OrgCoursesPage() {
 
       {/* Assign to Beneficiary Dialog */}
       <Dialog open={!!assignCourse} onOpenChange={(open) => !open && setAssignCourse(null)}>
-        <DialogContent dir="rtl" className="max-w-md">
+        <DialogContent dir={dir} className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <UserPlus className="h-5 w-5" />
-              تعيين الدورة لمستفيد
+              {bi("تعيين الدورة لمستفيد", "Assign course to beneficiary")}
             </DialogTitle>
             <DialogDescription>
-              اختر المستفيدين لتسجيلهم في: {assignCourse?.title}
+              {bi("اختر المستفيدين لتسجيلهم في:", "Choose beneficiaries to enroll in:")} {assignCourse?.title}
             </DialogDescription>
           </DialogHeader>
 
@@ -277,7 +280,7 @@ export default function OrgCoursesPage() {
                 {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-10 w-full rounded" />)}
               </div>
             ) : beneficiaries.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">لا يوجد مستفيدون بعد</p>
+              <p className="text-center text-muted-foreground py-8">{bi("لا يوجد مستفيدون بعد", "No beneficiaries yet")}</p>
             ) : (
               beneficiaries.map(b => (
                 <div
@@ -290,7 +293,7 @@ export default function OrgCoursesPage() {
                     onCheckedChange={() => toggleBeneficiary(b.id)}
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{b.name || 'مستفيد'}</p>
+                    <p className="text-sm font-medium truncate">{b.name || bi('مستفيد', 'Beneficiary')}</p>
                     {b.email && <p className="text-xs text-muted-foreground truncate">{b.email}</p>}
                   </div>
                 </div>
@@ -299,12 +302,12 @@ export default function OrgCoursesPage() {
           </div>
 
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setAssignCourse(null)}>إلغاء</Button>
+            <Button variant="outline" onClick={() => setAssignCourse(null)}>{bi("إلغاء", "Cancel")}</Button>
             <Button
               onClick={handleAssign}
               disabled={assigning || selectedBeneficiaryIds.length === 0}
             >
-              {assigning ? 'جارٍ التعيين...' : `تعيين (${selectedBeneficiaryIds.length})`}
+              {assigning ? bi('جارٍ التعيين...', 'Assigning...') : bi(`تعيين (${selectedBeneficiaryIds.length})`, `Assign (${selectedBeneficiaryIds.length})`)}
             </Button>
           </DialogFooter>
         </DialogContent>

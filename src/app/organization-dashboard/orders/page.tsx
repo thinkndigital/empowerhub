@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { StatCard, StatGrid } from "@/components/dashboard/stat-card";
 import { ExportButton } from "@/components/export-button";
+import { useLanguage } from "@/components/language-provider";
 
 interface Order {
   id: string;
@@ -36,8 +37,19 @@ const orderStatusLabels: Record<string, string> = {
   cancelled: "ملغي",
 };
 
+const orderStatusLabelsEn: Record<string, string> = {
+  pending: "Pending",
+  confirmed: "Confirmed",
+  shipped: "Shipped",
+  completed: "Completed",
+  cancelled: "Cancelled",
+};
+
 export default function OrgOrdersPage() {
   const { user } = useUser();
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
+  const locale = lang === 'en' ? 'en-US' : 'ar-EG';
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -74,38 +86,40 @@ export default function OrgOrdersPage() {
   };
 
   const statItems = [
-    { label: "إجمالي الطلبات",  value: String(stats.total),               description: "طلب مسجل",        icon: ShoppingBag },
-    { label: "قيد الانتظار",    value: String(stats.pending),             description: "بانتظار التأكيد", icon: Clock },
-    { label: "مكتملة",          value: String(stats.completed),           description: "تم التسليم",      icon: CheckCircle },
-    { label: "إيرادات مدفوعة",  value: `${stats.revenue.toFixed(0)} د.أ`, description: "دفعات مؤكدة",     icon: DollarSign },
+    { label: bi("إجمالي الطلبات", "Total orders"),  value: String(stats.total),               description: bi("طلب مسجل", "registered"),        icon: ShoppingBag },
+    { label: bi("قيد الانتظار", "Pending"),    value: String(stats.pending),             description: bi("بانتظار التأكيد", "awaiting confirmation"), icon: Clock },
+    { label: bi("مكتملة", "Completed"),          value: String(stats.completed),           description: bi("تم التسليم", "delivered"),      icon: CheckCircle },
+    { label: bi("إيرادات مدفوعة", "Paid revenue"),  value: `${stats.revenue.toFixed(0)} ${bi("د.أ", "JOD")}`, description: bi("دفعات مؤكدة", "confirmed payments"),     icon: DollarSign },
   ];
 
   return (
-    <div className="space-y-6 animate-fade-in-up" dir="rtl">
+    <div className="space-y-6 animate-fade-in-up" dir={dir}>
       <PageHeader
-        title="طلبات المتاجر"
-        description="متابعة طلبات جميع متاجر المستفيدين في المنظمة"
+        title={bi("طلبات المتاجر", "Store orders")}
+        description={bi("متابعة طلبات جميع متاجر المستفيدين في المنظمة", "Track orders from all beneficiary stores in the organization")}
         actions={
           <>
             <ExportButton
-              title="طلبات المتاجر"
+              title={bi("طلبات المتاجر", "Store orders")}
               filename={`orders-${new Date().toISOString().slice(0,10)}`}
-              headers={['المنتج', 'المشتري', 'الهاتف', 'المتجر', 'المبلغ (د.أ)', 'الحالة', 'طريقة الدفع', 'التاريخ']}
+              headers={lang === 'en'
+                ? ['Product', 'Buyer', 'Phone', 'Store', 'Amount (JOD)', 'Status', 'Payment method', 'Date']
+                : ['المنتج', 'المشتري', 'الهاتف', 'المتجر', 'المبلغ (د.أ)', 'الحالة', 'طريقة الدفع', 'التاريخ']}
               rows={orders.map(o => [
                 o.productName || '',
                 o.buyerName || '',
                 o.buyerPhone || '',
                 o.storeName || '',
                 (o.totalAmount || 0).toFixed(2),
-                orderStatusLabels[o.status] || o.status,
+                (lang === 'en' ? orderStatusLabelsEn[o.status] : orderStatusLabels[o.status]) || o.status,
                 o.paymentMethod || '',
-                o.createdAt ? new Date(o.createdAt).toLocaleDateString('ar-EG') : '',
+                o.createdAt ? new Date(o.createdAt).toLocaleDateString(locale) : '',
               ])}
-              options={{ summary: { 'إجمالي الطلبات': String(stats.total), 'قيد الانتظار': String(stats.pending), 'مكتملة': String(stats.completed), 'إيرادات مدفوعة': `${stats.revenue.toFixed(0)} د.أ` } }}
+              options={{ summary: { [bi('إجمالي الطلبات', 'Total orders')]: String(stats.total), [bi('قيد الانتظار', 'Pending')]: String(stats.pending), [bi('مكتملة', 'Completed')]: String(stats.completed), [bi('إيرادات مدفوعة', 'Paid revenue')]: `${stats.revenue.toFixed(0)} ${bi("د.أ", "JOD")}` } }}
             />
             <Button variant="outline" onClick={load} disabled={loading} className="gap-2 h-fit">
               <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
-              تحديث
+              {bi("تحديث", "Refresh")}
             </Button>
           </>
         }
@@ -133,21 +147,21 @@ export default function OrgOrdersPage() {
           <Input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="بحث عن طلب..."
+            placeholder={bi("بحث عن طلب...", "Search for an order...")}
             className="pr-9"
           />
         </div>
         <Select value={filterStatus} onValueChange={setFilterStatus}>
           <SelectTrigger className="w-44">
-            <SelectValue placeholder="الحالة" />
+            <SelectValue placeholder={bi("الحالة", "Status")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">جميع الحالات</SelectItem>
-            <SelectItem value="pending">قيد الانتظار</SelectItem>
-            <SelectItem value="confirmed">مؤكد</SelectItem>
-            <SelectItem value="shipped">تم الشحن</SelectItem>
-            <SelectItem value="completed">مكتمل</SelectItem>
-            <SelectItem value="cancelled">ملغي</SelectItem>
+            <SelectItem value="all">{bi("جميع الحالات", "All statuses")}</SelectItem>
+            <SelectItem value="pending">{bi("قيد الانتظار", "Pending")}</SelectItem>
+            <SelectItem value="confirmed">{bi("مؤكد", "Confirmed")}</SelectItem>
+            <SelectItem value="shipped">{bi("تم الشحن", "Shipped")}</SelectItem>
+            <SelectItem value="completed">{bi("مكتمل", "Completed")}</SelectItem>
+            <SelectItem value="cancelled">{bi("ملغي", "Cancelled")}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -170,11 +184,11 @@ export default function OrgOrdersPage() {
       ) : filtered.length === 0 ? (
         <div className="empty-state">
           <div className="empty-state-icon"><Package className="h-6 w-6" /></div>
-          <p className="empty-state-title">لا توجد طلبات</p>
+          <p className="empty-state-title">{bi("لا توجد طلبات", "No orders")}</p>
           <p className="empty-state-desc">
             {search || filterStatus !== 'all'
-              ? 'لا توجد نتائج تطابق معايير البحث'
-              : 'ستظهر طلبات متاجر المستفيدين هنا'}
+              ? bi('لا توجد نتائج تطابق معايير البحث', 'No results match your search criteria')
+              : bi('ستظهر طلبات متاجر المستفيدين هنا', 'Beneficiary store orders will appear here')}
           </p>
         </div>
       ) : (
@@ -182,13 +196,13 @@ export default function OrgOrdersPage() {
           <table className="w-full text-sm premium-table">
             <thead>
               <tr>
-                <th>المنتج</th>
-                <th>العميل</th>
-                <th>المتجر</th>
-                <th>المبلغ</th>
-                <th>الدفع</th>
-                <th>الحالة</th>
-                <th>التاريخ</th>
+                <th>{bi("المنتج", "Product")}</th>
+                <th>{bi("العميل", "Customer")}</th>
+                <th>{bi("المتجر", "Store")}</th>
+                <th>{bi("المبلغ", "Amount")}</th>
+                <th>{bi("الدفع", "Payment")}</th>
+                <th>{bi("الحالة", "Status")}</th>
+                <th>{bi("التاريخ", "Date")}</th>
               </tr>
             </thead>
             <tbody>
@@ -200,16 +214,16 @@ export default function OrgOrdersPage() {
                     <div className="text-xs text-muted-foreground" dir="ltr">{order.buyerPhone}</div>
                   </td>
                   <td className="text-muted-foreground">{order.storeName || '—'}</td>
-                  <td className="font-bold text-primary tabular-nums">{(order.totalAmount || 0).toFixed(2)} د.أ</td>
+                  <td className="font-bold text-primary tabular-nums">{(order.totalAmount || 0).toFixed(2)} {bi("د.أ", "JOD")}</td>
                   <td>
                     <div className="flex flex-col gap-1">
-                      <span className="text-xs text-muted-foreground">{order.paymentMethod === 'online' ? 'أونلاين' : 'استلام'}</span>
+                      <span className="text-xs text-muted-foreground">{order.paymentMethod === 'online' ? bi('أونلاين', 'Online') : bi('استلام', 'Cash on delivery')}</span>
                       {order.paymentStatus === 'paid' && <StatusBadge status="paid" />}
                     </div>
                   </td>
                   <td><StatusBadge status={order.status} /></td>
                   <td className="text-xs text-muted-foreground tabular-nums">
-                    {order.createdAt ? new Date(order.createdAt).toLocaleDateString('ar-EG') : '—'}
+                    {order.createdAt ? new Date(order.createdAt).toLocaleDateString(locale) : '—'}
                   </td>
                 </tr>
               ))}

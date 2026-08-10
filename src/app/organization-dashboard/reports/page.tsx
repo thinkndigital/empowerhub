@@ -17,12 +17,10 @@ import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useUser } from "@/firebase/auth/use-user"
 import { format, subMonths, startOfMonth } from "date-fns"
-import { ar } from "date-fns/locale"
+import { ar, enUS } from "date-fns/locale"
 import Link from "next/link"
 import { Lock } from "lucide-react"
-
-const engagementConfig = { active: { label: "المستفيدون النشطون", color: "hsl(var(--chart-1))" } }
-const completionConfig = { "معدل الإكمال": { label: "معدل الإكمال", color: "hsl(var(--chart-2))" } }
+import { useLanguage } from "@/components/language-provider"
 
 type Session = { id: string; date: string; status: string; hostId: string; attendees: string[] };
 type Beneficiary = { id: string; name?: string; progress?: number; createdAt?: string };
@@ -38,6 +36,11 @@ type ReportsData = {
 export default function OrgReportsPage() {
   const { toast } = useToast();
   const { user } = useUser();
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
+  const locale = lang === 'en' ? 'en-US' : 'ar-EG';
+  const engagementConfig = useMemo(() => ({ active: { label: bi("المستفيدون النشطون", "Active beneficiaries"), color: "hsl(var(--chart-1))" } }), [lang]);
+  const completionConfig = useMemo(() => ({ completionRate: { label: bi("معدل الإكمال", "Completion rate"), color: "hsl(var(--chart-2))" } }), [lang]);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [exportOptions, setExportOptions] = useState({ summary: true, progress: true, engagement: true });
   const [data, setData] = useState<ReportsData | null>(null);
@@ -57,7 +60,7 @@ export default function OrgReportsPage() {
       ]);
       if (reportsRes.status === 403) {
         const err = await reportsRes.json().catch(() => ({}));
-        setLockedMessage(err.error || 'هذه الميزة غير متاحة بخطتك الحالية.');
+        setLockedMessage(err.error || bi('هذه الميزة غير متاحة بخطتك الحالية.', 'This feature is not available on your current plan.'));
       } else if (reportsRes.ok) {
         setData(await reportsRes.json());
       }
@@ -103,9 +106,9 @@ export default function OrgReportsPage() {
         const created = new Date(b.createdAt || '').getTime();
         return created <= end && (b.progress ?? 0) > 0;
       }).length;
-      return { month: format(d, 'MMM', { locale: ar }), active: activeInMonth };
+      return { month: format(d, 'MMM', { locale: lang === 'en' ? enUS : ar }), active: activeInMonth };
     });
-  }, [beneficiaries]);
+  }, [beneficiaries, lang]);
 
   const progressDistribution = useMemo(() => {
     const ranges = [
@@ -116,7 +119,7 @@ export default function OrgReportsPage() {
     ];
     return ranges.map(r => ({
       name: r.name,
-      "معدل الإكمال": beneficiaries.filter(b => {
+      completionRate: beneficiaries.filter(b => {
         const p = b.progress || 0;
         return p >= r.min && p <= r.max;
       }).length,
@@ -124,42 +127,44 @@ export default function OrgReportsPage() {
   }, [beneficiaries]);
 
   const handleExport = () => {
-    const headers = ['الاسم', 'نسبة التقدم %', 'الحالة', 'تاريخ التسجيل'];
+    const headers = lang === 'en'
+      ? ['Name', 'Progress %', 'Status', 'Registration date']
+      : ['الاسم', 'نسبة التقدم %', 'الحالة', 'تاريخ التسجيل'];
     const rows = beneficiaries.map(b => [
       b.name || '',
       b.progress ?? 0,
-      (b.progress ?? 0) >= 100 ? 'أكمل' : (b.progress ?? 0) > 0 ? 'نشط' : 'جديد',
-      b.createdAt ? new Date(b.createdAt).toLocaleDateString('ar-EG') : '',
+      (b.progress ?? 0) >= 100 ? bi('أكمل', 'Completed') : (b.progress ?? 0) > 0 ? bi('نشط', 'Active') : bi('جديد', 'New'),
+      b.createdAt ? new Date(b.createdAt).toLocaleDateString(locale) : '',
     ]);
     const summary = {
-      'إجمالي المستفيدين': String(stats.total),
-      'النشطون': String(stats.active),
-      'متوسط التقدم': `${stats.avgProgress}%`,
-      'نسبة الإكمال': `${stats.completionRate}%`,
-      'جلسات منجزة': String(stats.totalSessions),
+      [bi('إجمالي المستفيدين', 'Total beneficiaries')]: String(stats.total),
+      [bi('النشطون', 'Active')]: String(stats.active),
+      [bi('متوسط التقدم', 'Average progress')]: `${stats.avgProgress}%`,
+      [bi('نسبة الإكمال', 'Completion rate')]: `${stats.completionRate}%`,
+      [bi('جلسات منجزة', 'Completed sessions')]: String(stats.totalSessions),
     };
     if (exportOptions.summary || exportOptions.progress) {
-      exportToExcel('تقرير_الأثر', headers, rows, { sheetName: 'تقرير التقدم' });
-      exportToPDF('تقارير الأثر والتحليلات', headers, rows, { summary });
+      exportToExcel(bi('تقرير_الأثر', 'Impact_Report'), headers, rows, { sheetName: bi('تقرير التقدم', 'Progress Report') });
+      exportToPDF(bi('تقارير الأثر والتحليلات', 'Impact & Analytics Reports'), headers, rows, { summary });
     }
-    toast({ title: "تم التصدير بنجاح" });
+    toast({ title: bi("تم التصدير بنجاح", "Exported successfully") });
     setIsExportDialogOpen(false);
   };
 
   if (!loading && lockedMessage) {
     return (
-      <div className="flex items-center justify-center py-24" dir="rtl">
+      <div className="flex items-center justify-center py-24" dir={dir}>
         <Card className="max-w-md w-full text-center">
           <CardContent className="pt-8 pb-6 space-y-4">
             <div className="h-14 w-14 rounded-full bg-muted flex items-center justify-center mx-auto">
               <Lock className="h-6 w-6 text-muted-foreground" />
             </div>
             <div>
-              <h2 className="font-bold text-lg mb-1">التقارير غير متاحة حالياً</h2>
+              <h2 className="font-bold text-lg mb-1">{bi("التقارير غير متاحة حالياً", "Reports are not available right now")}</h2>
               <p className="text-sm text-muted-foreground">{lockedMessage}</p>
             </div>
             <Button asChild>
-              <Link href="/organization-dashboard/settings">الذهاب لصفحة الاشتراك</Link>
+              <Link href="/organization-dashboard/settings">{bi("الذهاب لصفحة الاشتراك", "Go to subscription page")}</Link>
             </Button>
           </CardContent>
         </Card>
@@ -168,29 +173,29 @@ export default function OrgReportsPage() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in-up" dir="rtl">
+    <div className="space-y-6 animate-fade-in-up" dir={dir}>
       <div className="page-header">
         <div>
-          <h1 className="page-title">تقارير الأثر والتحليلات</h1>
-          <p className="page-subtitle">قياس أثر برامج التمكين في منظمتك</p>
+          <h1 className="page-title">{bi("تقارير الأثر والتحليلات", "Impact & analytics reports")}</h1>
+          <p className="page-subtitle">{bi("قياس أثر برامج التمكين في منظمتك", "Measure the impact of empowerment programs in your organization")}</p>
         </div>
         <Dialog open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen}>
           <DialogTrigger asChild>
             <Button variant="outline" size="sm">
               <Download className="ml-2 h-4 w-4" />
-              تصدير التقارير
+              {bi("تصدير التقارير", "Export reports")}
             </Button>
           </DialogTrigger>
-          <DialogContent dir="rtl">
+          <DialogContent dir={dir}>
             <DialogHeader>
-              <DialogTitle>تصدير التقارير</DialogTitle>
-              <DialogDescription>اختر أجزاء التقرير للتصدير.</DialogDescription>
+              <DialogTitle>{bi("تصدير التقارير", "Export reports")}</DialogTitle>
+              <DialogDescription>{bi("اختر أجزاء التقرير للتصدير.", "Choose which report sections to export.")}</DialogDescription>
             </DialogHeader>
             <div className="space-y-3 py-4">
               {[
-                { key: "summary" as const, label: "الملخص الإحصائي" },
-                { key: "progress" as const, label: "توزيع التقدم" },
-                { key: "engagement" as const, label: "مشاركة المستفيدين" },
+                { key: "summary" as const, label: bi("الملخص الإحصائي", "Statistical summary") },
+                { key: "progress" as const, label: bi("توزيع التقدم", "Progress distribution") },
+                { key: "engagement" as const, label: bi("مشاركة المستفيدين", "Beneficiary engagement") },
               ].map(item => (
                 <div key={item.key} className="flex items-center gap-2">
                   <Checkbox id={item.key} checked={exportOptions[item.key]} onCheckedChange={() => setExportOptions(p => ({ ...p, [item.key]: !p[item.key] }))} />
@@ -199,8 +204,8 @@ export default function OrgReportsPage() {
               ))}
             </div>
             <DialogFooter>
-              <DialogClose asChild><Button variant="ghost">إلغاء</Button></DialogClose>
-              <Button onClick={handleExport}>تصدير</Button>
+              <DialogClose asChild><Button variant="ghost">{bi("إلغاء", "Cancel")}</Button></DialogClose>
+              <Button onClick={handleExport}>{bi("تصدير", "Export")}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -209,10 +214,10 @@ export default function OrgReportsPage() {
       {/* KPI Cards */}
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         {[
-          { label: "إجمالي المستفيدين",  value: String(stats.total),            sub: "مستفيد مسجل",           icon: <Users />,    bg: "bg-primary/10",    ic: "bg-primary" },
-          { label: "المستفيدون النشطون", value: String(stats.active),           sub: `من أصل ${stats.total}`, icon: <Activity />, bg: "bg-emerald-500/10",ic: "bg-emerald-500" },
-          { label: "متوسط التقدم",       value: `${stats.avgProgress}%`,        sub: "نسبة الإنجاز الكلية",  icon: <BarChart3 />,bg: "bg-amber-500/10",  ic: "bg-amber-500" },
-          { label: "نسبة الإكمال",       value: `${stats.completionRate}%`,     sub: `${stats.completed} أتموا البرنامج`, icon: <Award />, bg: "bg-purple-500/10", ic: "bg-purple-500" },
+          { label: bi("إجمالي المستفيدين", "Total beneficiaries"),  value: String(stats.total),            sub: bi("مستفيد مسجل", "registered"),           icon: <Users />,    bg: "bg-primary/10",    ic: "bg-primary" },
+          { label: bi("المستفيدون النشطون", "Active beneficiaries"), value: String(stats.active),           sub: bi(`من أصل ${stats.total}`, `out of ${stats.total}`), icon: <Activity />, bg: "bg-emerald-500/10",ic: "bg-emerald-500" },
+          { label: bi("متوسط التقدم", "Average progress"),       value: `${stats.avgProgress}%`,        sub: bi("نسبة الإنجاز الكلية", "overall completion rate"),  icon: <BarChart3 />,bg: "bg-amber-500/10",  ic: "bg-amber-500" },
+          { label: bi("نسبة الإكمال", "Completion rate"),       value: `${stats.completionRate}%`,     sub: bi(`${stats.completed} أتموا البرنامج`, `${stats.completed} finished the program`), icon: <Award />, bg: "bg-purple-500/10", ic: "bg-purple-500" },
         ].map((s, i) => (
           <Card key={i} className={`stat-card border-0 overflow-hidden ${s.bg}`}>
             <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3 pt-5 px-5">
@@ -230,7 +235,7 @@ export default function OrgReportsPage() {
       {/* Impact Summary */}
       <Card className="border-primary/20 bg-primary/5">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-primary"><Target className="h-5 w-5" /> ملخص الأثر الاجتماعي</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-primary"><Target className="h-5 w-5" /> {bi("ملخص الأثر الاجتماعي", "Social impact summary")}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
@@ -240,19 +245,19 @@ export default function OrgReportsPage() {
               <>
                 <div className="text-center">
                   <div className="text-3xl font-extrabold text-primary">{stats.total}</div>
-                  <div className="text-sm text-muted-foreground mt-1">مستفيد تمكّن</div>
+                  <div className="text-sm text-muted-foreground mt-1">{bi("مستفيد تمكّن", "beneficiaries empowered")}</div>
                 </div>
                 <div className="text-center">
                   <div className="text-3xl font-extrabold text-primary">{data?.mentorsCount || 0}</div>
-                  <div className="text-sm text-muted-foreground mt-1">مرشد متطوع</div>
+                  <div className="text-sm text-muted-foreground mt-1">{bi("مرشد متطوع", "volunteer mentors")}</div>
                 </div>
                 <div className="text-center">
                   <div className="text-3xl font-extrabold text-primary">{stats.totalSessions}</div>
-                  <div className="text-sm text-muted-foreground mt-1">جلسة إرشادية</div>
+                  <div className="text-sm text-muted-foreground mt-1">{bi("جلسة إرشادية", "mentoring sessions")}</div>
                 </div>
                 <div className="text-center">
                   <div className="text-3xl font-extrabold text-primary">{stats.completed}</div>
-                  <div className="text-sm text-muted-foreground mt-1">أتموا البرنامج</div>
+                  <div className="text-sm text-muted-foreground mt-1">{bi("أتموا البرنامج", "completed the program")}</div>
                 </div>
               </>
             )}
@@ -264,7 +269,7 @@ export default function OrgReportsPage() {
       {!loading && beneficiaries.length > 0 && (
         <Card className="border-0 shadow-sm">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><TrendingUp className="h-5 w-5" /> تقدم المستفيدين</CardTitle>
+            <CardTitle className="flex items-center gap-2"><TrendingUp className="h-5 w-5" /> {bi("تقدم المستفيدين", "Beneficiary progress")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 max-h-64 overflow-y-auto">
             {[...beneficiaries].sort((a, b) => (b.progress || 0) - (a.progress || 0)).map(b => (
@@ -309,8 +314,8 @@ export default function OrgReportsPage() {
         return (
           <Card className="border-0 shadow-sm">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><BookUser className="h-5 w-5" /> متابعة الإرشاد</CardTitle>
-              <CardDescription>نظرة عامة على جلسات الإرشاد وتغطية المرشدين والمدربين.</CardDescription>
+              <CardTitle className="flex items-center gap-2"><BookUser className="h-5 w-5" /> {bi("متابعة الإرشاد", "Mentoring overview")}</CardTitle>
+              <CardDescription>{bi("نظرة عامة على جلسات الإرشاد وتغطية المرشدين والمدربين.", "Overview of mentoring sessions and mentor/coach coverage.")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               {loading ? <Skeleton className="h-32 w-full" /> : (
@@ -318,26 +323,26 @@ export default function OrgReportsPage() {
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     <div className="text-center p-4 bg-primary/5 rounded-xl border border-primary/10">
                       <div className="text-3xl font-bold text-primary">{sessionsThisMonth.length}</div>
-                      <div className="text-xs text-muted-foreground mt-1.5 font-medium">جلسات هذا الشهر</div>
+                      <div className="text-xs text-muted-foreground mt-1.5 font-medium">{bi("جلسات هذا الشهر", "Sessions this month")}</div>
                     </div>
                     <div className="text-center p-4 bg-emerald-500/5 rounded-xl border border-emerald-500/10">
                       <div className="text-3xl font-bold text-emerald-600">{completionRate}%</div>
-                      <div className="text-xs text-muted-foreground mt-1.5 font-medium">معدل الإكمال</div>
+                      <div className="text-xs text-muted-foreground mt-1.5 font-medium">{bi("معدل الإكمال", "Completion rate")}</div>
                     </div>
                     <div className="text-center p-4 bg-amber-500/5 rounded-xl border border-amber-500/10 col-span-2 md:col-span-1">
                       <div className="text-3xl font-bold text-amber-600">{topMentors.length}</div>
-                      <div className="text-xs text-muted-foreground mt-1.5 font-medium">مرشدون نشطون</div>
+                      <div className="text-xs text-muted-foreground mt-1.5 font-medium">{bi("مرشدون نشطون", "Active mentors")}</div>
                     </div>
                   </div>
 
                   {topMentors.length > 0 && (
                     <div>
-                      <p className="text-sm font-medium mb-2 flex items-center gap-1"><Star className="h-4 w-4 text-amber-500" /> أكثر المرشدين نشاطاً</p>
+                      <p className="text-sm font-medium mb-2 flex items-center gap-1"><Star className="h-4 w-4 text-amber-500" /> {bi("أكثر المرشدين نشاطاً", "Most active mentors")}</p>
                       <div className="space-y-2">
                         {topMentors.map(([hostId, count]) => (
                           <div key={hostId} className="flex items-center justify-between text-sm">
                             <span className="text-muted-foreground font-mono text-xs">{hostId.slice(0, 8)}…</span>
-                            <Badge variant="secondary">{count} جلسة</Badge>
+                            <Badge variant="secondary">{count} {bi("جلسة", "sessions")}</Badge>
                           </div>
                         ))}
                       </div>
@@ -345,18 +350,18 @@ export default function OrgReportsPage() {
                   )}
 
                   <div>
-                    <p className="text-sm font-medium mb-3">تغطية الإرشاد</p>
+                    <p className="text-sm font-medium mb-3">{bi("تغطية الإرشاد", "Mentoring coverage")}</p>
                     <div className="space-y-3">
                       <div>
                         <div className="flex justify-between text-xs mb-1">
-                          <span>لديهم مرشد</span>
+                          <span>{bi("لديهم مرشد", "Have a mentor")}</span>
                           <span>{withMentor} / {totalBeneficiaries} ({mentorCoverage}%)</span>
                         </div>
                         <Progress value={mentorCoverage} className="h-2" />
                       </div>
                       <div>
                         <div className="flex justify-between text-xs mb-1">
-                          <span>لديهم مدرب</span>
+                          <span>{bi("لديهم مدرب", "Have a coach")}</span>
                           <span>{withCoach} / {totalBeneficiaries} ({coachCoverage}%)</span>
                         </div>
                         <Progress value={coachCoverage} className="h-2" />
@@ -373,8 +378,8 @@ export default function OrgReportsPage() {
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="border-0 shadow-sm">
           <CardHeader className="pb-4">
-            <CardTitle>مشاركة المستفيدين</CardTitle>
-            <CardDescription className="mt-1">المستفيدون النشطون على مدار 6 أشهر.</CardDescription>
+            <CardTitle>{bi("مشاركة المستفيدين", "Beneficiary engagement")}</CardTitle>
+            <CardDescription className="mt-1">{bi("المستفيدون النشطون على مدار 6 أشهر.", "Active beneficiaries over the last 6 months.")}</CardDescription>
           </CardHeader>
           <CardContent>
             <ChartContainer config={engagementConfig} className="h-[250px] w-full relative">
@@ -392,20 +397,20 @@ export default function OrgReportsPage() {
         </Card>
         <Card className="border-0 shadow-sm">
           <CardHeader className="pb-4">
-            <CardTitle>توزيع التقدم</CardTitle>
-            <CardDescription className="mt-1">توزيع المستفيدين حسب نسبة إنجازهم.</CardDescription>
+            <CardTitle>{bi("توزيع التقدم", "Progress distribution")}</CardTitle>
+            <CardDescription className="mt-1">{bi("توزيع المستفيدين حسب نسبة إنجازهم.", "Distribution of beneficiaries by their completion rate.")}</CardDescription>
           </CardHeader>
           <CardContent>
             <ChartContainer config={completionConfig} className="h-[250px] w-full relative">
               {loading ? <Skeleton className="h-full w-full" /> : progressDistribution.length === 0 ? (
-                <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">لا توجد بيانات</div>
+                <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">{bi("لا توجد بيانات", "No data")}</div>
               ) : (
                 <BarChart accessibilityLayer data={progressDistribution} margin={{ left: 10, right: 20 }}>
                   <CartesianGrid vertical={false} />
                   <XAxis dataKey="name" tickLine={false} tickMargin={10} axisLine={false} />
                   <YAxis orientation="right" tickLine={false} axisLine={false} tickMargin={10} />
                   <Tooltip cursor={false} content={<ChartTooltipContent />} />
-                  <Bar dataKey="معدل الإكمال" fill="hsl(var(--chart-2))" radius={6} />
+                  <Bar dataKey="completionRate" fill="hsl(var(--chart-2))" radius={6} />
                 </BarChart>
               )}
             </ChartContainer>

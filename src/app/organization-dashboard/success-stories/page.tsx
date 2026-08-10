@@ -16,6 +16,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Star, Plus, Pencil, Trash2, Quote } from "lucide-react";
+import { useLanguage } from "@/components/language-provider";
 
 interface SuccessStory {
   id: string;
@@ -43,6 +44,8 @@ const emptyForm = {
 export default function OrgSuccessStoriesPage() {
   const { user } = useUser();
   const { toast } = useToast();
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const [stories, setStories] = useState<SuccessStory[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -63,7 +66,7 @@ export default function OrgSuccessStoriesPage() {
       const json = await res.json();
       setStories(json.stories || []);
     } catch {
-      toast({ variant: 'destructive', title: 'خطأ', description: 'فشل تحميل القصص' });
+      toast({ variant: 'destructive', title: bi('خطأ', 'Error'), description: bi('فشل تحميل القصص', 'Failed to load stories') });
     } finally {
       setLoading(false);
     }
@@ -94,7 +97,7 @@ export default function OrgSuccessStoriesPage() {
   async function handleSave() {
     if (!user) return;
     if (!form.beneficiaryName.trim() || !form.content.trim()) {
-      toast({ variant: 'destructive', title: 'الاسم ونص القصة مطلوبان' });
+      toast({ variant: 'destructive', title: bi('الاسم ونص القصة مطلوبان', 'Name and story text are required') });
       return;
     }
     setSaving(true);
@@ -110,13 +113,13 @@ export default function OrgSuccessStoriesPage() {
       });
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.error || 'فشل الحفظ');
+        throw new Error(err.error || bi('فشل الحفظ', 'Save failed'));
       }
-      toast({ title: editing ? 'تم التعديل بنجاح' : 'تمت الإضافة بنجاح' });
+      toast({ title: editing ? bi('تم التعديل بنجاح', 'Updated successfully') : bi('تمت الإضافة بنجاح', 'Added successfully') });
       setDialogOpen(false);
       fetchStories();
     } catch (e: any) {
-      toast({ variant: 'destructive', title: 'خطأ', description: e.message });
+      toast({ variant: 'destructive', title: bi('خطأ', 'Error'), description: e.message });
     } finally {
       setSaving(false);
     }
@@ -131,12 +134,12 @@ export default function OrgSuccessStoriesPage() {
         method: 'DELETE',
         headers: { authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error('فشل الحذف');
-      toast({ title: 'تم الحذف' });
+      if (!res.ok) throw new Error(bi('فشل الحذف', 'Delete failed'));
+      toast({ title: bi('تم الحذف', 'Deleted') });
       setDeleteId(null);
       fetchStories();
     } catch (e: any) {
-      toast({ variant: 'destructive', title: 'خطأ', description: e.message });
+      toast({ variant: 'destructive', title: bi('خطأ', 'Error'), description: e.message });
     } finally {
       setDeleting(false);
     }
@@ -152,35 +155,35 @@ export default function OrgSuccessStoriesPage() {
         headers: { authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
       });
-      toast({ title: newStatus === 'published' ? 'تم النشر' : 'تم إخفاء القصة' });
+      toast({ title: newStatus === 'published' ? bi('تم النشر', 'Published') : bi('تم إخفاء القصة', 'Story hidden') });
       fetchStories();
     } catch {
-      toast({ variant: 'destructive', title: 'خطأ في تغيير الحالة' });
+      toast({ variant: 'destructive', title: bi('خطأ في تغيير الحالة', 'Failed to change status') });
     }
   }
 
   const published = stories.filter(s => s.status === 'published').length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir={dir}>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">قصص النجاح</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{bi("قصص النجاح", "Success stories")}</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            أضف قصص نجاح المستفيدين لتظهر في الصفحة الرئيسية للمنصة
+            {bi("أضف قصص نجاح المستفيدين لتظهر في الصفحة الرئيسية للمنصة", "Add beneficiary success stories to display on the platform's homepage")}
           </p>
         </div>
         <Button onClick={openCreate}>
-          <Plus className="h-4 w-4 ml-1.5" /> إضافة قصة
+          <Plus className="h-4 w-4 ml-1.5" /> {bi("إضافة قصة", "Add story")}
         </Button>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
         {[
-          { label: 'إجمالي القصص', value: stories.length },
-          { label: 'منشور', value: published },
-          { label: 'مسودة', value: stories.length - published },
+          { label: bi('إجمالي القصص', 'Total stories'), value: stories.length },
+          { label: bi('منشور', 'Published'), value: published },
+          { label: bi('مسودة', 'Draft'), value: stories.length - published },
         ].map(s => (
           <div key={s.label} className="rounded-xl border border-border bg-card p-4">
             <div className="text-2xl font-bold">{s.value}</div>
@@ -197,10 +200,10 @@ export default function OrgSuccessStoriesPage() {
       ) : stories.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-muted-foreground text-center">
           <Quote className="h-12 w-12 mb-3 opacity-20" />
-          <p className="font-medium">لا توجد قصص بعد</p>
-          <p className="text-sm mt-1">أضف أول قصة نجاح لمستفيديك</p>
+          <p className="font-medium">{bi("لا توجد قصص بعد", "No stories yet")}</p>
+          <p className="text-sm mt-1">{bi("أضف أول قصة نجاح لمستفيديك", "Add your first beneficiary success story")}</p>
           <Button className="mt-5" onClick={openCreate}>
-            <Plus className="h-4 w-4 ml-1.5" /> إضافة قصة
+            <Plus className="h-4 w-4 ml-1.5" /> {bi("إضافة قصة", "Add story")}
           </Button>
         </div>
       ) : (
@@ -234,7 +237,7 @@ export default function OrgSuccessStoriesPage() {
                   className="shrink-0 cursor-pointer text-xs"
                   onClick={() => toggleStatus(story)}
                 >
-                  {story.status === 'published' ? 'منشور' : 'مسودة'}
+                  {story.status === 'published' ? bi('منشور', 'Published') : bi('مسودة', 'Draft')}
                 </Badge>
               </div>
 
@@ -256,7 +259,7 @@ export default function OrgSuccessStoriesPage() {
               {/* Actions */}
               <div className="flex gap-2 pt-1 border-t border-border">
                 <Button variant="ghost" size="sm" className="flex-1 h-8 text-xs" onClick={() => openEdit(story)}>
-                  <Pencil className="h-3.5 w-3.5 ml-1" /> تعديل
+                  <Pencil className="h-3.5 w-3.5 ml-1" /> {bi("تعديل", "Edit")}
                 </Button>
                 <Button
                   variant="ghost"
@@ -274,41 +277,41 @@ export default function OrgSuccessStoriesPage() {
 
       {/* Create / Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent dir="rtl" className="max-w-lg">
+        <DialogContent dir={dir} className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>{editing ? 'تعديل القصة' : 'إضافة قصة نجاح'}</DialogTitle>
+            <DialogTitle>{editing ? bi('تعديل القصة', 'Edit story') : bi('إضافة قصة نجاح', 'Add a success story')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label>اسم المستفيد *</Label>
+                <Label>{bi("اسم المستفيد *", "Beneficiary name *")}</Label>
                 <Input
-                  placeholder="سارة أحمد"
+                  placeholder={bi("سارة أحمد", "Sara Ahmad")}
                   value={form.beneficiaryName}
                   onChange={e => setForm(f => ({ ...f, beneficiaryName: e.target.value }))}
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>الدور / المسمى</Label>
+                <Label>{bi("الدور / المسمى", "Role / title")}</Label>
                 <Input
-                  placeholder="رائدة أعمال"
+                  placeholder={bi("رائدة أعمال", "Entrepreneur")}
                   value={form.beneficiaryRole}
                   onChange={e => setForm(f => ({ ...f, beneficiaryRole: e.target.value }))}
                 />
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label>عنوان القصة (اختياري)</Label>
+              <Label>{bi("عنوان القصة (اختياري)", "Story title (optional)")}</Label>
               <Input
-                placeholder="من الصفر إلى أول عملية بيع..."
+                placeholder={bi("من الصفر إلى أول عملية بيع...", "From scratch to first sale...")}
                 value={form.title}
                 onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
               />
             </div>
             <div className="space-y-1.5">
-              <Label>نص القصة *</Label>
+              <Label>{bi("نص القصة *", "Story text *")}</Label>
               <Textarea
-                placeholder="اكتب قصة نجاح المستفيد بكلماته..."
+                placeholder={bi("اكتب قصة نجاح المستفيد بكلماته...", "Write the beneficiary's success story in their words...")}
                 rows={4}
                 className="resize-none"
                 value={form.content}
@@ -316,7 +319,7 @@ export default function OrgSuccessStoriesPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label>رابط صورة المستفيد (اختياري)</Label>
+              <Label>{bi("رابط صورة المستفيد (اختياري)", "Beneficiary photo URL (optional)")}</Label>
               <Input
                 placeholder="https://..."
                 dir="ltr"
@@ -326,7 +329,7 @@ export default function OrgSuccessStoriesPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label>التقييم</Label>
+                <Label>{bi("التقييم", "Rating")}</Label>
                 <Select
                   value={String(form.stars)}
                   onValueChange={v => setForm(f => ({ ...f, stars: Number(v) }))}
@@ -344,7 +347,7 @@ export default function OrgSuccessStoriesPage() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>الحالة</Label>
+                <Label>{bi("الحالة", "Status")}</Label>
                 <Select
                   value={form.status}
                   onValueChange={v => setForm(f => ({ ...f, status: v as 'published' | 'draft' }))}
@@ -353,17 +356,17 @@ export default function OrgSuccessStoriesPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="published">منشور</SelectItem>
-                    <SelectItem value="draft">مسودة</SelectItem>
+                    <SelectItem value="published">{bi("منشور", "Published")}</SelectItem>
+                    <SelectItem value="draft">{bi("مسودة", "Draft")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
           </div>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>إلغاء</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>{bi("إلغاء", "Cancel")}</Button>
             <Button onClick={handleSave} disabled={saving}>
-              {saving ? 'جارٍ الحفظ...' : (editing ? 'حفظ التعديلات' : 'إضافة القصة')}
+              {saving ? bi('جارٍ الحفظ...', 'Saving...') : (editing ? bi('حفظ التعديلات', 'Save changes') : bi('إضافة القصة', 'Add story'))}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -371,15 +374,15 @@ export default function OrgSuccessStoriesPage() {
 
       {/* Delete Confirmation */}
       <Dialog open={!!deleteId} onOpenChange={open => !open && setDeleteId(null)}>
-        <DialogContent dir="rtl" className="max-w-sm">
+        <DialogContent dir={dir} className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>حذف القصة</DialogTitle>
+            <DialogTitle>{bi("حذف القصة", "Delete story")}</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">هل أنت متأكد من حذف هذه القصة؟ لا يمكن التراجع.</p>
+          <p className="text-sm text-muted-foreground">{bi("هل أنت متأكد من حذف هذه القصة؟ لا يمكن التراجع.", "Are you sure you want to delete this story? This cannot be undone.")}</p>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setDeleteId(null)}>إلغاء</Button>
+            <Button variant="outline" onClick={() => setDeleteId(null)}>{bi("إلغاء", "Cancel")}</Button>
             <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
-              {deleting ? 'جارٍ الحذف...' : 'حذف'}
+              {deleting ? bi('جارٍ الحذف...', 'Deleting...') : bi('حذف', 'Delete')}
             </Button>
           </DialogFooter>
         </DialogContent>
