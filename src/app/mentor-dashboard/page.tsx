@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/components/language-provider";
 
 type Session = { id: string; title: string; date: string; status: string; attendees: string[]; meetLink?: string };
 type Beneficiary = { id: string; name?: string; progress?: number };
@@ -32,22 +33,25 @@ function safeDate(d: any): Date {
   return new Date(d);
 }
 
-function formatSessionDate(dateStr: string): string {
+function formatSessionDate(dateStr: string, bi: (ar: string, en: string) => string, locale: string): string {
   const d = safeDate(dateStr);
   const now = new Date();
   const diffMs = d.getTime() - now.getTime();
   const diffH = Math.round(diffMs / (1000 * 60 * 60));
   const diffD = Math.round(diffMs / (1000 * 60 * 60 * 24));
 
-  if (diffH <= 0 && diffMs > 0) return 'خلال دقائق';
-  if (diffH === 1) return 'خلال ساعة';
-  if (diffH < 24 && diffH > 0) return `خلال ${diffH} ساعة`;
-  if (diffD === 1) return 'غداً';
-  return d.toLocaleDateString('ar-EG', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  if (diffH <= 0 && diffMs > 0) return bi('خلال دقائق', 'in minutes');
+  if (diffH === 1) return bi('خلال ساعة', 'in an hour');
+  if (diffH < 24 && diffH > 0) return bi(`خلال ${diffH} ساعة`, `in ${diffH} hours`);
+  if (diffD === 1) return bi('غداً', 'tomorrow');
+  return d.toLocaleDateString(locale, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 export default function MentorDashboardPage() {
   const { user: authUser } = useUser();
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
+  const locale = lang === 'en' ? 'en-US' : 'ar-EG';
   const [beneficiaries, setBeneficiaries] = useState<Beneficiary[] | null>(null);
   const [benefLoading, setBenefLoading] = useState(true);
   const [allSessions, setAllSessions] = useState<Session[]>([]);
@@ -107,26 +111,26 @@ export default function MentorDashboardPage() {
   const nextSession = upcomingSessions[0];
 
   const statItems = [
-    { title: "إجمالي المستفيدين", value: String(beneficiaries?.length || 0), sub: "مستفيد نشط",             icon: <Users />,       loading: benefLoading },
-    { title: "الجلسات القادمة",   value: String(upcomingSessions.length),     sub: "جلسة مجدولة",            icon: <Calendar />,    loading: sessLoading },
-    { title: "متوسط التقدم",      value: `${avgProgress}%`,                   sub: "نسبة إنجاز المستفيدين", icon: <Star />,        loading: benefLoading },
-    { title: "إجمالي الأرباح",   value: `${(earnings?.remaining ?? 0).toFixed(2)} د.أ`, sub: "الرصيد المتاح", icon: <DollarSign />,  loading: earningsLoading },
+    { title: bi("إجمالي المستفيدين", "Total beneficiaries"), value: String(beneficiaries?.length || 0), sub: bi("مستفيد نشط", "active"),             icon: <Users />,       loading: benefLoading },
+    { title: bi("الجلسات القادمة", "Upcoming sessions"),   value: String(upcomingSessions.length),     sub: bi("جلسة مجدولة", "scheduled"),            icon: <Calendar />,    loading: sessLoading },
+    { title: bi("متوسط التقدم", "Average progress"),      value: `${avgProgress}%`,                   sub: bi("نسبة إنجاز المستفيدين", "beneficiary completion rate"), icon: <Star />,        loading: benefLoading },
+    { title: bi("إجمالي الأرباح", "Total earnings"),   value: `${(earnings?.remaining ?? 0).toFixed(2)} ${bi("د.أ", "JOD")}`, sub: bi("الرصيد المتاح", "available balance"), icon: <DollarSign />,  loading: earningsLoading },
   ];
 
   return (
-    <div className="space-y-6 animate-fade-in-up" dir="rtl">
+    <div className="space-y-6 animate-fade-in-up" dir={dir}>
       {/* ── Page header ── */}
       <div className="page-header">
         <div>
-          <h1 className="page-title">لوحة تحكم المرشد</h1>
-          <p className="page-subtitle">أدواتك لمتابعة المستفيدين، جدولة الجلسات، وقياس تأثيرك</p>
+          <h1 className="page-title">{bi("لوحة تحكم المرشد", "Mentor dashboard")}</h1>
+          <p className="page-subtitle">{bi("أدواتك لمتابعة المستفيدين، جدولة الجلسات، وقياس تأثيرك", "Your tools to track beneficiaries, schedule sessions, and measure your impact")}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <Badge className="bg-primary/10 text-primary border-primary/20 w-fit h-fit">مرشد معتمد</Badge>
+          <Badge className="bg-primary/10 text-primary border-primary/20 w-fit h-fit">{bi("مرشد معتمد", "Certified mentor")}</Badge>
           <Button size="sm" asChild className="gap-1.5 h-fit">
             <Link href="/mentor-dashboard/sessions">
               <PlusCircle className="h-3.5 w-3.5" />
-              جدولة جلسة
+              {bi("جدولة جلسة", "Schedule a session")}
             </Link>
           </Button>
         </div>
@@ -140,9 +144,9 @@ export default function MentorDashboardPage() {
               <Clock className="h-5 w-5 text-primary" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs font-semibold text-primary uppercase tracking-wide mb-0.5">الجلسة القادمة</p>
+              <p className="text-xs font-semibold text-primary uppercase tracking-wide mb-0.5">{bi("الجلسة القادمة", "Next session")}</p>
               <p className="font-semibold text-foreground truncate">{nextSession.title}</p>
-              <p className="text-sm text-muted-foreground">{formatSessionDate(nextSession.date)}</p>
+              <p className="text-sm text-muted-foreground">{formatSessionDate(nextSession.date, bi, locale)}</p>
             </div>
           </div>
           <div className="flex gap-2 shrink-0">
@@ -150,12 +154,12 @@ export default function MentorDashboardPage() {
               <Button size="sm" asChild>
                 <a href={nextSession.meetLink} target="_blank" rel="noopener noreferrer">
                   <Video className="h-3.5 w-3.5 ml-1.5" />
-                  انضم
+                  {bi("انضم", "Join")}
                 </a>
               </Button>
             )}
             <Button size="sm" variant="outline" asChild>
-              <Link href="/mentor-dashboard/sessions">إدارة الجلسات</Link>
+              <Link href="/mentor-dashboard/sessions">{bi("إدارة الجلسات", "Manage sessions")}</Link>
             </Button>
           </div>
         </div>
@@ -192,11 +196,11 @@ export default function MentorDashboardPage() {
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>الجلسات القادمة</CardTitle>
-                <CardDescription className="mt-1">جلسات الإرشاد المجدولة</CardDescription>
+                <CardTitle>{bi("الجلسات القادمة", "Upcoming sessions")}</CardTitle>
+                <CardDescription className="mt-1">{bi("جلسات الإرشاد المجدولة", "Scheduled mentoring sessions")}</CardDescription>
               </div>
               <Button variant="outline" size="sm" asChild>
-                <Link href="/mentor-dashboard/sessions">إدارة الجلسات</Link>
+                <Link href="/mentor-dashboard/sessions">{bi("إدارة الجلسات", "Manage sessions")}</Link>
               </Button>
             </div>
           </CardHeader>
@@ -213,10 +217,10 @@ export default function MentorDashboardPage() {
             {!sessLoading && upcomingSessions.length === 0 && (
               <div className="empty-state">
                 <div className="empty-state-icon"><Calendar className="h-6 w-6" /></div>
-                <p className="empty-state-title">لا توجد جلسات قادمة</p>
-                <p className="empty-state-desc">جدولة جلسات إرشاد مع مستفيديك</p>
+                <p className="empty-state-title">{bi("لا توجد جلسات قادمة", "No upcoming sessions")}</p>
+                <p className="empty-state-desc">{bi("جدولة جلسات إرشاد مع مستفيديك", "Schedule mentoring sessions with your beneficiaries")}</p>
                 <Button size="sm" asChild className="mt-2">
-                  <Link href="/mentor-dashboard/sessions">جدولة جلسة</Link>
+                  <Link href="/mentor-dashboard/sessions">{bi("جدولة جلسة", "Schedule a session")}</Link>
                 </Button>
               </div>
             )}
@@ -227,7 +231,7 @@ export default function MentorDashboardPage() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold truncate">{s.title}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{formatSessionDate(s.date)}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{formatSessionDate(s.date, bi, locale)}</p>
                 </div>
                 {s.meetLink && (
                   <a
@@ -236,7 +240,7 @@ export default function MentorDashboardPage() {
                     rel="noopener noreferrer"
                     className="shrink-0 text-xs font-medium text-primary border border-primary/20 bg-primary/5 hover:bg-primary/10 rounded-md px-2.5 py-1 transition-colors"
                   >
-                    انضم
+                    {bi("انضم", "Join")}
                   </a>
                 )}
               </div>
@@ -250,9 +254,9 @@ export default function MentorDashboardPage() {
           <Card className="border-0 shadow-sm">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle>مستفيدوني</CardTitle>
+                <CardTitle>{bi("مستفيدوني", "My beneficiaries")}</CardTitle>
                 <Button variant="ghost" size="sm" asChild className="text-xs text-primary h-7 px-2">
-                  <Link href="/mentor-dashboard/my-beneficiaries">عرض الكل</Link>
+                  <Link href="/mentor-dashboard/my-beneficiaries">{bi("عرض الكل", "View all")}</Link>
                 </Button>
               </div>
             </CardHeader>
@@ -269,7 +273,7 @@ export default function MentorDashboardPage() {
               {!benefLoading && (!beneficiaries || beneficiaries.length === 0) && (
                 <div className="empty-state py-8">
                   <div className="empty-state-icon h-10 w-10"><Users className="h-5 w-5" /></div>
-                  <p className="empty-state-title text-sm">لا يوجد مستفيدون</p>
+                  <p className="empty-state-title text-sm">{bi("لا يوجد مستفيدون", "No beneficiaries")}</p>
                 </div>
               )}
               {!benefLoading && (beneficiaries || []).slice(0, 4).map(b => (
@@ -280,7 +284,7 @@ export default function MentorDashboardPage() {
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{b.name || 'بلا اسم'}</p>
+                    <p className="text-sm font-medium truncate">{b.name || bi('بلا اسم', 'No name')}</p>
                     <div className="flex items-center gap-2 mt-1">
                       <Progress value={(b as any).progress || 0} className={cn("h-1.5 flex-1", progressColor((b as any).progress || 0))} />
                       <span className="text-xs text-muted-foreground shrink-0 tabular-nums">{(b as any).progress || 0}%</span>
@@ -293,13 +297,13 @@ export default function MentorDashboardPage() {
 
           {/* Quick actions */}
           <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-3"><CardTitle>إجراءات سريعة</CardTitle></CardHeader>
+            <CardHeader className="pb-3"><CardTitle>{bi("إجراءات سريعة", "Quick actions")}</CardTitle></CardHeader>
             <CardContent className="grid grid-cols-2 gap-2">
               {[
-                { href: "/mentor-dashboard/sessions",          icon: <Calendar className="h-4 w-4" />,      label: "الجلسات",    color: "text-sky-500 bg-sky-500/10" },
-                { href: "/mentor-dashboard/messages",          icon: <MessageSquare className="h-4 w-4" />, label: "الرسائل",    color: "text-primary bg-primary/10" },
-                { href: "/mentor-dashboard/my-beneficiaries", icon: <Users className="h-4 w-4" />,          label: "المستفيدون", color: "text-emerald-600 bg-emerald-500/10" },
-                { href: "/mentor-dashboard/analytics",         icon: <CheckCircle2 className="h-4 w-4" />,  label: "التحليلات",  color: "text-purple-500 bg-purple-500/10" },
+                { href: "/mentor-dashboard/sessions",          icon: <Calendar className="h-4 w-4" />,      label: bi("الجلسات", "Sessions"),    color: "text-sky-500 bg-sky-500/10" },
+                { href: "/mentor-dashboard/messages",          icon: <MessageSquare className="h-4 w-4" />, label: bi("الرسائل", "Messages"),    color: "text-primary bg-primary/10" },
+                { href: "/mentor-dashboard/my-beneficiaries", icon: <Users className="h-4 w-4" />,          label: bi("المستفيدون", "Beneficiaries"), color: "text-emerald-600 bg-emerald-500/10" },
+                { href: "/mentor-dashboard/analytics",         icon: <CheckCircle2 className="h-4 w-4" />,  label: bi("التحليلات", "Analytics"),  color: "text-purple-500 bg-purple-500/10" },
               ].map(item => (
                 <Link key={item.href} href={item.href} className="quick-action-card">
                   <span className={cn("h-9 w-9 rounded-xl flex items-center justify-center", item.color)}>

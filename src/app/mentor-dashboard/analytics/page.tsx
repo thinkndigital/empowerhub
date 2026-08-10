@@ -15,10 +15,8 @@ import { useUser } from "@/firebase/auth/use-user"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Progress } from "@/components/ui/progress"
 import { format, subMonths, startOfMonth } from "date-fns"
-import { ar } from "date-fns/locale"
-
-const progressConfig = { progress: { label: "التقدم", color: "hsl(var(--chart-1))" } }
-const sessionFrequencyConfig = { sessions: { label: "عدد الجلسات", color: "hsl(var(--chart-2))" } }
+import { ar, enUS } from "date-fns/locale"
+import { useLanguage } from "@/components/language-provider"
 
 type Beneficiary = { id: string; name?: string; progress?: number };
 type Session = { id: string; date: string; status: string; attendees: string[]; duration?: number };
@@ -26,6 +24,10 @@ type Session = { id: string; date: string; status: string; attendees: string[]; 
 export default function MentorAnalyticsPage() {
   const { toast } = useToast();
   const { user: authUser } = useUser();
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
+  const progressConfig = useMemo(() => ({ progress: { label: bi("التقدم", "Progress"), color: "hsl(var(--chart-1))" } }), [lang]);
+  const sessionFrequencyConfig = useMemo(() => ({ sessions: { label: bi("عدد الجلسات", "Number of sessions"), color: "hsl(var(--chart-2))" } }), [lang]);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [exportOptions, setExportOptions] = useState({ summary: true, progress: true, frequency: true });
   const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>([]);
@@ -82,31 +84,31 @@ export default function MentorAnalyticsPage() {
     const start = startOfMonth(d).getTime();
     const end = new Date(d.getFullYear(), d.getMonth() + 1, 0).getTime();
     return {
-      month: format(d, 'MMM', { locale: ar }),
+      month: format(d, 'MMM', { locale: lang === 'en' ? enUS : ar }),
       sessions: sessions.filter(s => { const t = new Date(s.date).getTime(); return t >= start && t <= end && s.status === 'completed'; }).length,
     };
-  }), [sessions]);
+  }), [sessions, lang]);
 
   const handleExport = (fullReport: boolean = false) => {
     const selected = fullReport ? Object.keys(exportOptions) : Object.entries(exportOptions).filter(([, v]) => v).map(([k]) => k);
-    if (selected.length === 0) { toast({ variant: "destructive", title: "لم يتم تحديد أي أجزاء" }); return; }
-    toast({ title: "جاري تصدير التقرير...", description: `سيتم تنزيل ${fullReport ? "التقرير الكامل" : "الأجزاء المحددة"} قريبًا.` });
+    if (selected.length === 0) { toast({ variant: "destructive", title: bi("لم يتم تحديد أي أجزاء", "No sections selected") }); return; }
+    toast({ title: bi("جاري تصدير التقرير...", "Exporting the report..."), description: bi(`سيتم تنزيل ${fullReport ? "التقرير الكامل" : "الأجزاء المحددة"} قريبًا.`, `${fullReport ? "The full report" : "The selected sections"} will download shortly.`) });
     setIsExportDialogOpen(false);
   }
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={dir}>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-2xl font-bold tracking-tight">تحليلات الإرشاد</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{bi("تحليلات الإرشاد", "Mentoring analytics")}</h1>
         <Dialog open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen}>
           <DialogTrigger asChild>
-            <Button variant="outline" size="sm"><Download className="ml-2 h-4 w-4" />تصدير التقارير</Button>
+            <Button variant="outline" size="sm"><Download className="ml-2 h-4 w-4" />{bi("تصدير التقارير", "Export reports")}</Button>
           </DialogTrigger>
-          <DialogContent dir="rtl">
-            <DialogHeader><DialogTitle>تصدير التقارير</DialogTitle><DialogDescription>اختر أجزاء التقرير.</DialogDescription></DialogHeader>
+          <DialogContent dir={dir}>
+            <DialogHeader><DialogTitle>{bi("تصدير التقارير", "Export reports")}</DialogTitle><DialogDescription>{bi("اختر أجزاء التقرير.", "Choose the report sections.")}</DialogDescription></DialogHeader>
             <div className="space-y-4 py-4">
               <div className="grid grid-cols-2 gap-4">
-                {([{ key: "summary" as const, label: "الملخص الإحصائي" }, { key: "progress" as const, label: "تقدم المستفيدين" }, { key: "frequency" as const, label: "تكرار الجلسات" }]).map(item => (
+                {([{ key: "summary" as const, label: bi("الملخص الإحصائي", "Statistical summary") }, { key: "progress" as const, label: bi("تقدم المستفيدين", "Beneficiary progress") }, { key: "frequency" as const, label: bi("تكرار الجلسات", "Session frequency") }]).map(item => (
                   <div key={item.key} className="flex items-center space-x-2 space-x-reverse">
                     <Checkbox id={item.key} checked={exportOptions[item.key]} onCheckedChange={() => setExportOptions(prev => ({ ...prev, [item.key]: !prev[item.key] }))} />
                     <Label htmlFor={item.key}>{item.label}</Label>
@@ -115,8 +117,8 @@ export default function MentorAnalyticsPage() {
               </div>
             </div>
             <DialogFooter>
-              <DialogClose asChild><Button variant="ghost">إلغاء</Button></DialogClose>
-              <Button onClick={() => handleExport(true)}>تصدير التقرير الكامل</Button>
+              <DialogClose asChild><Button variant="ghost">{bi("إلغاء", "Cancel")}</Button></DialogClose>
+              <Button onClick={() => handleExport(true)}>{bi("تصدير التقرير الكامل", "Export full report")}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -124,10 +126,10 @@ export default function MentorAnalyticsPage() {
 
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         {[
-          { label: "إجمالي المستفيدين", value: stats.totalBeneficiaries, sub: "مستفيدين نشطين", icon: <Users className="h-5 w-5 text-white" />, color: "bg-primary" },
-          { label: "متوسط تقدم المستفيدين", value: `${stats.avgProgress}%`, sub: "نسبة الإنجاز الكلية", icon: <BarChart3 className="h-5 w-5 text-white" />, color: "bg-emerald-500" },
-          { label: "جلسات هذا الشهر", value: stats.sessionsThisMonth, sub: `بإجمالي ${stats.totalHours} ساعة`, icon: <Clock className="h-5 w-5 text-white" />, color: "bg-amber-500" },
-          { label: "إجمالي الأرباح", value: earningsLoading ? "—" : `${(earnings?.remaining ?? 0).toFixed(2)} د.أ`, sub: "الرصيد المتاح", icon: <DollarSign className="h-5 w-5 text-white" />, color: "bg-purple-500" },
+          { label: bi("إجمالي المستفيدين", "Total beneficiaries"), value: stats.totalBeneficiaries, sub: bi("مستفيدين نشطين", "active beneficiaries"), icon: <Users className="h-5 w-5 text-white" />, color: "bg-primary" },
+          { label: bi("متوسط تقدم المستفيدين", "Average beneficiary progress"), value: `${stats.avgProgress}%`, sub: bi("نسبة الإنجاز الكلية", "overall completion rate"), icon: <BarChart3 className="h-5 w-5 text-white" />, color: "bg-emerald-500" },
+          { label: bi("جلسات هذا الشهر", "Sessions this month"), value: stats.sessionsThisMonth, sub: bi(`بإجمالي ${stats.totalHours} ساعة`, `${stats.totalHours} total hours`), icon: <Clock className="h-5 w-5 text-white" />, color: "bg-amber-500" },
+          { label: bi("إجمالي الأرباح", "Total earnings"), value: earningsLoading ? "—" : `${(earnings?.remaining ?? 0).toFixed(2)} ${bi("د.أ", "JOD")}`, sub: bi("الرصيد المتاح", "Available balance"), icon: <DollarSign className="h-5 w-5 text-white" />, color: "bg-purple-500" },
         ].map((stat, i) => (
           <Card key={i} className="border-0 shadow-sm card-hover">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -144,7 +146,7 @@ export default function MentorAnalyticsPage() {
 
       {!loading && beneficiaries.length > 0 && (
         <Card className="border-0 shadow-sm">
-          <CardHeader><CardTitle className="flex items-center gap-2"><TrendingUp className="h-5 w-5" />تقدم المستفيدين</CardTitle><CardDescription>نسبة إنجاز كل مستفيد.</CardDescription></CardHeader>
+          <CardHeader><CardTitle className="flex items-center gap-2"><TrendingUp className="h-5 w-5" />{bi("تقدم المستفيدين", "Beneficiary progress")}</CardTitle><CardDescription>{bi("نسبة إنجاز كل مستفيد.", "Each beneficiary's completion rate.")}</CardDescription></CardHeader>
           <CardContent className="space-y-4">
             {beneficiaries.map(b => (
               <div key={b.id}>
@@ -158,11 +160,11 @@ export default function MentorAnalyticsPage() {
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="border-0 shadow-sm">
-          <CardHeader><CardTitle>تقدم المستفيدين</CardTitle><CardDescription>التقدم الحالي للمستفيدين الذين تشرف عليهم.</CardDescription></CardHeader>
+          <CardHeader><CardTitle>{bi("تقدم المستفيدين", "Beneficiary progress")}</CardTitle><CardDescription>{bi("التقدم الحالي للمستفيدين الذين تشرف عليهم.", "The current progress of the beneficiaries you supervise.")}</CardDescription></CardHeader>
           <CardContent>
             <ChartContainer config={progressConfig} className="h-[250px] w-full relative">
               {loading ? <Skeleton className="h-full w-full" /> : progressData.length === 0 ? (
-                <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">لا توجد بيانات</div>
+                <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">{bi("لا توجد بيانات", "No data")}</div>
               ) : (
                 <BarChart accessibilityLayer data={progressData} margin={{ left: 10, right: 20 }}>
                   <CartesianGrid vertical={false} />
@@ -176,7 +178,7 @@ export default function MentorAnalyticsPage() {
           </CardContent>
         </Card>
         <Card className="border-0 shadow-sm">
-          <CardHeader><CardTitle>تكرار الجلسات الشهرية</CardTitle><CardDescription>عدد الجلسات المنجزة على مدار 6 أشهر.</CardDescription></CardHeader>
+          <CardHeader><CardTitle>{bi("تكرار الجلسات الشهرية", "Monthly session frequency")}</CardTitle><CardDescription>{bi("عدد الجلسات المنجزة على مدار 6 أشهر.", "Number of completed sessions over the last 6 months.")}</CardDescription></CardHeader>
           <CardContent>
             <ChartContainer config={sessionFrequencyConfig} className="h-[250px] w-full relative">
               {loading ? <Skeleton className="h-full w-full" /> : (

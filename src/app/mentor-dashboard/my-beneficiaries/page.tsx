@@ -33,6 +33,7 @@ import { useUser } from "@/firebase/auth/use-user";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { useLanguage } from "@/components/language-provider";
 
 type Beneficiary = {
   id: string;
@@ -47,6 +48,8 @@ type Beneficiary = {
 export default function MyBeneficiariesPage() {
   const { toast } = useToast();
   const { user } = useUser();
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const [beneficiaries, setBeneficiaries] = useState<Beneficiary[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [beneficiaryToView, setBeneficiaryToView] = useState<Beneficiary | null>(null);
@@ -71,27 +74,27 @@ export default function MyBeneficiariesPage() {
   useEffect(() => { fetchBeneficiaries(); }, [fetchBeneficiaries]);
 
   const handleExport = () => {
-    toast({ title: "جاري تصدير قائمة المستفيدين...", description: "سيتم تنزيل ملف CSV قريبًا." });
+    toast({ title: bi("جاري تصدير قائمة المستفيدين...", "Exporting beneficiaries list..."), description: bi("سيتم تنزيل ملف CSV قريبًا.", "A CSV file will download shortly.") });
   };
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={dir}>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">مستفيدوني</h1>
-          <p className="text-sm text-muted-foreground">قائمة المستفيدين الذين تشرف على إرشادهم.</p>
+          <h1 className="text-2xl font-bold tracking-tight">{bi("مستفيدوني", "My beneficiaries")}</h1>
+          <p className="text-sm text-muted-foreground">{bi("قائمة المستفيدين الذين تشرف على إرشادهم.", "The list of beneficiaries you mentor.")}</p>
         </div>
         <Button variant="outline" size="sm" onClick={handleExport}>
           <Download className="ml-2 h-4 w-4" />
-          تصدير
+          {bi("تصدير", "Export")}
         </Button>
       </div>
       <Card className="border-0 shadow-sm">
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <CardTitle className="text-base">قائمة المستفيدين</CardTitle>
-              <CardDescription>{!loading && beneficiaries ? `${beneficiaries.length} مستفيد` : 'جاري التحميل...'}</CardDescription>
+              <CardTitle className="text-base">{bi("قائمة المستفيدين", "Beneficiaries list")}</CardTitle>
+              <CardDescription>{!loading && beneficiaries ? bi(`${beneficiaries.length} مستفيد`, `${beneficiaries.length} beneficiaries`) : bi('جاري التحميل...', 'Loading...')}</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -100,11 +103,11 @@ export default function MyBeneficiariesPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>الاسم</TableHead>
-                <TableHead className="hidden md:table-cell">البريد الإلكتروني</TableHead>
-                <TableHead>التقدم</TableHead>
-                <TableHead className="hidden md:table-cell">آخر جلسة</TableHead>
-                <TableHead><span className="sr-only">الإجراءات</span></TableHead>
+                <TableHead>{bi("الاسم", "Name")}</TableHead>
+                <TableHead className="hidden md:table-cell">{bi("البريد الإلكتروني", "Email")}</TableHead>
+                <TableHead>{bi("التقدم", "Progress")}</TableHead>
+                <TableHead className="hidden md:table-cell">{bi("آخر جلسة", "Last session")}</TableHead>
+                <TableHead><span className="sr-only">{bi("الإجراءات", "Actions")}</span></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -118,7 +121,7 @@ export default function MyBeneficiariesPage() {
                 </TableRow>
               ))}
               {!loading && beneficiaries?.map((b) => {
-                const userName = b.name || 'مستفيد بلا اسم';
+                const userName = b.name || bi('مستفيد بلا اسم', 'Unnamed beneficiary');
                 return (
                   <TableRow key={b.id}>
                     <TableCell className="font-medium">
@@ -137,7 +140,7 @@ export default function MyBeneficiariesPage() {
                         <span className="text-xs text-muted-foreground">{b.progress || 0}%</span>
                       </div>
                     </TableCell>
-                    <TableCell className="hidden md:table-cell">لم تحدد</TableCell>
+                    <TableCell className="hidden md:table-cell">{bi("لم تحدد", "Not set")}</TableCell>
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -146,21 +149,21 @@ export default function MyBeneficiariesPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
+                          <DropdownMenuLabel>{bi("الإجراءات", "Actions")}</DropdownMenuLabel>
                           <DropdownMenuItem onSelect={() => setBeneficiaryToView(b)}>
                             <Eye className="ml-2 h-4 w-4" />
-                            عرض الملف الشخصي
+                            {bi("عرض الملف الشخصي", "View profile")}
                           </DropdownMenuItem>
                           <DropdownMenuItem asChild>
                             <Link href="/mentor-dashboard/sessions">
                               <Calendar className="ml-2 h-4 w-4" />
-                              جدولة جلسة جديدة
+                              {bi("جدولة جلسة جديدة", "Schedule a new session")}
                             </Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem asChild>
                             <Link href="/mentor-dashboard/messages">
                               <MessageSquare className="ml-2 h-4 w-4" />
-                              إرسال رسالة
+                              {bi("إرسال رسالة", "Send a message")}
                             </Link>
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -171,7 +174,7 @@ export default function MyBeneficiariesPage() {
               })}
               {!loading && (!beneficiaries || beneficiaries.length === 0) && (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center h-24">لا يوجد مستفيدون معينون لك.</TableCell>
+                  <TableCell colSpan={5} className="text-center h-24">{bi("لا يوجد مستفيدون معينون لك.", "No beneficiaries have been assigned to you.")}</TableCell>
                 </TableRow>
               )}
             </TableBody>
@@ -181,10 +184,10 @@ export default function MyBeneficiariesPage() {
       </Card>
 
       <Dialog open={!!beneficiaryToView} onOpenChange={(open) => !open && setBeneficiaryToView(null)}>
-        <DialogContent dir="rtl" className="sm:max-w-[90vw] md:max-w-[500px]">
+        <DialogContent dir={dir} className="sm:max-w-[90vw] md:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>الملف الشخصي للمستفيد</DialogTitle>
-            <DialogDescription>تفاصيل المستفيد {beneficiaryToView?.name || 'بلا اسم'}</DialogDescription>
+            <DialogTitle>{bi("الملف الشخصي للمستفيد", "Beneficiary profile")}</DialogTitle>
+            <DialogDescription>{bi("تفاصيل المستفيد", "Details for beneficiary")} {beneficiaryToView?.name || bi('بلا اسم', 'No name')}</DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-4">
             <Avatar className="h-24 w-24 mx-auto">
@@ -192,14 +195,14 @@ export default function MyBeneficiariesPage() {
               <AvatarFallback>{beneficiaryToView?.name?.charAt(0) || 'U'}</AvatarFallback>
             </Avatar>
             <div className="text-center">
-              <h3 className="text-xl font-semibold">{beneficiaryToView?.name || 'مستفيد بلا اسم'}</h3>
-              <p className="text-muted-foreground">{beneficiaryToView?.email || 'لا يوجد بريد إلكتروني'}</p>
+              <h3 className="text-xl font-semibold">{beneficiaryToView?.name || bi('مستفيد بلا اسم', 'Unnamed beneficiary')}</h3>
+              <p className="text-muted-foreground">{beneficiaryToView?.email || bi('لا يوجد بريد إلكتروني', 'No email')}</p>
             </div>
             <div className="text-right space-y-2 border-t pt-4">
-              <p><strong>الفئة:</strong> {beneficiaryToView?.category || 'غير محدد'}</p>
-              <p><strong>الحالة:</strong> <Badge variant={beneficiaryToView?.status === "نشط" ? "default" : "secondary"}>{beneficiaryToView?.status || 'غير محدد'}</Badge></p>
+              <p><strong>{bi("الفئة:", "Category:")}</strong> {beneficiaryToView?.category || bi('غير محدد', 'Unspecified')}</p>
+              <p><strong>{bi("الحالة:", "Status:")}</strong> <Badge variant={beneficiaryToView?.status === "نشط" ? "default" : "secondary"}>{beneficiaryToView?.status || bi('غير محدد', 'Unspecified')}</Badge></p>
               <div className="space-y-1">
-                <p><strong>التقدم العام:</strong></p>
+                <p><strong>{bi("التقدم العام:", "Overall progress:")}</strong></p>
                 <div className="flex items-center gap-2">
                   <Progress value={beneficiaryToView?.progress || 0} className="h-2" />
                   <span className="text-xs font-medium text-muted-foreground">{beneficiaryToView?.progress || 0}%</span>
