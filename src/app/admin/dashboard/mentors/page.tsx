@@ -19,6 +19,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { useLanguage } from "@/components/language-provider";
 
 interface Person {
   id: string; name: string; email: string; role: string;
@@ -27,9 +28,13 @@ interface Person {
 
 const statusBadge: Record<string, string> = { active: "text-emerald-400", suspended: "text-red-400", pending: "text-yellow-400" };
 const statusLabel: Record<string, string> = { active: "نشط", suspended: "موقوف", pending: "معلق" };
+const statusLabelEn: Record<string, string> = { active: "Active", suspended: "Suspended", pending: "Pending" };
 
 function PeopleTable({ data, onEdit, onDelete }: { data: Person[]; onEdit: (p: Person) => void; onDelete: (p: Person) => void }) {
   const [search, setSearch] = useState("");
+  const { lang } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
+  const tStatus = lang === 'en' ? statusLabelEn : statusLabel;
   const filtered = data.filter(p =>
     p.name?.toLowerCase().includes(search.toLowerCase()) ||
     p.email?.toLowerCase().includes(search.toLowerCase())
@@ -39,22 +44,22 @@ function PeopleTable({ data, onEdit, onDelete }: { data: Person[]; onEdit: (p: P
     <div className="space-y-4">
       <div className="relative">
         <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="بحث..." className="bg-muted border-border text-foreground pr-10" />
+        <Input value={search} onChange={e => setSearch(e.target.value)} placeholder={bi('بحث...', 'Search...')} className="bg-muted border-border text-foreground pr-10" />
       </div>
       <Card className="border-0 shadow-sm">
         <CardContent className="p-0">
           {filtered.length === 0 ? (
-            <p className="text-muted-foreground text-center py-10">لا يوجد بيانات</p>
+            <p className="text-muted-foreground text-center py-10">{bi('لا يوجد بيانات', 'No data')}</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-border">
-                    <th className="text-right text-muted-foreground text-xs px-4 py-3">الاسم</th>
-                    <th className="text-right text-muted-foreground text-xs px-4 py-3 hidden md:table-cell">البريد</th>
-                    <th className="text-right text-muted-foreground text-xs px-4 py-3 hidden sm:table-cell">التخصصات</th>
-                    <th className="text-right text-muted-foreground text-xs px-4 py-3">الحالة</th>
-                    <th className="text-right text-muted-foreground text-xs px-4 py-3">إجراءات</th>
+                    <th className="text-right text-muted-foreground text-xs px-4 py-3">{bi('الاسم', 'Name')}</th>
+                    <th className="text-right text-muted-foreground text-xs px-4 py-3 hidden md:table-cell">{bi('البريد', 'Email')}</th>
+                    <th className="text-right text-muted-foreground text-xs px-4 py-3 hidden sm:table-cell">{bi('التخصصات', 'Specializations')}</th>
+                    <th className="text-right text-muted-foreground text-xs px-4 py-3">{bi('الحالة', 'Status')}</th>
+                    <th className="text-right text-muted-foreground text-xs px-4 py-3">{bi('إجراءات', 'Actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -77,7 +82,7 @@ function PeopleTable({ data, onEdit, onDelete }: { data: Person[]; onEdit: (p: P
                       </td>
                       <td className="px-4 py-3">
                         <span className={`text-xs font-medium ${statusBadge[p.status || 'active']}`}>
-                          ● {statusLabel[p.status || 'active']}
+                          ● {tStatus[p.status || 'active']}
                         </span>
                       </td>
                       <td className="px-4 py-3">
@@ -118,6 +123,8 @@ export default function MentorsPage() {
   const [mentors, setMentors] = useState<Person[]>([]);
   const [coaches, setCoaches] = useState<Person[]>([]);
   const [loading, setLoading] = useState(true);
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const [editPerson, setEditPerson] = useState<Person | null>(null);
   const [deletePerson, setDeletePerson] = useState<Person | null>(null);
   const [status, setStatus] = useState("active");
@@ -221,28 +228,28 @@ export default function MentorsPage() {
   );
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={dir}>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">المرشدون والمدربون</h1>
-          <p className="text-muted-foreground text-sm">إدارة جميع المرشدين والمدربين في المنصة</p>
+          <h1 className="text-2xl font-bold text-foreground">{bi('المرشدون والمدربون', 'Mentors & Coaches')}</h1>
+          <p className="text-muted-foreground text-sm">{bi('إدارة جميع المرشدين والمدربين في المنصة', 'Manage all mentors and coaches on the platform')}</p>
         </div>
         <Button onClick={() => setShowAdd(true)} className="bg-purple-600 hover:bg-purple-700 text-white gap-2">
           <Plus className="h-4 w-4" />
-          إضافة
+          {bi('إضافة', 'Add')}
         </Button>
       </div>
 
       {loading ? (
-        <div className="text-muted-foreground text-center py-12">جاري التحميل...</div>
+        <div className="text-muted-foreground text-center py-12">{bi('جاري التحميل...', 'Loading...')}</div>
       ) : (
         <Tabs defaultValue="mentors">
           <TabsList className="bg-muted rounded-xl p-1 gap-1">
             <TabsTrigger value="mentors" className="rounded-lg border-0 data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-sm text-muted-foreground hover:text-foreground">
-              المرشدون ({mentors.length})
+              {bi('المرشدون', 'Mentors')} ({mentors.length})
             </TabsTrigger>
             <TabsTrigger value="coaches" className="rounded-lg border-0 data-[state=active]:bg-orange-600 data-[state=active]:text-white data-[state=active]:shadow-sm text-muted-foreground hover:text-foreground">
-              المدربون ({coaches.length})
+              {bi('المدربون', 'Coaches')} ({coaches.length})
             </TabsTrigger>
           </TabsList>
           <TabsContent value="mentors" className="mt-4">
@@ -256,21 +263,21 @@ export default function MentorsPage() {
 
       {/* Add Dialog */}
       <Dialog open={showAdd} onOpenChange={o => { if (!o) { setShowAdd(false); setForm(emptyForm); setAvatarPreview(null); } }}>
-        <DialogContent dir="rtl" className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent dir={dir} className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              إضافة {addRole === 'mentor' ? 'مرشد' : 'مدرب'} جديد
+              {bi(`إضافة ${addRole === 'mentor' ? 'مرشد' : 'مدرب'} جديد`, `Add New ${addRole === 'mentor' ? 'Mentor' : 'Coach'}`)}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             {/* Role picker */}
             <div className="space-y-1.5">
-              <Label className="text-foreground/90 text-xs">النوع</Label>
+              <Label className="text-foreground/90 text-xs">{bi('النوع', 'Type')}</Label>
               <div className="flex gap-2">
                 {(['mentor', 'coach'] as const).map(r => (
                   <button key={r} onClick={() => setAddRole(r)}
                     className={`px-4 py-1.5 rounded-full text-xs font-medium border transition-colors ${addRole === r ? (r === 'mentor' ? 'bg-purple-600 border-purple-500 text-white' : 'bg-orange-600 border-orange-500 text-white') : 'border-border text-muted-foreground hover:text-foreground'}`}>
-                    {r === 'mentor' ? 'مرشد' : 'مدرب'}
+                    {r === 'mentor' ? bi('مرشد', 'Mentor') : bi('مدرب', 'Coach')}
                   </button>
                 ))}
               </div>
@@ -278,13 +285,13 @@ export default function MentorsPage() {
 
             {/* Avatar upload */}
             <div className="space-y-2">
-              <Label className="text-foreground/90 text-xs">الصورة الشخصية</Label>
+              <Label className="text-foreground/90 text-xs">{bi('الصورة الشخصية', 'Profile picture')}</Label>
               <div className="flex items-center gap-3">
                 <div className="h-16 w-16 rounded-full border border-border overflow-hidden bg-muted flex-shrink-0">
                   {(avatarPreview || form.avatarUrl) ? (
                     <img src={avatarPreview || form.avatarUrl} alt="" className="h-full w-full object-cover" />
                   ) : (
-                    <div className="h-full w-full flex items-center justify-center text-muted-foreground text-xs">صورة</div>
+                    <div className="h-full w-full flex items-center justify-center text-muted-foreground text-xs">{bi('صورة', 'Image')}</div>
                   )}
                 </div>
                 <div className="flex flex-col gap-1.5 flex-1">
@@ -294,33 +301,33 @@ export default function MentorsPage() {
                     disabled={uploading}
                     className="border-border text-foreground/90 hover:text-foreground gap-1.5 w-fit">
                     <Upload className="h-3.5 w-3.5" />
-                    {uploading ? 'جاري الرفع...' : 'رفع صورة'}
+                    {uploading ? bi('جاري الرفع...', 'Uploading...') : bi('رفع صورة', 'Upload image')}
                   </Button>
-                  <span className="text-xs text-muted-foreground">أو</span>
+                  <span className="text-xs text-muted-foreground">{bi('أو', 'or')}</span>
                   <Input
                     value={form.avatarUrl}
                     onChange={e => { setForm(f => ({ ...f, avatarUrl: e.target.value })); setAvatarPreview(null); }}
-                    placeholder="رابط الصورة https://..."
+                    placeholder={bi('رابط الصورة https://...', 'Image URL https://...')}
                     className="bg-muted border-border text-foreground text-xs h-8"
                   />
                 </div>
               </div>
             </div>
 
-            {field('name', 'الاسم *', 'input', 'أحمد العلي')}
-            {field('email', 'البريد الإلكتروني', 'input', 'ahmed@example.com')}
-            {field('bio', 'نبذة تعريفية', 'textarea', 'خبير في ...')}
-            {field('specializations', 'التخصصات (افصل بـ ،)', 'input', 'القيادة، ريادة الأعمال، التسويق')}
-            {field('sessionPrice', 'سعر الجلسة (د.أ)', 'input', '200')}
-            {field('yearsOfExperience', 'سنوات الخبرة', 'input', '10')}
-            {field('whatsapp', 'واتساب (مع رمز الدولة)', 'input', '966501234567')}
-            {field('linkedin', 'رابط LinkedIn', 'input', 'https://linkedin.com/in/...')}
-            {field('instagram', 'رابط Instagram', 'input', 'https://instagram.com/...')}
+            {field('name', bi('الاسم *', 'Name *'), 'input', bi('أحمد العلي', 'John Smith'))}
+            {field('email', bi('البريد الإلكتروني', 'Email'), 'input', 'ahmed@example.com')}
+            {field('bio', bi('نبذة تعريفية', 'Bio'), 'textarea', bi('خبير في ...', 'Expert in ...'))}
+            {field('specializations', bi('التخصصات (افصل بـ ،)', 'Specializations (comma-separated)'), 'input', bi('القيادة، ريادة الأعمال، التسويق', 'Leadership, Entrepreneurship, Marketing'))}
+            {field('sessionPrice', bi('سعر الجلسة (د.أ)', 'Session price (JOD)'), 'input', '200')}
+            {field('yearsOfExperience', bi('سنوات الخبرة', 'Years of experience'), 'input', '10')}
+            {field('whatsapp', bi('واتساب (مع رمز الدولة)', 'WhatsApp (with country code)'), 'input', '966501234567')}
+            {field('linkedin', bi('رابط LinkedIn', 'LinkedIn URL'), 'input', 'https://linkedin.com/in/...')}
+            {field('instagram', bi('رابط Instagram', 'Instagram URL'), 'input', 'https://instagram.com/...')}
           </div>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => { setShowAdd(false); setForm(emptyForm); setAvatarPreview(null); }}>إلغاء</Button>
+            <Button variant="outline" onClick={() => { setShowAdd(false); setForm(emptyForm); setAvatarPreview(null); }}>{bi('إلغاء', 'Cancel')}</Button>
             <Button onClick={handleAdd} disabled={saving || !form.name.trim()} className="bg-purple-600 hover:bg-purple-700">
-              {saving ? 'جاري الحفظ...' : 'إضافة'}
+              {saving ? bi('جاري الحفظ...', 'Saving...') : bi('إضافة', 'Add')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -328,36 +335,36 @@ export default function MentorsPage() {
 
       {/* Edit Status */}
       <Dialog open={!!editPerson} onOpenChange={o => !o && setEditPerson(null)}>
-        <DialogContent dir="rtl" className="sm:max-w-sm">
-          <DialogHeader><DialogTitle>تعديل: {editPerson?.name}</DialogTitle></DialogHeader>
+        <DialogContent dir={dir} className="sm:max-w-sm">
+          <DialogHeader><DialogTitle>{bi('تعديل:', 'Edit:')} {editPerson?.name}</DialogTitle></DialogHeader>
           <div className="space-y-2">
-            <Label>الحالة</Label>
+            <Label>{bi('الحالة', 'Status')}</Label>
             <Select value={status} onValueChange={setStatus}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="active">نشط</SelectItem>
-                <SelectItem value="suspended">موقوف</SelectItem>
-                <SelectItem value="pending">معلق</SelectItem>
+                <SelectItem value="active">{bi('نشط', 'Active')}</SelectItem>
+                <SelectItem value="suspended">{bi('موقوف', 'Suspended')}</SelectItem>
+                <SelectItem value="pending">{bi('معلق', 'Pending')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditPerson(null)}>إلغاء</Button>
-            <Button onClick={handleEdit} disabled={saving}>{saving ? "..." : "حفظ"}</Button>
+            <Button variant="outline" onClick={() => setEditPerson(null)}>{bi('إلغاء', 'Cancel')}</Button>
+            <Button onClick={handleEdit} disabled={saving}>{saving ? "..." : bi("حفظ", "Save")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Delete */}
       <AlertDialog open={!!deletePerson} onOpenChange={o => !o && setDeletePerson(null)}>
-        <AlertDialogContent dir="rtl">
+        <AlertDialogContent dir={dir}>
           <AlertDialogHeader>
-            <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
-            <AlertDialogDescription>هل أنت متأكد من حذف "{deletePerson?.name}"؟</AlertDialogDescription>
+            <AlertDialogTitle>{bi('تأكيد الحذف', 'Confirm Deletion')}</AlertDialogTitle>
+            <AlertDialogDescription>{bi(`هل أنت متأكد من حذف "${deletePerson?.name}"؟`, `Are you sure you want to delete "${deletePerson?.name}"?`)}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>إلغاء</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">حذف</AlertDialogAction>
+            <AlertDialogCancel>{bi('إلغاء', 'Cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">{bi('حذف', 'Delete')}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

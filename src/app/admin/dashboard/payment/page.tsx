@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { useLanguage } from "@/components/language-provider";
 
 interface GwConfig {
   enabled: boolean;
@@ -45,65 +46,72 @@ const defaultConfig: PaymentConfig = {
 
 type GwKey = 'moyasar' | 'stripe' | 'paypal' | 'paytabs' | 'hyperpay' | 'tamara' | 'tabby';
 
-const GATEWAYS: { key: GwKey; name: string; desc: string; logo: string; disabled?: boolean; fields: { key: string; label: string; hint?: string; type?: string; options?: string[] }[] }[] = [
+const GATEWAYS: { key: GwKey; name: string; desc: string; descEn: string; logo: string; disabled?: boolean; fields: { key: string; label: string; labelEn: string; hint?: string; hintEn?: string; type?: string; options?: string[] }[] }[] = [
   {
     key: 'moyasar', name: 'Moyasar', logo: '🏦',
     desc: 'بوابة الدفع السعودية — تدعم Mada، Visa، Mastercard، STC Pay، Apple Pay',
+    descEn: 'The Saudi payment gateway — supports Mada, Visa, Mastercard, STC Pay, Apple Pay',
     fields: [
-      { key: 'publishableKey', label: 'المفتاح العلني (Publishable Key)', hint: 'يبدأ بـ pk_live_ أو pk_test_' },
-      { key: 'secretKey', label: 'المفتاح السري (Secret Key)', hint: 'يبدأ بـ sk_live_ أو sk_test_ — لا تشاركه', type: 'password' },
+      { key: 'publishableKey', label: 'المفتاح العلني (Publishable Key)', labelEn: 'Publishable Key', hint: 'يبدأ بـ pk_live_ أو pk_test_', hintEn: 'Starts with pk_live_ or pk_test_' },
+      { key: 'secretKey', label: 'المفتاح السري (Secret Key)', labelEn: 'Secret Key', hint: 'يبدأ بـ sk_live_ أو sk_test_ — لا تشاركه', hintEn: "Starts with sk_live_ or sk_test_ — don't share it", type: 'password' },
     ],
   },
   {
     key: 'stripe', name: 'Stripe', logo: '💳',
     desc: 'أشهر بوابة دفع دولية — تدعم جميع البطاقات البنكية والمحافظ الرقمية',
+    descEn: 'The most popular international payment gateway — supports all bank cards and digital wallets',
     fields: [
-      { key: 'publishableKey', label: 'Publishable Key', hint: 'يبدأ بـ pk_live_ أو pk_test_' },
-      { key: 'secretKey', label: 'Secret Key', hint: 'يبدأ بـ sk_live_ أو sk_test_', type: 'password' },
+      { key: 'publishableKey', label: 'Publishable Key', labelEn: 'Publishable Key', hint: 'يبدأ بـ pk_live_ أو pk_test_', hintEn: 'Starts with pk_live_ or pk_test_' },
+      { key: 'secretKey', label: 'Secret Key', labelEn: 'Secret Key', hint: 'يبدأ بـ sk_live_ أو sk_test_', hintEn: 'Starts with sk_live_ or sk_test_', type: 'password' },
     ],
   },
   {
     key: 'paypal', name: 'PayPal', logo: '🅿️',
     desc: 'بوابة PayPal — تدعم الدفع ببطاقة أو رصيد PayPal',
+    descEn: 'PayPal gateway — supports payment by card or PayPal balance',
     fields: [
-      { key: 'clientId', label: 'Client ID' },
-      { key: 'clientSecret', label: 'Client Secret', type: 'password' },
-      { key: 'mode', label: 'البيئة', options: ['sandbox', 'live'] },
+      { key: 'clientId', label: 'Client ID', labelEn: 'Client ID' },
+      { key: 'clientSecret', label: 'Client Secret', labelEn: 'Client Secret', type: 'password' },
+      { key: 'mode', label: 'البيئة', labelEn: 'Environment', options: ['sandbox', 'live'] },
     ],
   },
   {
     key: 'paytabs', name: 'PayTabs', logo: '💰',
     desc: 'بوابة PayTabs للسوق السعودي والخليجي — تدعم Mada، Visa، Mastercard',
+    descEn: 'PayTabs gateway for the Saudi and Gulf market — supports Mada, Visa, Mastercard',
     fields: [
-      { key: 'profileId', label: 'Profile ID' },
-      { key: 'serverKey', label: 'Server Key', type: 'password' },
-      { key: 'clientKey', label: 'Client Key', type: 'password' },
-      { key: 'region', label: 'المنطقة (Region)', hint: 'JOR للأردن | SAU للسعودية | ARE للإمارات | EGY لمصر | OMN لعُمان | IRQ للعراق' },
+      { key: 'profileId', label: 'Profile ID', labelEn: 'Profile ID' },
+      { key: 'serverKey', label: 'Server Key', labelEn: 'Server Key', type: 'password' },
+      { key: 'clientKey', label: 'Client Key', labelEn: 'Client Key', type: 'password' },
+      { key: 'region', label: 'المنطقة (Region)', labelEn: 'Region', hint: 'JOR للأردن | SAU للسعودية | ARE للإمارات | EGY لمصر | OMN لعُمان | IRQ للعراق', hintEn: 'JOR for Jordan | SAU for Saudi Arabia | ARE for UAE | EGY for Egypt | OMN for Oman | IRQ for Iraq' },
     ],
   },
   {
     key: 'hyperpay', name: 'HyperPay', logo: '⚡', disabled: true,
     desc: 'HyperPay — غير مدعومة بعد على المنصة (قيد التطوير)، لا يمكن تفعيلها حالياً',
+    descEn: 'HyperPay — not yet supported on the platform (in development), cannot be enabled currently',
     fields: [
-      { key: 'accessToken', label: 'Access Token', type: 'password' },
-      { key: 'entityIdVisa', label: 'Entity ID (Visa/Mastercard)' },
-      { key: 'entityIdMada', label: 'Entity ID (Mada)' },
-      { key: 'mode', label: 'البيئة', options: ['test', 'live'] },
+      { key: 'accessToken', label: 'Access Token', labelEn: 'Access Token', type: 'password' },
+      { key: 'entityIdVisa', label: 'Entity ID (Visa/Mastercard)', labelEn: 'Entity ID (Visa/Mastercard)' },
+      { key: 'entityIdMada', label: 'Entity ID (Mada)', labelEn: 'Entity ID (Mada)' },
+      { key: 'mode', label: 'البيئة', labelEn: 'Environment', options: ['test', 'live'] },
     ],
   },
   {
     key: 'tamara', name: 'تمارا', logo: '🛍️',
     desc: 'تمارا — اشتري الآن وادفع لاحقاً (BNPL) للسوق السعودي والخليجي',
+    descEn: 'Tamara — buy now, pay later (BNPL) for the Saudi and Gulf market',
     fields: [
-      { key: 'apiKey', label: 'API Token', type: 'password' },
+      { key: 'apiKey', label: 'API Token', labelEn: 'API Token', type: 'password' },
     ],
   },
   {
     key: 'tabby', name: 'تابي', logo: '📦',
     desc: 'تابي — قسّم مدفوعاتك على 4 أقساط بدون فوائد',
+    descEn: 'Tabby — split your payments into 4 interest-free installments',
     fields: [
-      { key: 'apiKey', label: 'Secret API Key', type: 'password' },
-      { key: 'publicKey', label: 'Public Key' },
+      { key: 'apiKey', label: 'Secret API Key', labelEn: 'Secret API Key', type: 'password' },
+      { key: 'publicKey', label: 'Public Key', labelEn: 'Public Key' },
     ],
   },
 ];
@@ -133,6 +141,8 @@ function GatewayCard({ gwDef, value, onChange }: {
   onChange: (v: GwConfig) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const { lang } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const set = (k: string, v: any) => onChange({ ...value, [k]: v });
 
   return (
@@ -142,10 +152,10 @@ function GatewayCard({ gwDef, value, onChange }: {
           <span className="text-2xl">{gwDef.logo}</span>
           <div className="flex-1 min-w-0">
             <p className="text-foreground font-semibold text-sm">{gwDef.name}</p>
-            <p className="text-muted-foreground text-xs truncate">{gwDef.desc}</p>
+            <p className="text-muted-foreground text-xs truncate">{bi(gwDef.desc, gwDef.descEn)}</p>
           </div>
           <Badge className={gwDef.disabled ? 'bg-muted/60 text-muted-foreground border-0' : value.enabled ? 'bg-emerald-500/20 text-emerald-400 border-0' : 'bg-muted/60 text-muted-foreground border-0'}>
-            {gwDef.disabled ? 'قيد التطوير' : value.enabled ? 'مفعّل' : 'معطّل'}
+            {gwDef.disabled ? bi('قيد التطوير', 'In development') : value.enabled ? bi('مفعّل', 'Enabled') : bi('معطّل', 'Disabled')}
           </Badge>
           <Switch checked={!gwDef.disabled && value.enabled} disabled={gwDef.disabled} onCheckedChange={v => set('enabled', v)} onClick={e => e.stopPropagation()} />
           {open ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
@@ -155,19 +165,19 @@ function GatewayCard({ gwDef, value, onChange }: {
           <div className="px-4 pb-4 border-t border-border pt-4">
             <div className="flex items-center gap-2 p-3 bg-muted/40 border border-border rounded-xl text-muted-foreground text-xs">
               <AlertCircle className="h-4 w-4 flex-shrink-0" />
-              <span>هذه البوابة قيد التطوير على المنصة ولا يمكن تفعيلها بعد — اختر بوابة أخرى.</span>
+              <span>{bi('هذه البوابة قيد التطوير على المنصة ولا يمكن تفعيلها بعد — اختر بوابة أخرى.', "This gateway is still in development on the platform and can't be enabled yet — choose another gateway.")}</span>
             </div>
           </div>
         )}
         {open && !gwDef.disabled && (
           <div className="px-4 pb-4 border-t border-border pt-4 space-y-4">
             <div className="space-y-2">
-              <Label>التسمية في نموذج الطلب</Label>
+              <Label>{bi('التسمية في نموذج الطلب', 'Label in the order form')}</Label>
               <Input value={value.label || ''} onChange={e => set('label', e.target.value)} placeholder={gwDef.name} />
             </div>
             {gwDef.fields.map(f => (
               <div key={f.key} className="space-y-2">
-                <Label>{f.label}</Label>
+                <Label>{bi(f.label, f.labelEn)}</Label>
                 {f.options ? (
                   <select
                     value={value[f.key] || f.options[0]}
@@ -182,19 +192,19 @@ function GatewayCard({ gwDef, value, onChange }: {
                 ) : (
                   <Input value={value[f.key] || ''} onChange={e => set(f.key, e.target.value)} dir="ltr" className="font-mono text-sm" />
                 )}
-                {f.hint && <p className="text-muted-foreground text-xs">{f.hint}</p>}
+                {f.hint && <p className="text-muted-foreground text-xs">{bi(f.hint, f.hintEn || f.hint)}</p>}
               </div>
             ))}
             {!value.enabled && (
               <div className="flex items-center gap-2 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-300 text-xs">
                 <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                <span>فعّل هذه البوابة لإظهارها في نموذج الطلب</span>
+                <span>{bi('فعّل هذه البوابة لإظهارها في نموذج الطلب', 'Enable this gateway to show it in the order form')}</span>
               </div>
             )}
             {value.enabled && Object.keys(value).filter(k => k !== 'enabled' && k !== 'label' && value[k]).length > 0 && (
               <div className="flex items-center gap-2 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-300 text-xs">
                 <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
-                <span>البيانات محددة — البوابة جاهزة للعمل</span>
+                <span>{bi('البيانات محددة — البوابة جاهزة للعمل', 'Credentials set — the gateway is ready to work')}</span>
               </div>
             )}
           </div>
@@ -209,6 +219,8 @@ export default function PaymentConfigPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
 
   useEffect(() => {
     fetch('/api/admin-panel/payment-config').then(r => r.json()).then(d => {
@@ -245,23 +257,23 @@ export default function PaymentConfigPage() {
 
   const setGw = (key: GwKey, v: GwConfig) => setConfig(c => ({ ...c, [key]: v }));
 
-  if (loading) return <div className="text-muted-foreground text-center py-16">جاري التحميل...</div>;
+  if (loading) return <div className="text-muted-foreground text-center py-16">{bi('جاري التحميل...', 'Loading...')}</div>;
 
   const enabledCount = GATEWAYS.filter(g => config[g.key]?.enabled).length + (config.allowCOD ? 1 : 0);
 
   return (
-    <div className="space-y-6 max-w-2xl" dir="rtl">
+    <div className="space-y-6 max-w-2xl" dir={dir}>
       <div>
-        <h1 className="text-2xl font-bold text-foreground">بوابات الدفع</h1>
-        <p className="text-muted-foreground text-sm">تهيئة وسائل الدفع المتاحة لمتاجر المستفيدين</p>
+        <h1 className="text-2xl font-bold text-foreground">{bi('بوابات الدفع', 'Payment Gateways')}</h1>
+        <p className="text-muted-foreground text-sm">{bi('تهيئة وسائل الدفع المتاحة لمتاجر المستفيدين', 'Configure the payment methods available to beneficiary stores')}</p>
       </div>
 
       {/* Summary */}
       <div className="flex items-center gap-3 p-4 bg-muted/60 border border-border rounded-xl">
         <CreditCard className="h-5 w-5 text-primary" />
         <div className="flex-1">
-          <p className="text-foreground text-sm font-medium">وسائل الدفع المفعّلة</p>
-          <p className="text-muted-foreground text-xs">{enabledCount === 0 ? 'لم يتم تفعيل أي وسيلة دفع بعد' : `${enabledCount} وسيل${enabledCount === 1 ? 'ة' : 'ة'} مفعّلة`}</p>
+          <p className="text-foreground text-sm font-medium">{bi('وسائل الدفع المفعّلة', 'Enabled payment methods')}</p>
+          <p className="text-muted-foreground text-xs">{enabledCount === 0 ? bi('لم يتم تفعيل أي وسيلة دفع بعد', 'No payment method enabled yet') : bi(`${enabledCount} وسيلة مفعّلة`, `${enabledCount} method${enabledCount === 1 ? '' : 's'} enabled`)}</p>
         </div>
         <Badge className="bg-primary/20 text-primary border-0">{enabledCount}</Badge>
       </div>
@@ -272,13 +284,13 @@ export default function PaymentConfigPage() {
           <div className="flex items-center gap-3">
             <span className="text-2xl">📊</span>
             <div className="flex-1">
-              <p className="text-foreground font-semibold text-sm">عمولة المنصة من مبيعات المتاجر</p>
-              <p className="text-muted-foreground text-xs">نسبة مئوية تُحتسب على مبيعات متاجر التجار والمستفيدين لأغراض التقارير</p>
+              <p className="text-foreground font-semibold text-sm">{bi('عمولة المنصة من مبيعات المتاجر', 'Platform commission on store sales')}</p>
+              <p className="text-muted-foreground text-xs">{bi('نسبة مئوية تُحتسب على مبيعات متاجر التجار والمستفيدين لأغراض التقارير', 'A percentage calculated on merchant and beneficiary store sales for reporting purposes')}</p>
             </div>
           </div>
           <div className="mt-3 pt-3 border-t border-border">
             <div className="space-y-1.5 max-w-[160px]">
-              <Label>النسبة (%)</Label>
+              <Label>{bi('النسبة (%)', 'Rate (%)')}</Label>
               <div className="relative">
                 <Input
                   type="number" min={0} max={100} step={0.5}
@@ -299,19 +311,19 @@ export default function PaymentConfigPage() {
           <div className="flex items-center gap-3">
             <span className="text-2xl">💵</span>
             <div className="flex-1">
-              <p className="text-foreground font-semibold text-sm">الدفع عند الاستلام (COD)</p>
-              <p className="text-muted-foreground text-xs">الدفع نقداً عند استلام الطلب</p>
+              <p className="text-foreground font-semibold text-sm">{bi('الدفع عند الاستلام (COD)', 'Cash on Delivery (COD)')}</p>
+              <p className="text-muted-foreground text-xs">{bi('الدفع نقداً عند استلام الطلب', 'Pay in cash when the order is received')}</p>
             </div>
             <Badge className={config.allowCOD ? 'bg-emerald-500/20 text-emerald-400 border-0' : 'bg-muted/60 text-muted-foreground border-0'}>
-              {config.allowCOD ? 'مفعّل' : 'معطّل'}
+              {config.allowCOD ? bi('مفعّل', 'Enabled') : bi('معطّل', 'Disabled')}
             </Badge>
             <Switch checked={config.allowCOD} onCheckedChange={v => setConfig(c => ({ ...c, allowCOD: v }))} />
           </div>
           {config.allowCOD && (
             <div className="mt-3 pt-3 border-t border-border space-y-3">
               <div className="space-y-1.5">
-                <Label>نص الزر في نموذج الطلب</Label>
-                <Input value={config.codLabel} onChange={e => setConfig(c => ({ ...c, codLabel: e.target.value }))} placeholder="الدفع عند الاستلام" />
+                <Label>{bi('نص الزر في نموذج الطلب', 'Button text in the order form')}</Label>
+                <Input value={config.codLabel} onChange={e => setConfig(c => ({ ...c, codLabel: e.target.value }))} placeholder={bi('الدفع عند الاستلام', 'Cash on delivery')} />
               </div>
             </div>
           )}
@@ -324,8 +336,8 @@ export default function PaymentConfigPage() {
           <div className="flex items-center gap-3">
             <span className="text-2xl">💱</span>
             <div className="flex-1">
-              <p className="text-foreground font-semibold text-sm">العملة الافتراضية</p>
-              <p className="text-muted-foreground text-xs">تُستخدم في جميع بوابات الدفع</p>
+              <p className="text-foreground font-semibold text-sm">{bi('العملة الافتراضية', 'Default currency')}</p>
+              <p className="text-muted-foreground text-xs">{bi('تُستخدم في جميع بوابات الدفع', 'Used across all payment gateways')}</p>
             </div>
             <Input
               value={config.currency}
@@ -341,7 +353,7 @@ export default function PaymentConfigPage() {
 
       {/* Gateway cards */}
       <div>
-        <h2 className="text-foreground font-semibold mb-3">بوابات الدفع الإلكتروني</h2>
+        <h2 className="text-foreground font-semibold mb-3">{bi('بوابات الدفع الإلكتروني', 'Electronic Payment Gateways')}</h2>
         <div className="space-y-3">
           {GATEWAYS.map(gw => (
             <GatewayCard key={gw.key} gwDef={gw} value={config[gw.key]} onChange={v => setGw(gw.key, v)} />
@@ -351,7 +363,7 @@ export default function PaymentConfigPage() {
 
       <Button onClick={save} disabled={saving} className={`w-full gap-2 ${saved ? 'bg-emerald-600 hover:bg-emerald-700' : ''}`}>
         <Save className="h-4 w-4" />
-        {saving ? 'جاري الحفظ...' : saved ? 'تم الحفظ ✓' : 'حفظ الإعدادات'}
+        {saving ? bi('جاري الحفظ...', 'Saving...') : saved ? bi('تم الحفظ ✓', 'Saved ✓') : bi('حفظ الإعدادات', 'Save settings')}
       </Button>
     </div>
   );
