@@ -7,8 +7,11 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useUser } from '@/firebase/auth/use-user';
 import { useCart } from '@/components/cart-provider';
+import { useLanguage } from '@/components/language-provider';
 
 export default function PaymentCallbackPage() {
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const searchParams = useSearchParams();
   const { user: authUser, loading: authLoading } = useUser();
   const { clear: clearCart } = useCart();
@@ -31,7 +34,7 @@ export default function PaymentCallbackPage() {
     const orderId = searchParams.get('orderId');
     const gateway = searchParams.get('gateway') || 'moyasar';
 
-    if (!orderId) { setStatus('failed'); setMessage('رقم الطلب غير موجود'); return; }
+    if (!orderId) { setStatus('failed'); setMessage(bi('رقم الطلب غير موجود', 'Order number not found')); return; }
 
     let isPaid = false;
     if (gateway === 'moyasar') {
@@ -68,15 +71,15 @@ export default function PaymentCallbackPage() {
           }
           if (data.order?.type === 'subscription') {
             setIsSubscriptionOrder(true);
-            setMessage('تم الدفع بنجاح! تم تفعيل اشتراكك ويمكنك الآن استخدام لوحة التحكم.');
+            setMessage(bi('تم الدفع بنجاح! تم تفعيل اشتراكك ويمكنك الآن استخدام لوحة التحكم.', 'Payment successful! Your subscription is now active and you can use the dashboard.'));
           }
           if (data.order?.type === 'session') {
             setIsSessionOrder(true);
-            setMessage('تم الدفع بنجاح! سيتم التواصل معك قريباً لتأكيد موعد الجلسة.');
+            setMessage(bi('تم الدفع بنجاح! سيتم التواصل معك قريباً لتأكيد موعد الجلسة.', "Payment successful! We'll contact you soon to confirm the session time."));
           }
           if (data.order?.type === 'cart') {
             setIsCartOrder(true);
-            setMessage('تم الدفع بنجاح! تم تأكيد جميع طلباتك.');
+            setMessage(bi('تم الدفع بنجاح! تم تأكيد جميع طلباتك.', 'Payment successful! All your orders have been confirmed.'));
             clearCart();
             const purchasedCourseIds: string[] = data.order.courseIds || [];
             if (purchasedCourseIds.length && authUser) {
@@ -95,13 +98,13 @@ export default function PaymentCallbackPage() {
         })
         .catch(() => {});
       setStatus('paid');
-      setMessage(`تم الدفع بنجاح! رقم طلبك: ${orderId}`);
+      setMessage(bi(`تم الدفع بنجاح! رقم طلبك: ${orderId}`, `Payment successful! Your order number: ${orderId}`));
     } else {
-      const failMsg = searchParams.get('message') || searchParams.get('respMessage') || 'فشل الدفع. يمكنك المحاولة مرة أخرى.';
+      const failMsg = searchParams.get('message') || searchParams.get('respMessage') || bi('فشل الدفع. يمكنك المحاولة مرة أخرى.', 'Payment failed. You can try again.');
       setStatus('failed');
       setMessage(failMsg);
     }
-  }, [searchParams, authUser, authLoading]);
+  }, [searchParams, authUser, authLoading, lang]);
 
   // Notify parent window (popup scenario) then auto-close
   useEffect(() => {
@@ -124,12 +127,12 @@ export default function PaymentCallbackPage() {
   // Minimal popup UI
   if (isPopup) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-6" dir="rtl">
+      <div className="min-h-screen flex items-center justify-center bg-background p-6" dir={dir}>
         <div className="text-center w-full max-w-xs">
           {status === 'loading' && (
             <>
               <Loader2 className="h-14 w-14 text-primary mx-auto mb-3 animate-spin" />
-              <p className="text-muted-foreground text-sm">جاري التحقق من الدفع...</p>
+              <p className="text-muted-foreground text-sm">{bi('جاري التحقق من الدفع...', 'Verifying payment...')}</p>
             </>
           )}
           {status === 'paid' && (
@@ -137,8 +140,8 @@ export default function PaymentCallbackPage() {
               <div className="h-20 w-20 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
                 <CheckCircle className="h-10 w-10 text-emerald-600" />
               </div>
-              <h2 className="font-bold text-xl mb-1">تم الدفع بنجاح!</h2>
-              <p className="text-muted-foreground text-sm">جاري إغلاق هذه النافذة...</p>
+              <h2 className="font-bold text-xl mb-1">{bi('تم الدفع بنجاح!', 'Payment successful!')}</h2>
+              <p className="text-muted-foreground text-sm">{bi('جاري إغلاق هذه النافذة...', 'Closing this window...')}</p>
             </>
           )}
           {status === 'failed' && (
@@ -146,9 +149,9 @@ export default function PaymentCallbackPage() {
               <div className="h-20 w-20 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
                 <XCircle className="h-10 w-10 text-red-600" />
               </div>
-              <h2 className="font-bold text-xl mb-1">لم يتم الدفع</h2>
+              <h2 className="font-bold text-xl mb-1">{bi('لم يتم الدفع', 'Payment not completed')}</h2>
               <p className="text-muted-foreground text-sm mb-4">{message}</p>
-              <Button variant="outline" size="sm" onClick={() => window.close()}>إغلاق</Button>
+              <Button variant="outline" size="sm" onClick={() => window.close()}>{bi('إغلاق', 'Close')}</Button>
             </>
           )}
         </div>
@@ -158,12 +161,12 @@ export default function PaymentCallbackPage() {
 
   // Full standalone page
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background" dir="rtl">
+    <div className="min-h-screen flex items-center justify-center bg-background" dir={dir}>
       <div className="text-center max-w-sm px-4">
         {status === 'loading' && (
           <>
             <Loader2 className="h-16 w-16 text-primary mx-auto mb-4 animate-spin" />
-            <p className="text-muted-foreground">جاري التحقق من الدفع...</p>
+            <p className="text-muted-foreground">{bi('جاري التحقق من الدفع...', 'Verifying payment...')}</p>
           </>
         )}
         {status === 'paid' && (
@@ -171,39 +174,39 @@ export default function PaymentCallbackPage() {
             <div className="h-20 w-20 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
               <CheckCircle className="h-10 w-10 text-emerald-600" />
             </div>
-            <h1 className="text-2xl font-bold mb-2">تم الدفع بنجاح!</h1>
+            <h1 className="text-2xl font-bold mb-2">{bi('تم الدفع بنجاح!', 'Payment successful!')}</h1>
             <p className="text-muted-foreground mb-6">{message}</p>
             <div className="flex flex-col gap-2">
               {isCourseOrder && authUser && courseId && (
                 <Button asChild className="w-full">
-                  <Link href={`/dashboard/training/${courseId}`}>ابدأ الدورة الآن</Link>
+                  <Link href={`/dashboard/training/${courseId}`}>{bi('ابدأ الدورة الآن', 'Start the course now')}</Link>
                 </Button>
               )}
               {isCourseOrder && !authUser && (
                 <Button asChild className="w-full">
-                  <Link href="/login">سجّل الدخول للوصول للدورة</Link>
+                  <Link href="/login">{bi('سجّل الدخول للوصول للدورة', 'Log in to access the course')}</Link>
                 </Button>
               )}
               {isSubscriptionOrder && (
                 <Button asChild className="w-full">
-                  <Link href="/organization-dashboard">الذهاب للوحة التحكم</Link>
+                  <Link href="/organization-dashboard">{bi('الذهاب للوحة التحكم', 'Go to dashboard')}</Link>
                 </Button>
               )}
               {!isSubscriptionOrder && !isSessionOrder && !isCartOrder && (
                 <Button asChild variant={isCourseOrder ? 'outline' : 'default'} className="w-full">
                   <Link href={isCourseOrder ? '/dashboard/training' : '/market'}>
-                    {isCourseOrder ? 'دوراتي' : 'العودة للمتجر'}
+                    {isCourseOrder ? bi('دوراتي', 'My courses') : bi('العودة للمتجر', 'Back to store')}
                   </Link>
                 </Button>
               )}
               {isSessionOrder && (
                 <Button asChild className="w-full">
-                  <Link href="/">العودة للرئيسية</Link>
+                  <Link href="/">{bi('العودة للرئيسية', 'Back to home')}</Link>
                 </Button>
               )}
               {isCartOrder && (
                 <Button asChild className="w-full">
-                  <Link href="/market">متابعة التسوق</Link>
+                  <Link href="/market">{bi('متابعة التسوق', 'Continue shopping')}</Link>
                 </Button>
               )}
             </div>
@@ -214,10 +217,10 @@ export default function PaymentCallbackPage() {
             <div className="h-20 w-20 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
               <XCircle className="h-10 w-10 text-red-600" />
             </div>
-            <h1 className="text-2xl font-bold mb-2">لم يتم الدفع</h1>
+            <h1 className="text-2xl font-bold mb-2">{bi('لم يتم الدفع', 'Payment not completed')}</h1>
             <p className="text-muted-foreground mb-6">{message}</p>
             <Button variant="outline" asChild className="w-full">
-              <Link href="/market">العودة للمتجر</Link>
+              <Link href="/market">{bi('العودة للمتجر', 'Back to store')}</Link>
             </Button>
           </>
         )}
