@@ -17,6 +17,7 @@ import { uploadFile as uploadToStorage } from "@/lib/upload-file";
 import { applyOrgColor } from "@/lib/apply-org-color";
 import { useToast } from "@/hooks/use-toast";
 import { DEFAULT_PLATFORM_SERVICES } from "@/lib/default-platform-services";
+import { useLanguage } from "@/components/language-provider";
 
 interface CtaButton { text: string; link: string; style: 'primary' | 'outline' }
 
@@ -103,20 +104,20 @@ const HEADER_TEAM_LABELS = ['المرشدون', 'المدربون'];
 
 const TOUR_ROLE_LABELS = ['المنظمة', 'المرشد', 'المدرب', 'المستفيد', 'المتجر'];
 
-const SECTION_HEADING_KEYS: { key: string; label: string }[] = [
-  { key: 'roles', label: 'جولة الأدوار' },
-  { key: 'features', label: 'المميزات' },
-  { key: 'experts', label: 'المرشدون والمدربون' },
-  { key: 'courses', label: 'الدورات' },
-  { key: 'sessions', label: 'الجلسات المباشرة' },
-  { key: 'products', label: 'المنتجات' },
-  { key: 'stores', label: 'المتاجر' },
-  { key: 'pricing', label: 'خطط الأسعار' },
-  { key: 'testimonials', label: 'آراء المستخدمين' },
-  { key: 'blog', label: 'المقالات' },
-  { key: 'opportunities', label: 'الفرص والمشاريع' },
-  { key: 'successStories', label: 'قصص النجاح' },
-  { key: 'contact', label: 'التواصل' },
+const SECTION_HEADING_KEYS: { key: string; label: string; labelEn: string }[] = [
+  { key: 'roles', label: 'جولة الأدوار', labelEn: 'Roles Tour' },
+  { key: 'features', label: 'المميزات', labelEn: 'Features' },
+  { key: 'experts', label: 'المرشدون والمدربون', labelEn: 'Mentors & Coaches' },
+  { key: 'courses', label: 'الدورات', labelEn: 'Courses' },
+  { key: 'sessions', label: 'الجلسات المباشرة', labelEn: 'Live Sessions' },
+  { key: 'products', label: 'المنتجات', labelEn: 'Products' },
+  { key: 'stores', label: 'المتاجر', labelEn: 'Stores' },
+  { key: 'pricing', label: 'خطط الأسعار', labelEn: 'Pricing Plans' },
+  { key: 'testimonials', label: 'آراء المستخدمين', labelEn: 'Testimonials' },
+  { key: 'blog', label: 'المقالات', labelEn: 'Articles' },
+  { key: 'opportunities', label: 'الفرص والمشاريع', labelEn: 'Opportunities & Projects' },
+  { key: 'successStories', label: 'قصص النجاح', labelEn: 'Success Stories' },
+  { key: 'contact', label: 'التواصل', labelEn: 'Contact' },
 ];
 
 const defaultConfig: SiteConfig = {
@@ -258,12 +259,14 @@ function SaveBar({ onSave, saving, saved, editLang, setEditLang }: {
   onSave: () => void; saving: boolean; saved: boolean;
   editLang: 'ar' | 'en'; setEditLang: (l: 'ar' | 'en') => void;
 }) {
+  const { lang } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   return (
     <div className="sticky top-14 z-20 bg-background/95 backdrop-blur border-b border-border px-4 py-3 space-y-2">
       <div className="flex items-center justify-between">
         <Button onClick={onSave} disabled={saving} className={`gap-2 ${saved ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-primary hover:bg-primary-hover'}`}>
           <Save className="h-4 w-4" />
-          {saving ? 'جاري الحفظ...' : saved ? 'تم الحفظ ✓' : 'حفظ جميع التغييرات'}
+          {saving ? bi('جاري الحفظ...', 'Saving...') : saved ? bi('تم الحفظ ✓', 'Saved ✓') : bi('حفظ جميع التغييرات', 'Save all changes')}
         </Button>
         <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
           <button
@@ -271,20 +274,20 @@ function SaveBar({ onSave, saving, saved, editLang, setEditLang }: {
             onClick={() => setEditLang('ar')}
             className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${editLang === 'ar' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
           >
-            المحتوى العربي
+            {bi('المحتوى العربي', 'Arabic content')}
           </button>
           <button
             type="button"
             onClick={() => setEditLang('en')}
             className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${editLang === 'en' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
           >
-            English content
+            {bi('المحتوى الإنجليزي', 'English content')}
           </button>
         </div>
       </div>
       {editLang === 'en' && (
         <p className="text-xs text-amber-600 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
-          تعديل المحتوى الإنجليزي — الحقول الفارغة ستعرض النص العربي حتى تتم ترجمتها. الأزرار "إضافة/حذف" متاحة فقط بوضع المحتوى العربي لأنه يحدد بنية القوائم.
+          {bi('تعديل المحتوى الإنجليزي — الحقول الفارغة ستعرض النص العربي حتى تتم ترجمتها. الأزرار "إضافة/حذف" متاحة فقط بوضع المحتوى العربي لأنه يحدد بنية القوائم.', 'Editing English content — empty fields will show the Arabic text until translated. "Add/Delete" buttons are only available in Arabic content mode since it defines the list structure.')}
         </p>
       )}
     </div>
@@ -296,6 +299,8 @@ function ImageUploadField({ label, value, onChange, storagePath }: {
 }) {
   const { user } = useUser();
   const { toast } = useToast();
+  const { lang } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   const [uploading, setUploading] = useState(false);
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -310,7 +315,7 @@ function ImageUploadField({ label, value, onChange, storagePath }: {
       const token = user ? await user.getIdToken() : undefined;
       onChange(await uploadToStorage(file, storagePath, token));
     } catch (err: any) {
-      toast({ variant: 'destructive', title: 'فشل رفع الصورة', description: err?.message || 'حدث خطأ غير متوقع' });
+      toast({ variant: 'destructive', title: bi('فشل رفع الصورة', 'Failed to upload image'), description: err?.message || bi('حدث خطأ غير متوقع', 'An unexpected error occurred') });
     }
     setUploading(false);
   };
@@ -360,22 +365,24 @@ function SectionStyleFields({ config, sectionKey, setSectionStyle, withIcon = tr
   config: SiteConfig; sectionKey: string; setSectionStyle: (section: string, field: 'bg' | 'iconColor', v: string) => void; withIcon?: boolean;
 }) {
   const style = config.sectionStyles[sectionKey] || {};
+  const { lang } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   return (
     <div className={`grid grid-cols-1 ${withIcon ? 'sm:grid-cols-2' : ''} gap-4 p-3 rounded-xl border border-border bg-muted/30`}>
       <ColorField
-        label="خلفية القسم"
+        label={bi('خلفية القسم', 'Section background')}
         value={style.bg || ''}
         defaultSwatch="#ffffff"
         onChange={v => setSectionStyle(sectionKey, 'bg', v)}
-        hint="فارغ = خلفية الموقع الافتراضية"
+        hint={bi('فارغ = خلفية الموقع الافتراضية', 'Empty = default site background')}
       />
       {withIcon && (
         <ColorField
-          label="لون الأيقونات"
+          label={bi('لون الأيقونات', 'Icon color')}
           value={style.iconColor || ''}
           defaultSwatch="#3b82f6"
           onChange={v => setSectionStyle(sectionKey, 'iconColor', v)}
-          hint="فارغ = اللون الرئيسي للمنصة"
+          hint={bi('فارغ = اللون الرئيسي للمنصة', "Empty = the platform's primary color")}
         />
       )}
     </div>
@@ -389,23 +396,25 @@ function ButtonsEditor({ buttons, onAdd, onUpdate, onRemove, readOnlyStructure }
   onRemove: (i: number) => void;
   readOnlyStructure?: boolean;
 }) {
+  const { lang } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <Label>الأزرار{readOnlyStructure ? ' — نص الزر بالإنجليزي فقط' : ''}</Label>
+        <Label>{bi('الأزرار', 'Buttons')}{readOnlyStructure ? bi(' — نص الزر بالإنجليزي فقط', ' — button text (English) only') : ''}</Label>
         {!readOnlyStructure && (
           <Button type="button" size="sm" variant="outline" onClick={onAdd} className="gap-1 h-7 text-xs">
-            <Plus className="h-3 w-3" />إضافة زر
+            <Plus className="h-3 w-3" />{bi('إضافة زر', 'Add button')}
           </Button>
         )}
       </div>
       {buttons.length === 0 && (
-        <p className="text-muted-foreground text-xs py-2">لا توجد أزرار — القسم سيظهر بدون أزرار.</p>
+        <p className="text-muted-foreground text-xs py-2">{bi('لا توجد أزرار — القسم سيظهر بدون أزرار.', 'No buttons — the section will show without buttons.')}</p>
       )}
       <div className="space-y-2">
         {buttons.map((btn, i) => (
           <div key={i} className="flex flex-col sm:flex-row gap-2 items-start sm:items-center p-2.5 rounded-lg border border-border bg-muted/30">
-            <Input value={btn.text} onChange={e => onUpdate(i, 'text', e.target.value)} placeholder="نص الزر" className="h-8 text-sm flex-1" />
+            <Input value={btn.text} onChange={e => onUpdate(i, 'text', e.target.value)} placeholder={bi('نص الزر', 'Button text')} className="h-8 text-sm flex-1" />
             {!readOnlyStructure && (
               <>
                 <Input value={btn.link} onChange={e => onUpdate(i, 'link', e.target.value)} placeholder="/register" dir="ltr" className="h-8 text-sm flex-1 font-mono" />
@@ -414,8 +423,8 @@ function ButtonsEditor({ buttons, onAdd, onUpdate, onRemove, readOnlyStructure }
                   onChange={e => onUpdate(i, 'style', e.target.value)}
                   className="h-8 text-sm border border-border rounded-md bg-background px-2 shrink-0"
                 >
-                  <option value="primary">تعبئة</option>
-                  <option value="outline">إطار</option>
+                  <option value="primary">{bi('تعبئة', 'Filled')}</option>
+                  <option value="outline">{bi('إطار', 'Outline')}</option>
                 </select>
                 <Button type="button" size="sm" variant="ghost" onClick={() => onRemove(i)} className="h-8 w-8 p-0 text-muted-foreground hover:text-red-400 shrink-0">
                   <Trash2 className="h-3.5 w-3.5" />
@@ -435,6 +444,8 @@ export default function SiteEditorPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [editLang, setEditLang] = useState<'ar' | 'en'>('ar');
+  const { lang, dir } = useLanguage();
+  const bi = (ar: string, en: string) => (lang === 'en' ? en : ar);
 
   // Generic content accessors — route reads/writes to either the Arabic
   // (top-level) or English (translations.en) content tree depending on
@@ -642,13 +653,13 @@ export default function SiteEditorPage() {
       return { ...c, tourRoles };
     });
 
-  if (loading) return <div className="text-muted-foreground text-center py-16">جاري التحميل...</div>;
+  if (loading) return <div className="text-muted-foreground text-center py-16">{bi('جاري التحميل...', 'Loading...')}</div>;
 
   return (
-    <div className="space-y-0" dir="rtl">
+    <div className="space-y-0" dir={dir}>
       <div className="px-0 pb-4">
-        <h1 className="text-2xl font-bold text-foreground">تعديل الموقع</h1>
-        <p className="text-muted-foreground text-sm">تحكم كامل في محتوى وتصميم الصفحة الرئيسية — التغييرات تظهر فوراً بعد الحفظ</p>
+        <h1 className="text-2xl font-bold text-foreground">{bi('تعديل الموقع', 'Site Editor')}</h1>
+        <p className="text-muted-foreground text-sm">{bi('تحكم كامل في محتوى وتصميم الصفحة الرئيسية — التغييرات تظهر فوراً بعد الحفظ', 'Full control over the homepage content and design — changes appear immediately after saving')}</p>
       </div>
 
       <SaveBar onSave={save} saving={saving} saved={saved} editLang={editLang} setEditLang={setEditLang} />
@@ -657,21 +668,21 @@ export default function SiteEditorPage() {
         <Tabs defaultValue="identity">
           <TabsList className="bg-muted rounded-xl w-full flex-wrap h-auto gap-1 p-1">
             {[
-              { value: 'identity', label: 'الهوية', icon: Globe },
-              { value: 'header', label: 'الهيدر', icon: Link2 },
-              { value: 'hero', label: 'الترحيب', icon: ImageIcon },
-              { value: 'auth', label: 'صفحات الدخول', icon: LogIn },
-              { value: 'stats', label: 'الإحصائيات', icon: BarChart3 },
-              { value: 'features', label: 'المميزات', icon: Sparkles },
-              { value: 'tourRoles', label: 'جولة الأدوار', icon: Users },
-              { value: 'testimonials', label: 'الآراء', icon: Star },
-              { value: 'contact', label: 'التواصل', icon: Phone },
-              { value: 'cta', label: 'CTA بانر', icon: MessageSquare },
-              { value: 'headings', label: 'عناوين الأقسام', icon: Globe },
-              { value: 'aiSpotlight', label: 'الذكاء الاصطناعي', icon: Sparkles },
-              { value: 'faq', label: 'الأسئلة الشائعة', icon: MessageSquare },
-              { value: 'sections', label: 'الأقسام', icon: Eye },
-              { value: 'footer', label: 'الفوتر', icon: Link2 },
+              { value: 'identity', label: bi('الهوية', 'Identity'), icon: Globe },
+              { value: 'header', label: bi('الهيدر', 'Header'), icon: Link2 },
+              { value: 'hero', label: bi('الترحيب', 'Hero'), icon: ImageIcon },
+              { value: 'auth', label: bi('صفحات الدخول', 'Login Pages'), icon: LogIn },
+              { value: 'stats', label: bi('الإحصائيات', 'Statistics'), icon: BarChart3 },
+              { value: 'features', label: bi('المميزات', 'Features'), icon: Sparkles },
+              { value: 'tourRoles', label: bi('جولة الأدوار', 'Role Tour'), icon: Users },
+              { value: 'testimonials', label: bi('الآراء', 'Testimonials'), icon: Star },
+              { value: 'contact', label: bi('التواصل', 'Contact'), icon: Phone },
+              { value: 'cta', label: bi('CTA بانر', 'CTA Banner'), icon: MessageSquare },
+              { value: 'headings', label: bi('عناوين الأقسام', 'Section Headings'), icon: Globe },
+              { value: 'aiSpotlight', label: bi('الذكاء الاصطناعي', 'AI Spotlight'), icon: Sparkles },
+              { value: 'faq', label: bi('الأسئلة الشائعة', 'FAQ'), icon: MessageSquare },
+              { value: 'sections', label: bi('الأقسام', 'Sections'), icon: Eye },
+              { value: 'footer', label: bi('الفوتر', 'Footer'), icon: Link2 },
             ].map(t => (
               <TabsTrigger key={t.value} value={t.value} className="rounded-lg border-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-muted-foreground hover:text-foreground gap-1 text-xs">
                 <t.icon className="h-3 w-3" />
@@ -683,21 +694,21 @@ export default function SiteEditorPage() {
           {/* IDENTITY */}
           <TabsContent value="identity" className="mt-4">
             <Card className="border-0 shadow-sm">
-              <CardHeader><CardTitle className="text-foreground text-base">هوية الموقع والشعار</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-foreground text-base">{bi('هوية الموقع والشعار', 'Site Identity & Logo')}</CardTitle></CardHeader>
               <CardContent className="space-y-5">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>اسم الموقع</Label>
+                    <Label>{bi('اسم الموقع', 'Site name')}</Label>
                     <Input value={config.siteName} onChange={e => setConfig(c => ({ ...c, siteName: e.target.value }))} placeholder="EmpowerHub" />
                   </div>
                   <div className="space-y-2">
-                    <Label>الشعار النصي (tagline)</Label>
-                    <Input value={cv('tagline')} onChange={e => uc('tagline', e.target.value)} placeholder="منصة التمكين الرقمي" />
+                    <Label>{bi('الشعار النصي (tagline)', 'Tagline')}</Label>
+                    <Input value={cv('tagline')} onChange={e => uc('tagline', e.target.value)} placeholder={bi('منصة التمكين الرقمي', 'Digital Empowerment Platform')} />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <Label>اللون الرئيسي</Label>
+                    <Label>{bi('اللون الرئيسي', 'Primary color')}</Label>
                     <div className="flex items-center gap-2">
                       <input
                         type="color"
@@ -712,10 +723,10 @@ export default function SiteEditorPage() {
                         className="font-mono"
                       />
                     </div>
-                    <p className="text-xs text-muted-foreground">لون الأزرار الرئيسية والعناصر البارزة في كل المنصة</p>
+                    <p className="text-xs text-muted-foreground">{bi('لون الأزرار الرئيسية والعناصر البارزة في كل المنصة', 'Color of primary buttons and prominent elements across the platform')}</p>
                   </div>
                   <div className="space-y-2">
-                    <Label>لون الهوفر (Hover)</Label>
+                    <Label>{bi('لون الهوفر (Hover)', 'Hover color')}</Label>
                     <div className="flex items-center gap-2">
                       <input
                         type="color"
@@ -726,15 +737,15 @@ export default function SiteEditorPage() {
                       <Input
                         value={config.hoverColor}
                         onChange={e => setConfig(c => ({ ...c, hoverColor: e.target.value }))}
-                        placeholder="فارغ = تعتيم تلقائي للون الرئيسي"
+                        placeholder={bi('فارغ = تعتيم تلقائي للون الرئيسي', 'Empty = automatic darkening of the primary color')}
                         className="font-mono"
                         dir="ltr"
                       />
                     </div>
-                    <p className="text-xs text-muted-foreground">لون الأزرار الرئيسية عند تمرير الفأرة (Hover) بكل المنصة</p>
+                    <p className="text-xs text-muted-foreground">{bi('لون الأزرار الرئيسية عند تمرير الفأرة (Hover) بكل المنصة', 'Color of primary buttons on hover across the platform')}</p>
                   </div>
                   <div className="space-y-2">
-                    <Label>اللون الثانوي</Label>
+                    <Label>{bi('اللون الثانوي', 'Secondary color')}</Label>
                     <div className="flex items-center gap-2">
                       <input
                         type="color"
@@ -745,16 +756,16 @@ export default function SiteEditorPage() {
                       <Input
                         value={config.secondaryColor}
                         onChange={e => setConfig(c => ({ ...c, secondaryColor: e.target.value }))}
-                        placeholder="فارغ = افتراضي"
+                        placeholder={bi('فارغ = افتراضي', 'Empty = default')}
                         className="font-mono"
                         dir="ltr"
                       />
                     </div>
-                    <p className="text-xs text-muted-foreground">لون أزرار "ثانوي" (variant=secondary) بكل المنصة</p>
+                    <p className="text-xs text-muted-foreground">{bi('لون أزرار "ثانوي" (variant=secondary) بكل المنصة', 'Color of "secondary" variant buttons across the platform')}</p>
                   </div>
                 </div>
-                <ImageUploadField label="شعار الموقع (Logo)" value={config.logoUrl} onChange={url => setConfig(c => ({ ...c, logoUrl: url }))} storagePath="site/logo" />
-                <ImageUploadField label="أيقونة الموقع (Favicon)" value={config.faviconUrl} onChange={url => setConfig(c => ({ ...c, faviconUrl: url }))} storagePath="site/favicon" />
+                <ImageUploadField label={bi('شعار الموقع (Logo)', 'Site Logo')} value={config.logoUrl} onChange={url => setConfig(c => ({ ...c, logoUrl: url }))} storagePath="site/logo" />
+                <ImageUploadField label={bi('أيقونة الموقع (Favicon)', 'Site Favicon')} value={config.faviconUrl} onChange={url => setConfig(c => ({ ...c, faviconUrl: url }))} storagePath="site/favicon" />
               </CardContent>
             </Card>
           </TabsContent>
@@ -763,12 +774,12 @@ export default function SiteEditorPage() {
           <TabsContent value="header" className="mt-4">
             <Card className="border-0 shadow-sm">
               <CardHeader>
-                <CardTitle className="text-foreground text-base">شريط التنقل العلوي (الهيدر)</CardTitle>
-                <p className="text-muted-foreground text-xs">يظهر هذا الشريط في أعلى كل صفحات الموقع العامة</p>
+                <CardTitle className="text-foreground text-base">{bi('شريط التنقل العلوي (الهيدر)', 'Top Navigation Bar (Header)')}</CardTitle>
+                <p className="text-muted-foreground text-xs">{bi('يظهر هذا الشريط في أعلى كل صفحات الموقع العامة', 'This bar appears at the top of every public site page')}</p>
               </CardHeader>
               <CardContent className="space-y-5">
                 <div className="space-y-2">
-                  <Label>روابط التنقل</Label>
+                  <Label>{bi('روابط التنقل', 'Navigation links')}</Label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {config.header.navLinks.map((l, i) => (
                       <Input key={i} value={l.label} onChange={e => setHeaderNavLabel(i, e.target.value)} placeholder={HEADER_NAV_LABELS[i]} />
@@ -777,27 +788,27 @@ export default function SiteEditorPage() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <Label>عنوان قائمة "فريقنا"</Label>
-                    <Input value={config.header.teamLabel} onChange={e => setHeaderField('teamLabel', e.target.value)} placeholder="فريقنا" />
+                    <Label>{bi('عنوان قائمة "فريقنا"', '"Our Team" menu title')}</Label>
+                    <Input value={config.header.teamLabel} onChange={e => setHeaderField('teamLabel', e.target.value)} placeholder={bi('فريقنا', 'Our Team')} />
                   </div>
                   {config.header.teamLinks.map((l, i) => (
                     <div key={i} className="space-y-2">
-                      <Label>رابط فريقنا {i + 1}</Label>
+                      <Label>{bi(`رابط فريقنا ${i + 1}`, `Team link ${i + 1}`)}</Label>
                       <Input value={l.label} onChange={e => setHeaderTeamLabel(i, e.target.value)} placeholder={HEADER_TEAM_LABELS[i]} />
                     </div>
                   ))}
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <Label>نص زر تسجيل الدخول</Label>
-                    <Input value={config.header.loginText} onChange={e => setHeaderField('loginText', e.target.value)} placeholder="تسجيل الدخول" />
+                    <Label>{bi('نص زر تسجيل الدخول', 'Login button text')}</Label>
+                    <Input value={config.header.loginText} onChange={e => setHeaderField('loginText', e.target.value)} placeholder={bi('تسجيل الدخول', 'Log in')} />
                   </div>
                   <div className="space-y-2">
-                    <Label>نص زر التسجيل (سطح المكتب)</Label>
-                    <Input value={config.header.registerText} onChange={e => setHeaderField('registerText', e.target.value)} placeholder="ابدأ مجاناً" />
+                    <Label>{bi('نص زر التسجيل (سطح المكتب)', 'Register button text (desktop)')}</Label>
+                    <Input value={config.header.registerText} onChange={e => setHeaderField('registerText', e.target.value)} placeholder={bi('ابدأ مجاناً', 'Get started free')} />
                   </div>
                   <div className="space-y-2">
-                    <Label>نص زر التسجيل (الجوال)</Label>
+                    <Label>{bi('نص زر التسجيل (الجوال)', 'Register button text (mobile)')}</Label>
                     <Input value={config.header.registerTextMobile} onChange={e => setHeaderField('registerTextMobile', e.target.value)} placeholder="ابدأ" />
                   </div>
                 </div>
@@ -808,15 +819,15 @@ export default function SiteEditorPage() {
           {/* HERO */}
           <TabsContent value="hero" className="mt-4">
             <Card className="border-0 shadow-sm">
-              <CardHeader><CardTitle className="text-foreground text-base">قسم الترحيب (Hero Section)</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-foreground text-base">{bi('قسم الترحيب (Hero Section)', 'Hero Section')}</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label>العنوان الرئيسي</Label>
-                  <Input value={cv('hero.title')} onChange={e => uc('hero.title', e.target.value)} placeholder="بوابتك للتمكين والنجاح" />
+                  <Label>{bi('العنوان الرئيسي', 'Main title')}</Label>
+                  <Input value={cv('hero.title')} onChange={e => uc('hero.title', e.target.value)} placeholder={bi('بوابتك للتمكين والنجاح', 'Your gateway to empowerment and success')} />
                 </div>
                 <div className="space-y-2">
-                  <Label>العنوان الفرعي</Label>
-                  <Textarea value={cv('hero.subtitle')} onChange={e => uc('hero.subtitle', e.target.value)} rows={3} className="resize-none" placeholder="وصف مختصر..." />
+                  <Label>{bi('العنوان الفرعي', 'Subtitle')}</Label>
+                  <Textarea value={cv('hero.subtitle')} onChange={e => uc('hero.subtitle', e.target.value)} rows={3} className="resize-none" placeholder={bi('وصف مختصر...', 'A brief description...')} />
                 </div>
                 <ButtonsEditor
                   buttons={editLang === 'ar' ? config.hero.buttons : (cv('hero.buttons', null) || config.hero.buttons.map(b => ({ ...b, text: '' })))}
@@ -827,7 +838,7 @@ export default function SiteEditorPage() {
                 />
                 {editLang === 'ar' && (
                   <>
-                    <ImageUploadField label="صورة الخلفية (اختياري)" value={config.hero.backgroundImage} onChange={url => setHero('backgroundImage', url)} storagePath="site/hero" />
+                    <ImageUploadField label={bi('صورة الخلفية (اختياري)', 'Background image (optional)')} value={config.hero.backgroundImage} onChange={url => setHero('backgroundImage', url)} storagePath="site/hero" />
                     <SectionStyleFields config={config} sectionKey="hero" setSectionStyle={setSectionStyle} withIcon={false} />
                   </>
                 )}
@@ -836,8 +847,8 @@ export default function SiteEditorPage() {
                     className="p-8 text-center bg-gradient-to-br from-primary/20 to-purple-900/30"
                     style={config.hero.backgroundImage ? { backgroundImage: `url(${config.hero.backgroundImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}
                   >
-                    <h2 className="text-foreground text-xl font-bold mb-2">{cv('hero.title') || 'العنوان الرئيسي'}</h2>
-                    <p className="text-foreground/90 text-sm mb-4 whitespace-pre-line">{cv('hero.subtitle') || 'الوصف...'}</p>
+                    <h2 className="text-foreground text-xl font-bold mb-2">{cv('hero.title') || bi('العنوان الرئيسي', 'Main title')}</h2>
+                    <p className="text-foreground/90 text-sm mb-4 whitespace-pre-line">{cv('hero.subtitle') || bi('الوصف...', 'Description...')}</p>
                     <div className="flex gap-2 justify-center flex-wrap">
                       {config.hero.buttons.map((btn, i) => (
                         <span
@@ -858,26 +869,26 @@ export default function SiteEditorPage() {
           <TabsContent value="auth" className="mt-4 space-y-4">
             <Card className="border-0 shadow-sm">
               <CardHeader>
-                <CardTitle className="text-foreground text-base">صفحة تسجيل الدخول</CardTitle>
-                <p className="text-muted-foreground text-xs">الصورة والنص الجانبي المعروض في صفحة تسجيل الدخول</p>
+                <CardTitle className="text-foreground text-base">{bi('صفحة تسجيل الدخول', 'Login Page')}</CardTitle>
+                <p className="text-muted-foreground text-xs">{bi('الصورة والنص الجانبي المعروض في صفحة تسجيل الدخول', 'The side image and text shown on the login page')}</p>
               </CardHeader>
               <CardContent className="space-y-4">
-                <ImageUploadField label="الصورة" value={config.authBranding.imageUrl} onChange={url => setAuthBranding('imageUrl', url)} storagePath="site/auth" />
+                <ImageUploadField label={bi('الصورة', 'Image')} value={config.authBranding.imageUrl} onChange={url => setAuthBranding('imageUrl', url)} storagePath="site/auth" />
                 <div className="space-y-2">
-                  <Label>العنوان</Label>
-                  <Input value={config.authBranding.title} onChange={e => setAuthBranding('title', e.target.value)} placeholder="منصة التمكين الرقمي" />
+                  <Label>{bi('العنوان', 'Title')}</Label>
+                  <Input value={config.authBranding.title} onChange={e => setAuthBranding('title', e.target.value)} placeholder={bi('منصة التمكين الرقمي', 'Digital Empowerment Platform')} />
                 </div>
                 <div className="space-y-2">
-                  <Label>الوصف</Label>
-                  <Textarea value={config.authBranding.subtitle} onChange={e => setAuthBranding('subtitle', e.target.value)} rows={3} className="resize-none" placeholder="وصف مختصر..." />
+                  <Label>{bi('الوصف', 'Description')}</Label>
+                  <Textarea value={config.authBranding.subtitle} onChange={e => setAuthBranding('subtitle', e.target.value)} rows={3} className="resize-none" placeholder={bi('وصف مختصر...', 'A brief description...')} />
                 </div>
                 {config.authBranding.imageUrl && (
                   <div className="rounded-xl overflow-hidden border border-border relative h-40">
                     <img src={config.authBranding.imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
                     <div className="absolute bottom-3 right-3 left-3">
-                      <p className="text-white font-bold text-sm">{config.authBranding.title || 'العنوان'}</p>
-                      <p className="text-white/80 text-xs mt-0.5 line-clamp-2">{config.authBranding.subtitle || 'الوصف...'}</p>
+                      <p className="text-white font-bold text-sm">{config.authBranding.title || bi('العنوان', 'Title')}</p>
+                      <p className="text-white/80 text-xs mt-0.5 line-clamp-2">{config.authBranding.subtitle || bi('الوصف...', 'Description...')}</p>
                     </div>
                   </div>
                 )}
@@ -886,26 +897,26 @@ export default function SiteEditorPage() {
 
             <Card className="border-0 shadow-sm">
               <CardHeader>
-                <CardTitle className="text-foreground text-base">صفحة إنشاء حساب</CardTitle>
-                <p className="text-muted-foreground text-xs">الصورة والنص الجانبي المعروض في صفحة إنشاء حساب جديد — مستقلة عن صفحة تسجيل الدخول</p>
+                <CardTitle className="text-foreground text-base">{bi('صفحة إنشاء حساب', 'Registration Page')}</CardTitle>
+                <p className="text-muted-foreground text-xs">{bi('الصورة والنص الجانبي المعروض في صفحة إنشاء حساب جديد — مستقلة عن صفحة تسجيل الدخول', 'The side image and text shown on the registration page — independent of the login page')}</p>
               </CardHeader>
               <CardContent className="space-y-4">
-                <ImageUploadField label="الصورة" value={config.registerBranding.imageUrl} onChange={url => setRegisterBranding('imageUrl', url)} storagePath="site/register" />
+                <ImageUploadField label={bi('الصورة', 'Image')} value={config.registerBranding.imageUrl} onChange={url => setRegisterBranding('imageUrl', url)} storagePath="site/register" />
                 <div className="space-y-2">
-                  <Label>العنوان</Label>
-                  <Input value={config.registerBranding.title} onChange={e => setRegisterBranding('title', e.target.value)} placeholder="ابدأ رحلتك نحو النجاح" />
+                  <Label>{bi('العنوان', 'Title')}</Label>
+                  <Input value={config.registerBranding.title} onChange={e => setRegisterBranding('title', e.target.value)} placeholder={bi('ابدأ رحلتك نحو النجاح', 'Start your journey to success')} />
                 </div>
                 <div className="space-y-2">
-                  <Label>الوصف</Label>
-                  <Textarea value={config.registerBranding.subtitle} onChange={e => setRegisterBranding('subtitle', e.target.value)} rows={3} className="resize-none" placeholder="وصف مختصر..." />
+                  <Label>{bi('الوصف', 'Description')}</Label>
+                  <Textarea value={config.registerBranding.subtitle} onChange={e => setRegisterBranding('subtitle', e.target.value)} rows={3} className="resize-none" placeholder={bi('وصف مختصر...', 'A brief description...')} />
                 </div>
                 {config.registerBranding.imageUrl && (
                   <div className="rounded-xl overflow-hidden border border-border relative h-40">
                     <img src={config.registerBranding.imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
                     <div className="absolute bottom-3 right-3 left-3">
-                      <p className="text-white font-bold text-sm">{config.registerBranding.title || 'العنوان'}</p>
-                      <p className="text-white/80 text-xs mt-0.5 line-clamp-2">{config.registerBranding.subtitle || 'الوصف...'}</p>
+                      <p className="text-white font-bold text-sm">{config.registerBranding.title || bi('العنوان', 'Title')}</p>
+                      <p className="text-white/80 text-xs mt-0.5 line-clamp-2">{config.registerBranding.subtitle || bi('الوصف...', 'Description...')}</p>
                     </div>
                   </div>
                 )}
@@ -917,26 +928,26 @@ export default function SiteEditorPage() {
           <TabsContent value="stats" className="mt-4">
             <Card className="border-0 shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-foreground text-base">الإحصائيات</CardTitle>
-                {editLang === 'ar' && <Button size="sm" onClick={addStat} className="gap-1"><Plus className="h-3.5 w-3.5" />إضافة</Button>}
+                <CardTitle className="text-foreground text-base">{bi('الإحصائيات', 'Statistics')}</CardTitle>
+                {editLang === 'ar' && <Button size="sm" onClick={addStat} className="gap-1"><Plus className="h-3.5 w-3.5" />{bi('إضافة', 'Add')}</Button>}
               </CardHeader>
               <CardContent className="space-y-3">
                 {config.stats.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-6">لا توجد إحصائيات. أضف واحدة!</p>
+                  <p className="text-muted-foreground text-center py-6">{bi('لا توجد إحصائيات. أضف واحدة!', 'No statistics. Add one!')}</p>
                 ) : config.stats.map((stat, i) => (
                   <div key={i} className="flex gap-3 items-start p-3 bg-muted/40 rounded-xl border border-border">
                     <div className="flex-1 grid grid-cols-1 sm:grid-cols-4 gap-2">
                       <div>
-                        <Label className="text-xs text-muted-foreground">الرقم/القيمة</Label>
+                        <Label className="text-xs text-muted-foreground">{bi('الرقم/القيمة', 'Number/Value')}</Label>
                         <Input value={cv(`stats.${i}.value`)} onChange={e => uc(`stats.${i}.value`, e.target.value)} placeholder={stat.value || '500+'} className="mt-1 h-8 text-sm" />
                       </div>
                       <div className="col-span-2">
-                        <Label className="text-xs text-muted-foreground">التسمية</Label>
-                        <Input value={cv(`stats.${i}.label`)} onChange={e => uc(`stats.${i}.label`, e.target.value)} placeholder={stat.label || 'مستفيد نشط'} className="mt-1 h-8 text-sm" />
+                        <Label className="text-xs text-muted-foreground">{bi('التسمية', 'Label')}</Label>
+                        <Input value={cv(`stats.${i}.label`)} onChange={e => uc(`stats.${i}.label`, e.target.value)} placeholder={stat.label || bi('مستفيد نشط', 'Active beneficiary')} className="mt-1 h-8 text-sm" />
                       </div>
                       {editLang === 'ar' && (
                         <div>
-                          <Label className="text-xs text-muted-foreground">الأيقونة</Label>
+                          <Label className="text-xs text-muted-foreground">{bi('الأيقونة', 'Icon')}</Label>
                           <Input value={stat.icon} onChange={e => updateStat(i, 'icon', e.target.value)} placeholder="Users" className="mt-1 h-8 text-sm" dir="ltr" />
                         </div>
                       )}
@@ -951,7 +962,7 @@ export default function SiteEditorPage() {
                 {editLang === 'ar' && <SectionStyleFields config={config} sectionKey="stats" setSectionStyle={setSectionStyle} />}
                 {config.stats.length > 0 && (
                   <div className="mt-4 p-4 bg-muted/40 rounded-xl border border-border">
-                    <p className="text-muted-foreground text-xs mb-3">معاينة:</p>
+                    <p className="text-muted-foreground text-xs mb-3">{bi('معاينة:', 'Preview:')}</p>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                       {config.stats.map((s, i) => (
                         <div key={i} className="text-center">
@@ -970,27 +981,27 @@ export default function SiteEditorPage() {
           <TabsContent value="features" className="mt-4">
             <Card className="border-0 shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-foreground text-base">بطاقات المميزات</CardTitle>
+                <CardTitle className="text-foreground text-base">{bi('بطاقات المميزات', 'Feature Cards')}</CardTitle>
                 {editLang === 'ar' && (
                   <div className="flex items-center gap-2">
                     {config.features.length > 0 && (
                       <Button size="sm" variant="outline" onClick={resetFeatures} className="gap-1">
-                        <RotateCcw className="h-3.5 w-3.5" />استعادة الافتراضي
+                        <RotateCcw className="h-3.5 w-3.5" />{bi('استعادة الافتراضي', 'Restore default')}
                       </Button>
                     )}
-                    <Button size="sm" onClick={addFeature} className="gap-1"><Plus className="h-3.5 w-3.5" />إضافة ميزة</Button>
+                    <Button size="sm" onClick={addFeature} className="gap-1"><Plus className="h-3.5 w-3.5" />{bi('إضافة ميزة', 'Add feature')}</Button>
                   </div>
                 )}
               </CardHeader>
               <CardContent className="space-y-3">
                 {config.features.length === 0 ? (
                   <p className="text-muted-foreground text-center py-6 text-sm leading-relaxed">
-                    لا توجد ميزات. اضغط "استعادة الافتراضي" لاستعادة قائمة الخدمات الافتراضية (٨ بطاقات مع روابط)، أو أضف ميزة جديدة.
+                    {bi('لا توجد ميزات. اضغط "استعادة الافتراضي" لاستعادة قائمة الخدمات الافتراضية (٨ بطاقات مع روابط)، أو أضف ميزة جديدة.', 'No features. Click "Restore default" to restore the default services list (8 cards with links), or add a new feature.')}
                   </p>
                 ) : config.features.map((feat, i) => (
                   <div key={i} className="p-3 bg-muted/40 rounded-xl border border-border space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground text-xs font-medium">ميزة {i + 1}</span>
+                      <span className="text-muted-foreground text-xs font-medium">{bi(`ميزة ${i + 1}`, `Feature ${i + 1}`)}</span>
                       {editLang === 'ar' && (
                         <Button size="sm" variant="ghost" onClick={() => removeFeature(i)} className="h-7 w-7 p-0 text-muted-foreground hover:text-red-400">
                           <Trash2 className="h-3.5 w-3.5" />
@@ -999,30 +1010,30 @@ export default function SiteEditorPage() {
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <div>
-                        <Label className="text-xs text-muted-foreground">العنوان</Label>
-                        <Input value={cv(`features.${i}.title`)} onChange={e => uc(`features.${i}.title`, e.target.value)} placeholder={feat.title || 'عنوان الميزة'} className="mt-1 h-8 text-sm" />
+                        <Label className="text-xs text-muted-foreground">{bi('العنوان', 'Title')}</Label>
+                        <Input value={cv(`features.${i}.title`)} onChange={e => uc(`features.${i}.title`, e.target.value)} placeholder={feat.title || bi('عنوان الميزة', 'Feature title')} className="mt-1 h-8 text-sm" />
                       </div>
                       {editLang === 'ar' && (
                         <div>
-                          <Label className="text-xs text-muted-foreground">الأيقونة (اختياري)</Label>
+                          <Label className="text-xs text-muted-foreground">{bi('الأيقونة (اختياري)', 'Icon (optional)')}</Label>
                           <Input value={feat.icon} onChange={e => updateFeature(i, 'icon', e.target.value)} placeholder="BookOpen" className="mt-1 h-8 text-sm" dir="ltr" />
                         </div>
                       )}
                     </div>
                     <div>
-                      <Label className="text-xs text-muted-foreground">الوصف</Label>
-                      <Input value={cv(`features.${i}.description`)} onChange={e => uc(`features.${i}.description`, e.target.value)} placeholder={feat.description || 'وصف الميزة...'} className="mt-1 h-8 text-sm" />
+                      <Label className="text-xs text-muted-foreground">{bi('الوصف', 'Description')}</Label>
+                      <Input value={cv(`features.${i}.description`)} onChange={e => uc(`features.${i}.description`, e.target.value)} placeholder={feat.description || bi('وصف الميزة...', 'Feature description...')} className="mt-1 h-8 text-sm" />
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {editLang === 'ar' && (
                         <div>
-                          <Label className="text-xs text-muted-foreground">رابط الزر (اختياري)</Label>
+                          <Label className="text-xs text-muted-foreground">{bi('رابط الزر (اختياري)', 'Button link (optional)')}</Label>
                           <Input value={feat.link || ''} onChange={e => updateFeature(i, 'link', e.target.value)} placeholder="/market" className="mt-1 h-8 text-sm" dir="ltr" />
                         </div>
                       )}
                       <div>
-                        <Label className="text-xs text-muted-foreground">نص الزر (اختياري)</Label>
-                        <Input value={cv(`features.${i}.linkLabel`)} onChange={e => uc(`features.${i}.linkLabel`, e.target.value)} placeholder={feat.linkLabel || 'تسوق الآن'} className="mt-1 h-8 text-sm" />
+                        <Label className="text-xs text-muted-foreground">{bi('نص الزر (اختياري)', 'Button text (optional)')}</Label>
+                        <Input value={cv(`features.${i}.linkLabel`)} onChange={e => uc(`features.${i}.linkLabel`, e.target.value)} placeholder={feat.linkLabel || bi('تسوق الآن', 'Shop now')} className="mt-1 h-8 text-sm" />
                       </div>
                     </div>
                   </div>
@@ -1036,8 +1047,8 @@ export default function SiteEditorPage() {
           <TabsContent value="tourRoles" className="mt-4">
             <Card className="border-0 shadow-sm">
               <CardHeader>
-                <CardTitle className="text-foreground text-base">جولة الأدوار داخل المنصة</CardTitle>
-                <p className="text-muted-foreground text-xs">محتوى قسم "جولة داخل المنصة" — النص والأرقام المعروضة لكل دور في معاينة لوحة التحكم</p>
+                <CardTitle className="text-foreground text-base">{bi('جولة الأدوار داخل المنصة', 'Role Tour Inside the Platform')}</CardTitle>
+                <p className="text-muted-foreground text-xs">{bi('محتوى قسم "جولة داخل المنصة" — النص والأرقام المعروضة لكل دور في معاينة لوحة التحكم', 'Content of the "Tour inside the platform" section — the text and numbers shown for each role in the dashboard preview')}</p>
               </CardHeader>
               <CardContent className="space-y-6">
                 {config.tourRoles.map((role, i) => (
@@ -1045,40 +1056,40 @@ export default function SiteEditorPage() {
                     <p className="text-sm font-semibold text-foreground">{TOUR_ROLE_LABELS[i]}</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="space-y-1.5">
-                        <Label className="text-xs">العنوان الرئيسي</Label>
+                        <Label className="text-xs">{bi('العنوان الرئيسي', 'Main title')}</Label>
                         <Input value={cv(`tourRoles.${i}.headline`)} onChange={e => uc(`tourRoles.${i}.headline`, e.target.value)} placeholder={editLang === 'en' ? role.headline : undefined} />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs">نص زر الدعوة {i === 4 ? '' : '(فارغ = "ابدأ كـ' + TOUR_ROLE_LABELS[i] + '")'}</Label>
+                        <Label className="text-xs">{bi('نص زر الدعوة', 'CTA button text')} {i === 4 ? '' : bi('(فارغ = "ابدأ كـ' + TOUR_ROLE_LABELS[i] + '")', '(empty = "Get started")')}</Label>
                         <Input value={cv(`tourRoles.${i}.ctaText`)} onChange={e => uc(`tourRoles.${i}.ctaText`, e.target.value)} placeholder={editLang === 'en' ? role.ctaText : undefined} />
                       </div>
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs">المزايا (٤)</Label>
+                      <Label className="text-xs">{bi('المزايا (٤)', 'Benefits (4)')}</Label>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {role.benefits.map((b, bi) => (
-                          <Input key={bi} value={cv(`tourRoles.${i}.benefits.${bi}`)} onChange={e => uc(`tourRoles.${i}.benefits.${bi}`, e.target.value)} placeholder={editLang === 'en' ? b : undefined} />
+                        {role.benefits.map((b, bidx) => (
+                          <Input key={bidx} value={cv(`tourRoles.${i}.benefits.${bidx}`)} onChange={e => uc(`tourRoles.${i}.benefits.${bidx}`, e.target.value)} placeholder={editLang === 'en' ? b : undefined} />
                         ))}
                       </div>
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs">الإحصائيات (٣)</Label>
+                      <Label className="text-xs">{bi('الإحصائيات (٣)', 'Statistics (3)')}</Label>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                         {role.stats.map((s, si) => (
                           <div key={si} className="flex gap-1.5">
-                            <Input value={cv(`tourRoles.${i}.stats.${si}.value`)} onChange={e => uc(`tourRoles.${i}.stats.${si}.value`, e.target.value)} placeholder={editLang === 'en' ? s.value : 'القيمة'} className="w-16" />
-                            <Input value={cv(`tourRoles.${i}.stats.${si}.label`)} onChange={e => uc(`tourRoles.${i}.stats.${si}.label`, e.target.value)} placeholder={editLang === 'en' ? s.label : 'التسمية'} className="flex-1" />
+                            <Input value={cv(`tourRoles.${i}.stats.${si}.value`)} onChange={e => uc(`tourRoles.${i}.stats.${si}.value`, e.target.value)} placeholder={editLang === 'en' ? s.value : bi('القيمة', 'Value')} className="w-16" />
+                            <Input value={cv(`tourRoles.${i}.stats.${si}.label`)} onChange={e => uc(`tourRoles.${i}.stats.${si}.label`, e.target.value)} placeholder={editLang === 'en' ? s.label : bi('التسمية', 'Label')} className="flex-1" />
                           </div>
                         ))}
                       </div>
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs">عناصر المعاينة (٣)</Label>
+                      <Label className="text-xs">{bi('عناصر المعاينة (٣)', 'Preview items (3)')}</Label>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                         {role.items.map((it, ii) => (
                           <div key={ii} className="space-y-1">
-                            <Input value={cv(`tourRoles.${i}.items.${ii}.title`)} onChange={e => uc(`tourRoles.${i}.items.${ii}.title`, e.target.value)} placeholder={editLang === 'en' ? it.title : 'العنوان'} />
-                            <Input value={cv(`tourRoles.${i}.items.${ii}.subtitle`)} onChange={e => uc(`tourRoles.${i}.items.${ii}.subtitle`, e.target.value)} placeholder={editLang === 'en' ? it.subtitle : 'الوصف الفرعي'} />
+                            <Input value={cv(`tourRoles.${i}.items.${ii}.title`)} onChange={e => uc(`tourRoles.${i}.items.${ii}.title`, e.target.value)} placeholder={editLang === 'en' ? it.title : bi('العنوان', 'Title')} />
+                            <Input value={cv(`tourRoles.${i}.items.${ii}.subtitle`)} onChange={e => uc(`tourRoles.${i}.items.${ii}.subtitle`, e.target.value)} placeholder={editLang === 'en' ? it.subtitle : bi('الوصف الفرعي', 'Subtitle')} />
                           </div>
                         ))}
                       </div>
@@ -1093,16 +1104,16 @@ export default function SiteEditorPage() {
           <TabsContent value="testimonials" className="mt-4">
             <Card className="border-0 shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-foreground text-base">آراء المستخدمين (Testimonials)</CardTitle>
-                {editLang === 'ar' && <Button size="sm" onClick={addTestimonial} className="gap-1"><Plus className="h-3.5 w-3.5" />إضافة رأي</Button>}
+                <CardTitle className="text-foreground text-base">{bi('آراء المستخدمين (Testimonials)', 'Testimonials')}</CardTitle>
+                {editLang === 'ar' && <Button size="sm" onClick={addTestimonial} className="gap-1"><Plus className="h-3.5 w-3.5" />{bi('إضافة رأي', 'Add testimonial')}</Button>}
               </CardHeader>
               <CardContent className="space-y-3">
                 {config.testimonials.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-6">لا توجد آراء.</p>
+                  <p className="text-muted-foreground text-center py-6">{bi('لا توجد آراء.', 'No testimonials.')}</p>
                 ) : config.testimonials.map((t, i) => (
                   <div key={i} className="p-3 bg-muted/40 rounded-xl border border-border space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground text-xs font-medium">رأي {i + 1}</span>
+                      <span className="text-muted-foreground text-xs font-medium">{bi(`رأي ${i + 1}`, `Testimonial ${i + 1}`)}</span>
                       {editLang === 'ar' && (
                         <Button size="sm" variant="ghost" onClick={() => removeTestimonial(i)} className="h-7 w-7 p-0 text-muted-foreground hover:text-red-400">
                           <Trash2 className="h-3.5 w-3.5" />
@@ -1111,21 +1122,21 @@ export default function SiteEditorPage() {
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <Label className="text-xs text-muted-foreground">الاسم</Label>
-                        <Input value={cv(`testimonials.${i}.name`)} onChange={e => uc(`testimonials.${i}.name`, e.target.value)} placeholder={t.name || 'اسم المستخدم'} className="mt-1 h-8 text-sm" />
+                        <Label className="text-xs text-muted-foreground">{bi('الاسم', 'Name')}</Label>
+                        <Input value={cv(`testimonials.${i}.name`)} onChange={e => uc(`testimonials.${i}.name`, e.target.value)} placeholder={t.name || bi('اسم المستخدم', 'User name')} className="mt-1 h-8 text-sm" />
                       </div>
                       <div>
-                        <Label className="text-xs text-muted-foreground">الدور/المسمى</Label>
-                        <Input value={cv(`testimonials.${i}.role`)} onChange={e => uc(`testimonials.${i}.role`, e.target.value)} placeholder={t.role || 'مستفيد - رائد أعمال'} className="mt-1 h-8 text-sm" />
+                        <Label className="text-xs text-muted-foreground">{bi('الدور/المسمى', 'Role/Title')}</Label>
+                        <Input value={cv(`testimonials.${i}.role`)} onChange={e => uc(`testimonials.${i}.role`, e.target.value)} placeholder={t.role || bi('مستفيد - رائد أعمال', 'Beneficiary - Entrepreneur')} className="mt-1 h-8 text-sm" />
                       </div>
                     </div>
                     <div>
-                      <Label className="text-xs text-muted-foreground">نص الرأي</Label>
-                      <Textarea value={cv(`testimonials.${i}.text`)} onChange={e => uc(`testimonials.${i}.text`, e.target.value)} placeholder={t.text || 'ماذا قال المستخدم...'} rows={3} className="mt-1 text-sm resize-none" />
+                      <Label className="text-xs text-muted-foreground">{bi('نص الرأي', 'Testimonial text')}</Label>
+                      <Textarea value={cv(`testimonials.${i}.text`)} onChange={e => uc(`testimonials.${i}.text`, e.target.value)} placeholder={t.text || bi('ماذا قال المستخدم...', 'What the user said...')} rows={3} className="mt-1 text-sm resize-none" />
                     </div>
                     {editLang === 'ar' && (
                       <div>
-                        <Label className="text-xs text-muted-foreground">التقييم (1-5 نجوم)</Label>
+                        <Label className="text-xs text-muted-foreground">{bi('التقييم (1-5 نجوم)', 'Rating (1-5 stars)')}</Label>
                         <div className="flex gap-2 mt-1">
                           {[1, 2, 3, 4, 5].map(n => (
                             <button
@@ -1149,23 +1160,23 @@ export default function SiteEditorPage() {
           {/* CONTACT */}
           <TabsContent value="contact" className="mt-4">
             <Card className="border-0 shadow-sm">
-              <CardHeader><CardTitle className="text-foreground text-base">معلومات التواصل</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-foreground text-base">{bi('معلومات التواصل', 'Contact Information')}</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label>رقم الهاتف (يظهر في قسم التواصل)</Label>
+                  <Label>{bi('رقم الهاتف (يظهر في قسم التواصل)', 'Phone number (shown in the contact section)')}</Label>
                   <Input value={config.contact.phone} onChange={e => setContact('phone', e.target.value)} placeholder="+966 XX XXX XXXX" dir="ltr" />
                 </div>
                 <div className="space-y-2">
-                  <Label>رقم واتساب</Label>
+                  <Label>{bi('رقم واتساب', 'WhatsApp number')}</Label>
                   <Input value={config.contact.whatsapp} onChange={e => setContact('whatsapp', e.target.value)} placeholder="+966 XX XXX XXXX" dir="ltr" />
                 </div>
                 <div className="space-y-2">
-                  <Label>رابط واتساب (wa.me link)</Label>
+                  <Label>{bi('رابط واتساب (wa.me link)', 'WhatsApp link (wa.me link)')}</Label>
                   <Input value={config.contact.whatsappLink} onChange={e => setContact('whatsappLink', e.target.value)} placeholder="https://wa.me/966XXXXXXXXX" dir="ltr" />
-                  <p className="text-muted-foreground text-xs">مثال: https://wa.me/966500000000</p>
+                  <p className="text-muted-foreground text-xs">{bi('مثال:', 'Example:')} https://wa.me/966500000000</p>
                 </div>
                 <div className="space-y-2">
-                  <Label>البريد الإلكتروني</Label>
+                  <Label>{bi('البريد الإلكتروني', 'Email')}</Label>
                   <Input value={config.contact.email} onChange={e => setContact('email', e.target.value)} placeholder="info@empowerhub.com" dir="ltr" />
                 </div>
               </CardContent>
@@ -1175,15 +1186,15 @@ export default function SiteEditorPage() {
           {/* CTA BANNER */}
           <TabsContent value="cta" className="mt-4">
             <Card className="border-0 shadow-sm">
-              <CardHeader><CardTitle className="text-foreground text-base">بانر الدعوة للعمل (CTA Banner)</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-foreground text-base">{bi('بانر الدعوة للعمل (CTA Banner)', 'Call-to-Action Banner')}</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label>العنوان الرئيسي</Label>
-                  <Input value={cv('ctaBanner.title')} onChange={e => uc('ctaBanner.title', e.target.value)} placeholder={editLang === 'en' ? config.ctaBanner.title : 'جاهز للبدء؟ انضم إلى آلاف المستفيدين'} />
+                  <Label>{bi('العنوان الرئيسي', 'Main title')}</Label>
+                  <Input value={cv('ctaBanner.title')} onChange={e => uc('ctaBanner.title', e.target.value)} placeholder={editLang === 'en' ? config.ctaBanner.title : bi('جاهز للبدء؟ انضم إلى آلاف المستفيدين', 'Ready to start? Join thousands of beneficiaries')} />
                 </div>
                 <div className="space-y-2">
-                  <Label>العنوان الفرعي</Label>
-                  <Textarea value={cv('ctaBanner.subtitle')} onChange={e => uc('ctaBanner.subtitle', e.target.value)} rows={2} className="resize-none" placeholder={editLang === 'en' ? config.ctaBanner.subtitle : 'سجّل مجاناً اليوم...'} />
+                  <Label>{bi('العنوان الفرعي', 'Subtitle')}</Label>
+                  <Textarea value={cv('ctaBanner.subtitle')} onChange={e => uc('ctaBanner.subtitle', e.target.value)} rows={2} className="resize-none" placeholder={editLang === 'en' ? config.ctaBanner.subtitle : bi('سجّل مجاناً اليوم...', 'Sign up for free today...')} />
                 </div>
                 <ButtonsEditor
                   buttons={editLang === 'ar' ? config.ctaBanner.buttons : (cv('ctaBanner.buttons', null) || config.ctaBanner.buttons.map(b => ({ ...b, text: '' })))}
@@ -1194,11 +1205,11 @@ export default function SiteEditorPage() {
                 />
                 {editLang === 'ar' && (
                   <ColorField
-                    label="لون خلفية البانر"
+                    label={bi('لون خلفية البانر', 'Banner background color')}
                     value={config.ctaBanner.backgroundColor}
                     defaultSwatch="#111827"
                     onChange={v => setBanner('backgroundColor', v)}
-                    hint="فارغ = التصميم الافتراضي (خلفية داكنة تتبع الثيم)"
+                    hint={bi('فارغ = التصميم الافتراضي (خلفية داكنة تتبع الثيم)', 'Empty = default design (dark background following the theme)')}
                   />
                 )}
                 {/* Preview — matches the real banner's default vs. custom-color behavior */}
@@ -1207,8 +1218,8 @@ export default function SiteEditorPage() {
                     className={`p-8 text-center ${config.ctaBanner.backgroundColor ? 'text-white' : 'bg-foreground text-background'}`}
                     style={config.ctaBanner.backgroundColor ? { backgroundColor: config.ctaBanner.backgroundColor } : undefined}
                   >
-                    <h2 className="text-xl font-bold mb-2">{cv('ctaBanner.title') || 'العنوان...'}</h2>
-                    <p className={`text-sm mb-4 ${config.ctaBanner.backgroundColor ? 'text-white/70' : 'text-background/60'}`}>{cv('ctaBanner.subtitle') || 'الوصف...'}</p>
+                    <h2 className="text-xl font-bold mb-2">{cv('ctaBanner.title') || bi('العنوان...', 'Title...')}</h2>
+                    <p className={`text-sm mb-4 ${config.ctaBanner.backgroundColor ? 'text-white/70' : 'text-background/60'}`}>{cv('ctaBanner.subtitle') || bi('الوصف...', 'Description...')}</p>
                     <div className="flex gap-2 justify-center flex-wrap">
                       {config.ctaBanner.buttons.map((btn, i) => (
                         <span
@@ -1232,27 +1243,27 @@ export default function SiteEditorPage() {
           {/* SECTIONS */}
           <TabsContent value="sections" className="mt-4">
             <Card className="border-0 shadow-sm">
-              <CardHeader><CardTitle className="text-foreground text-base">تشغيل وإيقاف الأقسام</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-foreground text-base">{bi('تشغيل وإيقاف الأقسام', 'Toggle Sections')}</CardTitle></CardHeader>
               <CardContent className="space-y-3">
                 {[
-                  { key: 'showStats' as const, label: 'قسم الإحصائيات', desc: 'أرقام الإنجازات والإحصائيات' },
-                  { key: 'showFeatures' as const, label: 'قسم المميزات', desc: 'بطاقات ميزات المنصة' },
-                  { key: 'showOpportunities' as const, label: 'قسم الفرص المتاحة', desc: 'يعرض أحدث المشاريع المنشورة من صفحة "إدارة المحتوى" — لن يظهر القسم إن لم توجد مشاريع' },
-                  { key: 'showRoles' as const, label: 'قسم الأدوار', desc: 'بطاقات مستفيد / مدرب / مرشد / منظمة' },
-                  { key: 'showMentors' as const, label: 'قسم المرشدون', desc: 'عرض المرشدين' },
-                  { key: 'showCoaches' as const, label: 'قسم المدربون', desc: 'عرض المدربين' },
-                  { key: 'showBlog' as const, label: 'قسم الموارد والمقالات', desc: 'يعرض أحدث المقالات المنشورة من صفحة "إدارة المحتوى" — لن يظهر القسم إن لم توجد مقالات' },
-                  { key: 'showTestimonials' as const, label: 'قسم الآراء', desc: 'شهادات وتقييمات المستخدمين' },
-                  { key: 'showProducts' as const, label: 'قسم المنتجات', desc: 'عرض منتجات المستفيدين' },
-                  { key: 'showStores' as const, label: 'قسم المتاجر', desc: 'عرض متاجر رواد الأعمال' },
-                  { key: 'showPricing' as const, label: 'قسم خطط الأسعار', desc: 'يعرض الخطط المُدارة من صفحة "خطط التسعير" — لن يظهر القسم إن لم توجد خطط' },
-                  { key: 'showContact' as const, label: 'قسم التواصل', desc: 'نموذج ومعلومات التواصل' },
-                  { key: 'showCTA' as const, label: 'قسم الدعوة للعمل', desc: 'بانر التسجيل في نهاية الصفحة' },
-                  { key: 'showAISpotlight' as const, label: 'قسم الذكاء الاصطناعي', desc: 'قسم "مدعوم بالذكاء الاصطناعي" الغامق' },
-                  { key: 'showFAQ' as const, label: 'قسم الأسئلة الشائعة', desc: 'الأسئلة والأجوبة الشائعة' },
-                  { key: 'showCourses' as const, label: 'قسم الدورات', desc: 'عرض الدورات التدريبية' },
-                  { key: 'showSessions' as const, label: 'قسم الجلسات المباشرة', desc: 'يعرض الجلسات المتاحة — لن يظهر القسم إن لم توجد جلسات' },
-                  { key: 'showSuccessStories' as const, label: 'قسم قصص النجاح', desc: 'يعرض قصص نجاح المستفيدين — لن يظهر القسم إن لم توجد قصص' },
+                  { key: 'showStats' as const, label: bi('قسم الإحصائيات', 'Stats Section'), desc: bi('أرقام الإنجازات والإحصائيات', 'Achievement numbers and statistics') },
+                  { key: 'showFeatures' as const, label: bi('قسم المميزات', 'Features Section'), desc: bi('بطاقات ميزات المنصة', 'Platform feature cards') },
+                  { key: 'showOpportunities' as const, label: bi('قسم الفرص المتاحة', 'Opportunities Section'), desc: bi('يعرض أحدث المشاريع المنشورة من صفحة "إدارة المحتوى" — لن يظهر القسم إن لم توجد مشاريع', 'Shows the latest published projects from the "Content Management" page — hidden if no projects exist') },
+                  { key: 'showRoles' as const, label: bi('قسم الأدوار', 'Roles Section'), desc: bi('بطاقات مستفيد / مدرب / مرشد / منظمة', 'Beneficiary / Coach / Mentor / Organization cards') },
+                  { key: 'showMentors' as const, label: bi('قسم المرشدون', 'Mentors Section'), desc: bi('عرض المرشدين', 'Displays mentors') },
+                  { key: 'showCoaches' as const, label: bi('قسم المدربون', 'Coaches Section'), desc: bi('عرض المدربين', 'Displays coaches') },
+                  { key: 'showBlog' as const, label: bi('قسم الموارد والمقالات', 'Resources & Articles Section'), desc: bi('يعرض أحدث المقالات المنشورة من صفحة "إدارة المحتوى" — لن يظهر القسم إن لم توجد مقالات', 'Shows the latest published articles from the "Content Management" page — hidden if no articles exist') },
+                  { key: 'showTestimonials' as const, label: bi('قسم الآراء', 'Testimonials Section'), desc: bi('شهادات وتقييمات المستخدمين', 'User testimonials and reviews') },
+                  { key: 'showProducts' as const, label: bi('قسم المنتجات', 'Products Section'), desc: bi('عرض منتجات المستفيدين', 'Displays beneficiary products') },
+                  { key: 'showStores' as const, label: bi('قسم المتاجر', 'Stores Section'), desc: bi('عرض متاجر رواد الأعمال', 'Displays entrepreneur stores') },
+                  { key: 'showPricing' as const, label: bi('قسم خطط الأسعار', 'Pricing Plans Section'), desc: bi('يعرض الخطط المُدارة من صفحة "خطط التسعير" — لن يظهر القسم إن لم توجد خطط', 'Shows plans managed from the "Pricing Plans" page — hidden if no plans exist') },
+                  { key: 'showContact' as const, label: bi('قسم التواصل', 'Contact Section'), desc: bi('نموذج ومعلومات التواصل', 'Contact form and information') },
+                  { key: 'showCTA' as const, label: bi('قسم الدعوة للعمل', 'CTA Section'), desc: bi('بانر التسجيل في نهاية الصفحة', 'Registration banner at the bottom of the page') },
+                  { key: 'showAISpotlight' as const, label: bi('قسم الذكاء الاصطناعي', 'AI Spotlight Section'), desc: bi('قسم "مدعوم بالذكاء الاصطناعي" الغامق', 'The dark "Powered by AI" section') },
+                  { key: 'showFAQ' as const, label: bi('قسم الأسئلة الشائعة', 'FAQ Section'), desc: bi('الأسئلة والأجوبة الشائعة', 'Frequently asked questions') },
+                  { key: 'showCourses' as const, label: bi('قسم الدورات', 'Courses Section'), desc: bi('عرض الدورات التدريبية', 'Displays training courses') },
+                  { key: 'showSessions' as const, label: bi('قسم الجلسات المباشرة', 'Live Sessions Section'), desc: bi('يعرض الجلسات المتاحة — لن يظهر القسم إن لم توجد جلسات', 'Shows available sessions — hidden if no sessions exist') },
+                  { key: 'showSuccessStories' as const, label: bi('قسم قصص النجاح', 'Success Stories Section'), desc: bi('يعرض قصص نجاح المستفيدين — لن يظهر القسم إن لم توجد قصص', 'Shows beneficiary success stories — hidden if no stories exist') },
                 ].map(item => (
                   <div key={item.key} className="flex items-center justify-between p-4 bg-muted/40 rounded-xl border border-border hover:border-border transition-all">
                     <div className="flex items-center gap-3">
@@ -1275,28 +1286,28 @@ export default function SiteEditorPage() {
           {/* FOOTER */}
           <TabsContent value="footer" className="mt-4">
             <Card className="border-0 shadow-sm">
-              <CardHeader><CardTitle className="text-foreground text-base">الفوتر وروابط التواصل</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-foreground text-base">{bi('الفوتر وروابط التواصل', 'Footer & Social Links')}</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label>وصف الفوتر</Label>
+                  <Label>{bi('وصف الفوتر', 'Footer description')}</Label>
                   <Textarea value={cv('footer.description')} onChange={e => uc('footer.description', e.target.value)} rows={2} className="resize-none" placeholder={editLang === 'en' ? config.footer.description : 'وصف قصير للمنصة...'} />
                 </div>
                 <div className="space-y-2">
-                  <Label>نص حقوق النشر</Label>
+                  <Label>{bi('نص حقوق النشر', 'Copyright text')}</Label>
                   <Input value={cv('footer.copyright')} onChange={e => uc('footer.copyright', e.target.value)} placeholder={editLang === 'en' ? config.footer.copyright : '© 2024 EmpowerHub. جميع الحقوق محفوظة.'} />
                 </div>
                 {editLang === 'ar' && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-2">
-                      <Label>البريد الإلكتروني</Label>
+                      <Label>{bi('البريد الإلكتروني', 'Email')}</Label>
                       <Input value={config.footer.email} onChange={e => setFooter('email', e.target.value)} placeholder="info@empowerhub.com" dir="ltr" />
                     </div>
                     <div className="space-y-2">
-                      <Label>رقم الهاتف</Label>
+                      <Label>{bi('رقم الهاتف', 'Phone number')}</Label>
                       <Input value={config.footer.phone} onChange={e => setFooter('phone', e.target.value)} placeholder="+966..." dir="ltr" />
                     </div>
                     <div className="space-y-2">
-                      <Label>تويتر / X</Label>
+                      <Label>{bi('تويتر / X', 'Twitter / X')}</Label>
                       <Input value={config.footer.twitter} onChange={e => setFooter('twitter', e.target.value)} placeholder="https://twitter.com/..." dir="ltr" />
                     </div>
                     <div className="space-y-2">
@@ -1310,39 +1321,39 @@ export default function SiteEditorPage() {
                   </div>
                 )}
                 <div className="pt-2 border-t border-border space-y-4">
-                  <p className="text-sm font-medium text-foreground">شريط الاشتراك بالنشرة</p>
+                  <p className="text-sm font-medium text-foreground">{bi('شريط الاشتراك بالنشرة', 'Newsletter Bar')}</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-2">
-                      <Label>عنوان شريط الاشتراك</Label>
+                      <Label>{bi('عنوان شريط الاشتراك', 'Newsletter bar title')}</Label>
                       <Input value={cv('footer.newsletterTitle')} onChange={e => uc('footer.newsletterTitle', e.target.value)} placeholder="انضم لمجتمع EmpowerHub الآن" />
                     </div>
                     <div className="space-y-2">
-                      <Label>نص حقل البريد</Label>
+                      <Label>{bi('نص حقل البريد', 'Email field placeholder')}</Label>
                       <Input value={cv('footer.newsletterPlaceholder')} onChange={e => uc('footer.newsletterPlaceholder', e.target.value)} placeholder="بريدك الإلكتروني" />
                     </div>
                     <div className="space-y-2">
-                      <Label>نص زر الاشتراك</Label>
+                      <Label>{bi('نص زر الاشتراك', 'Subscribe button text')}</Label>
                       <Input value={cv('footer.newsletterButton')} onChange={e => uc('footer.newsletterButton', e.target.value)} placeholder="اشترك" />
                     </div>
                   </div>
                 </div>
                 <div className="pt-2 border-t border-border space-y-4">
-                  <p className="text-sm font-medium text-foreground">عناوين أعمدة الروابط</p>
+                  <p className="text-sm font-medium text-foreground">{bi('عناوين أعمدة الروابط', 'Link Column Titles')}</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-2">
-                      <Label>عمود الروابط السريعة</Label>
+                      <Label>{bi('عمود الروابط السريعة', 'Quick links column')}</Label>
                       <Input value={cv('footer.quickLinksTitle')} onChange={e => uc('footer.quickLinksTitle', e.target.value)} placeholder="روابط سريعة" />
                     </div>
                     <div className="space-y-2">
-                      <Label>عمود "ابدأ كـ"</Label>
+                      <Label>{bi('عمود "ابدأ كـ"', '"Get started as" column')}</Label>
                       <Input value={cv('footer.roleLinksTitle')} onChange={e => uc('footer.roleLinksTitle', e.target.value)} placeholder="ابدأ كـ" />
                     </div>
                     <div className="space-y-2">
-                      <Label>عمود الشركة</Label>
+                      <Label>{bi('عمود الشركة', 'Company column')}</Label>
                       <Input value={cv('footer.companyLinksTitle')} onChange={e => uc('footer.companyLinksTitle', e.target.value)} placeholder="الشركة" />
                     </div>
                     <div className="space-y-2">
-                      <Label>عمود قانوني</Label>
+                      <Label>{bi('عمود قانوني', 'Legal column')}</Label>
                       <Input value={cv('footer.legalLinksTitle')} onChange={e => uc('footer.legalLinksTitle', e.target.value)} placeholder="قانوني" />
                     </div>
                   </div>
@@ -1355,36 +1366,36 @@ export default function SiteEditorPage() {
           <TabsContent value="headings" className="mt-4">
             <Card className="border-0 shadow-sm">
               <CardHeader>
-                <CardTitle className="text-foreground text-base">عناوين الأقسام</CardTitle>
-                <p className="text-muted-foreground text-xs">النص التمهيدي والعنوان والوصف الفرعي لكل قسم في الصفحة الرئيسية — اتركها فارغة لاستخدام النص الافتراضي</p>
+                <CardTitle className="text-foreground text-base">{bi('عناوين الأقسام', 'Section Headings')}</CardTitle>
+                <p className="text-muted-foreground text-xs">{bi('النص التمهيدي والعنوان والوصف الفرعي لكل قسم في الصفحة الرئيسية — اتركها فارغة لاستخدام النص الافتراضي', 'Eyebrow text, heading, and subheading for each section on the homepage — leave empty to use the default text')}</p>
               </CardHeader>
               <CardContent className="space-y-3">
                 {SECTION_HEADING_KEYS.map(s => (
                   <div key={s.key} className="p-4 bg-muted/40 rounded-xl border border-border space-y-3">
-                    <p className="text-sm font-semibold text-foreground">{s.label}</p>
+                    <p className="text-sm font-semibold text-foreground">{bi(s.label, s.labelEn)}</p>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div className="space-y-1.5">
-                        <Label className="text-xs">النص التمهيدي</Label>
+                        <Label className="text-xs">{bi('النص التمهيدي', 'Eyebrow text')}</Label>
                         <Input
                           value={cv(`sectionHeadings.${s.key}.eyebrow`)}
                           onChange={e => uc(`sectionHeadings.${s.key}.eyebrow`, e.target.value)}
-                          placeholder={editLang === 'en' ? (config.sectionHeadings[s.key]?.eyebrow || 'Default') : 'افتراضي'}
+                          placeholder={editLang === 'en' ? (config.sectionHeadings[s.key]?.eyebrow || 'Default') : bi('افتراضي', 'Default')}
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs">العنوان</Label>
+                        <Label className="text-xs">{bi('العنوان', 'Heading')}</Label>
                         <Input
                           value={cv(`sectionHeadings.${s.key}.heading`)}
                           onChange={e => uc(`sectionHeadings.${s.key}.heading`, e.target.value)}
-                          placeholder={editLang === 'en' ? (config.sectionHeadings[s.key]?.heading || 'Default') : 'افتراضي'}
+                          placeholder={editLang === 'en' ? (config.sectionHeadings[s.key]?.heading || 'Default') : bi('افتراضي', 'Default')}
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs">الوصف الفرعي</Label>
+                        <Label className="text-xs">{bi('الوصف الفرعي', 'Subheading')}</Label>
                         <Input
                           value={cv(`sectionHeadings.${s.key}.subheading`)}
                           onChange={e => uc(`sectionHeadings.${s.key}.subheading`, e.target.value)}
-                          placeholder={editLang === 'en' ? (config.sectionHeadings[s.key]?.subheading || 'Default') : 'افتراضي'}
+                          placeholder={editLang === 'en' ? (config.sectionHeadings[s.key]?.subheading || 'Default') : bi('افتراضي', 'Default')}
                         />
                       </div>
                     </div>
@@ -1397,28 +1408,28 @@ export default function SiteEditorPage() {
           {/* AI SPOTLIGHT */}
           <TabsContent value="aiSpotlight" className="mt-4">
             <Card className="border-0 shadow-sm">
-              <CardHeader><CardTitle className="text-foreground text-base">قسم الذكاء الاصطناعي</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-foreground text-base">{bi('قسم الذكاء الاصطناعي', 'AI Spotlight Section')}</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>النص التمهيدي</Label>
+                    <Label>{bi('النص التمهيدي', 'Eyebrow text')}</Label>
                     <Input value={cv('aiSpotlight.eyebrow')} onChange={e => uc('aiSpotlight.eyebrow', e.target.value)} placeholder={editLang === 'en' ? config.aiSpotlight.eyebrow : 'مدعوم بالذكاء الاصطناعي'} />
                   </div>
                   <div className="space-y-2">
-                    <Label>العنوان</Label>
+                    <Label>{bi('العنوان', 'Heading')}</Label>
                     <Input value={cv('aiSpotlight.heading')} onChange={e => uc('aiSpotlight.heading', e.target.value)} placeholder={editLang === 'en' ? config.aiSpotlight.heading : 'توصيات ذكية تسبقك خطوة.'} />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>الوصف الفرعي</Label>
+                  <Label>{bi('الوصف الفرعي', 'Subheading')}</Label>
                   <Textarea value={cv('aiSpotlight.subheading')} onChange={e => uc('aiSpotlight.subheading', e.target.value)} rows={2} className="resize-none" placeholder={editLang === 'en' ? config.aiSpotlight.subheading : undefined} />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {config.aiSpotlight.cards.map((card, i) => (
                     <div key={i} className="p-3 rounded-xl border border-border bg-muted/30 space-y-2">
-                      <Label className="text-xs">بطاقة {i + 1} — العنوان</Label>
+                      <Label className="text-xs">{bi('بطاقة', 'Card')} {i + 1} — {bi('العنوان', 'Title')}</Label>
                       <Input value={cv(`aiSpotlight.cards.${i}.title`)} onChange={e => uc(`aiSpotlight.cards.${i}.title`, e.target.value)} placeholder={editLang === 'en' ? card.title : undefined} />
-                      <Label className="text-xs">بطاقة {i + 1} — الوصف</Label>
+                      <Label className="text-xs">{bi('بطاقة', 'Card')} {i + 1} — {bi('الوصف', 'Description')}</Label>
                       <Textarea value={cv(`aiSpotlight.cards.${i}.description`)} onChange={e => uc(`aiSpotlight.cards.${i}.description`, e.target.value)} rows={2} className="resize-none" placeholder={editLang === 'en' ? card.description : undefined} />
                     </div>
                   ))}
@@ -1432,23 +1443,23 @@ export default function SiteEditorPage() {
             <Card className="border-0 shadow-sm">
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-foreground text-base">الأسئلة الشائعة</CardTitle>
+                  <CardTitle className="text-foreground text-base">{bi('الأسئلة الشائعة', 'FAQ')}</CardTitle>
                   {editLang === 'ar' && (
                     <Button type="button" size="sm" variant="outline" onClick={addFaq} className="gap-1">
-                      <Plus className="h-4 w-4" />إضافة سؤال
+                      <Plus className="h-4 w-4" />{bi('إضافة سؤال', 'Add question')}
                     </Button>
                   )}
                 </div>
-                <p className="text-muted-foreground text-xs">اتركها فارغة لاستخدام الأسئلة الافتراضية</p>
+                <p className="text-muted-foreground text-xs">{bi('اتركها فارغة لاستخدام الأسئلة الافتراضية', 'Leave empty to use the default questions')}</p>
               </CardHeader>
               <CardContent className="space-y-3">
                 {config.faq.length === 0 && (
-                  <p className="text-muted-foreground text-sm py-4 text-center">لا توجد أسئلة مخصصة بعد — يتم عرض الأسئلة الافتراضية.</p>
+                  <p className="text-muted-foreground text-sm py-4 text-center">{bi('لا توجد أسئلة مخصصة بعد — يتم عرض الأسئلة الافتراضية.', 'No custom questions yet — the default questions are shown.')}</p>
                 )}
                 {config.faq.map((item, i) => (
                   <div key={i} className="p-4 bg-muted/40 rounded-xl border border-border space-y-2">
                     <div className="flex items-center justify-between">
-                      <Label className="text-xs">السؤال</Label>
+                      <Label className="text-xs">{bi('السؤال', 'Question')}</Label>
                       {editLang === 'ar' && (
                         <Button type="button" size="sm" variant="ghost" onClick={() => removeFaq(i)} className="h-7 w-7 p-0 text-muted-foreground hover:text-red-400">
                           <Trash2 className="h-3.5 w-3.5" />
@@ -1456,7 +1467,7 @@ export default function SiteEditorPage() {
                       )}
                     </div>
                     <Input value={cv(`faq.${i}.question`)} onChange={e => uc(`faq.${i}.question`, e.target.value)} placeholder={editLang === 'en' ? item.question : 'نص السؤال'} />
-                    <Label className="text-xs">الإجابة</Label>
+                    <Label className="text-xs">{bi('الإجابة', 'Answer')}</Label>
                     <Textarea value={cv(`faq.${i}.answer`)} onChange={e => uc(`faq.${i}.answer`, e.target.value)} rows={2} className="resize-none" placeholder={editLang === 'en' ? item.answer : 'نص الإجابة'} />
                   </div>
                 ))}
