@@ -186,7 +186,7 @@ export default function OrganizationDashboardLayout({ children }: { children: Re
 
       <SidebarInset>
         {/* ── Top Header ── */}
-        <header className="flex h-16 items-center gap-3 border-b border-border/70 bg-card px-4 lg:px-6 sticky top-0 z-30" dir="ltr">
+        <header className="flex h-16 items-center gap-3 border-b border-border/70 bg-card px-4 lg:px-6 sticky top-0 z-30">
           <SidebarTrigger className="h-8 w-8 rounded-xl shrink-0" />
           <div className="flex-1 max-w-xs">
             <div className="relative">
