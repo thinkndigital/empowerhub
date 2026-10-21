@@ -1,30 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase-admin';
-
-function normalizeDate(d: any): string | null {
-  if (!d) return null;
-  if (typeof d === 'string') return d;
-  const s = d._seconds ?? d.seconds;
-  return s ? new Date(s * 1000).toISOString() : null;
-}
+import { db } from '@/lib/db';
+import { articles } from '@/lib/schema';
+import { eq } from 'drizzle-orm';
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const doc = await adminDb.collection('articles').doc(params.id).get();
-    if (!doc.exists) return NextResponse.json({ error: 'المقال غير موجود' }, { status: 404 });
-    const data = doc.data()!;
-    if (data.status !== 'published') {
+    const [article] = await db.select().from(articles).where(eq(articles.id, params.id)).limit(1);
+    if (!article) return NextResponse.json({ error: 'المقال غير موجود' }, { status: 404 });
+    if (article.status !== 'published') {
       return NextResponse.json({ error: 'المقال غير متاح' }, { status: 404 });
     }
-    return NextResponse.json({
-      article: {
-        id: doc.id,
-        ...data,
-        publishedAt: normalizeDate(data.publishedAt),
-        createdAt: normalizeDate(data.createdAt),
-        updatedAt: normalizeDate(data.updatedAt),
-      }
-    });
+    return NextResponse.json({ article });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }

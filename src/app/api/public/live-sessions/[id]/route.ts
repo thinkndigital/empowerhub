@@ -1,37 +1,32 @@
 import { NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase-admin';
-
-function normalizeDate(d: any): string | null {
-  if (!d) return null;
-  if (typeof d === 'string') return d;
-  const s = d._seconds ?? d.seconds;
-  return s ? new Date(s * 1000).toISOString() : null;
-}
+import { db } from '@/lib/db';
+import { liveSessions, liveSessionRegistrations } from '@/lib/schema';
+import { eq, sql } from 'drizzle-orm';
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   try {
-    const docRef = adminDb.collection('live_sessions').doc(params.id);
-    const snap = await docRef.get();
-    if (!snap.exists) {
+    const [session] = await db.select().from(liveSessions).where(eq(liveSessions.id, params.id)).limit(1);
+    if (!session) {
       return NextResponse.json({ error: 'غير موجود' }, { status: 404 });
     }
-    const data = snap.data()!;
-    if (data.status !== 'published') {
+    if (session.status !== 'published') {
       return NextResponse.json({ error: 'غير متاح' }, { status: 404 });
     }
-    const regsSnap = await docRef.collection('registrations').get();
+
+    const [{ c }] = await db.select({ c: sql<number>`count(*)` }).from(liveSessionRegistrations).where(eq(liveSessionRegistrations.sessionId, params.id));
+
     return NextResponse.json({
       session: {
-        id: snap.id,
-        title: data.title,
-        description: data.description,
-        coverImageUrl: data.coverImageUrl,
-        coachName: data.coachName,
-        date: normalizeDate(data.date),
-        duration: data.duration,
-        price: data.price,
-        maxParticipants: data.maxParticipants,
-        registrationsCount: regsSnap.size,
+        id: session.id,
+        title: session.title,
+        description: session.description,
+        coverImageUrl: session.coverImageUrl,
+        coachName: session.coachName,
+        date: session.date,
+        duration: session.duration,
+        price: session.price,
+        maxParticipants: session.maxParticipants,
+        registrationsCount: Number(c),
       },
     });
   } catch (e: any) {

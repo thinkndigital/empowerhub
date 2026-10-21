@@ -1,24 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { verifyAuthToken } from '@/lib/auth-server';
+import { db } from '@/lib/db';
+import { courses, users, enrollments } from '@/lib/schema';
+import { and, eq } from 'drizzle-orm';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const snap = await adminDb.collection('courses').doc(params.id).get();
-    if (!snap.exists) return NextResponse.json({ error: 'غير موجود' }, { status: 404 });
-    const data = snap.data()!;
+    const [course] = await db.select().from(courses).where(eq(courses.id, params.id)).limit(1);
+    if (!course) return NextResponse.json({ error: 'غير موجود' }, { status: 404 });
+    if (course.status !== 'published') return NextResponse.json({ error: 'غير متاح' }, { status: 404 });
 
-    const allowed = ['published', 'منشورة'];
-    if (!allowed.includes(data.status)) return NextResponse.json({ error: 'غير متاح' }, { status: 404 });
-
-    let coachName = data.coachName || '';
+    let coachName = course.coachName || '';
     let coachAvatarUrl = '';
-    if (data.createdBy) {
-      const coachSnap = await adminDb.collection('users').doc(data.createdBy).get();
-      if (coachSnap.exists) {
-        coachName = coachName || coachSnap.data()!.name || coachSnap.data()!.displayName || '';
-        coachAvatarUrl = coachSnap.data()!.avatarUrl || '';
+    if (course.createdBy) {
+      const [coach] = await db.select().from(users).where(eq(users.id, course.createdBy)).limit(1);
+      if (coach) {
+        coachName = coachName || coach.name || coach.displayName || '';
+        coachAvatarUrl = coach.avatarUrl || '';
       }
     }
 
@@ -27,28 +27,27 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     const authHeader = req.headers.get('authorization');
     if (authHeader) {
       try {
-        const decoded = await adminAuth.verifyIdToken(authHeader.replace('Bearer ', ''));
-        const enrollDoc = await adminDb
-          .collection('courses').doc(params.id)
-          .collection('enrollments').doc(decoded.uid).get();
-        isEnrolled = enrollDoc.exists;
+        const decoded = await verifyAuthToken(authHeader.replace('Bearer ', ''));
+        const [enroll] = await db.select().from(enrollments)
+          .where(and(eq(enrollments.courseId, params.id), eq(enrollments.userId, decoded.uid))).limit(1);
+        isEnrolled = !!enroll;
       } catch { /* unauthenticated is fine */ }
     }
 
     return NextResponse.json({
       course: {
-        id: snap.id,
-        title: data.title || '',
-        description: data.description || '',
-        price: data.price ?? null,
-        coverImageUrl: data.coverImageUrl || data.imageUrl || '',
-        duration: data.duration || '',
-        createdBy: data.createdBy || '',
+        id: course.id,
+        title: course.title || '',
+        description: course.description || '',
+        price: course.price ?? null,
+        coverImageUrl: course.coverImageUrl || '',
+        duration: course.duration || '',
+        createdBy: course.createdBy || '',
         coachName,
         coachAvatarUrl,
-        enrollmentCount: data.enrollmentCount || 0,
-        objectives: data.objectives || [],
-        requirements: data.requirements || [],
+        enrollmentCount: course.enrolledCount || 0,
+        objectives: course.objectives || [],
+        requirements: course.requirements || [],
         isEnrolled,
       },
     });

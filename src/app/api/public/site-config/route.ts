@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase-admin';
+import { getSetting } from '@/lib/app-settings';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -119,8 +119,7 @@ const defaultConfig = {
 
 export async function GET() {
   try {
-    const snap = await adminDb.collection('config').doc('site').get();
-    const data = snap.exists ? snap.data() as any : {};
+    const data = (await getSetting<any>('site')) || {};
     const config = {
       ...defaultConfig,
       ...data,

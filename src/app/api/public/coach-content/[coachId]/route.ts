@@ -1,19 +1,21 @@
 import { NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase-admin';
+import { db } from '@/lib/db';
+import { courses, liveSessions } from '@/lib/schema';
+import { and, eq } from 'drizzle-orm';
 
 export async function GET(_req: Request, { params }: { params: { coachId: string } }) {
   try {
     const { coachId } = params;
 
-    const [coursesSnap, liveSnap] = await Promise.all([
-      adminDb.collection('courses').where('createdBy', '==', coachId).where('status', 'in', ['published', 'منشورة']).get(),
-      adminDb.collection('live_sessions').where('coachId', '==', coachId).where('status', '==', 'published').get(),
+    const [courseRows, liveRows] = await Promise.all([
+      db.select().from(courses).where(and(eq(courses.createdBy, coachId), eq(courses.status, 'published'))),
+      db.select().from(liveSessions).where(and(eq(liveSessions.coachId, coachId), eq(liveSessions.status, 'published'))),
     ]);
 
-    const courses = coursesSnap.docs.map(d => ({ id: d.id, title: d.data().title || '', type: 'course' as const }));
-    const liveSessions = liveSnap.docs.map(d => ({ id: d.id, title: d.data().title || '', type: 'live_session' as const }));
+    const coursesResult = courseRows.map(c => ({ id: c.id, title: c.title || '', type: 'course' as const }));
+    const liveSessionsResult = liveRows.map(s => ({ id: s.id, title: s.title || '', type: 'live_session' as const }));
 
-    return NextResponse.json({ courses, liveSessions });
+    return NextResponse.json({ courses: coursesResult, liveSessions: liveSessionsResult });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }

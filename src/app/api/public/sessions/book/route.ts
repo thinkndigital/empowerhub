@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase-admin';
+import { db } from '@/lib/db';
+import { orders } from '@/lib/schema';
+import { randomUUID } from 'crypto';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,18 +15,15 @@ export async function POST(req: NextRequest) {
     }
 
     const sessionType = hostRole === 'coach' ? 'تدريب' : 'إرشاد';
-    const order = {
+    const orderId = randomUUID();
+    await db.insert(orders).values({
+      id: orderId,
       type: 'session',
       productId: hostId,
       productName: `جلسة ${sessionType} مع ${hostName}`,
-      productPrice: Number(sessionPrice),
-      storeId: '',
-      storeName: '',
-      beneficiaryId: hostId,
-      organizationId: '',
+      totalAmount: String(Number(sessionPrice)),
       buyerName: buyerName.trim(),
       buyerPhone: buyerPhone.trim(),
-      buyerAddress: '',
       notes: notes || '',
       preferredTime: preferredTime || '',
       quantity: 1,
@@ -34,11 +33,9 @@ export async function POST(req: NextRequest) {
       hostId,
       hostName,
       hostRole: hostRole || 'mentor',
-      createdAt: new Date().toISOString(),
-    };
+    });
 
-    const ref = await adminDb.collection('orders').add(order);
-    return NextResponse.json({ ok: true, orderId: ref.id });
+    return NextResponse.json({ ok: true, orderId });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }

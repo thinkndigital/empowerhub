@@ -32,7 +32,10 @@ export const users = mysqlTable('users', {
   whatsapp: varchar('whatsapp', { length: 50 }),
   linkedin: varchar('linkedin', { length: 255 }),
   instagram: varchar('instagram', { length: 255 }),
+  website: varchar('website', { length: 255 }),
+  twitter: varchar('twitter', { length: 255 }),
   bio: text('bio'),
+  certifications: text('certifications'),
   specializations: json('specializations').$type<string[]>(),
   sessionPrice: decimal('session_price', { precision: 10, scale: 2 }),
   yearsOfExperience: int('years_of_experience'),
@@ -71,12 +74,21 @@ export const plans = mysqlTable('plans', {
   id: id(),
   key: varchar('key', { length: 100 }).notNull().unique(),
   name: varchar('name', { length: 255 }).notNull(),
+  nameEn: varchar('name_en', { length: 255 }),
+  description: text('description'),
   priceMonthly: decimal('price_monthly', { precision: 10, scale: 2 }),
   priceAnnual: decimal('price_annual', { precision: 10, scale: 2 }),
   currency: varchar('currency', { length: 10 }).default('JOD'),
+  color: varchar('color', { length: 20 }),
+  icon: varchar('icon', { length: 50 }),
+  highlighted: boolean('highlighted').default(false),
   sortOrder: int('sort_order').default(0),
   maxUsers: int('max_users'),
   maxMentors: int('max_mentors'),
+  // Full limits object as shown/edited in the admin UI (maxUsers/maxMentors
+  // are mirrored into the real columns above, which plan-limits.ts enforces;
+  // maxCourses/maxProducts/maxStorage are display-only, not yet enforced).
+  limits: json('limits').$type<Record<string, number>>(),
   features: json('features').$type<string[]>(),
   createdAt: createdAt(),
 });

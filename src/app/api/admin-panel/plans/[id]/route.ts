@@ -11,7 +11,11 @@ function checkAuth() {
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   if (!checkAuth()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const body = await req.json();
-  await db.update(plans).set(body).where(eq(plans.id, params.id));
+  await db.update(plans).set({
+    ...body,
+    maxUsers: body.limits?.maxUsers ?? body.maxUsers,
+    maxMentors: body.limits?.maxMentors ?? body.maxMentors,
+  }).where(eq(plans.id, params.id));
   return NextResponse.json({ ok: true });
 }
 

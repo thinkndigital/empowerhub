@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase-admin';
+import { getSetting } from '@/lib/app-settings';
+import { db } from '@/lib/db';
+import { orders } from '@/lib/schema';
+import { eq } from 'drizzle-orm';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,8 +15,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'بيانات ناقصة' }, { status: 400 });
     }
 
-    const configSnap = await adminDb.collection('config').doc('payment').get();
-    const config = configSnap.exists ? configSnap.data() as any : {};
+    const config = (await getSetting<any>('payment')) || {};
     const currency = config?.currency || 'JOD';
 
     const host = (req.headers.get('origin') || '').replace(/\/$/, '') || 'https://empowerhub.tech';
@@ -45,7 +47,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: e.message || 'خطأ في موياسر' }, { status: 500 });
       }
       const payment = await res.json();
-      await adminDb.collection('orders').doc(orderId).update({ paymentId: payment.id, paymentGateway: 'moyasar' });
+      await db.update(orders).set({ paymentId: payment.id, paymentGateway: 'moyasar' }).where(eq(orders.id, orderId));
       return NextResponse.json({ ok: true, paymentUrl: payment.source?.transaction_url, paymentId: payment.id });
     }
 
@@ -79,7 +81,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: e.error?.message || 'خطأ في Stripe' }, { status: 500 });
       }
       const session = await res.json();
-      await adminDb.collection('orders').doc(orderId).update({ paymentId: session.id, paymentGateway: 'stripe' });
+      await db.update(orders).set({ paymentId: session.id, paymentGateway: 'stripe' }).where(eq(orders.id, orderId));
       return NextResponse.json({ ok: true, paymentUrl: session.url, paymentId: session.id });
     }
 
@@ -116,7 +118,7 @@ export async function POST(req: NextRequest) {
       const ppOrder = await orderRes.json();
       const approveLink = ppOrder.links?.find((l: any) => l.rel === 'approve')?.href;
       if (!approveLink) return NextResponse.json({ error: 'فشل إنشاء طلب PayPal' }, { status: 500 });
-      await adminDb.collection('orders').doc(orderId).update({ paymentId: ppOrder.id, paymentGateway: 'paypal' });
+      await db.update(orders).set({ paymentId: ppOrder.id, paymentGateway: 'paypal' }).where(eq(orders.id, orderId));
       return NextResponse.json({ ok: true, paymentUrl: approveLink, paymentId: ppOrder.id });
     }
 
@@ -157,7 +159,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: errMsg }, { status: 500 });
       }
       const pt = await res.json();
-      await adminDb.collection('orders').doc(orderId).update({ paymentId: pt.tran_ref, paymentGateway: 'paytabs' });
+      await db.update(orders).set({ paymentId: pt.tran_ref, paymentGateway: 'paytabs' }).where(eq(orders.id, orderId));
       return NextResponse.json({ ok: true, paymentUrl: pt.redirect_url, paymentId: pt.tran_ref });
     }
 
@@ -187,7 +189,7 @@ export async function POST(req: NextRequest) {
       }
       const hp = await res.json();
       const paymentUrl = `${host}/payment/hyperpay?checkoutId=${hp.id}&orderId=${orderId}`;
-      await adminDb.collection('orders').doc(orderId).update({ paymentId: hp.id, paymentGateway: 'hyperpay' });
+      await db.update(orders).set({ paymentId: hp.id, paymentGateway: 'hyperpay' }).where(eq(orders.id, orderId));
       return NextResponse.json({ ok: true, paymentUrl, paymentId: hp.id });
     }
 
@@ -215,7 +217,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: e.message || 'خطأ في تمارا' }, { status: 500 });
       }
       const tm = await res.json();
-      await adminDb.collection('orders').doc(orderId).update({ paymentId: tm.order_id, paymentGateway: 'tamara' });
+      await db.update(orders).set({ paymentId: tm.order_id, paymentGateway: 'tamara' }).where(eq(orders.id, orderId));
       return NextResponse.json({ ok: true, paymentUrl: tm.checkout_url, paymentId: tm.order_id });
     }
 
@@ -250,7 +252,7 @@ export async function POST(req: NextRequest) {
       }
       const tb = await res.json();
       const paymentUrl = tb.configuration?.available_products?.installments?.[0]?.web_url;
-      await adminDb.collection('orders').doc(orderId).update({ paymentId: tb.id, paymentGateway: 'tabby' });
+      await db.update(orders).set({ paymentId: tb.id, paymentGateway: 'tabby' }).where(eq(orders.id, orderId));
       return NextResponse.json({ ok: true, paymentUrl: paymentUrl || tb.configuration?.available_products?.pay_later?.[0]?.web_url, paymentId: tb.id });
     }
 

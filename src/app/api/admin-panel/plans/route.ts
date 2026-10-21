@@ -20,6 +20,12 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const [{ c }] = await db.select({ c: count() }).from(plans);
   const id = randomUUID();
-  await db.insert(plans).values({ ...body, id, sortOrder: c });
+  await db.insert(plans).values({
+    ...body,
+    id,
+    sortOrder: c,
+    maxUsers: body.limits?.maxUsers ?? body.maxUsers,
+    maxMentors: body.limits?.maxMentors ?? body.maxMentors,
+  });
   return NextResponse.json({ id, ...body });
 }

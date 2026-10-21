@@ -1,13 +1,12 @@
 import { NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase-admin';
+import { getSetting } from '@/lib/app-settings';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export async function GET() {
   try {
-    const snap = await adminDb.collection('config').doc('platform').get();
-    const d = snap.exists ? snap.data() as any : {};
+    const d = (await getSetting<any>('platform')) || {};
     return NextResponse.json({
       config: {
         platformName: d.platformName || 'EmpowerHub',

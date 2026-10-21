@@ -1,26 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase-admin';
+import { db } from '@/lib/db';
+import { users } from '@/lib/schema';
+import { eq } from 'drizzle-orm';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const snap = await adminDb.collection('users').doc(params.id).get();
-    if (!snap.exists) return NextResponse.json({ error: 'غير موجود' }, { status: 404 });
-    const data = snap.data()!;
-    if (data.role !== 'mentor') return NextResponse.json({ error: 'غير موجود' }, { status: 404 });
+    const [mentor] = await db.select().from(users).where(eq(users.id, params.id)).limit(1);
+    if (!mentor || mentor.role !== 'mentor') return NextResponse.json({ error: 'غير موجود' }, { status: 404 });
     return NextResponse.json({
       mentor: {
-        id: snap.id,
-        name: data.name || data.displayName || '',
-        bio: data.bio || data.description || '',
-        specializations: Array.isArray(data.specializations) ? data.specializations : typeof data.specializations === 'string' && data.specializations ? [data.specializations] : [],
-        avatarUrl: data.avatarUrl || '',
-        sessionPrice: data.sessionPrice ?? null,
-        whatsapp: data.whatsapp || '',
-        linkedin: data.linkedin || '',
-        instagram: data.instagram || '',
-        email: data.email || '',
+        id: mentor.id,
+        name: mentor.name || mentor.displayName || '',
+        bio: mentor.bio || '',
+        specializations: mentor.specializations || [],
+        avatarUrl: mentor.avatarUrl || '',
+        sessionPrice: mentor.sessionPrice ?? null,
+        whatsapp: mentor.whatsapp || '',
+        linkedin: mentor.linkedin || '',
+        instagram: mentor.instagram || '',
+        email: mentor.email || '',
       },
     });
   } catch (e: any) {

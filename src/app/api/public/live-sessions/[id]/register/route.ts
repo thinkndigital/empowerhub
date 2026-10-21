@@ -1,22 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase-admin';
-import { FieldValue } from 'firebase-admin/firestore';
+import { db } from '@/lib/db';
+import { liveSessions, liveSessionRegistrations } from '@/lib/schema';
+import { and, eq, sql } from 'drizzle-orm';
+import { randomUUID } from 'crypto';
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const docRef = adminDb.collection('live_sessions').doc(params.id);
-    const snap = await docRef.get();
-    if (!snap.exists || snap.data()?.status !== 'published') {
+    const [session] = await db.select().from(liveSessions).where(eq(liveSessions.id, params.id)).limit(1);
+    if (!session || session.status !== 'published') {
       return NextResponse.json({ error: 'الجلسة غير موجودة أو غير متاحة' }, { status: 404 });
     }
 
-    const data = snap.data()!;
-    const regsRef = docRef.collection('registrations');
-
-    // Check if max participants reached
-    if (data.maxParticipants) {
-      const count = (await regsRef.get()).size;
-      if (count >= data.maxParticipants) {
+    if (session.maxParticipants) {
+      const [{ c }] = await db.select({ c: sql<number>`count(*)` }).from(liveSessionRegistrations).where(eq(liveSessionRegistrations.sessionId, params.id));
+      if (Number(c) >= session.maxParticipants) {
         return NextResponse.json({ error: 'اكتمل عدد المشاركين' }, { status: 400 });
       }
     }
@@ -27,18 +24,20 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       return NextResponse.json({ error: 'الاسم والبريد الإلكتروني مطلوبان' }, { status: 400 });
     }
 
-    // Prevent duplicate registrations by email
-    const existing = await regsRef.where('email', '==', email.trim().toLowerCase()).get();
-    if (!existing.empty) {
+    const normalizedEmail = email.trim().toLowerCase();
+    const [existing] = await db.select().from(liveSessionRegistrations)
+      .where(and(eq(liveSessionRegistrations.sessionId, params.id), eq(liveSessionRegistrations.email, normalizedEmail))).limit(1);
+    if (existing) {
       return NextResponse.json({ error: 'تم تسجيلك مسبقاً في هذه الجلسة' }, { status: 400 });
     }
 
-    await regsRef.add({
+    await db.insert(liveSessionRegistrations).values({
+      id: randomUUID(),
+      sessionId: params.id,
       name: name.trim(),
-      email: email.trim().toLowerCase(),
+      email: normalizedEmail,
       phone: phone?.trim() || '',
-      registeredAt: FieldValue.serverTimestamp(),
-      paymentStatus: data.price > 0 ? 'pending' : 'free',
+      paymentStatus: Number(session.price) > 0 ? 'pending' : 'free',
     });
 
     return NextResponse.json({ success: true });

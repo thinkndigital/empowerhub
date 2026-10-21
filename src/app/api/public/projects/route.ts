@@ -1,33 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase-admin';
-
-function normalizeDate(d: any): string | null {
-  if (!d) return null;
-  if (typeof d === 'string') return d;
-  const s = d._seconds ?? d.seconds;
-  return s ? new Date(s * 1000).toISOString() : null;
-}
+import { db } from '@/lib/db';
+import { projects } from '@/lib/schema';
+import { desc, eq } from 'drizzle-orm';
 
 export async function GET(_req: NextRequest) {
   try {
-    const snap = await adminDb.collection('projects').where('status', '==', 'published').get();
-    const projects = snap.docs.map(d => {
-      const data = d.data();
-      return {
-        id: d.id,
-        title: data.title,
-        description: data.description,
-        coverImageUrl: data.coverImageUrl,
-        organizationId: data.organizationId,
-        organizationName: data.organizationName,
-        type: data.type,
-        location: data.location,
-        deadline: data.deadline,
-        publishedAt: normalizeDate(data.publishedAt),
-      };
+    const rows = await db.select().from(projects).where(eq(projects.status, 'published')).orderBy(desc(projects.publishedAt));
+    return NextResponse.json({
+      projects: rows.map(p => ({
+        id: p.id,
+        title: p.title,
+        description: p.description,
+        coverImageUrl: p.coverImageUrl,
+        organizationId: p.organizationId,
+        organizationName: p.organizationName,
+        type: p.type,
+        location: p.location,
+        deadline: p.deadline,
+        publishedAt: p.publishedAt,
+      })),
     });
-    projects.sort((a: any, b: any) => (b.publishedAt || '').localeCompare(a.publishedAt || ''));
-    return NextResponse.json({ projects });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }

@@ -3,16 +3,16 @@ import { Toaster } from '@/components/ui/toaster';
 import './globals.css';
 import { FirebaseProviderDynamic } from '@/components/firebase-provider-dynamic';
 import { ThemeProvider } from '@/components/theme-provider';
-import { adminDb } from '@/lib/firebase-admin';
+import { getSetting } from '@/lib/app-settings';
 
 export async function generateMetadata(): Promise<Metadata> {
   let faviconUrl = '';
   try {
-    const [platformSnap, siteSnap] = await Promise.all([
-      adminDb.collection('config').doc('platform').get(),
-      adminDb.collection('config').doc('site').get(),
+    const [platformConfig, siteConfig] = await Promise.all([
+      getSetting<any>('platform'),
+      getSetting<any>('site'),
     ]);
-    faviconUrl = platformSnap.data()?.faviconUrl || siteSnap.data()?.faviconUrl || '';
+    faviconUrl = platformConfig?.faviconUrl || siteConfig?.faviconUrl || '';
   } catch {}
 
   return {
@@ -49,7 +49,7 @@ function hexToHsl(hex: string): { h: number; s: number; l: number } | null {
 
 async function getBrandColorStyle(): Promise<string> {
   try {
-    const data = (await adminDb.collection('config').doc('site').get()).data() || {};
+    const data = (await getSetting<any>('site')) || {};
     const hsl = hexToHsl(data.primaryColor || '');
     if (!hsl) return '';
     const { h, s, l } = hsl;

@@ -1,35 +1,33 @@
 import { NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase-admin';
-
-function normalizeDate(d: any): string | null {
-  if (!d) return null;
-  if (typeof d === 'string') return d;
-  const s = d._seconds ?? d.seconds;
-  return s ? new Date(s * 1000).toISOString() : null;
-}
+import { db } from '@/lib/db';
+import { liveSessions, liveSessionRegistrations } from '@/lib/schema';
+import { asc, eq, inArray, sql } from 'drizzle-orm';
 
 export async function GET() {
   try {
-    const snap = await adminDb.collection('live_sessions').where('status', '==', 'published').get();
+    const sessionRows = await db.select().from(liveSessions).where(eq(liveSessions.status, 'published')).orderBy(asc(liveSessions.date));
 
-    const sessions = await Promise.all(snap.docs.map(async d => {
-      const data = d.data();
-      const regsSnap = await adminDb.collection('live_sessions').doc(d.id).collection('registrations').get();
-      return {
-        id: d.id,
-        title: data.title,
-        description: data.description,
-        coverImageUrl: data.coverImageUrl,
-        coachName: data.coachName,
-        date: normalizeDate(data.date),
-        duration: data.duration,
-        price: data.price,
-        maxParticipants: data.maxParticipants,
-        registrationsCount: regsSnap.size,
-        createdAt: normalizeDate(data.createdAt),
-      };
+    const sessionIds = sessionRows.map(s => s.id);
+    const counts = sessionIds.length
+      ? await db.select({ sessionId: liveSessionRegistrations.sessionId, c: sql<number>`count(*)` })
+          .from(liveSessionRegistrations).where(inArray(liveSessionRegistrations.sessionId, sessionIds)).groupBy(liveSessionRegistrations.sessionId)
+      : [];
+    const countMap = new Map(counts.map(c => [c.sessionId, Number(c.c)]));
+
+    const sessions = sessionRows.map(s => ({
+      id: s.id,
+      title: s.title,
+      description: s.description,
+      coverImageUrl: s.coverImageUrl,
+      coachName: s.coachName,
+      date: s.date,
+      duration: s.duration,
+      price: s.price,
+      maxParticipants: s.maxParticipants,
+      registrationsCount: countMap.get(s.id) || 0,
+      createdAt: s.createdAt,
     }));
-    sessions.sort((a: any, b: any) => (a.date || '').localeCompare(b.date || ''));
+
     return NextResponse.json({ sessions });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
