@@ -1,4 +1,6 @@
-import { adminDb } from '@/lib/firebase-admin';
+import { db } from '@/lib/db';
+import { organizations, plans, subscriptions, users } from '@/lib/schema';
+import { eq, and, count } from 'drizzle-orm';
 
 type LimitKey = 'maxUsers' | 'maxMentors';
 
@@ -17,44 +19,34 @@ export type LimitCheckResult = { allowed: true } | { allowed: false; message: st
 export async function checkOrgLimit(orgId: string | undefined | null, limitKey: LimitKey): Promise<LimitCheckResult> {
   if (!orgId) return { allowed: true };
 
-  const orgSnap = await adminDb.collection('organizations').doc(orgId).get();
+  const [org] = await db.select().from(organizations).where(eq(organizations.id, orgId)).limit(1);
 
   // An admin can override a specific org's limit (e.g. to grant it more capacity
   // than its plan normally allows) independent of which plan it's on.
-  const override = orgSnap.data()?.limitOverrides?.[limitKey];
+  const override = limitKey === 'maxUsers' ? org?.maxUsersOverride : org?.maxMentorsOverride;
 
-  let max: number | undefined = override;
+  let max: number | null | undefined = override;
   if (max == null) {
-    const planKey = orgSnap.data()?.plan;
+    const planKey = org?.planKey;
     if (!planKey) return { allowed: true };
 
-    // Plans without an explicit `key` field are exposed elsewhere using their document
-    // ID as a fallback key — mirror that here since the query only matches the real
-    // stored `key` field, not the ID.
-    const planSnap = await adminDb.collection('plans').where('key', '==', planKey).limit(1).get();
-    let planDoc = !planSnap.empty ? planSnap.docs[0] : null;
-    if (!planDoc) {
-      const byId = await adminDb.collection('plans').doc(planKey).get();
-      if (byId.exists) planDoc = byId as any;
-    }
-    if (!planDoc) return { allowed: true };
-    max = planDoc.data()?.limits?.[limitKey];
+    const [plan] = await db.select().from(plans).where(eq(plans.key, planKey)).limit(1);
+    if (!plan) return { allowed: true };
+    max = limitKey === 'maxUsers' ? plan.maxUsers : plan.maxMentors;
   }
   if (max == null || max === -1) return { allowed: true };
 
   let current = 0;
   if (limitKey === 'maxUsers') {
-    const snap = await adminDb.collection('users')
-      .where('organizationId', '==', orgId)
-      .where('role', '==', 'beneficiary')
-      .get();
-    current = snap.size;
+    const [row] = await db.select({ c: count() }).from(users)
+      .where(and(eq(users.organizationId, orgId), eq(users.role, 'beneficiary')));
+    current = row?.c ?? 0;
   } else {
-    const [mentors, coaches] = await Promise.all([
-      adminDb.collection('users').where('organizationId', '==', orgId).where('role', '==', 'mentor').get(),
-      adminDb.collection('users').where('organizationId', '==', orgId).where('role', '==', 'coach').get(),
-    ]);
-    current = mentors.size + coaches.size;
+    const [mentorsRow] = await db.select({ c: count() }).from(users)
+      .where(and(eq(users.organizationId, orgId), eq(users.role, 'mentor')));
+    const [coachesRow] = await db.select({ c: count() }).from(users)
+      .where(and(eq(users.organizationId, orgId), eq(users.role, 'coach')));
+    current = (mentorsRow?.c ?? 0) + (coachesRow?.c ?? 0);
   }
 
   if (current >= max) {
@@ -75,16 +67,15 @@ export async function checkOrgLimit(orgId: string | undefined | null, limitKey: 
 export async function checkOrgLocked(orgId: string | undefined | null): Promise<LimitCheckResult> {
   if (!orgId) return { allowed: true };
 
-  const subSnap = await adminDb.collection('subscriptions').doc(orgId).get();
-  if (!subSnap.exists) return { allowed: true };
+  const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.organizationId, orgId)).limit(1);
+  if (!sub) return { allowed: true };
 
-  const sub = subSnap.data();
-  if (sub?.permanentFree) return { allowed: true };
-  if (sub?.status === 'trial' || sub?.status === 'active') return { allowed: true };
+  if (sub.permanentFree) return { allowed: true };
+  if (sub.status === 'trial' || sub.status === 'active') return { allowed: true };
 
   return {
     allowed: false,
-    message: sub?.status === 'expired'
+    message: sub.status === 'expired'
       ? 'انتهت الفترة التجريبية المجانية أو الاشتراك المدفوع لمنظمتك. يرجى الاشتراك أو التجديد لإضافة أعضاء جدد.'
       : 'اشتراك منظمتك غير مفعّل. يرجى إتمام الدفع لإضافة أعضاء جدد للمنظمة.',
   };

@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { randomUUID } from 'crypto';
+import { db } from '@/lib/db';
+import { organizations, users } from '@/lib/schema';
+import { eq } from 'drizzle-orm';
+import { hashPassword } from '@/lib/auth-server';
 
 export async function POST(req: NextRequest) {
   try {
@@ -10,46 +14,42 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'orgName, adminName, and adminEmail are required' }, { status: 400 });
     }
 
-    // 1. Create the organization document
-    const orgRef = adminDb.collection('organizations').doc();
-    const orgId = orgRef.id;
+    const existing = await db.select({ id: users.id }).from(users).where(eq(users.email, adminEmail)).limit(1);
+    if (existing.length) {
+      return NextResponse.json({ error: 'هذا البريد الإلكتروني مستخدم بالفعل.' }, { status: 400 });
+    }
 
-    await orgRef.set({
+    // 1. Create the organization row
+    const orgId = randomUUID();
+    await db.insert(organizations).values({
       id: orgId,
       name: orgName,
-      status: 'نشطة',
-      createdAt: new Date().toISOString(),
+      status: 'active',
     });
 
     // 2. Create the organization admin user
-    const userRecord = await adminAuth.createUser({
-      email: adminEmail,
-      password: adminPassword,
-      displayName: adminName,
-    });
-
-    await adminDb.collection('users').doc(userRecord.uid).set({
-      id: userRecord.uid,
+    const uid = randomUUID();
+    const passwordHash = await hashPassword(adminPassword);
+    await db.insert(users).values({
+      id: uid,
       name: adminName,
       email: adminEmail,
+      passwordHash,
       role: 'organization',
       organizationId: orgId,
-      status: 'نشط',
-      createdAt: new Date().toISOString(),
+      status: 'active',
+      displayName: adminName,
     });
 
     return NextResponse.json({
       success: true,
       orgId,
-      uid: userRecord.uid,
+      uid,
       message: `تم إنشاء المنظمة "${orgName}" وحساب المدير. كلمة المرور: ${adminPassword}`,
     });
 
   } catch (error: any) {
     console.error('Create organization error:', error);
-    if (error.code === 'auth/email-already-exists') {
-      return NextResponse.json({ error: 'هذا البريد الإلكتروني مستخدم بالفعل.' }, { status: 400 });
-    }
     return NextResponse.json({ error: error.message || 'حدث خطأ غير متوقع' }, { status: 500 });
   }
 }
