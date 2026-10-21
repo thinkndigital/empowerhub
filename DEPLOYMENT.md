@@ -3,7 +3,16 @@
 هذا الدليل لنشر نفس مشروع EmpowerHub (نفس مشروع Firebase الخلفي `studio-4511819966-bc14f`
 للبيانات والمصادقة) على سيرفر جديد — استضافة مشتركة بلوحة تحكم cPanel، على دومين
 `empowerhub.tech`، باستخدام Node.js 20 عبر ميزة "Setup Node.js App" (Phusion Passenger).
-لا يوجد VPS ولا Docker هنا — الاعتماد على ملف "dist" جاهز يُرفع مباشرة.
+لا يوجد VPS ولا Docker ولا SSH هنا — الاعتماد **فقط على File Manager و"Setup Node.js
+App"** من واجهة cPanel.
+
+**طريقة العمل**: ترفع المشروع **كامل** (الكود المصدري + أدوات البناء)، وضغطة واحدة على
+زر **"Run NPM Install"** بواجهة cPanel تقوم بتثبيت الحزم **وبناء المشروع تلقائياً**
+(عن طريق `postinstall` script مُعدّ مسبقاً لهذا الغرض بالضبط) — بدون أي حاجة لـ Terminal.
+جُرّب هذا بالكامل محلياً بنفس الخطوات (تثبيت نظيف + بناء تلقائي + تشغيل السيرفر
+الناتج) قبل ما يُرسل لك.
+
+---
 
 ## 0) تجهيزات لمرة واحدة قبل النشر
 
@@ -16,7 +25,7 @@ Firebase Console → مشروع `studio-4511819966-bc14f` → Authentication →
 Firebase Console → Project settings (⚙️) → Service accounts → **Generate new private key**.
 يتنزّل ملف JSON — هذا يحتاجه السيرفر الجديد لأنه (خلافاً لـ Firebase App Hosting) ما
 عنده Application Default Credentials تلقائية. حوّل محتواه لسطر واحد (minify) وخزّنه
-بأمان، بتحتاجه بالخطوة 4.
+بأمان، بتحتاجه بالخطوة 3.
 
 ```bash
 # أي جهاز عندك فيه node، لتحويل الملف لسطر واحد:
@@ -29,38 +38,7 @@ node -e "console.log(JSON.stringify(require('./service-account.json')))"
 
 ---
 
-## 1) بناء حزمة النشر محلياً (أو من أي بيئة بناء)
-
-```bash
-npm ci
-npm run build          # next build — output: standalone مفعّل بـ next.config.js
-```
-
-أو ببساطة شغّل السكريبت الجاهز اللي بيسوي كل هالخطوات + يجمّع كل شي بمجلد واحد:
-
-```bash
-./scripts/build-for-cpanel.sh
-```
-
-بينتج:
-- `dist-cpanel/` — المجلد الجاهز اللي لازم يترفع كامل.
-- `dist-cpanel.zip` — نفس المجلد مضغوط، أسهل للرفع عبر File Manager.
-
-**ليش فيه تجميع يدوي؟** وضع `output: standalone` في Next.js ينتج سيرفر Node خفيف
-(`server.js`) مع `node_modules` مُختصرة تلقائياً داخل `next-build/standalone`، لكنه **لا
-ينسخ** `next-build/static` ولا `public/` بنفسه — لازم تُنسخ يدوياً جنبه، وهذا بالضبط اللي
-يسويه السكريبت.
-
-**ليش `next-build` مو `.next`؟** الاسم الافتراضي لمجلد بناء Next.js هو `.next`
-(يبدأ بنقطة)، ومعظم مديري الملفات — بما فيهم File Manager بـ cPanel — **يخفون**
-الملفات والمجلدات اللي تبدأ بنقطة تلقائياً. عشان ما يصير لبس إنه "الملف ناقص"
-بعد فك الضغط، `next.config.js` مضبوط يستخدم اسم مجلد بناء عادي (`distDir:
-'next-build'`) ما يبدأ بنقطة، فيظهر مباشرة بأي مدير ملفات بدون ما تحتاج تفعّل
-"إظهار الملفات المخفية".
-
----
-
-## 2) إنشاء تطبيق Node.js في cPanel
+## 1) إنشاء تطبيق Node.js في cPanel
 
 1. سجّل دخول لـ cPanel → ابحث عن **"Setup Node.js App"**.
 2. **Create Application**:
@@ -68,71 +46,86 @@ npm run build          # next build — output: standalone مفعّل بـ next.
    - **Application mode**: `Production`.
    - **Application root**: مثلاً `empowerhub` (مجلد داخل الحساب، مو بالضرورة `public_html`).
    - **Application URL**: اختر الدومين `empowerhub.tech` (أو الدومين الفرعي لو بتجرب أول مرة على subdomain).
-   - **Application startup file**: `server.js`
-3. اضغط **Create**. cPanel بينشئ المجلد ويعطيك أمر مثل:
-   ```
-   source /home/USERNAME/nodevenv/empowerhub/20/bin/activate && cd /home/USERNAME/empowerhub
-   ```
-   (احتفظ فيه، بتحتاجه إذا رديت تشغّل أوامر npm يدوياً من SSH).
+   - **Application startup file**: اتركه مؤقتاً أي قيمة، بترجع تعدّله بالخطوة 4 (لأن الملف الفعلي ما يكون موجود إلا بعد البناء).
+3. اضغط **Create**.
 
 ---
 
-## 3) رفع الملفات
+## 2) رفع المشروع كامل
 
-### الطريقة أ — File Manager (الأسهل، بدون SSH)
 1. افتح **File Manager** → روح لمجلد التطبيق اللي أنشأته (`empowerhub` مثلاً).
-2. ارفع `dist-cpanel.zip`.
-3. يمين الفأرة عليه → **Extract** داخل نفس المجلد.
-4. تأكد إن `server.js` و `next-build/` و `node_modules/` و `package.json` صاروا
-   مباشرة داخل مجلد التطبيق (مو داخل مجلد فرعي زائد بعد فك الضغط). المشروع حالياً ما فيه مجلد `public/`
-   (الأيقونة المفضّلة favicon.ico معرّفة داخل `src/app/` مباشرة حسب تعريف
-   Next.js App Router) — إذا أضفتوا لاحقاً ملفات ثابتة بمجلد `public/` بجذر
-   المشروع، السكريبت بينسخها تلقائياً.
+2. ارفع ملف المشروع المضغوط (المرسل لك) وفك الضغط (**Extract**) داخل نفس المجلد.
+3. تأكد إن `package.json` و `src/` و `next.config.js` و `.npmrc` صاروا مباشرة داخل
+   مجلد التطبيق (مو داخل مجلد فرعي زائد بعد فك الضغط).
 
-### الطريقة ب — SFTP/SSH (لو حسابك فيه وصول SSH)
-```bash
-scp -r dist-cpanel/. USERNAME@empowerhub.tech:~/empowerhub/
-```
+> المرفق **لا يحتوي** `node_modules/` ولا مجلد بناء جاهز — هذا مقصود، لأن
+> التثبيت والبناء بيصيرا على السيرفر نفسه بالخطوة التالية.
 
 ---
 
-## 4) ضبط متغيرات البيئة
+## 3) ضبط متغيرات البيئة (قبل الضغط على npm install، مهم!)
 
 ارجع لصفحة **Setup Node.js App** → افتح تطبيقك → قسم **Environment Variables**
-→ أضف كل متغير من `.env.production.example` (الموجود بجذر المشروع) واحد واحد، أهمها:
+→ أضف كل متغير من `.env.production.example` (الموجود بجذر المشروع)، وأهمها:
 
 | المتغير | القيمة |
 |---|---|
 | `NODE_ENV` | `production` |
+| `CPANEL_AUTOBUILD` | `1` ⚠️ **ضروري** — هذا هو المفتاح اللي يخلي `npm install` يبني المشروع تلقائياً بدل ما يكتفي بتثبيت الحزم فقط |
 | `FIREBASE_SERVICE_ACCOUNT_KEY` | محتوى ملف الـ service account كسطر JSON واحد (من الخطوة 0-ب) |
 | `FIREBASE_PROJECT_ID` | `studio-4511819966-bc14f` |
 | `FIREBASE_STORAGE_BUCKET` | `studio-4511819966-bc14f.firebasestorage.app` |
 | `CRON_SECRET` | قيمة سرية عشوائية من اختيارك |
 
-> بديل: بدل إدخالها بالواجهة، تقدر ترفع ملف `.env` فعلي داخل مجلد التطبيق (نفس
-> مستوى `server.js`) — Node بيقرأه لو عندك `dotenv` محمّل، لكن الأسلم استخدام
-> حقل Environment Variables اللي توفره الواجهة لأنه مضمون أكيد يوصل للعملية.
-
-لا تلمس **Application startup file** ولا تضغط **"Run NPM Install"** — الحزمة
-جاهزة ومبنية مسبقاً (`node_modules` مُضمّنة ضمن `next-build/standalone`)، وتشغيل
-npm install من جديد على استضافة مشتركة غالباً أبطأ وقد يفشل بسبب حدود الذاكرة.
+**احفظ (Save) المتغيرات قبل الانتقال للخطوة التالية** — إذا ضغطت "Run NPM Install"
+قبل حفظ `CPANEL_AUTOBUILD=1`، التثبيت بيصير بس بدون بناء، وبترجع تضغط الزر من
+جديد بعد ما تضيفه.
 
 ---
 
-## 5) التشغيل
+## 4) التثبيت والبناء (ضغطة زر واحدة)
 
-ارجع لصفحة **Setup Node.js App** → اضغط **Restart** (أو **Start**) على التطبيق.
-بعدها جرّب فتح `https://empowerhub.tech` — المفروض توصل للصفحة الرئيسية.
+من نفس صفحة التطبيق بـ **Setup Node.js App** → اضغط **"Run NPM Install"**.
+
+هاي الخطوة وحدها بتسوي كل شي تلقائياً بالترتيب:
+1. `npm install` (يثبّت كل الحزم، بما فيها أدوات البناء مثل TypeScript — بفضل
+   ملف `.npmrc` المرفق اللي يضمن تثبيتها حتى مع `NODE_ENV=production`).
+2. بعد التثبيت مباشرة، `postinstall` script يشوف `CPANEL_AUTOBUILD=1` ويشغّل
+   `next build` تلقائياً.
+3. ثم ينسخ ملفات الـ static assets للمكان الصحيح داخل `next-build/standalone/`.
+
+هذي الخطوة بتاخذ عدة دقائق (10-15 دقيقة تقريباً حسب سرعة السيرفر) — لا تقفل
+الصفحة لحد ما يخلص وتشوف رسالة النجاح بالأسفل.
+
+**بعد ما يخلص**: تأكد إن مجلد `next-build/standalone/` صار موجود جوا مجلد
+التطبيق (من File Manager) — فيه `server.js` و `node_modules/` خاصة فيه.
+
+---
+
+## 5) ضبط ملف التشغيل والتشغيل الفعلي
+
+ارجع لإعدادات التطبيق بـ **Setup Node.js App**:
+1. عدّل **Application startup file** إلى:
+   ```
+   next-build/standalone/server.js
+   ```
+2. احفظ، ثم اضغط **Restart** (أو **Start**).
+3. جرّب فتح `https://empowerhub.tech` — المفروض توصل للصفحة الرئيسية.
 
 ### لو ظهر خطأ 503 أو التطبيق ما يشتغل
-- من **Setup Node.js App** → فتح التطبيق فيه رابط لسجلات الأخطاء (Error Log) — افتحه
-  وشوف آخر سطور.
-- الأسباب الشائعة:
-  - `FIREBASE_SERVICE_ACCOUNT_KEY` ناقصة أو JSON غير صحيح (تأكد إنه سطر واحد كامل
-    بين علامتي اقتباس، بدون أسطر جديدة).
-  - الدومين الجديد مو مضاف في Firebase Authorized domains (تسجيل الدخول بيفشل
-    بصمت أو برسالة `auth/unauthorized-domain`).
-  - رفعت محتوى `dist-cpanel/` داخل مجلد فرعي إضافي بدل جذر مجلد التطبيق مباشرة.
+من **Setup Node.js App** → فتح التطبيق فيه رابط لسجلات الأخطاء (Error Log) — افتحه
+وشوف آخر سطور. الأسباب الشائعة:
+- نسيت تضيف `CPANEL_AUTOBUILD=1` قبل الضغط على "Run NPM Install"، فما صار بناء
+  أصلاً — رجّع أضف المتغير واضغط "Run NPM Install" من جديد.
+- `FIREBASE_SERVICE_ACCOUNT_KEY` ناقصة أو JSON غير صحيح (تأكد إنه سطر واحد كامل
+  بين علامتي اقتباس، بدون أسطر جديدة).
+- الدومين الجديد مو مضاف في Firebase Authorized domains (تسجيل الدخول بيفشل
+  بصمت أو برسالة `auth/unauthorized-domain`).
+- رفعت محتوى المشروع داخل مجلد فرعي إضافي بدل جذر مجلد التطبيق مباشرة.
+
+### لو عملت تعديل على الكود لاحقاً
+ارفع الملفات المعدّلة، ثم اضغط **"Run NPM Install"** مرة ثانية (بما إن
+`CPANEL_AUTOBUILD=1` محفوظة أصلاً، بيعيد البناء تلقائياً)، ثم **Restart** للتطبيق.
 
 ---
 
@@ -141,15 +134,11 @@ npm install من جديد على استضافة مشتركة غالباً أبط
 المسار `/api/cron/check-subscriptions` يتطلب رأس `Authorization` يطابق `CRON_SECRET`.
 بما إنه مجرد رابط HTTP عام، يشتغل من أي مصدر جدولة بغض النظر عن نوع الاستضافة:
 
-**خيار 1 — Cron Jobs من نفس cPanel** (الأبسط الآن إنك على cPanel):
 cPanel → **Cron Jobs** → أضف مهمة يومية:
 ```bash
 curl -s -X POST https://empowerhub.tech/api/cron/check-subscriptions \
   -H "Authorization: Bearer <نفس قيمة CRON_SECRET>"
 ```
-
-**خيار 2 — GitHub Action** (إذا موجودة مسبقاً بالمشروع، راجع `.github/workflows/`):
-نفس الفكرة، فقط حدّث الـ secret والرابط للدومين الجديد.
 
 ---
 
@@ -157,14 +146,32 @@ curl -s -X POST https://empowerhub.tech/api/cron/check-subscriptions \
 
 `.github/workflows/deploy.yml` الحالي ينشر تلقائياً إلى **Firebase App Hosting** عند
 push لبعض الفروع — وهذا مسار النشر القديم. بما إنكم انتقلتوا لاستضافة cPanel، هذا
-الـ workflow ما عاد يعكس مكان الاستضافة الفعلي، ويفضل تعطيله أو تحويله لمجرد بناء
-وتوليد `dist-cpanel.zip` كـ artifact بدل النشر لـ Firebase App Hosting. لم يُعدَّل
-تلقائياً هنا تجنباً لتغيير سلوك CI دون طلب صريح — قرر وأخبرني إذا تبي أعدّله.
+الـ workflow ما عاد يعكس مكان الاستضافة الفعلي. لم يُعدَّل تلقائياً هنا تجنباً
+لتغيير سلوك CI دون طلب صريح — قرر وأخبرني إذا تبي أعدّله أو أعطّله.
+
+---
+
+## بديل: بناء محلي وشحن النتيجة الجاهزة فقط
+
+إذا صار عندك لاحقاً وصول SSH أو بيئة بناء منفصلة (مثلاً هاي الجلسة)، فيه سكريبت
+جاهز يبني محلياً ويطلع لك فقط النتيجة النهائية الجاهزة للتشغيل (`dist-cpanel.zip`،
+أصغر حجماً وأسرع رفع لأنه بدون أدوات بناء):
+
+```bash
+./scripts/build-for-cpanel.sh
+```
+
+هذا بديل عن أسلوب "ارفع كامل وشغّل Run NPM Install" أعلاه، مو إضافة له — استخدم
+واحد منهم بس.
 
 ---
 
 ## ملخص الملفات المضافة لهذا النشر
 
-- `scripts/build-for-cpanel.sh` — يبني ويجمّع `dist-cpanel/` و `dist-cpanel.zip`.
+- `.npmrc` — يضمن تثبيت أدوات البناء (TypeScript) حتى مع `NODE_ENV=production`.
+- `scripts/postinstall-gate.js` + `scripts/postbuild-cpanel.sh` — يشغّلان البناء
+  تلقائياً بعد `npm install` فقط عند وجود `CPANEL_AUTOBUILD=1` (ما يأثر على التطوير
+  المحلي ولا على GitHub Actions الحالي).
+- `scripts/build-for-cpanel.sh` — البديل للبناء المحلي (راجع القسم أعلاه).
 - `.env.production.example` — قائمة كل متغيرات البيئة المطلوبة وشرحها.
 - `DEPLOYMENT.md` — هذا الملف.
