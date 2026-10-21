@@ -1,31 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { randomUUID } from 'crypto';
+import { db } from '@/lib/db';
+import { assessments, organizations, users } from '@/lib/schema';
+import { eq, desc } from 'drizzle-orm';
+import { verifyAuthToken, DecodedToken } from '@/lib/auth-server';
 import { checkOrgLocked } from '@/lib/plan-limits';
 
 export const dynamic = 'force-dynamic';
 
-async function getOrgId(decoded: any): Promise<string | null> {
+async function getOrgId(decoded: DecodedToken): Promise<string | null> {
   if (decoded.organizationId) return decoded.organizationId;
-  const snap = await adminDb.collection('users').doc(decoded.uid).get();
-  return snap.data()?.organizationId || null;
+  const [userRow] = await db.select().from(users).where(eq(users.id, decoded.uid)).limit(1);
+  return userRow?.organizationId || null;
 }
 
 export async function GET(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    const decoded = await adminAuth.verifyIdToken(token);
+    const decoded = await verifyAuthToken(token);
     const orgId = await getOrgId(decoded);
     if (!orgId) return NextResponse.json({ error: 'غير مصرح' }, { status: 403 });
 
-    const snap = await adminDb.collection('assessments').where('organizationId', '==', orgId).get();
-    const assessments = snap.docs.map(d => {
-      const data = d.data();
-      return {
-        id: d.id, ...data,
-        createdAt: data.createdAt?._seconds ? new Date(data.createdAt._seconds * 1000).toISOString() : null,
-      };
-    }).sort((a: any, b: any) => (b.createdAt || '').localeCompare(a.createdAt || ''));
-    return NextResponse.json({ assessments });
+    const rows = await db.select().from(assessments)
+      .where(eq(assessments.organizationId, orgId))
+      .orderBy(desc(assessments.createdAt));
+    return NextResponse.json({ assessments: rows });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
@@ -34,7 +33,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    const decoded = await adminAuth.verifyIdToken(token);
+    const decoded = await verifyAuthToken(token);
     const orgId = await getOrgId(decoded);
     if (!orgId) return NextResponse.json({ error: 'غير مصرح' }, { status: 403 });
 
@@ -47,24 +46,22 @@ export async function POST(req: NextRequest) {
     const { title, description, type, questions, status } = body;
     if (!title || !type) return NextResponse.json({ error: 'العنوان ونوع التقييم مطلوبان' }, { status: 400 });
 
-    const orgSnap = await adminDb.collection('organizations').doc(orgId).get();
-    const orgData = orgSnap.data() || {};
+    const [org] = await db.select().from(organizations).where(eq(organizations.id, orgId)).limit(1);
 
-    const ref = await adminDb.collection('assessments').add({
-      title, description: description || '', type,
+    const id = randomUUID();
+    await db.insert(assessments).values({
+      id, title, description: description || '', type,
       questions: questions || [],
       status: status || 'draft',
       organizationId: orgId,
       createdBy: decoded.uid,
-      sentTo: [],
       responsesCount: 0,
-      orgName: orgData.name || '',
-      orgLogo: orgData.logoUrl || '',
-      orgColor: orgData.primaryColor || '',
-      createdAt: new Date(),
+      orgName: org?.name || '',
+      orgLogo: org?.logoUrl || '',
+      orgColor: org?.primaryColor || '',
     });
 
-    return NextResponse.json({ id: ref.id });
+    return NextResponse.json({ id });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }

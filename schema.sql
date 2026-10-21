@@ -28,12 +28,13 @@ CREATE TABLE `assessment_responses` (
 	`assessment_id` varchar(36) NOT NULL,
 	`respondent_id` varchar(36) NOT NULL,
 	`respondent_role` varchar(50) NOT NULL,
+	`phase` varchar(10) NOT NULL DEFAULT '',
 	`organization_id` varchar(36),
 	`answers` json,
 	`respondent_info` json,
 	`created_at` timestamp NOT NULL DEFAULT (now()),
 	CONSTRAINT `assessment_responses_id` PRIMARY KEY(`id`),
-	CONSTRAINT `assessment_responses_uniq` UNIQUE(`assessment_id`,`respondent_id`,`respondent_role`)
+	CONSTRAINT `assessment_responses_uniq` UNIQUE(`assessment_id`,`respondent_id`,`respondent_role`,`phase`)
 );
 CREATE TABLE `assessment_targets` (
 	`assessment_id` varchar(36) NOT NULL,
@@ -47,7 +48,7 @@ CREATE TABLE `assessments` (
 	`description` text,
 	`type` varchar(50),
 	`questions` json,
-	`status` enum('draft','sent','closed') NOT NULL DEFAULT 'draft',
+	`status` enum('draft','active') NOT NULL DEFAULT 'draft',
 	`organization_id` varchar(36),
 	`created_by` varchar(36),
 	`org_name` varchar(255),
@@ -101,7 +102,8 @@ CREATE TABLE `course_lessons` (
 	`id` varchar(36) NOT NULL,
 	`course_id` varchar(36) NOT NULL,
 	`title` varchar(255),
-	`content` text,
+	`description` text,
+	`video_url` text,
 	`sort_order` int DEFAULT 0,
 	`created_at` timestamp NOT NULL DEFAULT (now()),
 	CONSTRAINT `course_lessons_id` PRIMARY KEY(`id`)
@@ -125,6 +127,7 @@ CREATE TABLE `courses` (
 	`objectives` json,
 	`requirements` json,
 	`tags` json,
+	`meta` json,
 	`created_at` timestamp NOT NULL DEFAULT (now()),
 	CONSTRAINT `courses_id` PRIMARY KEY(`id`)
 );
@@ -133,9 +136,11 @@ CREATE TABLE `enrollments` (
 	`course_id` varchar(36) NOT NULL,
 	`user_id` varchar(36) NOT NULL,
 	`progress` int DEFAULT 0,
+	`completed_lessons` json DEFAULT ('[]'),
 	`assigned` boolean DEFAULT false,
 	`created_at` timestamp NOT NULL DEFAULT (now()),
 	`enrolled_by` varchar(36),
+	`updated_at` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	CONSTRAINT `enrollments_id` PRIMARY KEY(`id`),
 	CONSTRAINT `enrollments_course_user_uniq` UNIQUE(`course_id`,`user_id`)
 );
@@ -176,6 +181,7 @@ CREATE TABLE `live_sessions` (
 	`price` decimal(10,2) DEFAULT '0',
 	`max_participants` int,
 	`status` enum('draft','published') NOT NULL DEFAULT 'draft',
+	`meta` json,
 	`created_at` timestamp NOT NULL DEFAULT (now()),
 	CONSTRAINT `live_sessions_id` PRIMARY KEY(`id`)
 );
@@ -275,8 +281,11 @@ CREATE TABLE `organizations` (
 	`invite_code` varchar(16),
 	`primary_color` varchar(20),
 	`logo_url` text,
+	`course_session_price` decimal(10,2),
+	`mentorship_session_price` decimal(10,2),
 	`max_users_override` int,
 	`max_mentors_override` int,
+	`meta` json,
 	`created_at` timestamp NOT NULL DEFAULT (now()),
 	CONSTRAINT `organizations_id` PRIMARY KEY(`id`),
 	CONSTRAINT `organizations_invite_code_unique` UNIQUE(`invite_code`)
@@ -323,6 +332,7 @@ CREATE TABLE `products` (
 	`beneficiary_name` varchar(255),
 	`organization_id` varchar(36),
 	`status` enum('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+	`meta` json,
 	`created_at` timestamp NOT NULL DEFAULT (now()),
 	`updated_at` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	CONSTRAINT `products_id` PRIMARY KEY(`id`)
@@ -415,7 +425,7 @@ CREATE TABLE `users` (
 	`name` varchar(255),
 	`email` varchar(255) NOT NULL,
 	`password_hash` varchar(255) NOT NULL,
-	`role` enum('admin','organization','mentor','coach','beneficiary','merchant','merchant_staff') NOT NULL,
+	`role` enum('admin','organization','mentor','coach','beneficiary','merchant','team_member') NOT NULL,
 	`organization_id` varchar(36),
 	`status` enum('active','inactive','pending') NOT NULL DEFAULT 'active',
 	`progress` int DEFAULT 0,
@@ -426,6 +436,7 @@ CREATE TABLE `users` (
 	`expertise` varchar(255),
 	`avatar_url` text,
 	`display_name` varchar(255),
+	`meta` json,
 	`created_at` timestamp NOT NULL DEFAULT (now()),
 	`updated_at` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	CONSTRAINT `users_id` PRIMARY KEY(`id`),

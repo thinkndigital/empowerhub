@@ -1,50 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { db } from '@/lib/db';
+import { assessments, assessmentTargets, assessmentResponses } from '@/lib/schema';
+import { eq, and, ne, inArray } from 'drizzle-orm';
+import { verifyAuthToken } from '@/lib/auth-server';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    const decoded = await adminAuth.verifyIdToken(token);
+    const decoded = await verifyAuthToken(token);
     const uid = decoded.uid;
 
-    // Assessments sent to this beneficiary — filter status in memory to avoid composite index
-    const snap = await adminDb.collection('assessments')
-      .where('sentTo', 'array-contains', uid)
-      .get();
+    const targets = await db.select().from(assessmentTargets)
+      .where(and(eq(assessmentTargets.targetId, uid), eq(assessmentTargets.targetRole, 'beneficiary')));
+    const assessmentIds = targets.map(t => t.assessmentId);
+    if (assessmentIds.length === 0) return NextResponse.json({ assessments: [] });
 
-    // Get submitted responses for this user
-    const respSnap = await adminDb.collection('assessment-responses')
-      .where('beneficiaryId', '==', uid).get();
+    const rows = await db.select().from(assessments)
+      .where(and(inArray(assessments.id, assessmentIds), ne(assessments.status, 'draft')));
 
+    const responses = await db.select().from(assessmentResponses)
+      .where(and(eq(assessmentResponses.respondentId, uid), eq(assessmentResponses.respondentRole, 'beneficiary')));
     const submittedMap: Record<string, string[]> = {};
-    respSnap.docs.forEach(d => {
-      const data = d.data();
-      if (!submittedMap[data.assessmentId]) submittedMap[data.assessmentId] = [];
-      submittedMap[data.assessmentId].push(data.phase);
-    });
+    for (const r of responses) {
+      if (!submittedMap[r.assessmentId]) submittedMap[r.assessmentId] = [];
+      submittedMap[r.assessmentId].push(r.phase);
+    }
 
-    const assessments = snap.docs
-      .filter(d => d.data().status !== 'draft' && d.data().status !== 'closed')
-      .map(d => {
-      const data = d.data();
-      const submitted = submittedMap[d.id] || [];
-      return {
-        id: d.id,
-        title: data.title,
-        description: data.description,
-        type: data.type,
-        questions: data.questions || [],
-        orgName: data.orgName,
-        orgLogo: data.orgLogo,
-        orgColor: data.orgColor,
-        createdAt: data.createdAt?._seconds ? new Date(data.createdAt._seconds * 1000).toISOString() : null,
-        submittedPhases: submitted,
-      };
+    return NextResponse.json({
+      assessments: rows.map(a => ({
+        id: a.id,
+        title: a.title,
+        description: a.description,
+        type: a.type,
+        questions: a.questions || [],
+        orgName: a.orgName,
+        orgLogo: a.orgLogo,
+        orgColor: a.orgColor,
+        createdAt: a.createdAt,
+        submittedPhases: submittedMap[a.id] || [],
+      })),
     });
-
-    return NextResponse.json({ assessments });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }

@@ -1,32 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { db } from '@/lib/db';
+import { users } from '@/lib/schema';
+import { eq, and } from 'drizzle-orm';
+import { verifyAuthToken, stripPasswords } from '@/lib/auth-server';
 
 export async function GET(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    const decoded = await adminAuth.verifyIdToken(token);
-    let orgId = decoded.organizationId as string | undefined;
+    const decoded = await verifyAuthToken(token);
+    let orgId = decoded.organizationId;
     if (!orgId) {
-      const userDoc = await adminDb.collection('users').doc(decoded.uid).get();
-      orgId = userDoc.data()?.organizationId;
+      const [userRow] = await db.select().from(users).where(eq(users.id, decoded.uid)).limit(1);
+      orgId = userRow?.organizationId;
     }
     if (!orgId) return NextResponse.json({ error: 'Not an org' }, { status: 403 });
 
-    const [benefSnap, mentorSnap, coachSnap] = await Promise.all([
-      adminDb.collection('users').where('organizationId', '==', orgId).where('role', '==', 'beneficiary').get(),
-      adminDb.collection('users').where('organizationId', '==', orgId).where('role', '==', 'mentor').get(),
-      adminDb.collection('users').where('organizationId', '==', orgId).where('role', '==', 'coach').get(),
+    const [beneficiaryRows, mentorRows, coachRows] = await Promise.all([
+      db.select().from(users).where(and(eq(users.organizationId, orgId), eq(users.role, 'beneficiary'))),
+      db.select().from(users).where(and(eq(users.organizationId, orgId), eq(users.role, 'mentor'))),
+      db.select().from(users).where(and(eq(users.organizationId, orgId), eq(users.role, 'coach'))),
     ]);
 
-    const beneficiaries = benefSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const beneficiaries = stripPasswords(beneficiaryRows);
     const avgProgress = beneficiaries.length > 0
-      ? Math.round(beneficiaries.reduce((s: number, b: any) => s + (b.progress || 0), 0) / beneficiaries.length)
+      ? Math.round(beneficiaries.reduce((s, b) => s + (b.progress || 0), 0) / beneficiaries.length)
       : 0;
 
     return NextResponse.json({
-      beneficiariesCount: benefSnap.size,
-      mentorsCount: mentorSnap.size,
-      coachesCount: coachSnap.size,
+      beneficiariesCount: beneficiaryRows.length,
+      mentorsCount: mentorRows.length,
+      coachesCount: coachRows.length,
       avgProgress,
       recentBeneficiaries: beneficiaries.slice(0, 5),
       beneficiaries,

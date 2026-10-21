@@ -11,6 +11,19 @@ const TOKEN_TTL = '30d';
 
 export type DecodedToken = { uid: string; role: string; organizationId?: string | null };
 
+// Unlike the old Firestore user docs (which never held a password at all),
+// rows from the `users` table carry `passwordHash` — every route that
+// returns a user row (or an array of them) to the client MUST strip it
+// first. Use this helper rather than spreading the row directly.
+export function stripPassword<T extends { passwordHash?: string }>(user: T): Omit<T, 'passwordHash'> {
+  const { passwordHash, ...rest } = user;
+  return rest;
+}
+
+export function stripPasswords<T extends { passwordHash?: string }>(users: T[]): Omit<T, 'passwordHash'>[] {
+  return users.map(stripPassword);
+}
+
 export async function hashPassword(plain: string): Promise<string> {
   return bcrypt.hash(plain, 10);
 }

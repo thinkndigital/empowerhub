@@ -17,7 +17,7 @@ export const users = mysqlTable('users', {
   name: varchar('name', { length: 255 }),
   email: varchar('email', { length: 255 }).notNull().unique(),
   passwordHash: varchar('password_hash', { length: 255 }).notNull(),
-  role: mysqlEnum('role', ['admin', 'organization', 'mentor', 'coach', 'beneficiary', 'merchant', 'merchant_staff']).notNull(),
+  role: mysqlEnum('role', ['admin', 'organization', 'mentor', 'coach', 'beneficiary', 'merchant', 'team_member']).notNull(),
   organizationId: fk('organization_id'),
   status: mysqlEnum('status', ['active', 'inactive', 'pending']).default('active').notNull(),
   progress: int('progress').default(0),
@@ -28,6 +28,7 @@ export const users = mysqlTable('users', {
   expertise: varchar('expertise', { length: 255 }),
   avatarUrl: text('avatar_url'),
   displayName: varchar('display_name', { length: 255 }),
+  meta: json('meta').$type<Record<string, any>>(),
   createdAt: createdAt(),
   updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
 }, t => ({
@@ -50,8 +51,11 @@ export const organizations = mysqlTable('organizations', {
   inviteCode: varchar('invite_code', { length: 16 }).unique(),
   primaryColor: varchar('primary_color', { length: 20 }),
   logoUrl: text('logo_url'),
+  courseSessionPrice: decimal('course_session_price', { precision: 10, scale: 2 }),
+  mentorshipSessionPrice: decimal('mentorship_session_price', { precision: 10, scale: 2 }),
   maxUsersOverride: int('max_users_override'),
   maxMentorsOverride: int('max_mentors_override'),
+  meta: json('meta').$type<Record<string, any>>(),
   createdAt: createdAt(),
 });
 
@@ -128,6 +132,7 @@ export const courses = mysqlTable('courses', {
   objectives: json('objectives').$type<string[]>(),
   requirements: json('requirements').$type<string[]>(),
   tags: json('tags').$type<string[]>(),
+  meta: json('meta').$type<Record<string, any>>(),
   createdAt: createdAt(),
 }, t => ({
   orgIdx: index('courses_org_idx').on(t.organizationId),
@@ -138,7 +143,8 @@ export const courseLessons = mysqlTable('course_lessons', {
   id: id(),
   courseId: fk('course_id').notNull(),
   title: varchar('title', { length: 255 }),
-  content: text('content'),
+  description: text('description'),
+  videoUrl: text('video_url'),
   sortOrder: int('sort_order').default(0),
   createdAt: createdAt(),
 }, t => ({ courseIdx: index('course_lessons_course_idx').on(t.courseId) }));
@@ -148,9 +154,11 @@ export const enrollments = mysqlTable('enrollments', {
   courseId: fk('course_id').notNull(),
   userId: fk('user_id').notNull(),
   progress: int('progress').default(0),
+  completedLessons: json('completed_lessons').$type<string[]>().default([]),
   assigned: boolean('assigned').default(false),
   enrolledAt: createdAt(),
   enrolledBy: fk('enrolled_by'),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
 }, t => ({
   uniq: uniqueIndex('enrollments_course_user_uniq').on(t.courseId, t.userId),
   userIdx: index('enrollments_user_idx').on(t.userId),
@@ -162,7 +170,7 @@ export const assessments = mysqlTable('assessments', {
   description: text('description'),
   type: varchar('type', { length: 50 }),
   questions: json('questions').$type<any[]>(),
-  status: mysqlEnum('status', ['draft', 'sent', 'closed']).default('draft').notNull(),
+  status: mysqlEnum('status', ['draft', 'active']).default('draft').notNull(),
   organizationId: fk('organization_id'),
   createdBy: fk('created_by'),
   orgName: varchar('org_name', { length: 255 }),
@@ -183,12 +191,17 @@ export const assessmentResponses = mysqlTable('assessment_responses', {
   assessmentId: fk('assessment_id').notNull(),
   respondentId: fk('respondent_id').notNull(),
   respondentRole: varchar('respondent_role', { length: 50 }).notNull(),
+  // '' (empty string, not NULL — MySQL unique indexes treat each NULL as
+  // distinct, which would silently defeat this constraint) for coach/mentor
+  // responses, which have no pre/post phase concept; 'pre'/'post' for
+  // beneficiary responses.
+  phase: varchar('phase', { length: 10 }).notNull().default(''),
   organizationId: fk('organization_id'),
   answers: json('answers').$type<any>(),
   respondentInfo: json('respondent_info').$type<any>(),
   submittedAt: createdAt(),
 }, t => ({
-  uniq: uniqueIndex('assessment_responses_uniq').on(t.assessmentId, t.respondentId, t.respondentRole),
+  uniq: uniqueIndex('assessment_responses_uniq').on(t.assessmentId, t.respondentId, t.respondentRole, t.phase),
 }));
 
 // ── Commerce ────────────────────────────────────────────────────────────
@@ -204,6 +217,7 @@ export const products = mysqlTable('products', {
   beneficiaryName: varchar('beneficiary_name', { length: 255 }),
   organizationId: fk('organization_id'),
   status: mysqlEnum('status', ['pending', 'approved', 'rejected']).default('pending').notNull(),
+  meta: json('meta').$type<Record<string, any>>(),
   createdAt: createdAt(),
   updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
 }, t => ({
@@ -293,6 +307,7 @@ export const liveSessions = mysqlTable('live_sessions', {
   price: decimal('price', { precision: 10, scale: 2 }).default('0'),
   maxParticipants: int('max_participants'),
   status: mysqlEnum('status', ['draft', 'published']).default('draft').notNull(),
+  meta: json('meta').$type<Record<string, any>>(),
   createdAt: createdAt(),
 }, t => ({ orgIdx: index('live_sessions_org_idx').on(t.organizationId) }));
 

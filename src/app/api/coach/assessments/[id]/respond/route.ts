@@ -1,43 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { randomUUID } from 'crypto';
+import { db } from '@/lib/db';
+import { assessments, assessmentTargets, assessmentResponses } from '@/lib/schema';
+import { eq, and, sql } from 'drizzle-orm';
+import { verifyAuthToken } from '@/lib/auth-server';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    const decoded = await adminAuth.verifyIdToken(token);
+    const decoded = await verifyAuthToken(token);
     const uid = decoded.uid;
 
-    const snap = await adminDb.collection('assessments').doc(params.id).get();
-    if (!snap.exists) return NextResponse.json({ error: 'غير موجود' }, { status: 404 });
-    const data = snap.data()!;
+    const [assessment] = await db.select().from(assessments).where(eq(assessments.id, params.id)).limit(1);
+    if (!assessment) return NextResponse.json({ error: 'غير موجود' }, { status: 404 });
 
-    if (!(data.sentToCoaches || []).includes(uid))
-      return NextResponse.json({ error: 'غير مصرح' }, { status: 403 });
+    const [target] = await db.select().from(assessmentTargets)
+      .where(and(eq(assessmentTargets.assessmentId, params.id), eq(assessmentTargets.targetId, uid), eq(assessmentTargets.targetRole, 'coach')))
+      .limit(1);
+    if (!target) return NextResponse.json({ error: 'غير مصرح' }, { status: 403 });
 
-    const existing = await adminDb.collection('assessment-responses')
-      .where('assessmentId', '==', params.id)
-      .where('respondentId', '==', uid)
-      .where('respondentRole', '==', 'coach')
-      .get();
-    if (!existing.empty)
-      return NextResponse.json({ error: 'لقد أجبت على هذا النموذج مسبقاً' }, { status: 409 });
+    const [existing] = await db.select().from(assessmentResponses)
+      .where(and(
+        eq(assessmentResponses.assessmentId, params.id),
+        eq(assessmentResponses.respondentId, uid),
+        eq(assessmentResponses.respondentRole, 'coach'),
+      )).limit(1);
+    if (existing) return NextResponse.json({ error: 'لقد أجبت على هذا النموذج مسبقاً' }, { status: 409 });
 
     const { answers, respondentInfo } = await req.json();
-    await adminDb.collection('assessment-responses').add({
+    await db.insert(assessmentResponses).values({
+      id: randomUUID(),
       assessmentId: params.id,
       respondentId: uid,
       respondentRole: 'coach',
-      organizationId: data.organizationId,
+      organizationId: assessment.organizationId,
       answers,
       respondentInfo: respondentInfo || null,
-      submittedAt: new Date(),
     });
 
-    await adminDb.collection('assessments').doc(params.id).update({
-      responsesCount: (data.responsesCount || 0) + 1,
-    });
+    await db.update(assessments).set({ responsesCount: sql`${assessments.responsesCount} + 1` }).where(eq(assessments.id, params.id));
 
     return NextResponse.json({ success: true });
   } catch (e: any) {

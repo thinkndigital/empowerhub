@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { db } from '@/lib/db';
+import { courses, courseLessons } from '@/lib/schema';
+import { eq, asc } from 'drizzle-orm';
+import { randomUUID } from 'crypto';
+import { verifyAuthToken } from '@/lib/auth-server';
 
 async function verifyOwner(token: string, courseId: string): Promise<string> {
-  const decoded = await adminAuth.verifyIdToken(token);
+  const decoded = await verifyAuthToken(token);
   const uid = decoded.uid;
-  const courseSnap = await adminDb.collection('courses').doc(courseId).get();
-  if (!courseSnap.exists) throw new Error('Course not found');
-  const course = courseSnap.data()!;
+  const [course] = await db.select().from(courses).where(eq(courses.id, courseId)).limit(1);
+  if (!course) throw new Error('Course not found');
   if (course.createdBy !== uid) throw new Error('Unauthorized');
   return uid;
 }
@@ -14,14 +17,10 @@ async function verifyOwner(token: string, courseId: string): Promise<string> {
 export async function GET(req: NextRequest, { params }: { params: { courseId: string } }) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    await adminAuth.verifyIdToken(token);
-    const snap = await adminDb
-      .collection('courses')
-      .doc(params.courseId)
-      .collection('lessons')
-      .orderBy('order', 'asc')
-      .get();
-    const lessons = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    await verifyAuthToken(token);
+    const lessons = await db.select().from(courseLessons)
+      .where(eq(courseLessons.courseId, params.courseId))
+      .orderBy(asc(courseLessons.sortOrder));
     return NextResponse.json({ lessons });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
@@ -33,18 +32,16 @@ export async function POST(req: NextRequest, { params }: { params: { courseId: s
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
     await verifyOwner(token, params.courseId);
     const body = await req.json();
-    const ref = await adminDb
-      .collection('courses')
-      .doc(params.courseId)
-      .collection('lessons')
-      .add({
-        title: body.title,
-        description: body.description || '',
-        videoUrl: body.videoUrl || '',
-        order: body.order ?? 0,
-        createdAt: new Date().toISOString(),
-      });
-    return NextResponse.json({ id: ref.id });
+    const id = randomUUID();
+    await db.insert(courseLessons).values({
+      id,
+      courseId: params.courseId,
+      title: body.title,
+      description: body.description || '',
+      videoUrl: body.videoUrl || '',
+      sortOrder: body.order ?? 0,
+    });
+    return NextResponse.json({ id });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
@@ -55,14 +52,11 @@ export async function PUT(req: NextRequest, { params }: { params: { courseId: st
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
     await verifyOwner(token, params.courseId);
     const body = await req.json();
-    const { id, ...fields } = body;
+    const { id, order, ...fields } = body;
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
-    await adminDb
-      .collection('courses')
-      .doc(params.courseId)
-      .collection('lessons')
-      .doc(id)
-      .set(fields, { merge: true });
+    await db.update(courseLessons)
+      .set({ ...fields, ...(order !== undefined ? { sortOrder: order } : {}) })
+      .where(eq(courseLessons.id, id));
     return NextResponse.json({ success: true });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
@@ -76,12 +70,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { courseId:
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
-    await adminDb
-      .collection('courses')
-      .doc(params.courseId)
-      .collection('lessons')
-      .doc(id)
-      .delete();
+    await db.delete(courseLessons).where(eq(courseLessons.id, id));
     return NextResponse.json({ success: true });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });

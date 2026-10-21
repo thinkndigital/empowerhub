@@ -1,47 +1,48 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { db } from '@/lib/db';
+import { assessments, users } from '@/lib/schema';
+import { eq } from 'drizzle-orm';
+import { verifyAuthToken, DecodedToken } from '@/lib/auth-server';
 
 export const dynamic = 'force-dynamic';
 
-async function getOrgId(decoded: any): Promise<string | null> {
+async function getOrgId(decoded: DecodedToken): Promise<string | null> {
   if (decoded.organizationId) return decoded.organizationId;
-  const snap = await adminDb.collection('users').doc(decoded.uid).get();
-  return snap.data()?.organizationId || null;
+  const [userRow] = await db.select().from(users).where(eq(users.id, decoded.uid)).limit(1);
+  return userRow?.organizationId || null;
 }
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    const decoded = await adminAuth.verifyIdToken(token);
+    const decoded = await verifyAuthToken(token);
     const orgId = await getOrgId(decoded);
     if (!orgId) return NextResponse.json({ error: 'غير مصرح' }, { status: 403 });
 
-    const docRef = adminDb.collection('assessments').doc(params.id);
-    const snap = await docRef.get();
-    if (!snap.exists || snap.data()?.organizationId !== orgId)
+    const [assessment] = await db.select().from(assessments).where(eq(assessments.id, params.id)).limit(1);
+    if (!assessment || assessment.organizationId !== orgId)
       return NextResponse.json({ error: 'غير موجود' }, { status: 404 });
 
     const body = await req.json();
-    await docRef.set(body, { merge: true });
+    await db.update(assessments).set(body).where(eq(assessments.id, params.id));
     return NextResponse.json({ success: true });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const token = _req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    const decoded = await adminAuth.verifyIdToken(token);
+    const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
+    const decoded = await verifyAuthToken(token);
     const orgId = await getOrgId(decoded);
     if (!orgId) return NextResponse.json({ error: 'غير مصرح' }, { status: 403 });
 
-    const docRef = adminDb.collection('assessments').doc(params.id);
-    const snap = await docRef.get();
-    if (!snap.exists || snap.data()?.organizationId !== orgId)
+    const [assessment] = await db.select().from(assessments).where(eq(assessments.id, params.id)).limit(1);
+    if (!assessment || assessment.organizationId !== orgId)
       return NextResponse.json({ error: 'غير موجود' }, { status: 404 });
 
-    await docRef.delete();
+    await db.delete(assessments).where(eq(assessments.id, params.id));
     return NextResponse.json({ success: true });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });

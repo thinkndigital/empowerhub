@@ -1,42 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { db } from '@/lib/db';
+import { courses, enrollments, users } from '@/lib/schema';
+import { eq } from 'drizzle-orm';
+import { randomUUID } from 'crypto';
+import { verifyAuthToken } from '@/lib/auth-server';
+
+async function withEnrollments(courseRows: (typeof courses.$inferSelect)[]) {
+  return Promise.all(courseRows.map(async (c) => {
+    const enrollRows = await db.select().from(enrollments).where(eq(enrollments.courseId, c.id));
+    return {
+      ...c,
+      enrolledCount: enrollRows.length,
+      enrollments: enrollRows.map(e => ({ userId: e.userId, enrolledAt: e.enrolledAt, progress: e.progress ?? 0 })),
+    };
+  }));
+}
 
 export async function GET(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    const decoded = await adminAuth.verifyIdToken(token);
+    const decoded = await verifyAuthToken(token);
     const allParam = req.nextUrl.searchParams.get('all');
 
     if (allParam === 'true') {
-      // Both Arabic and English published statuses
-      const [arSnap, enSnap] = await Promise.all([
-        adminDb.collection('courses').where('status', '==', 'منشورة').get(),
-        adminDb.collection('courses').where('status', '==', 'published').get(),
-      ]);
-      const seen = new Set<string>();
-      const allDocs: any[] = [];
-      for (const d of [...arSnap.docs, ...enSnap.docs]) {
-        if (!seen.has(d.id)) { seen.add(d.id); allDocs.push(d); }
-      }
-      const courses = await Promise.all(allDocs.map(async (d) => {
-        const enrollSnap = await adminDb.collection('courses').doc(d.id).collection('enrollments').get();
-        const enrollments = enrollSnap.docs.map(e => ({
-          userId: e.id, enrolledAt: e.data().enrolledAt, progress: e.data().progress ?? 0,
-        }));
-        return { id: d.id, ...d.data(), enrolledCount: enrollments.length, enrollments };
-      }));
-      return NextResponse.json({ courses });
+      const rows = await db.select().from(courses).where(eq(courses.status, 'published'));
+      return NextResponse.json({ courses: await withEnrollments(rows) });
     }
 
-    const snap = await adminDb.collection('courses').where('createdBy', '==', decoded.uid).get();
-    const courses = await Promise.all(snap.docs.map(async (d) => {
-      const enrollSnap = await adminDb.collection('courses').doc(d.id).collection('enrollments').get();
-      const enrollments = enrollSnap.docs.map(e => ({
-        userId: e.id, enrolledAt: e.data().enrolledAt, progress: e.data().progress ?? 0,
-      }));
-      return { id: d.id, ...d.data(), enrolledCount: enrollments.length, enrollments };
-    }));
-    return NextResponse.json({ courses });
+    const rows = await db.select().from(courses).where(eq(courses.createdBy, decoded.uid));
+    return NextResponse.json({ courses: await withEnrollments(rows) });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
@@ -45,24 +37,25 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    const decoded = await adminAuth.verifyIdToken(token);
-    let orgId = decoded.organizationId as string | undefined;
+    const decoded = await verifyAuthToken(token);
     const body = await req.json();
-    const userDoc = await adminDb.collection('users').doc(decoded.uid).get();
-    if (!orgId) orgId = userDoc.data()?.organizationId;
-    const coachName = userDoc.data()?.name || '';
 
-    const ref = await adminDb.collection('courses').add({
+    const [userRow] = await db.select().from(users).where(eq(users.id, decoded.uid)).limit(1);
+    const orgId = decoded.organizationId || userRow?.organizationId || null;
+    const coachName = userRow?.name || '';
+
+    const id = randomUUID();
+    await db.insert(courses).values({
       ...body,
+      id,
       createdBy: decoded.uid,
       coachName,
-      organizationId: orgId || null,
+      organizationId: orgId,
       status: 'draft',
       enrolledCount: 0,
       completionRate: 0,
-      createdAt: new Date().toISOString(),
     });
-    return NextResponse.json({ id: ref.id });
+    return NextResponse.json({ id });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
@@ -71,9 +64,9 @@ export async function POST(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    await adminAuth.verifyIdToken(token);
+    await verifyAuthToken(token);
     const { id, ...fields } = await req.json();
-    await adminDb.collection('courses').doc(id).update(fields);
+    await db.update(courses).set(fields).where(eq(courses.id, id));
     return NextResponse.json({ success: true });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
@@ -83,9 +76,9 @@ export async function PUT(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    await adminAuth.verifyIdToken(token);
+    await verifyAuthToken(token);
     const id = req.nextUrl.searchParams.get('id') || '';
-    await adminDb.collection('courses').doc(id).delete();
+    await db.delete(courses).where(eq(courses.id, id));
     return NextResponse.json({ success: true });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });

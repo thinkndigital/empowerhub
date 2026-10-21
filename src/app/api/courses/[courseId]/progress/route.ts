@@ -1,28 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
-import { FieldValue } from 'firebase-admin/firestore';
+import { db } from '@/lib/db';
+import { enrollments, users } from '@/lib/schema';
+import { eq, and } from 'drizzle-orm';
+import { verifyAuthToken } from '@/lib/auth-server';
 
 export async function GET(req: NextRequest, { params }: { params: { courseId: string } }) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    const decoded = await adminAuth.verifyIdToken(token);
+    const decoded = await verifyAuthToken(token);
 
-    const enrollDoc = await adminDb
-      .collection('courses')
-      .doc(params.courseId)
-      .collection('enrollments')
-      .doc(decoded.uid)
-      .get();
+    const [enroll] = await db.select().from(enrollments)
+      .where(and(eq(enrollments.courseId, params.courseId), eq(enrollments.userId, decoded.uid))).limit(1);
 
-    if (!enrollDoc.exists) {
+    if (!enroll) {
       return NextResponse.json({ enrolled: false, progress: 0, completedLessons: [] });
     }
 
-    const data = enrollDoc.data()!;
     return NextResponse.json({
       enrolled: true,
-      progress: data.progress ?? 0,
-      completedLessons: data.completedLessons ?? [],
+      progress: enroll.progress ?? 0,
+      completedLessons: enroll.completedLessons ?? [],
     });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
@@ -32,39 +29,27 @@ export async function GET(req: NextRequest, { params }: { params: { courseId: st
 export async function PUT(req: NextRequest, { params }: { params: { courseId: string } }) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    const decoded = await adminAuth.verifyIdToken(token);
+    const decoded = await verifyAuthToken(token);
     const body = await req.json();
 
-    const update: Record<string, unknown> = {
-      progress: body.progress,
-      updatedAt: FieldValue.serverTimestamp(),
-    };
+    const [enroll] = await db.select().from(enrollments)
+      .where(and(eq(enrollments.courseId, params.courseId), eq(enrollments.userId, decoded.uid))).limit(1);
+    if (!enroll) return NextResponse.json({ error: 'Not enrolled' }, { status: 404 });
 
-    if (body.completedLesson) {
-      update.completedLessons = FieldValue.arrayUnion(body.completedLesson);
-    }
+    const completedLessons = new Set(enroll.completedLessons ?? []);
+    if (body.completedLesson) completedLessons.add(body.completedLesson);
 
-    await adminDb
-      .collection('courses')
-      .doc(params.courseId)
-      .collection('enrollments')
-      .doc(decoded.uid)
-      .update(update);
+    await db.update(enrollments)
+      .set({ progress: body.progress, completedLessons: Array.from(completedLessons) })
+      .where(and(eq(enrollments.courseId, params.courseId), eq(enrollments.userId, decoded.uid)));
 
     // Recalculate overall user progress from all enrolled courses
     try {
-      const allCoursesSnap = await adminDb.collection('courses').get();
-      let totalProgress = 0;
-      let enrolledCount = 0;
-      await Promise.all(allCoursesSnap.docs.map(async (courseDoc) => {
-        const enroll = await adminDb.collection('courses').doc(courseDoc.id).collection('enrollments').doc(decoded.uid).get();
-        if (enroll.exists) {
-          enrolledCount++;
-          totalProgress += (enroll.data()?.progress ?? 0);
-        }
-      }));
-      const avgProgress = enrolledCount > 0 ? Math.round(totalProgress / enrolledCount) : 0;
-      await adminDb.collection('users').doc(decoded.uid).update({ progress: avgProgress });
+      const rows = await db.select().from(enrollments).where(eq(enrollments.userId, decoded.uid));
+      const avgProgress = rows.length > 0
+        ? Math.round(rows.reduce((sum, r) => sum + (r.progress ?? 0), 0) / rows.length)
+        : 0;
+      await db.update(users).set({ progress: avgProgress }).where(eq(users.id, decoded.uid));
     } catch { /* non-critical */ }
 
     return NextResponse.json({ success: true });

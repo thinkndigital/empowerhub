@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
-import { FieldValue } from 'firebase-admin/firestore';
+import { randomUUID } from 'crypto';
+import { db } from '@/lib/db';
+import { users, groups, groupMembers, organizations, orgInvitations, notifications } from '@/lib/schema';
+import { eq, sql } from 'drizzle-orm';
+import { verifyAuthToken } from '@/lib/auth-server';
 
 export async function POST(req: NextRequest) {
   try {
@@ -8,11 +11,11 @@ export async function POST(req: NextRequest) {
     const token = authHeader.replace('Bearer ', '');
     if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const decoded = await adminAuth.verifyIdToken(token);
-    let orgId = decoded.organizationId as string | undefined;
+    const decoded = await verifyAuthToken(token);
+    let orgId = decoded.organizationId;
     if (!orgId) {
-      const userDoc = await adminDb.collection('users').doc(decoded.uid).get();
-      orgId = userDoc.data()?.organizationId;
+      const [userRow] = await db.select().from(users).where(eq(users.id, decoded.uid)).limit(1);
+      orgId = userRow?.organizationId;
     }
     if (!orgId) return NextResponse.json({ error: 'Not an org' }, { status: 403 });
 
@@ -20,85 +23,79 @@ export async function POST(req: NextRequest) {
     const { action } = body;
 
     if (action === 'addToOrg') {
-      await adminDb.collection('users').doc(body.userId).update({ organizationId: orgId });
+      await db.update(users).set({ organizationId: orgId }).where(eq(users.id, body.userId));
       return NextResponse.json({ success: true });
     }
 
     if (action === 'removeFromOrg') {
-      await adminDb.collection('users').doc(body.userId).update({
-        organizationId: FieldValue.delete(),
-        groupId: FieldValue.delete(),
-      });
+      await db.update(users).set({ organizationId: null, groupId: null }).where(eq(users.id, body.userId));
       return NextResponse.json({ success: true });
     }
 
     if (action === 'createGroup') {
-      const ref = await adminDb.collection('groups').add({
-        orgId, name: body.name, memberIds: [], createdAt: new Date().toISOString(),
-      });
-      return NextResponse.json({ success: true, id: ref.id });
+      const id = randomUUID();
+      await db.insert(groups).values({ id, organizationId: orgId, name: body.name });
+      return NextResponse.json({ success: true, id });
     }
 
     if (action === 'assignGroup') {
-      await adminDb.collection('users').doc(body.userId).update({ groupId: body.groupId });
-      await adminDb.collection('groups').doc(body.groupId).update({
-        memberIds: FieldValue.arrayUnion(body.userId),
-      });
+      await db.update(users).set({ groupId: body.groupId }).where(eq(users.id, body.userId));
+      await db.insert(groupMembers).values({ groupId: body.groupId, userId: body.userId })
+        .onDuplicateKeyUpdate({ set: { userId: body.userId } });
       return NextResponse.json({ success: true });
     }
 
     if (action === 'invite') {
-      const orgSnap = await adminDb.collection('organizations').doc(orgId).get();
-      const orgName = orgSnap.data()?.name || '';
-      await adminDb.collection('orgInvitations').add({
-        orgId,
+      const [org] = await db.select().from(organizations).where(eq(organizations.id, orgId)).limit(1);
+      const orgName = org?.name || '';
+      await db.insert(orgInvitations).values({
+        id: randomUUID(),
+        organizationId: orgId,
         orgName,
         targetUid: body.targetUid,
         targetName: body.targetName,
         targetRole: body.targetRole,
         status: 'pending',
-        createdAt: new Date().toISOString(),
       });
-      await adminDb.collection('notifications').add({
+      await db.insert(notifications).values({
+        id: randomUUID(),
         userId: body.targetUid,
         title: 'دعوة من منظمة',
-        description: `دعتك منظمة ${orgName} للانضمام إليها`,
+        body: `دعتك منظمة ${orgName} للانضمام إليها`,
         link: `/${body.targetRole}-dashboard/invitations`,
-        isRead: false,
-        createdAt: new Date().toISOString(),
+        read: false,
       });
       return NextResponse.json({ success: true });
     }
 
     if (action === 'assignMentor') {
       // body.userId = beneficiary, body.mentorId = mentor's uid
-      await adminDb.collection('users').doc(body.userId).update({ mentorId: body.mentorId });
-      // Notify mentor
-      const benefSnap = await adminDb.collection('users').doc(body.userId).get();
-      const benefName = benefSnap.data()?.name || 'مستفيد';
-      await adminDb.collection('notifications').add({
+      await db.update(users).set({ mentorId: body.mentorId }).where(eq(users.id, body.userId));
+      const [benef] = await db.select().from(users).where(eq(users.id, body.userId)).limit(1);
+      const benefName = benef?.name || 'مستفيد';
+      await db.insert(notifications).values({
+        id: randomUUID(),
         userId: body.mentorId,
         title: 'تم تعيينك مرشداً',
-        description: `تم تعيينك مرشداً للمستفيد ${benefName}`,
+        body: `تم تعيينك مرشداً للمستفيد ${benefName}`,
         link: '/mentor-dashboard',
-        isRead: false,
-        createdAt: new Date().toISOString(),
+        read: false,
       });
       return NextResponse.json({ success: true });
     }
 
     if (action === 'assignCoach') {
       // body.userId = beneficiary, body.coachId = coach's uid
-      await adminDb.collection('users').doc(body.userId).update({ coachId: body.coachId });
-      const benefSnap2 = await adminDb.collection('users').doc(body.userId).get();
-      const benefName2 = benefSnap2.data()?.name || 'مستفيد';
-      await adminDb.collection('notifications').add({
+      await db.update(users).set({ coachId: body.coachId }).where(eq(users.id, body.userId));
+      const [benef] = await db.select().from(users).where(eq(users.id, body.userId)).limit(1);
+      const benefName = benef?.name || 'مستفيد';
+      await db.insert(notifications).values({
+        id: randomUUID(),
         userId: body.coachId,
         title: 'تم تعيينك مدرباً',
-        description: `تم تعيينك مدرباً للمستفيد ${benefName2}`,
+        body: `تم تعيينك مدرباً للمستفيد ${benefName}`,
         link: '/coach-dashboard',
-        isRead: false,
-        createdAt: new Date().toISOString(),
+        read: false,
       });
       return NextResponse.json({ success: true });
     }
