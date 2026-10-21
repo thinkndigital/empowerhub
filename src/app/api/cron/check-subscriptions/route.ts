@@ -1,19 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase-admin';
+import { randomUUID } from 'crypto';
+import { db } from '@/lib/db';
+import { subscriptions, organizations, notifications } from '@/lib/schema';
+import { eq, inArray } from 'drizzle-orm';
 
 export const dynamic = 'force-dynamic';
 
 function isSameDay(a: Date, b: Date) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-}
-
-function toDate(value: any): Date | null {
-  if (!value) return null;
-  if (value instanceof Date) return value;
-  if (typeof value.toDate === 'function') return value.toDate();
-  if (value._seconds || value.seconds) return new Date((value._seconds ?? value.seconds) * 1000);
-  if (typeof value === 'string') return new Date(value);
-  return null;
 }
 
 // Daily job (called by a scheduled GitHub Action) that, for every "active" (paid) or
@@ -27,50 +21,48 @@ export async function POST(req: NextRequest) {
   }
 
   const now = new Date();
-  const snap = await adminDb.collection('subscriptions').where('status', 'in', ['active', 'trial']).get();
+  const subs = await db.select().from(subscriptions).where(inArray(subscriptions.status, ['active', 'trial']));
 
   let reminded = 0;
   let expired = 0;
 
-  for (const doc of snap.docs) {
-    const sub = doc.data() as any;
+  for (const sub of subs) {
     if (sub.permanentFree) continue;
 
-    const orgId = sub.orgId || doc.id;
-    const endDate = toDate(sub.endDate);
+    const orgId = sub.organizationId;
+    const endDate = sub.endDate ? new Date(sub.endDate) : null;
     if (!endDate) continue;
 
     const daysLeft = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
     const isTrial = sub.status === 'trial';
 
     if (daysLeft <= 0) {
-      await doc.ref.update({ status: 'expired', expiredAt: now });
+      await db.update(subscriptions).set({ status: 'expired', expiredAt: now }).where(eq(subscriptions.organizationId, orgId));
       expired++;
       continue;
     }
 
     if (daysLeft <= 30) {
-      const lastReminder = toDate(sub.lastReminderAt);
+      const lastReminder = sub.lastReminderAt ? new Date(sub.lastReminderAt) : null;
       if (lastReminder && isSameDay(lastReminder, now)) continue;
 
-      const orgSnap = await adminDb.collection('organizations').doc(orgId).get();
-      const adminId = orgSnap.data()?.adminId;
-      if (adminId) {
-        await adminDb.collection('notifications').add({
-          userId: adminId,
+      const [org] = await db.select().from(organizations).where(eq(organizations.id, orgId)).limit(1);
+      if (org?.adminId) {
+        await db.insert(notifications).values({
+          id: randomUUID(),
+          userId: org.adminId,
           title: isTrial ? 'تذكير بانتهاء الفترة التجريبية المجانية' : 'تذكير بتجديد الاشتراك',
           body: isTrial
             ? `باقي ${daysLeft} يوم على انتهاء الفترة التجريبية المجانية لمنظمتك. اشترك بخطة مدفوعة لتفادي إيقاف إضافة أعضاء جدد.`
             : `باقي ${daysLeft} يوم على انتهاء اشتراك منظمتك. يرجى السداد لتفادي إيقاف إضافة أعضاء جدد.`,
           link: '/organization-dashboard/settings',
           read: false,
-          createdAt: now,
         });
       }
-      await doc.ref.update({ lastReminderAt: now });
+      await db.update(subscriptions).set({ lastReminderAt: now }).where(eq(subscriptions.organizationId, orgId));
       reminded++;
     }
   }
 
-  return NextResponse.json({ ok: true, checked: snap.size, reminded, expired });
+  return NextResponse.json({ ok: true, checked: subs.length, reminded, expired });
 }

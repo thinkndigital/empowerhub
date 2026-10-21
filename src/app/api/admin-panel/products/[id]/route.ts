@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { adminDb } from '@/lib/firebase-admin';
+import { db } from '@/lib/db';
+import { products } from '@/lib/schema';
+import { eq } from 'drizzle-orm';
 
 function checkAuth() {
   return cookies().get('ap_session')?.value === 'empowerhub-admin-2026-secret';
@@ -9,12 +11,12 @@ function checkAuth() {
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   if (!checkAuth()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const body = await req.json();
-  await adminDb.collection('products').doc(params.id).update({ ...body, updatedAt: new Date() });
+  await db.update(products).set(body).where(eq(products.id, params.id));
   return NextResponse.json({ ok: true });
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   if (!checkAuth()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  await adminDb.collection('products').doc(params.id).delete();
+  await db.delete(products).where(eq(products.id, params.id));
   return NextResponse.json({ ok: true });
 }

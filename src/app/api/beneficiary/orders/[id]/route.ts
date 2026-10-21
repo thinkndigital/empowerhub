@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { db } from '@/lib/db';
+import { orders } from '@/lib/schema';
+import { eq } from 'drizzle-orm';
+import { verifyAuthToken } from '@/lib/auth-server';
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    await adminAuth.verifyIdToken(token);
+    await verifyAuthToken(token);
     const body = await req.json();
-    await adminDb.collection('orders').doc(params.id).update({ ...body, updatedAt: new Date() });
+    await db.update(orders).set(body).where(eq(orders.id, params.id));
     return NextResponse.json({ ok: true });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 401 });

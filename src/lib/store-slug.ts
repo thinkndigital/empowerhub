@@ -1,4 +1,6 @@
-import { adminDb } from '@/lib/firebase-admin';
+import { db } from '@/lib/db';
+import { stores } from '@/lib/schema';
+import { eq } from 'drizzle-orm';
 
 export function slugify(name: string): string {
   return name
@@ -16,8 +18,8 @@ export async function uniqueStoreSlug(name: string, excludeId?: string): Promise
   let candidate = base;
   let attempt = 1;
   while (true) {
-    const snap = await adminDb.collection('stores').where('slug', '==', candidate).limit(5).get();
-    const collides = snap.docs.some(d => d.id !== excludeId);
+    const rows = await db.select({ id: stores.id }).from(stores).where(eq(stores.slug, candidate)).limit(5);
+    const collides = rows.some(r => r.id !== excludeId);
     if (!collides) return candidate;
     attempt += 1;
     candidate = `${base}-${attempt}`;

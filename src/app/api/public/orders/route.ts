@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase-admin';
+import { randomUUID } from 'crypto';
+import { db } from '@/lib/db';
+import { orders } from '@/lib/schema';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,38 +14,36 @@ export async function POST(req: NextRequest) {
       buyerName, buyerPhone, buyerAddress, notes,
       paymentMethod, // 'cod' | 'online'
       quantity = 1,
+      type, courseId, userId,
     } = body;
 
     if (!productId || !buyerName || !buyerPhone) {
       return NextResponse.json({ error: 'بيانات ناقصة' }, { status: 400 });
     }
 
-    const { type, courseId, userId } = body;
-
-    const orderRef = await adminDb.collection('orders').add({
+    const id = randomUUID();
+    await db.insert(orders).values({
+      id,
       type: type || 'product',
-      courseId: courseId || '',
-      userId: userId || beneficiaryId || '',
+      courseId: courseId || null,
+      userId: userId || beneficiaryId || null,
       productId,
       productName: productName || '',
-      productPrice: productPrice || 0,
-      storeId: storeId || '',
+      storeId: storeId || null,
       storeName: storeName || '',
-      beneficiaryId: beneficiaryId || '',
-      organizationId: organizationId || '',
+      organizationId: organizationId || null,
       buyerName,
       buyerPhone,
       buyerAddress: buyerAddress || '',
       notes: notes || '',
       quantity,
-      totalAmount: (productPrice || 0) * quantity,
+      totalAmount: String((productPrice || 0) * quantity),
       paymentMethod: paymentMethod || 'cod',
       paymentStatus: 'unpaid',
       status: 'pending',
-      createdAt: new Date(),
     });
 
-    return NextResponse.json({ ok: true, orderId: orderRef.id });
+    return NextResponse.json({ ok: true, orderId: id });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }

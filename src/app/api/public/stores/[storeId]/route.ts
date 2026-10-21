@@ -1,67 +1,60 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase-admin';
+import { db } from '@/lib/db';
+import { stores, products } from '@/lib/schema';
+import { eq, or } from 'drizzle-orm';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(_req: NextRequest, { params }: { params: { storeId: string } }) {
   try {
     // القيمة قد تكون الرابط المخصص (slug) أو معرّف المستند — نجرب الرابط المخصص أولاً
-    const bySlug = await adminDb.collection('stores').where('slug', '==', params.storeId).limit(1).get();
-    const storeDoc = !bySlug.empty ? bySlug.docs[0] : await adminDb.collection('stores').doc(params.storeId).get();
-    if (!storeDoc.exists) {
+    const [bySlug] = await db.select().from(stores).where(eq(stores.slug, params.storeId)).limit(1);
+    const store = bySlug || (await db.select().from(stores).where(eq(stores.id, params.storeId)).limit(1))[0];
+    if (!store) {
       return NextResponse.json({ error: 'المتجر غير موجود' }, { status: 404 });
     }
 
-    const storeData = storeDoc.data()!;
-    const beneficiaryId = storeData.beneficiaryId || '';
+    const beneficiaryId = store.beneficiaryId || '';
 
-    // Products can be linked via userId==beneficiaryId, beneficiaryId==beneficiaryId,
-    // userId==storeId, or storeId==storeId — try all combinations and deduplicate
-    const queries = [
-      adminDb.collection('products').where('userId', '==', beneficiaryId).get(),
-      adminDb.collection('products').where('beneficiaryId', '==', beneficiaryId).get(),
-      adminDb.collection('products').where('userId', '==', storeDoc.id).get(),
-      adminDb.collection('products').where('storeId', '==', storeDoc.id).get(),
-    ];
-    const results = await Promise.all(queries);
-    const allDocs = results.flatMap(s => s.docs);
+    // Products can be linked via userId==beneficiaryId or storeId==storeId —
+    // try both and deduplicate (mirrors the original's multi-field lookup).
+    const productRows = await db.select().from(products).where(
+      or(eq(products.userId, beneficiaryId), eq(products.storeId, store.id))
+    );
 
     const seen = new Set<string>();
-    const products = allDocs
-      .filter(d => {
-        if (seen.has(d.id)) return false;
-        seen.add(d.id);
-        return !d.data().hidden;
+    const productsResult = productRows
+      .filter(p => {
+        if (seen.has(p.id)) return false;
+        seen.add(p.id);
+        return !p.hidden;
       })
-      .map(d => {
-        const data = d.data();
-        return {
-          id: d.id,
-          name: data.name || '',
-          description: data.description || '',
-          price: data.price ?? 0,
-          category: data.category || '',
-          imageUrl: data.imageUrl || '',
-          stock: data.stock ?? null,
-          whatsapp: data.whatsapp || storeData.whatsapp || '',
-        };
-      });
+      .map(p => ({
+        id: p.id,
+        name: p.name || '',
+        description: p.description || '',
+        price: p.price ?? 0,
+        category: p.category || '',
+        imageUrl: p.image || '',
+        stock: p.stock ?? null,
+        whatsapp: p.whatsapp || store.whatsapp || '',
+      }));
 
     return NextResponse.json({
       store: {
-        id: storeDoc.id,
-        slug: storeData.slug || '',
-        name: storeData.name || '',
-        logoUrl: storeData.logoUrl || '',
-        coverUrl: storeData.coverUrl || '',
-        beneficiaryName: storeData.beneficiaryName || '',
-        location: storeData.location || '',
-        description: storeData.description || '',
-        phone: storeData.phone || '',
-        whatsapp: storeData.whatsapp || '',
-        socials: storeData.socials || {},
+        id: store.id,
+        slug: store.slug || '',
+        name: store.name || '',
+        logoUrl: store.logoUrl || '',
+        coverUrl: store.coverUrl || '',
+        beneficiaryName: store.beneficiaryName || '',
+        location: store.location || '',
+        description: store.description || '',
+        phone: store.phone || '',
+        whatsapp: store.whatsapp || '',
+        socials: store.socials || {},
       },
-      products,
+      products: productsResult,
     });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });

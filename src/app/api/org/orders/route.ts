@@ -1,34 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
-
-function normalizeDate(date: any): string | undefined {
-  if (!date || typeof date === 'string') return date;
-  if (date._seconds || date.seconds) {
-    return new Date((date._seconds ?? date.seconds) * 1000).toISOString();
-  }
-}
+import { db } from '@/lib/db';
+import { users, orders } from '@/lib/schema';
+import { eq, desc } from 'drizzle-orm';
+import { verifyAuthToken } from '@/lib/auth-server';
 
 export async function GET(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    const decoded = await adminAuth.verifyIdToken(token);
-    const orgId = decoded.organizationId as string;
+    const decoded = await verifyAuthToken(token);
+    let orgId = decoded.organizationId;
 
     if (!orgId) {
-      const userSnap = await adminDb.collection('users').doc(decoded.uid).get();
-      const orgIdFromDoc = (userSnap.data() as any)?.organizationId;
-      if (!orgIdFromDoc) return NextResponse.json({ orders: [] });
+      const [userRow] = await db.select().from(users).where(eq(users.id, decoded.uid)).limit(1);
+      orgId = userRow?.organizationId;
     }
+    if (!orgId) return NextResponse.json({ orders: [] });
 
-    const effectiveOrgId = orgId || (await adminDb.collection('users').doc(decoded.uid).get()).data()?.organizationId;
-    if (!effectiveOrgId) return NextResponse.json({ orders: [] });
-
-    const snap = await adminDb.collection('orders').where('organizationId', '==', effectiveOrgId).get();
-    const orders = snap.docs
-      .map(d => ({ id: d.id, ...d.data(), createdAt: normalizeDate((d.data() as any).createdAt) }))
-      .sort((a: any, b: any) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
-
-    return NextResponse.json({ orders });
+    const rows = await db.select().from(orders).where(eq(orders.organizationId, orgId)).orderBy(desc(orders.createdAt));
+    return NextResponse.json({ orders: rows });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 401 });
   }

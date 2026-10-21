@@ -1,28 +1,22 @@
 import { NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase-admin';
+import { db } from '@/lib/db';
+import { stores, products } from '@/lib/schema';
+import { eq, ne } from 'drizzle-orm';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export async function GET() {
   try {
-    const storesSnap = await adminDb.collection('stores').limit(100).get();
-    const stores = storesSnap.docs
-      .filter(d => !d.data().hidden)
-      .map(d => {
-        const data = d.data();
-        return { id: d.id, slug: data.slug || '', name: data.name, logoUrl: data.logoUrl, coverUrl: data.coverUrl || '', location: data.location, beneficiaryName: data.beneficiaryName };
-      });
+    const storeRows = await db.select().from(stores).where(ne(stores.hidden, true)).limit(100);
+    const storesResult = storeRows.map(s => ({
+      id: s.id, slug: s.slug || '', name: s.name, logoUrl: s.logoUrl, coverUrl: s.coverUrl || '', location: s.location, beneficiaryName: s.beneficiaryName,
+    }));
 
-    const productsSnap = await adminDb.collection('products').get();
-    const products = productsSnap.docs
-      .filter(d => !d.data().hidden)
-      .map(d => {
-        const data = d.data();
-        return { id: d.id, storeId: data.userId || data.storeId || '', ...data };
-      });
+    const productRows = await db.select().from(products).where(ne(products.hidden, true));
+    const productsResult = productRows.map(p => ({ ...p, id: p.id, storeId: p.userId || p.storeId || '' }));
 
-    return NextResponse.json({ stores, products });
+    return NextResponse.json({ stores: storesResult, products: productsResult });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }

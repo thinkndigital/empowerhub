@@ -1,38 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { randomUUID } from 'crypto';
+import { db } from '@/lib/db';
+import { products, users } from '@/lib/schema';
+import { eq, and, desc } from 'drizzle-orm';
+import { verifyAuthToken } from '@/lib/auth-server';
 
 export async function GET(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    const decoded = await adminAuth.verifyIdToken(token);
+    const decoded = await verifyAuthToken(token);
     const scope = req.nextUrl.searchParams.get('scope');
     const approved = req.nextUrl.searchParams.get('approved');
 
-    let query: FirebaseFirestore.Query = adminDb.collection('products');
+    const [userRow] = await db.select().from(users).where(eq(users.id, decoded.uid)).limit(1);
 
+    const conditions = [];
     if (scope === 'all') {
-      // Org sees all products for their org
-      const userSnap = await adminDb.collection('users').doc(decoded.uid).get();
-      const orgId = userSnap.data()?.organizationId || (decoded as any).organizationId;
+      const orgId = userRow?.organizationId || decoded.organizationId;
       if (!orgId) return NextResponse.json({ error: 'Not an org' }, { status: 403 });
-      query = query.where('orgId', '==', orgId);
+      conditions.push(eq(products.organizationId, orgId));
     } else {
-      // Beneficiary sees own products
-      query = query.where('userId', '==', decoded.uid);
+      conditions.push(eq(products.userId, decoded.uid));
     }
-
     if (approved === 'true') {
-      query = query.where('status', '==', 'approved');
+      conditions.push(eq(products.status, 'approved'));
     }
 
-    const snap = await query.get();
-    const rawProducts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    rawProducts.sort((a: any, b: any) => {
-      const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-      return bTime - aTime;
-    });
-    return NextResponse.json({ products: rawProducts });
+    const rows = await db.select().from(products).where(and(...conditions)).orderBy(desc(products.createdAt));
+    return NextResponse.json({ products: rows });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
@@ -41,7 +36,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    const decoded = await adminAuth.verifyIdToken(token);
+    const decoded = await verifyAuthToken(token);
     const body = await req.json();
     const { name, description, price, category, image } = body;
 
@@ -49,26 +44,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Get user info
-    const userSnap = await adminDb.collection('users').doc(decoded.uid).get();
-    const userData = userSnap.data() || {};
-    const orgId = userData.organizationId || (decoded as any).organizationId || '';
+    const [userRow] = await db.select().from(users).where(eq(users.id, decoded.uid)).limit(1);
+    const orgId = userRow?.organizationId || decoded.organizationId || null;
 
+    const id = randomUUID();
     const product = {
+      id,
       name,
       description,
-      price: Number(price),
+      price: String(Number(price)),
       category,
-      ...(image ? { image } : {}),
+      image: image || null,
       userId: decoded.uid,
-      userName: userData.name || (decoded as any).name || '',
-      orgId,
+      beneficiaryName: userRow?.name || '',
+      organizationId: orgId,
       status: 'pending' as const,
-      createdAt: new Date().toISOString(),
     };
 
-    const ref = await adminDb.collection('products').add(product);
-    return NextResponse.json({ id: ref.id, ...product });
+    await db.insert(products).values(product);
+    return NextResponse.json(product);
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
@@ -77,12 +71,10 @@ export async function POST(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    const decoded = await adminAuth.verifyIdToken(token);
+    const decoded = await verifyAuthToken(token);
 
-    // Check caller is org role
-    const userSnap = await adminDb.collection('users').doc(decoded.uid).get();
-    const role = userSnap.data()?.role;
-    if (role !== 'organization') {
+    const [userRow] = await db.select().from(users).where(eq(users.id, decoded.uid)).limit(1);
+    if (userRow?.role !== 'organization') {
       return NextResponse.json({ error: 'Forbidden: only organizations can approve/reject products' }, { status: 403 });
     }
 
@@ -91,7 +83,7 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
     }
 
-    await adminDb.collection('products').doc(id).update({ status });
+    await db.update(products).set({ status }).where(eq(products.id, id));
     return NextResponse.json({ success: true });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
@@ -101,22 +93,20 @@ export async function PUT(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    const decoded = await adminAuth.verifyIdToken(token);
+    const decoded = await verifyAuthToken(token);
     const id = req.nextUrl.searchParams.get('id') || '';
     if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
 
-    const docSnap = await adminDb.collection('products').doc(id).get();
-    if (!docSnap.exists) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    const [product] = await db.select().from(products).where(eq(products.id, id)).limit(1);
+    if (!product) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-    const data = docSnap.data()!;
-    const userSnap = await adminDb.collection('users').doc(decoded.uid).get();
-    const role = userSnap.data()?.role;
+    const [userRow] = await db.select().from(users).where(eq(users.id, decoded.uid)).limit(1);
 
-    if (data.userId !== decoded.uid && role !== 'organization') {
+    if (product.userId !== decoded.uid && userRow?.role !== 'organization') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    await adminDb.collection('products').doc(id).delete();
+    await db.delete(products).where(eq(products.id, id));
     return NextResponse.json({ success: true });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });

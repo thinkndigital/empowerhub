@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase-admin';
+import { db } from '@/lib/db';
+import { orders, subscriptions, organizations } from '@/lib/schema';
+import { eq } from 'drizzle-orm';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,50 +10,59 @@ export async function POST(req: NextRequest) {
     const { orderId, paymentStatus, status } = await req.json();
     if (!orderId) return NextResponse.json({ error: 'orderId required' }, { status: 400 });
 
-    await adminDb.collection('orders').doc(orderId).update({
+    await db.update(orders).set({
       paymentStatus: paymentStatus || 'paid',
       status: status || 'confirmed',
-      paidAt: new Date(),
-    });
+      confirmedAt: new Date(),
+    }).where(eq(orders.id, orderId));
 
-    // Return order data so the client can check type/courseId
-    const orderDoc = await adminDb.collection('orders').doc(orderId).get();
-    const orderData = orderDoc.exists ? orderDoc.data() : null;
+    const [order] = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1);
 
-    if (orderData?.type === 'subscription' && orderData.orgId && orderData.planId) {
+    if (order?.type === 'subscription' && order.organizationId && order.planId) {
       const now = new Date();
       const endDate = new Date(now);
-      if (orderData.billingCycle === 'annual') endDate.setFullYear(endDate.getFullYear() + 1);
+      const billingCycle: 'monthly' | 'annual' = order.billingCycle === 'annual' ? 'annual' : 'monthly';
+      if (billingCycle === 'annual') endDate.setFullYear(endDate.getFullYear() + 1);
       else endDate.setMonth(endDate.getMonth() + 1);
 
-      await adminDb.collection('subscriptions').doc(orderData.orgId).set({
-        orgId: orderData.orgId,
-        planId: orderData.planId,
-        planKey: orderData.planKey || orderData.planId,
-        planName: orderData.planName || '',
-        billingCycle: orderData.billingCycle || 'monthly',
+      await db.insert(subscriptions).values({
+        organizationId: order.organizationId,
+        planId: order.planId,
+        planKey: order.planKey || order.planId,
+        planName: order.planName || '',
+        billingCycle,
         status: 'active',
         startDate: now,
         endDate,
         renewalDate: endDate,
         lastReminderAt: null,
         lastPaymentId: orderId,
-        updatedAt: now,
-      }, { merge: true });
+      }).onDuplicateKeyUpdate({
+        set: {
+          planId: order.planId,
+          planKey: order.planKey || order.planId,
+          planName: order.planName || '',
+          billingCycle,
+          status: 'active',
+          startDate: now,
+          endDate,
+          renewalDate: endDate,
+          lastReminderAt: null,
+          lastPaymentId: orderId,
+        },
+      });
 
-      await adminDb.collection('organizations').doc(orderData.orgId).update({
-        plan: orderData.planKey || orderData.planId,
-      }).catch(() => {});
+      await db.update(organizations).set({ planKey: order.planKey || order.planId }).where(eq(organizations.id, order.organizationId)).catch(() => {});
     }
 
     return NextResponse.json({
       ok: true,
-      order: orderData
+      order: order
         ? {
-            type: orderData.type || 'product',
-            courseId: orderData.courseId || '',
-            userId: orderData.userId || '',
-            orgId: orderData.orgId || '',
+            type: order.type || 'product',
+            courseId: order.courseId || '',
+            userId: order.userId || '',
+            orgId: order.organizationId || '',
           }
         : null,
     });

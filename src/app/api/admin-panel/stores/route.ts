@@ -1,16 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { adminDb } from '@/lib/firebase-admin';
+import { db } from '@/lib/db';
+import { orders, products, stores, users } from '@/lib/schema';
+import { eq, desc, count, inArray } from 'drizzle-orm';
 
 function checkAuth() {
   return cookies().get('ap_session')?.value === 'empowerhub-admin-2026-secret';
-}
-
-function normalizeDate(date: any): string | undefined {
-  if (!date || typeof date === 'string') return date;
-  if (date._seconds || date.seconds) {
-    return new Date((date._seconds ?? date.seconds) * 1000).toISOString();
-  }
 }
 
 export async function GET(req: NextRequest) {
@@ -20,76 +15,63 @@ export async function GET(req: NextRequest) {
   const type = url.searchParams.get('type') || 'stores';
 
   if (type === 'orders') {
-    const snap = await adminDb.collection('orders').get();
-    const orders = snap.docs.map(d => {
-      const data = d.data();
-      return {
-        id: d.id,
-        productName: data.productName || '',
-        storeName: data.storeName || '',
-        buyerName: data.buyerName || '',
-        buyerPhone: data.buyerPhone || '',
-        buyerAddress: data.buyerAddress || '',
-        totalAmount: data.totalAmount || 0,
-        status: data.status || 'pending',
-        paymentMethod: data.paymentMethod || 'cod',
-        paymentStatus: data.paymentStatus || 'unpaid',
-        createdAt: normalizeDate(data.createdAt),
-      };
+    const rows = await db.select().from(orders).orderBy(desc(orders.createdAt));
+    return NextResponse.json({
+      orders: rows.map(o => ({
+        id: o.id,
+        productName: o.productName || '',
+        storeName: o.storeName || '',
+        buyerName: o.buyerName || '',
+        buyerPhone: o.buyerPhone || '',
+        buyerAddress: o.buyerAddress || '',
+        totalAmount: o.totalAmount || 0,
+        status: o.status || 'pending',
+        paymentMethod: o.paymentMethod || 'cod',
+        paymentStatus: o.paymentStatus || 'unpaid',
+        createdAt: o.createdAt,
+      })),
     });
-    orders.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
-    return NextResponse.json({ orders });
   }
 
   if (type === 'products') {
-    const snap = await adminDb.collection('products').get();
-    const products = snap.docs.map(d => {
-      const data = d.data();
-      return {
-        id: d.id,
-        name: data.name,
-        price: data.price,
-        category: data.category,
-        status: data.status,
-        hidden: data.hidden ?? false,
-        imageUrl: data.imageUrl || data.image || '',
-        userId: data.userId,
-        storeId: data.storeId,
-        createdAt: normalizeDate(data.createdAt),
-      };
+    const rows = await db.select().from(products);
+    return NextResponse.json({
+      products: rows.map(p => ({
+        id: p.id, name: p.name, price: p.price, category: p.category, status: p.status,
+        hidden: p.hidden ?? false, imageUrl: p.image || '', userId: p.userId, storeId: p.storeId,
+        createdAt: p.createdAt,
+      })),
     });
-    return NextResponse.json({ products });
   }
 
   // stores (default)
-  const storesSnap = await adminDb.collection('stores').get();
-  const stores = await Promise.all(storesSnap.docs.map(async d => {
-    const data = d.data();
-    const productsSnap = await adminDb.collection('products').where('storeId', '==', d.id).count().get();
-    let beneficiaryName = data.beneficiaryName || '';
-    let ownerRole = '';
-    if (data.beneficiaryId) {
-      const userSnap = await adminDb.collection('users').doc(data.beneficiaryId).get();
-      if (userSnap.exists) {
-        const u = userSnap.data() as any;
-        if (!beneficiaryName) beneficiaryName = u?.name || '';
-        ownerRole = u?.role || '';
-      }
-    }
-    return {
-      id: d.id,
-      name: data.name,
-      logoUrl: data.logoUrl || '',
-      location: data.location || '',
-      beneficiaryName,
-      beneficiaryId: data.beneficiaryId || '',
-      organizationId: data.organizationId || '',
-      ownerRole,
-      hidden: data.hidden ?? false,
-      productsCount: productsSnap.data().count,
-      createdAt: normalizeDate(data.createdAt),
-    };
-  }));
+  const storeRows = await db.select().from(stores);
+  const storeIds = storeRows.map(s => s.id);
+  const productCounts = storeIds.length
+    ? await db.select({ storeId: products.storeId, c: count() }).from(products).where(inArray(products.storeId, storeIds)).groupBy(products.storeId)
+    : [];
+  const countMap = new Map(productCounts.map(p => [p.storeId, p.c]));
 
-  return NextResponse.json({ stores });
+  const beneficiaryIds = Array.from(new Set(storeRows.map(s => s.beneficiaryId).filter(Boolean))) as string[];
+  const ownerRows = beneficiaryIds.length ? await db.select().from(users).where(inArray(users.id, beneficiaryIds)) : [];
+  const ownerById = new Map(ownerRows.map(u => [u.id, u]));
+
+  const result = storeRows.map(s => {
+    const owner = s.beneficiaryId ? ownerById.get(s.beneficiaryId) : undefined;
+    return {
+      id: s.id,
+      name: s.name,
+      logoUrl: s.logoUrl || '',
+      location: s.location || '',
+      beneficiaryName: s.beneficiaryName || owner?.name || '',
+      beneficiaryId: s.beneficiaryId || '',
+      organizationId: s.organizationId || '',
+      ownerRole: owner?.role || '',
+      hidden: s.hidden ?? false,
+      productsCount: countMap.get(s.id) || 0,
+      createdAt: s.createdAt,
+    };
+  });
+
+  return NextResponse.json({ stores: result });
 }

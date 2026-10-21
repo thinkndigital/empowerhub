@@ -279,7 +279,9 @@ CREATE TABLE `orders` (
 	`payment_gateway` varchar(50),
 	`payment_id` varchar(255),
 	`status` varchar(20) DEFAULT 'pending',
+	`confirmed_at` timestamp,
 	`created_at` timestamp NOT NULL DEFAULT (now()),
+	`updated_at` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	CONSTRAINT `orders_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
@@ -355,9 +357,13 @@ CREATE TABLE `products` (
 	`price` decimal(10,2) DEFAULT '0',
 	`category` varchar(100),
 	`image` text,
+	`stock` int,
+	`whatsapp` varchar(50),
 	`user_id` varchar(36),
 	`beneficiary_name` varchar(255),
 	`organization_id` varchar(36),
+	`store_id` varchar(36),
+	`hidden` boolean DEFAULT false,
 	`status` enum('pending','approved','rejected') NOT NULL DEFAULT 'pending',
 	`meta` json,
 	`created_at` timestamp NOT NULL DEFAULT (now()),
@@ -412,6 +418,13 @@ CREATE TABLE `stores` (
 	`beneficiary_id` varchar(36),
 	`beneficiary_name` varchar(255),
 	`organization_id` varchar(36),
+	`description` text,
+	`logo_url` text,
+	`cover_url` text,
+	`location` varchar(255),
+	`phone` varchar(50),
+	`whatsapp` varchar(50),
+	`socials` json,
 	`hidden` boolean DEFAULT false,
 	`meta` json,
 	`created_at` timestamp NOT NULL DEFAULT (now()),
@@ -430,6 +443,10 @@ CREATE TABLE `subscriptions` (
 	`price` decimal(10,2),
 	`start_date` timestamp,
 	`end_date` timestamp,
+	`renewal_date` timestamp,
+	`expired_at` timestamp,
+	`last_reminder_at` timestamp,
+	`last_payment_id` varchar(36),
 	`permanent_free` boolean DEFAULT false,
 	`created_at` timestamp NOT NULL DEFAULT (now()),
 	`updated_at` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
@@ -475,6 +492,8 @@ CREATE TABLE `users` (
 	`avatar_url` text,
 	`display_name` varchar(255),
 	`phone` varchar(50),
+	`whatsapp` varchar(50),
+	`linkedin` varchar(255),
 	`meta` json,
 	`created_at` timestamp NOT NULL DEFAULT (now()),
 	`updated_at` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
@@ -503,6 +522,7 @@ CREATE INDEX `org_invitations_org_idx` ON `org_invitations` (`organization_id`);
 CREATE INDEX `payouts_user_idx` ON `payouts` (`user_id`);--> statement-breakpoint
 CREATE INDEX `products_user_idx` ON `products` (`user_id`);--> statement-breakpoint
 CREATE INDEX `products_org_idx` ON `products` (`organization_id`);--> statement-breakpoint
+CREATE INDEX `products_store_idx` ON `products` (`store_id`);--> statement-breakpoint
 CREATE INDEX `project_registrations_project_idx` ON `project_registrations` (`project_id`);--> statement-breakpoint
 CREATE INDEX `projects_org_idx` ON `projects` (`organization_id`);--> statement-breakpoint
 CREATE INDEX `social_content_beneficiary_idx` ON `social_content` (`beneficiary_id`);--> statement-breakpoint
