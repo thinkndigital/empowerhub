@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { verifyAuthToken, signAuthToken } from '@/lib/auth-server';
+import { db } from '@/lib/db';
+import { contentOffers, users, notifications } from '@/lib/schema';
+import { and, eq } from 'drizzle-orm';
+import { randomUUID } from 'crypto';
 
 export async function GET(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    const decoded = await adminAuth.verifyIdToken(token);
+    const decoded = await verifyAuthToken(token);
 
-    const snap = await adminDb.collection('contentOffers').where('targetUid', '==', decoded.uid).get();
-    const offers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const offers = await db.select().from(contentOffers).where(eq(contentOffers.targetUid, decoded.uid));
     return NextResponse.json({ offers });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
@@ -17,49 +20,41 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    const decoded = await adminAuth.verifyIdToken(token);
+    const decoded = await verifyAuthToken(token);
 
     const { offerId, action } = await req.json();
     if (!offerId || !['accept', 'reject'].includes(action)) {
       return NextResponse.json({ error: 'بيانات غير صالحة' }, { status: 400 });
     }
 
-    const offerRef = adminDb.collection('contentOffers').doc(offerId);
-    const offerSnap = await offerRef.get();
-    if (!offerSnap.exists) return NextResponse.json({ error: 'غير موجود' }, { status: 404 });
+    const [offer] = await db.select().from(contentOffers).where(eq(contentOffers.id, offerId)).limit(1);
+    if (!offer) return NextResponse.json({ error: 'غير موجود' }, { status: 404 });
 
-    const offer = offerSnap.data()!;
     if (offer.targetUid !== decoded.uid) return NextResponse.json({ error: 'غير مصرح' }, { status: 403 });
     if (offer.status !== 'pending') return NextResponse.json({ error: 'تمت معالجة هذا العرض مسبقاً' }, { status: 400 });
 
-    await offerRef.update({ status: action === 'accept' ? 'accepted' : 'rejected' });
+    await db.update(contentOffers).set({ status: action === 'accept' ? 'accepted' : 'rejected' }).where(eq(contentOffers.id, offerId));
 
+    let freshToken: string | undefined;
     if (action === 'accept') {
-      // Link user to org (same as orgInvitations flow)
-      await adminDb.collection('users').doc(decoded.uid).update({ organizationId: offer.orgId });
-      const currentUser = await adminAuth.getUser(decoded.uid);
-      const claims = currentUser.customClaims || {};
-      await adminAuth.setCustomUserClaims(decoded.uid, { ...claims, organizationId: offer.orgId });
+      await db.update(users).set({ organizationId: offer.organizationId }).where(eq(users.id, decoded.uid));
+      freshToken = signAuthToken({ uid: decoded.uid, role: decoded.role, organizationId: offer.organizationId });
     }
 
-    // Notify the org admin
-    const orgAdminSnap = await adminDb.collection('users')
-      .where('organizationId', '==', offer.orgId)
-      .where('role', '==', 'organization')
-      .limit(1).get();
-    const orgAdminUid = orgAdminSnap.docs[0]?.id;
-    if (orgAdminUid) {
-      await adminDb.collection('notifications').add({
-        userId: orgAdminUid,
+    const [orgAdmin] = await db.select().from(users)
+      .where(and(eq(users.organizationId, offer.organizationId), eq(users.role, 'organization'))).limit(1);
+    if (orgAdmin) {
+      await db.insert(notifications).values({
+        id: randomUUID(),
+        userId: orgAdmin.id,
         title: action === 'accept' ? 'تم قبول العرض' : 'تم رفض العرض',
-        description: `${offer.targetName} ${action === 'accept' ? 'قبل' : 'رفض'} عرضك${offer.contentTitle ? ` (${offer.contentTitle})` : ''}`,
+        body: `${offer.targetName} ${action === 'accept' ? 'قبل' : 'رفض'} عرضك${offer.contentTitle ? ` (${offer.contentTitle})` : ''}`,
         link: `/organization-dashboard/${offer.targetRole === 'mentor' ? 'mentors' : 'coaches'}`,
-        isRead: false,
-        createdAt: new Date().toISOString(),
+        read: false,
       });
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, token: freshToken });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }

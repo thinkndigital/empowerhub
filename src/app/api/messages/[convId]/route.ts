@@ -1,42 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
-import { FieldValue } from 'firebase-admin/firestore';
+import { verifyAuthToken } from '@/lib/auth-server';
+import { db } from '@/lib/db';
+import { conversations, conversationParticipants, messages } from '@/lib/schema';
+import { and, asc, desc, eq, ne } from 'drizzle-orm';
 
 export async function GET(req: NextRequest, { params }: { params: { convId: string } }) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    const decoded = await adminAuth.verifyIdToken(token);
+    const decoded = await verifyAuthToken(token);
     const uid = decoded.uid;
     const { convId } = params;
 
-    const snap = await adminDb.collection('conversations').doc(convId)
-      .collection('msgs').orderBy('createdAt', 'asc').get();
+    const rows = await db.select().from(messages).where(eq(messages.conversationId, convId)).orderBy(asc(messages.createdAt));
 
-    const messages = snap.docs.map(d => ({
-      id: d.id,
-      senderId: d.data().senderId || '',
-      content: d.data().content || '',
-      read: d.data().read || false,
-      createdAt: d.data().createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+    const result = rows.map(m => ({
+      id: m.id,
+      senderId: m.senderId || '',
+      content: m.content || '',
+      read: m.read || false,
+      createdAt: m.createdAt?.toISOString?.() || new Date().toISOString(),
     }));
 
-    // Mark unread messages from the other party as read and reset unread counter
-    const batch = adminDb.batch();
-    let hasUnread = false;
-    snap.docs.forEach(d => {
-      if (d.data().senderId !== uid && !d.data().read) {
-        batch.update(d.ref, { read: true });
-        hasUnread = true;
-      }
-    });
-    if (hasUnread) {
-      batch.update(adminDb.collection('conversations').doc(convId), {
-        [`unread_${uid}`]: 0,
-      });
-      await batch.commit();
+    const unreadIds = rows.filter(m => m.senderId !== uid && !m.read).map(m => m.id);
+    if (unreadIds.length) {
+      await db.update(messages).set({ read: true })
+        .where(and(eq(messages.conversationId, convId), ne(messages.senderId, uid), eq(messages.read, false)));
+      await db.update(conversationParticipants).set({ unreadCount: 0 })
+        .where(and(eq(conversationParticipants.conversationId, convId), eq(conversationParticipants.userId, uid)));
     }
 
-    return NextResponse.json({ messages });
+    return NextResponse.json({ messages: result });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
@@ -45,38 +38,30 @@ export async function GET(req: NextRequest, { params }: { params: { convId: stri
 export async function DELETE(req: NextRequest, { params }: { params: { convId: string } }) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    const decoded = await adminAuth.verifyIdToken(token);
+    const decoded = await verifyAuthToken(token);
     const uid = decoded.uid;
     const { convId } = params;
 
-    // Verify the user is a participant
-    const convDoc = await adminDb.collection('conversations').doc(convId).get();
-    if (!convDoc.exists) return NextResponse.json({ error: 'not found' }, { status: 404 });
-    if (!convDoc.data()?.participants?.includes(uid)) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+    const [myPart] = await db.select().from(conversationParticipants)
+      .where(and(eq(conversationParticipants.conversationId, convId), eq(conversationParticipants.userId, uid))).limit(1);
+    if (!myPart) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
 
     const { searchParams } = new URL(req.url);
     const msgId = searchParams.get('msgId');
 
     if (msgId) {
-      // Delete single message
-      const msgRef = adminDb.collection('conversations').doc(convId).collection('msgs').doc(msgId);
-      const msgDoc = await msgRef.get();
-      if (!msgDoc.exists) return NextResponse.json({ error: 'not found' }, { status: 404 });
-      if (msgDoc.data()?.senderId !== uid) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+      const [msg] = await db.select().from(messages).where(eq(messages.id, msgId)).limit(1);
+      if (!msg) return NextResponse.json({ error: 'not found' }, { status: 404 });
+      if (msg.senderId !== uid) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
 
-      await msgRef.delete();
+      await db.delete(messages).where(eq(messages.id, msgId));
 
-      const lastSnap = await adminDb.collection('conversations').doc(convId)
-        .collection('msgs').orderBy('createdAt', 'desc').limit(1).get();
-      const lastMsg = lastSnap.empty ? '' : (lastSnap.docs[0].data().content || '');
-      await adminDb.collection('conversations').doc(convId).update({ lastMessage: lastMsg });
+      const [last] = await db.select().from(messages).where(eq(messages.conversationId, convId)).orderBy(desc(messages.createdAt)).limit(1);
+      await db.update(conversations).set({ lastMessage: last?.content || '' }).where(eq(conversations.id, convId));
     } else {
-      // Delete entire conversation and all its messages
-      const msgSnap = await adminDb.collection('conversations').doc(convId).collection('msgs').get();
-      const batch = adminDb.batch();
-      msgSnap.docs.forEach(d => batch.delete(d.ref));
-      batch.delete(adminDb.collection('conversations').doc(convId));
-      await batch.commit();
+      await db.delete(messages).where(eq(messages.conversationId, convId));
+      await db.delete(conversationParticipants).where(eq(conversationParticipants.conversationId, convId));
+      await db.delete(conversations).where(eq(conversations.id, convId));
     }
 
     return NextResponse.json({ success: true });
@@ -84,4 +69,3 @@ export async function DELETE(req: NextRequest, { params }: { params: { convId: s
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
-

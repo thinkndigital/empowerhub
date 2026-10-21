@@ -113,6 +113,7 @@ export const orgInvitations = mysqlTable('org_invitations', {
   orgName: varchar('org_name', { length: 255 }),
   targetUid: fk('target_uid'),
   targetName: varchar('target_name', { length: 255 }),
+  targetEmail: varchar('target_email', { length: 255 }),
   targetRole: varchar('target_role', { length: 50 }),
   groupName: varchar('group_name', { length: 255 }),
   status: mysqlEnum('status', ['pending', 'accepted', 'rejected']).default('pending').notNull(),
@@ -352,12 +353,23 @@ export const liveSessionRegistrations = mysqlTable('live_session_registrations',
 export const mentoringSessions = mysqlTable('sessions', {
   id: id(),
   title: varchar('title', { length: 255 }),
+  description: text('description'),
   date: timestamp('date'),
+  duration: int('duration').default(60),
   status: varchar('status', { length: 20 }).default('pending'),
   hostId: fk('host_id'),
+  beneficiaryId: fk('beneficiary_id'),
   organizationId: fk('organization_id'),
+  meetLink: text('meet_link'),
+  bannerUrl: text('banner_url'),
+  imageUrls: json('image_urls').$type<string[]>(),
+  isPublic: boolean('is_public').default(false),
+  price: decimal('price', { precision: 10, scale: 2 }),
   createdAt: createdAt(),
-}, t => ({ orgIdx: index('sessions_org_idx').on(t.organizationId) }));
+}, t => ({
+  orgIdx: index('sessions_org_idx').on(t.organizationId),
+  beneficiaryIdx: index('sessions_beneficiary_idx').on(t.beneficiaryId),
+}));
 
 export const sessionAttendees = mysqlTable('session_attendees', {
   sessionId: fk('session_id').notNull(),
@@ -368,11 +380,17 @@ export const projects = mysqlTable('projects', {
   id: id(),
   title: varchar('title', { length: 255 }).notNull(),
   description: text('description'),
-  status: mysqlEnum('status', ['draft', 'published']).default('draft').notNull(),
+  coverImageUrl: text('cover_image_url'),
   organizationId: fk('organization_id'),
+  organizationName: varchar('organization_name', { length: 255 }),
+  type: varchar('type', { length: 100 }),
+  location: varchar('location', { length: 255 }),
+  deadline: varchar('deadline', { length: 50 }),
+  status: mysqlEnum('status', ['draft', 'published']).default('draft').notNull(),
   registrationForm: json('registration_form').$type<any>(),
   publishedAt: timestamp('published_at'),
   createdAt: createdAt(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
 }, t => ({ orgIdx: index('projects_org_idx').on(t.organizationId) }));
 
 export const projectRegistrations = mysqlTable('project_registrations', {

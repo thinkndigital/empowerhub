@@ -1,41 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
-
-function normalizeDate(d: any): string | null {
-  if (!d) return null;
-  if (typeof d === 'string') return d;
-  const s = d._seconds ?? d.seconds;
-  return s ? new Date(s * 1000).toISOString() : null;
-}
+import { verifyAuthToken } from '@/lib/auth-server';
+import { db } from '@/lib/db';
+import { liveSessions, liveSessionRegistrations, users } from '@/lib/schema';
+import { desc, eq } from 'drizzle-orm';
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    const decoded = await adminAuth.verifyIdToken(token);
+    const decoded = await verifyAuthToken(token);
 
-    const userDoc = await adminDb.doc(`users/${decoded.uid}`).get();
-    const userData = userDoc.data() || {};
-    if (userData.role !== 'coach') {
+    const [userRow] = await db.select().from(users).where(eq(users.id, decoded.uid)).limit(1);
+    if (userRow?.role !== 'coach') {
       return NextResponse.json({ error: 'غير مصرح' }, { status: 403 });
     }
 
-    const sessionDoc = await adminDb.collection('live_sessions').doc(params.id).get();
-    if (!sessionDoc.exists || sessionDoc.data()?.coachId !== decoded.uid) {
+    const [session] = await db.select().from(liveSessions).where(eq(liveSessions.id, params.id)).limit(1);
+    if (!session || session.coachId !== decoded.uid) {
       return NextResponse.json({ error: 'غير موجود أو غير مصرح' }, { status: 404 });
     }
 
-    const snap = await adminDb
-      .collection('live_sessions')
-      .doc(params.id)
-      .collection('registrations')
-      .get();
-
-    const registrations = snap.docs.map(d => ({
-      id: d.id,
-      ...d.data(),
-      registeredAt: normalizeDate(d.data().registeredAt),
-    }));
-    registrations.sort((a: any, b: any) => (b.registeredAt || '').localeCompare(a.registeredAt || ''));
+    const registrations = await db.select().from(liveSessionRegistrations)
+      .where(eq(liveSessionRegistrations.sessionId, params.id))
+      .orderBy(desc(liveSessionRegistrations.registeredAt));
     return NextResponse.json({ registrations });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });

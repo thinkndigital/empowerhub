@@ -1,59 +1,66 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { verifyAuthToken, stripPassword } from '@/lib/auth-server';
+import { db } from '@/lib/db';
+import { users, mentoringSessions, sessionAttendees, courses, enrollments, stores, products } from '@/lib/schema';
+import { and, eq, inArray, or } from 'drizzle-orm';
 
 export async function GET(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    const decoded = await adminAuth.verifyIdToken(token);
+    const decoded = await verifyAuthToken(token);
     const uid = decoded.uid;
 
-    // User profile
-    const userDoc = await adminDb.collection('users').doc(uid).get();
-    const userProfile = userDoc.exists ? { id: uid, ...userDoc.data() } : null;
+    const [userRow] = await db.select().from(users).where(eq(users.id, uid)).limit(1);
+    const userProfile = userRow ? stripPassword(userRow) : null;
 
-    // Sessions - all queries
-    const [sessAttendees, sessBeneficiary] = await Promise.all([
-      adminDb.collection('sessions').where('attendees', 'array-contains', uid).get(),
-      adminDb.collection('sessions').where('beneficiaryId', '==', uid).get(),
-    ]);
-    const sessionIds = new Set<string>();
-    const sessions: any[] = [];
-    for (const d of [...sessAttendees.docs, ...sessBeneficiary.docs]) {
-      if (sessionIds.has(d.id)) continue;
-      sessionIds.add(d.id);
-      const data = d.data();
-      let date = data.date;
-      if (date && typeof date === 'object' && (date._seconds || date.seconds)) {
-        date = new Date((date._seconds ?? date.seconds) * 1000).toISOString();
-      }
-      sessions.push({ id: d.id, title: data.title, date, status: data.status, attendees: data.attendees, beneficiaryId: data.beneficiaryId });
+    const attendeeRows = await db.select().from(sessionAttendees).where(eq(sessionAttendees.userId, uid));
+    const attendeeSessionIds = attendeeRows.map(a => a.sessionId);
+    const whereClause = attendeeSessionIds.length
+      ? or(inArray(mentoringSessions.id, attendeeSessionIds), eq(mentoringSessions.beneficiaryId, uid))
+      : eq(mentoringSessions.beneficiaryId, uid);
+    const sessionRows = await db.select().from(mentoringSessions).where(whereClause);
+    const sessionIds = sessionRows.map(s => s.id);
+    const theirAttendeeRows = sessionIds.length
+      ? await db.select().from(sessionAttendees).where(inArray(sessionAttendees.sessionId, sessionIds))
+      : [];
+    const attendeesBySession = new Map<string, string[]>();
+    for (const a of theirAttendeeRows) {
+      const list = attendeesBySession.get(a.sessionId) || [];
+      list.push(a.userId);
+      attendeesBySession.set(a.sessionId, list);
     }
-
-    // All sessions count (to know if sessions exist at all)
-    const allSessionsSnap = await adminDb.collection('sessions').limit(5).get();
-    const sampleSessions = allSessionsSnap.docs.map(d => ({
-      id: d.id, attendees: d.data().attendees, beneficiaryId: d.data().beneficiaryId, hostId: d.data().hostId
+    const sessions = sessionRows.map(s => ({
+      id: s.id, title: s.title, date: s.date, status: s.status,
+      attendees: attendeesBySession.get(s.id) || [], beneficiaryId: s.beneficiaryId,
     }));
 
-    // Courses and enrollments
-    const coursesSnap = await adminDb.collection('courses').get();
-    const myEnrollments: any[] = [];
-    const allCourses: any[] = [];
-    for (const d of coursesSnap.docs) {
-      allCourses.push({ id: d.id, title: d.data().title, status: d.data().status });
-      const enrollDoc = await adminDb.collection('courses').doc(d.id).collection('enrollments').doc(uid).get();
-      if (enrollDoc.exists) {
-        myEnrollments.push({ courseId: d.id, courseTitle: d.data().title, ...enrollDoc.data() });
-      }
+    const sampleRows = await db.select().from(mentoringSessions).limit(5);
+    const sampleIds = sampleRows.map(s => s.id);
+    const sampleAttendeeRows = sampleIds.length
+      ? await db.select().from(sessionAttendees).where(inArray(sessionAttendees.sessionId, sampleIds))
+      : [];
+    const sampleAttendeesBySession = new Map<string, string[]>();
+    for (const a of sampleAttendeeRows) {
+      const list = sampleAttendeesBySession.get(a.sessionId) || [];
+      list.push(a.userId);
+      sampleAttendeesBySession.set(a.sessionId, list);
     }
+    const sampleSessions = sampleRows.map(s => ({
+      id: s.id, attendees: sampleAttendeesBySession.get(s.id) || [], beneficiaryId: s.beneficiaryId, hostId: s.hostId,
+    }));
 
-    // Store
-    const storeSnap = await adminDb.collection('stores').where('beneficiaryId', '==', uid).limit(1).get();
-    const store = storeSnap.empty ? null : { id: storeSnap.docs[0].id, ...storeSnap.docs[0].data() };
+    const allCourseRows = await db.select().from(courses);
+    const allCourses = allCourseRows.map(c => ({ id: c.id, title: c.title, status: c.status }));
+    const myEnrollmentRows = allCourseRows.length
+      ? await db.select().from(enrollments).where(and(inArray(enrollments.courseId, allCourseRows.map(c => c.id)), eq(enrollments.userId, uid)))
+      : [];
+    const courseById = new Map(allCourseRows.map(c => [c.id, c]));
+    const myEnrollments = myEnrollmentRows.map(e => ({ ...e, courseTitle: courseById.get(e.courseId)?.title }));
 
-    // Products
-    const productsSnap = await adminDb.collection('products').where('userId', '==', uid).get();
-    const products = productsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const [storeRow] = await db.select().from(stores).where(eq(stores.beneficiaryId, uid)).limit(1);
+    const store = storeRow || null;
+
+    const productRows = await db.select().from(products).where(eq(products.userId, uid));
 
     return NextResponse.json({
       uid,
@@ -61,7 +68,7 @@ export async function GET(req: NextRequest) {
       sessions: { myCount: sessions.length, mySessions: sessions, sampleAllSessions: sampleSessions },
       courses: { allCount: allCourses.length, allCourses, myEnrollmentsCount: myEnrollments.length, myEnrollments },
       store,
-      products,
+      products: productRows,
     });
   } catch (e: any) {
     return NextResponse.json({ error: e.message, stack: e.stack }, { status: 500 });

@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "mysql",
-  "id": "00326527-27b9-4c68-b245-0d9777cdcd17",
+  "id": "1b36ec61-b35b-47cd-9daf-bb98bf3315b1",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "app_settings": {
@@ -1494,12 +1494,27 @@
           "notNull": false,
           "autoincrement": false
         },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "date": {
           "name": "date",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
+        },
+        "duration": {
+          "name": "duration",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": 60
         },
         "status": {
           "name": "status",
@@ -1516,9 +1531,52 @@
           "notNull": false,
           "autoincrement": false
         },
+        "beneficiary_id": {
+          "name": "beneficiary_id",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "organization_id": {
           "name": "organization_id",
           "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "meet_link": {
+          "name": "meet_link",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "banner_url": {
+          "name": "banner_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "image_urls": {
+          "name": "image_urls",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "is_public": {
+          "name": "is_public",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": false
+        },
+        "price": {
+          "name": "price",
+          "type": "decimal(10,2)",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -1537,6 +1595,13 @@
           "name": "sessions_org_idx",
           "columns": [
             "organization_id"
+          ],
+          "isUnique": false
+        },
+        "sessions_beneficiary_idx": {
+          "name": "sessions_beneficiary_idx",
+          "columns": [
+            "beneficiary_id"
           ],
           "isUnique": false
         }
@@ -2016,6 +2081,13 @@
         },
         "target_name": {
           "name": "target_name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "target_email": {
+          "name": "target_email",
           "type": "varchar(255)",
           "primaryKey": false,
           "notNull": false,
@@ -2682,13 +2754,12 @@
           "notNull": false,
           "autoincrement": false
         },
-        "status": {
-          "name": "status",
-          "type": "enum('draft','published')",
+        "cover_image_url": {
+          "name": "cover_image_url",
+          "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "'draft'"
+          "notNull": false,
+          "autoincrement": false
         },
         "organization_id": {
           "name": "organization_id",
@@ -2696,6 +2767,42 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
+        },
+        "organization_name": {
+          "name": "organization_name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "type": {
+          "name": "type",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "location": {
+          "name": "location",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "deadline": {
+          "name": "deadline",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "enum('draft','published')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'draft'"
         },
         "registration_form": {
           "name": "registration_form",
@@ -2717,6 +2824,15 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
+          "default": "(now())"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "onUpdate": true,
           "default": "(now())"
         }
       },

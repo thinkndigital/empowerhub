@@ -1,44 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
-import { FieldValue } from 'firebase-admin/firestore';
-
-function normalizeDate(d: any): string | null {
-  if (!d) return null;
-  if (typeof d === 'string') return d;
-  const s = d._seconds ?? d.seconds;
-  return s ? new Date(s * 1000).toISOString() : null;
-}
+import { verifyAuthToken } from '@/lib/auth-server';
+import { db } from '@/lib/db';
+import { projects, projectRegistrations, users, organizations } from '@/lib/schema';
+import { desc, eq, inArray, sql } from 'drizzle-orm';
+import { randomUUID } from 'crypto';
 
 export async function GET(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    const decoded = await adminAuth.verifyIdToken(token);
+    const decoded = await verifyAuthToken(token);
 
-    const userDoc = await adminDb.doc(`users/${decoded.uid}`).get();
-    const userData = userDoc.data() || {};
-    if (userData.role !== 'organization') {
+    const [userRow] = await db.select().from(users).where(eq(users.id, decoded.uid)).limit(1);
+    if (userRow?.role !== 'organization') {
       return NextResponse.json({ error: 'غير مصرح' }, { status: 403 });
     }
 
-    const orgId = userData.organizationId || (decoded as any).organizationId || '';
+    const orgId = userRow?.organizationId || decoded.organizationId || '';
     if (!orgId) return NextResponse.json({ error: 'لا يوجد معرف المنظمة' }, { status: 400 });
 
-    const snap = await adminDb.collection('projects').where('organizationId', '==', orgId).get();
+    const projectRows = await db.select().from(projects).where(eq(projects.organizationId, orgId)).orderBy(desc(projects.createdAt));
 
-    // Count registrations for each project
-    const projects = await Promise.all(snap.docs.map(async d => {
-      const data = d.data();
-      const regsSnap = await adminDb.collection('projects').doc(d.id).collection('registrations').get();
-      return {
-        id: d.id,
-        ...data,
-        publishedAt: normalizeDate(data.publishedAt),
-        createdAt: normalizeDate(data.createdAt),
-        registrationsCount: regsSnap.size,
-      };
-    }));
-    projects.sort((a: any, b: any) => (b.createdAt || '').localeCompare(a.createdAt || ''));
-    return NextResponse.json({ projects });
+    const projectIds = projectRows.map(p => p.id);
+    const counts = projectIds.length
+      ? await db.select({ projectId: projectRegistrations.projectId, c: sql<number>`count(*)` })
+          .from(projectRegistrations).where(inArray(projectRegistrations.projectId, projectIds)).groupBy(projectRegistrations.projectId)
+      : [];
+    const countMap = new Map(counts.map(c => [c.projectId, Number(c.c)]));
+
+    const result = projectRows.map(p => ({ ...p, registrationsCount: countMap.get(p.id) || 0 }));
+    return NextResponse.json({ projects: result });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
@@ -47,19 +37,18 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    const decoded = await adminAuth.verifyIdToken(token);
+    const decoded = await verifyAuthToken(token);
 
-    const userDoc = await adminDb.doc(`users/${decoded.uid}`).get();
-    const userData = userDoc.data() || {};
-    if (userData.role !== 'organization') {
+    const [userRow] = await db.select().from(users).where(eq(users.id, decoded.uid)).limit(1);
+    if (userRow?.role !== 'organization') {
       return NextResponse.json({ error: 'غير مصرح' }, { status: 403 });
     }
 
-    const orgId = userData.organizationId || (decoded as any).organizationId || '';
+    const orgId = userRow?.organizationId || decoded.organizationId || '';
     if (!orgId) return NextResponse.json({ error: 'لا يوجد معرف المنظمة' }, { status: 400 });
 
-    const orgDoc = await adminDb.doc(`organizations/${orgId}`).get();
-    const orgName = orgDoc.data()?.name || userData.name || '';
+    const [org] = await db.select().from(organizations).where(eq(organizations.id, orgId)).limit(1);
+    const orgName = org?.name || userRow?.name || '';
 
     const body = await req.json();
     const {
@@ -72,7 +61,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'العنوان والوصف مطلوبان' }, { status: 400 });
     }
 
-    const docRef = await adminDb.collection('projects').add({
+    const id = randomUUID();
+    await db.insert(projects).values({
+      id,
       title,
       description,
       coverImageUrl,
@@ -83,10 +74,9 @@ export async function POST(req: NextRequest) {
       deadline,
       status,
       registrationForm,
-      publishedAt: status === 'published' ? FieldValue.serverTimestamp() : null,
-      createdAt: FieldValue.serverTimestamp(),
+      publishedAt: status === 'published' ? new Date() : null,
     });
-    return NextResponse.json({ id: docRef.id });
+    return NextResponse.json({ id });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }

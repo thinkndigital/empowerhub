@@ -1,30 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { verifyAuthToken, stripPassword } from '@/lib/auth-server';
+import { db } from '@/lib/db';
+import { users } from '@/lib/schema';
+import { eq } from 'drizzle-orm';
 
 export async function GET(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    const decoded = await adminAuth.verifyIdToken(token);
-    const snap = await adminDb.collection('users').doc(decoded.uid).get();
-    if (!snap.exists) return NextResponse.json({ profile: null });
+    const decoded = await verifyAuthToken(token);
+    const [userRow] = await db.select().from(users).where(eq(users.id, decoded.uid)).limit(1);
+    if (!userRow) return NextResponse.json({ profile: null });
 
-    const data = snap.data()!;
-    const profile: Record<string, unknown> = { id: snap.id, ...data };
+    const profile: Record<string, unknown> = stripPassword(userRow);
 
-    // Enrich with mentor name
-    if (data.mentorId) {
-      try {
-        const mentorSnap = await adminDb.collection('users').doc(data.mentorId).get();
-        if (mentorSnap.exists) profile.mentorName = (mentorSnap.data() as any)?.name || null;
-      } catch { /* ignore */ }
+    if (userRow.mentorId) {
+      const [mentor] = await db.select().from(users).where(eq(users.id, userRow.mentorId)).limit(1);
+      if (mentor) profile.mentorName = mentor.name || null;
     }
 
-    // Enrich with coach name
-    if (data.coachId) {
-      try {
-        const coachSnap = await adminDb.collection('users').doc(data.coachId).get();
-        if (coachSnap.exists) profile.coachName = (coachSnap.data() as any)?.name || null;
-      } catch { /* ignore */ }
+    if (userRow.coachId) {
+      const [coach] = await db.select().from(users).where(eq(users.id, userRow.coachId)).limit(1);
+      if (coach) profile.coachName = coach.name || null;
     }
 
     return NextResponse.json({ profile });
@@ -36,9 +32,11 @@ export async function GET(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    const decoded = await adminAuth.verifyIdToken(token);
+    const decoded = await verifyAuthToken(token);
     const body = await req.json();
-    await adminDb.collection('users').doc(decoded.uid).set(body, { merge: true });
+    delete body.passwordHash;
+    delete body.id;
+    await db.update(users).set(body).where(eq(users.id, decoded.uid));
     return NextResponse.json({ success: true });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });

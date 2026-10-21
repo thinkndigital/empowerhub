@@ -1,40 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
-import { FieldValue } from 'firebase-admin/firestore';
+import { verifyAuthToken } from '@/lib/auth-server';
+import { db } from '@/lib/db';
+import { conversations, conversationParticipants, messages, notifications, users, userBlocks } from '@/lib/schema';
+import { and, eq, inArray, sql } from 'drizzle-orm';
+import { randomUUID } from 'crypto';
 
 export async function GET(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    const decoded = await adminAuth.verifyIdToken(token);
+    const decoded = await verifyAuthToken(token);
     const uid = decoded.uid;
 
-    const snap = await adminDb.collection('conversations')
-      .where('participants', 'array-contains', uid)
-      .get();
+    const myParts = await db.select().from(conversationParticipants).where(eq(conversationParticipants.userId, uid));
+    const convIds = myParts.map(p => p.conversationId);
+    if (!convIds.length) return NextResponse.json({ conversations: [] });
 
-    const conversations = (await Promise.all(snap.docs.map(async d => {
-      const data = d.data();
-      const otherId = data.participants.find((p: string) => p !== uid);
-      let otherUser = { id: otherId || '', name: 'مستخدم', role: '' };
-      if (otherId) {
-        const u = await adminDb.collection('users').doc(otherId).get();
-        if (u.exists) {
-          otherUser = { id: otherId, name: u.data()?.name || 'مستخدم', role: u.data()?.role || '' };
-        }
-      }
-      // unreadCount stored directly on conversation doc as unread_{uid}
-      const unreadCount = data[`unread_${uid}`] || 0;
+    const convRows = await db.select().from(conversations).where(inArray(conversations.id, convIds));
+    const allParts = await db.select().from(conversationParticipants).where(inArray(conversationParticipants.conversationId, convIds));
+
+    const otherIds = Array.from(new Set(allParts.filter(p => p.userId !== uid).map(p => p.userId)));
+    const otherUsers = otherIds.length ? await db.select().from(users).where(inArray(users.id, otherIds)) : [];
+    const userById = new Map(otherUsers.map(u => [u.id, u]));
+
+    const myPartByConv = new Map(myParts.map(p => [p.conversationId, p]));
+    const otherPartByConv = new Map(allParts.filter(p => p.userId !== uid).map(p => [p.conversationId, p]));
+
+    const result = convRows.map(c => {
+      const otherPart = otherPartByConv.get(c.id);
+      const otherUser = otherPart ? userById.get(otherPart.userId) : undefined;
       return {
-        id: d.id,
-        participants: data.participants || [],
-        lastMessage: data.lastMessage || '',
-        lastUpdated: data.lastUpdated?.toDate?.()?.toISOString() || null,
-        unreadCount,
-        otherUser,
+        id: c.id,
+        participants: allParts.filter(p => p.conversationId === c.id).map(p => p.userId),
+        lastMessage: c.lastMessage || '',
+        lastUpdated: c.lastUpdated?.toISOString?.() || null,
+        unreadCount: myPartByConv.get(c.id)?.unreadCount || 0,
+        otherUser: otherUser
+          ? { id: otherUser.id, name: otherUser.name || 'مستخدم', role: otherUser.role || '' }
+          : { id: otherPart?.userId || '', name: 'مستخدم', role: '' },
       };
-    }))).sort((a, b) => (b.lastUpdated || '').localeCompare(a.lastUpdated || ''));
+    }).sort((a, b) => (b.lastUpdated || '').localeCompare(a.lastUpdated || ''));
 
-    return NextResponse.json({ conversations });
+    return NextResponse.json({ conversations: result });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
@@ -43,71 +49,58 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    const decoded = await adminAuth.verifyIdToken(token);
+    const decoded = await verifyAuthToken(token);
     const uid = decoded.uid;
 
     const { toUserId, content } = await req.json();
     if (!toUserId) return NextResponse.json({ error: 'toUserId is required' }, { status: 400 });
 
-    // Check if recipient has blocked sender
-    const recipientDoc = await adminDb.collection('users').doc(toUserId).get();
-    const recipientBlocked: string[] = recipientDoc.data()?.blockedUsers || [];
-    if (recipientBlocked.includes(uid)) {
+    const [blocked] = await db.select().from(userBlocks)
+      .where(and(eq(userBlocks.blockerId, toUserId), eq(userBlocks.blockedId, uid))).limit(1);
+    if (blocked) {
       return NextResponse.json({ error: 'تعذر إرسال الرسالة' }, { status: 403 });
     }
 
-    const participants = [uid, toUserId].sort();
-
-    // Find or create conversation
-    const convQuery = await adminDb.collection('conversations')
-      .where('participants', '==', participants).limit(1).get();
+    const myConvIds = (await db.select({ conversationId: conversationParticipants.conversationId })
+      .from(conversationParticipants).where(eq(conversationParticipants.userId, uid))).map(r => r.conversationId);
+    const otherConvIds = (await db.select({ conversationId: conversationParticipants.conversationId })
+      .from(conversationParticipants).where(eq(conversationParticipants.userId, toUserId))).map(r => r.conversationId);
+    const existingConvId = myConvIds.find(id => otherConvIds.includes(id));
 
     let convId: string;
-    if (convQuery.empty) {
-      const ref = await adminDb.collection('conversations').add({
-        participants,
-        createdAt: FieldValue.serverTimestamp(),
-        lastUpdated: FieldValue.serverTimestamp(),
-        lastMessage: '',
-        [`unread_${uid}`]: 0,
-        [`unread_${toUserId}`]: 0,
-      });
-      convId = ref.id;
+    if (existingConvId) {
+      convId = existingConvId;
     } else {
-      convId = convQuery.docs[0].id;
+      convId = randomUUID();
+      await db.insert(conversations).values({ id: convId, lastMessage: '' });
+      await db.insert(conversationParticipants).values([
+        { conversationId: convId, userId: uid, unreadCount: 0 },
+        { conversationId: convId, userId: toUserId, unreadCount: 0 },
+      ]);
     }
 
     let messageId = '';
     const text = content?.trim() || '';
     if (text) {
-      // Get sender name
-      const senderDoc = await adminDb.collection('users').doc(uid).get();
-      const senderName = senderDoc.data()?.name || 'مستخدم';
+      const [sender] = await db.select().from(users).where(eq(users.id, uid)).limit(1);
+      const senderName = sender?.name || 'مستخدم';
 
-      const msgRef = await adminDb.collection('conversations').doc(convId).collection('msgs').add({
-        senderId: uid,
-        content: text,
-        read: false,
-        createdAt: FieldValue.serverTimestamp(),
-      });
-      messageId = msgRef.id;
+      messageId = randomUUID();
+      await db.insert(messages).values({ id: messageId, conversationId: convId, senderId: uid, content: text, read: false });
 
-      // Update conversation: last message + increment unread for recipient
-      await adminDb.collection('conversations').doc(convId).update({
-        lastMessage: text,
-        lastUpdated: FieldValue.serverTimestamp(),
-        [`unread_${toUserId}`]: FieldValue.increment(1),
-      });
+      await db.update(conversations).set({ lastMessage: text }).where(eq(conversations.id, convId));
+      await db.update(conversationParticipants)
+        .set({ unreadCount: sql`${conversationParticipants.unreadCount} + 1` })
+        .where(and(eq(conversationParticipants.conversationId, convId), eq(conversationParticipants.userId, toUserId)));
 
-      // Notify recipient
-      await adminDb.collection('notifications').add({
+      await db.insert(notifications).values({
+        id: randomUUID(),
         userId: toUserId,
         type: 'message',
         title: `رسالة جديدة من ${senderName}`,
         body: text.slice(0, 100),
         link: '/messages',
         read: false,
-        createdAt: FieldValue.serverTimestamp(),
       });
     }
 

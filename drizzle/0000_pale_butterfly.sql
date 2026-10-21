@@ -219,10 +219,18 @@ CREATE TABLE `mentor_contracts` (
 CREATE TABLE `sessions` (
 	`id` varchar(36) NOT NULL,
 	`title` varchar(255),
+	`description` text,
 	`date` timestamp,
+	`duration` int DEFAULT 60,
 	`status` varchar(20) DEFAULT 'pending',
 	`host_id` varchar(36),
+	`beneficiary_id` varchar(36),
 	`organization_id` varchar(36),
+	`meet_link` text,
+	`banner_url` text,
+	`image_urls` json,
+	`is_public` boolean DEFAULT false,
+	`price` decimal(10,2),
 	`created_at` timestamp NOT NULL DEFAULT (now()),
 	CONSTRAINT `sessions_id` PRIMARY KEY(`id`)
 );
@@ -291,6 +299,7 @@ CREATE TABLE `org_invitations` (
 	`org_name` varchar(255),
 	`target_uid` varchar(36),
 	`target_name` varchar(255),
+	`target_email` varchar(255),
 	`target_role` varchar(50),
 	`group_name` varchar(255),
 	`status` enum('pending','accepted','rejected') NOT NULL DEFAULT 'pending',
@@ -386,11 +395,17 @@ CREATE TABLE `projects` (
 	`id` varchar(36) NOT NULL,
 	`title` varchar(255) NOT NULL,
 	`description` text,
-	`status` enum('draft','published') NOT NULL DEFAULT 'draft',
+	`cover_image_url` text,
 	`organization_id` varchar(36),
+	`organization_name` varchar(255),
+	`type` varchar(100),
+	`location` varchar(255),
+	`deadline` varchar(50),
+	`status` enum('draft','published') NOT NULL DEFAULT 'draft',
 	`registration_form` json,
 	`published_at` timestamp,
 	`created_at` timestamp NOT NULL DEFAULT (now()),
+	`updated_at` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	CONSTRAINT `projects_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
@@ -512,6 +527,7 @@ CREATE INDEX `groups_org_idx` ON `groups` (`organization_id`);--> statement-brea
 CREATE INDEX `live_session_reg_user_idx` ON `live_session_registrations` (`user_id`);--> statement-breakpoint
 CREATE INDEX `live_sessions_org_idx` ON `live_sessions` (`organization_id`);--> statement-breakpoint
 CREATE INDEX `sessions_org_idx` ON `sessions` (`organization_id`);--> statement-breakpoint
+CREATE INDEX `sessions_beneficiary_idx` ON `sessions` (`beneficiary_id`);--> statement-breakpoint
 CREATE INDEX `messages_conv_idx` ON `messages` (`conversation_id`);--> statement-breakpoint
 CREATE INDEX `notifications_user_idx` ON `notifications` (`user_id`);--> statement-breakpoint
 CREATE INDEX `orders_user_idx` ON `orders` (`user_id`);--> statement-breakpoint

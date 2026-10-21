@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase-admin';
-import { FieldValue } from 'firebase-admin/firestore';
+import { db } from '@/lib/db';
+import { orgInvitations } from '@/lib/schema';
+import { randomUUID } from 'crypto';
 
 // POST { email, orgId, groupName? }
-// Creates a record in orgInvitations and returns { success: true }
+// Creates a record in org_invitations and returns { success: true }
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -20,19 +21,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const invitation: Record<string, unknown> = {
-      orgId,
+    await db.insert(orgInvitations).values({
+      id: randomUUID(),
+      organizationId: orgId,
       targetEmail: email,
       targetRole: 'beneficiary',
+      groupName: groupName || null,
       status: 'pending',
-      createdAt: FieldValue.serverTimestamp(),
-    };
-
-    if (groupName) {
-      invitation.groupName = groupName;
-    }
-
-    await adminDb.collection('orgInvitations').add(invitation);
+    });
 
     return NextResponse.json({ success: true });
   } catch (err: unknown) {

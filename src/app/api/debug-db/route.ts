@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { verifyAuthToken } from '@/lib/auth-server';
+import { db } from '@/lib/db';
+import { users } from '@/lib/schema';
+import { eq } from 'drizzle-orm';
 
 export async function GET(req: NextRequest) {
   try {
@@ -7,39 +10,19 @@ export async function GET(req: NextRequest) {
     const idToken = authHeader.replace('Bearer ', '');
     if (!idToken) return NextResponse.json({ error: 'No token' }, { status: 401 });
 
-    const decoded = await adminAuth.verifyIdToken(idToken);
+    const decoded = await verifyAuthToken(idToken);
 
-    // Get all users from Firestore
-    const usersSnap = await adminDb.collection('users').limit(30).get();
-    const firestoreUsers = usersSnap.docs.map(d => ({
-      id: d.id,
-      role: d.data().role,
-      name: d.data().name,
-      email: d.data().email,
-      organizationId: d.data().organizationId || null,
-    }));
+    const userRows = await db.select({
+      id: users.id, role: users.role, name: users.name, email: users.email, organizationId: users.organizationId,
+    }).from(users).limit(30);
 
-    // Get all Firebase Auth users
-    const authListResult = await adminAuth.listUsers(30);
-    const authUsers = authListResult.users.map(u => ({
-      uid: u.uid,
-      email: u.email,
-      displayName: u.displayName,
-      claims: u.customClaims || {},
-      hasFirestoreDoc: firestoreUsers.some(f => f.id === u.uid),
-    }));
-
-    // Current user token claims
-    const authUser = await adminAuth.getUser(decoded.uid);
+    const [currentUser] = await db.select().from(users).where(eq(users.id, decoded.uid)).limit(1);
 
     return NextResponse.json({
-      currentUser: {
-        uid: decoded.uid,
-        email: decoded.email,
-        customClaims: authUser.customClaims || {},
-      },
-      authUsers,
-      firestoreUsers,
+      currentUser: currentUser
+        ? { uid: currentUser.id, email: currentUser.email, role: currentUser.role, organizationId: currentUser.organizationId }
+        : null,
+      users: userRows,
     });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });

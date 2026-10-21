@@ -1,33 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { verifyAuthToken } from '@/lib/auth-server';
+import { db } from '@/lib/db';
+import { notifications } from '@/lib/schema';
+import { and, desc, eq } from 'drizzle-orm';
 
 export async function GET(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    const decoded = await adminAuth.verifyIdToken(token);
+    const decoded = await verifyAuthToken(token);
     const uid = decoded.uid;
 
-    const snapshot = await adminDb
-      .collection('notifications')
-      .where('userId', '==', uid)
-      .get();
+    const rows = await db.select().from(notifications)
+      .where(eq(notifications.userId, uid))
+      .orderBy(desc(notifications.createdAt))
+      .limit(20);
 
-    const notifications = snapshot.docs.map((doc) => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        type: data.type || '',
-        title: data.title || '',
-        body: data.body || '',
-        read: data.read || false,
-        createdAt: data.createdAt?.toDate?.()?.toISOString?.() || new Date().toISOString(),
-        link: data.link || '',
-      };
-    })
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-      .slice(0, 20);
-
-    return NextResponse.json({ notifications });
+    return NextResponse.json({
+      notifications: rows.map(n => ({
+        id: n.id,
+        type: n.type || '',
+        title: n.title || '',
+        body: n.body || '',
+        read: n.read || false,
+        createdAt: n.createdAt?.toISOString?.() || new Date().toISOString(),
+        link: n.link || '',
+      })),
+    });
   } catch (error) {
     console.error('GET /api/notifications error:', error);
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -37,24 +35,16 @@ export async function GET(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    const decoded = await adminAuth.verifyIdToken(token);
+    const decoded = await verifyAuthToken(token);
     const uid = decoded.uid;
 
     const body = await req.json();
 
     if (body.all) {
-      const snapshot = await adminDb
-        .collection('notifications')
-        .where('userId', '==', uid)
-        .where('read', '==', false)
-        .get();
-      const batch = adminDb.batch();
-      snapshot.docs.forEach((doc) => {
-        batch.update(doc.ref, { read: true });
-      });
-      await batch.commit();
+      await db.update(notifications).set({ read: true })
+        .where(and(eq(notifications.userId, uid), eq(notifications.read, false)));
     } else if (body.id) {
-      await adminDb.collection('notifications').doc(body.id).update({ read: true });
+      await db.update(notifications).set({ read: true }).where(eq(notifications.id, body.id));
     }
 
     return NextResponse.json({ success: true });

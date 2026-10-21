@@ -1,39 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
-import { FieldValue } from 'firebase-admin/firestore';
-
-function normalizeDate(d: any): string | null {
-  if (!d) return null;
-  if (typeof d === 'string') return d;
-  const s = d._seconds ?? d.seconds;
-  return s ? new Date(s * 1000).toISOString() : null;
-}
+import { verifyAuthToken } from '@/lib/auth-server';
+import { db } from '@/lib/db';
+import { liveSessions, liveSessionRegistrations, users } from '@/lib/schema';
+import { desc, eq, inArray, sql } from 'drizzle-orm';
+import { randomUUID } from 'crypto';
 
 export async function GET(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    const decoded = await adminAuth.verifyIdToken(token);
+    const decoded = await verifyAuthToken(token);
 
-    const userDoc = await adminDb.doc(`users/${decoded.uid}`).get();
-    const userData = userDoc.data() || {};
-    if (userData.role !== 'coach') {
+    const [userRow] = await db.select().from(users).where(eq(users.id, decoded.uid)).limit(1);
+    if (userRow?.role !== 'coach') {
       return NextResponse.json({ error: 'غير مصرح' }, { status: 403 });
     }
 
-    const snap = await adminDb.collection('live_sessions').where('coachId', '==', decoded.uid).get();
+    const sessionRows = await db.select().from(liveSessions).where(eq(liveSessions.coachId, decoded.uid)).orderBy(desc(liveSessions.createdAt));
 
-    const sessions = await Promise.all(snap.docs.map(async d => {
-      const data = d.data();
-      const regsSnap = await adminDb.collection('live_sessions').doc(d.id).collection('registrations').get();
-      return {
-        id: d.id,
-        ...data,
-        date: normalizeDate(data.date),
-        createdAt: normalizeDate(data.createdAt),
-        registrationsCount: regsSnap.size,
-      };
-    }));
-    sessions.sort((a: any, b: any) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+    const sessionIds = sessionRows.map(s => s.id);
+    const counts = sessionIds.length
+      ? await db.select({ sessionId: liveSessionRegistrations.sessionId, c: sql<number>`count(*)` })
+          .from(liveSessionRegistrations).where(inArray(liveSessionRegistrations.sessionId, sessionIds)).groupBy(liveSessionRegistrations.sessionId)
+      : [];
+    const countMap = new Map(counts.map(c => [c.sessionId, Number(c.c)]));
+
+    const sessions = sessionRows.map(s => ({ ...s, registrationsCount: countMap.get(s.id) || 0 }));
     return NextResponse.json({ sessions });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
@@ -43,11 +34,10 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    const decoded = await adminAuth.verifyIdToken(token);
+    const decoded = await verifyAuthToken(token);
 
-    const userDoc = await adminDb.doc(`users/${decoded.uid}`).get();
-    const userData = userDoc.data() || {};
-    if (userData.role !== 'coach') {
+    const [userRow] = await db.select().from(users).where(eq(users.id, decoded.uid)).limit(1);
+    if (userRow?.role !== 'coach') {
       return NextResponse.json({ error: 'غير مصرح' }, { status: 403 });
     }
 
@@ -62,24 +52,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'العنوان والتاريخ مطلوبان' }, { status: 400 });
     }
 
-    const orgId = userData.organizationId || (decoded as any).organizationId || '';
+    const orgId = userRow?.organizationId || decoded.organizationId || null;
 
-    const docRef = await adminDb.collection('live_sessions').add({
+    const id = randomUUID();
+    await db.insert(liveSessions).values({
+      id,
       coachId: decoded.uid,
-      coachName: userData.name || '',
+      coachName: userRow?.name || '',
       organizationId: orgId,
       title,
       description,
       coverImageUrl,
       date: new Date(date),
-      duration: Number(duration),
+      duration: String(duration),
       meetLink,
-      price: Number(price),
+      price: String(Number(price)),
       maxParticipants: maxParticipants ? Number(maxParticipants) : null,
       status,
-      createdAt: FieldValue.serverTimestamp(),
     });
-    return NextResponse.json({ id: docRef.id });
+    return NextResponse.json({ id });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }

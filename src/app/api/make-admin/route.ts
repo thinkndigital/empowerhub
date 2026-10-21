@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase-admin';
+import { db } from '@/lib/db';
+import { users } from '@/lib/schema';
+import { eq } from 'drizzle-orm';
 
 // One-time endpoint to promote a user to admin by email
 // Usage: POST /api/make-admin with { email, secret }
@@ -15,15 +17,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'email required' }, { status: 400 });
   }
 
-  // Find user by email in Firestore
-  const snapshot = await adminDb.collection('users').where('email', '==', email).get();
-
-  if (snapshot.empty) {
-    return NextResponse.json({ error: 'User not found in Firestore. Login first to create profile.' }, { status: 404 });
+  const [userRow] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  if (!userRow) {
+    return NextResponse.json({ error: 'User not found. Login first to create a profile.' }, { status: 404 });
   }
 
-  const userDoc = snapshot.docs[0];
-  await userDoc.ref.update({ role: 'admin' });
+  await db.update(users).set({ role: 'admin' }).where(eq(users.id, userRow.id));
 
   return NextResponse.json({ success: true, message: `${email} is now an admin.` });
 }

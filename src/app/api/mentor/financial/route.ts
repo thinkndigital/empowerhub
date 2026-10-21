@@ -1,92 +1,64 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { verifyAuthToken } from '@/lib/auth-server';
+import { db } from '@/lib/db';
+import { appSettings, courses, orders, payouts } from '@/lib/schema';
+import { eq, inArray, desc } from 'drizzle-orm';
 
 export const dynamic = 'force-dynamic';
-
-function normalizeDate(d: any): string | null {
-  if (!d) return null;
-  if (typeof d === 'string') return d;
-  const s = d._seconds ?? d.seconds;
-  return s ? new Date(s * 1000).toISOString() : null;
-}
 
 export async function GET(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    const decoded = await adminAuth.verifyIdToken(token);
+    const decoded = await verifyAuthToken(token);
     const uid = decoded.uid;
 
-    // Get commission rate from config
-    const configDoc = await adminDb.collection('config').doc('platform').get();
-    const commissionRate: number = configDoc.exists ? (configDoc.data()?.commissionRate ?? 10) : 10;
+    const [platformConfig] = await db.select().from(appSettings).where(eq(appSettings.key, 'platform')).limit(1);
+    const commissionRate: number = platformConfig?.value?.commissionRate ?? 10;
 
-    // Get all courses created by this mentor
-    const coursesSnap = await adminDb.collection('courses').where('createdBy', '==', uid).get();
+    const courseRows = await db.select().from(courses).where(eq(courses.createdBy, uid));
+    const courseNames = new Map(courseRows.map(c => [c.id, c.title || '']));
+    const courseIds = courseRows.map(c => c.id);
 
-    const orderDocs: any[] = [];
+    const orderRows = courseIds.length
+      ? await db.select().from(orders).where(inArray(orders.courseId, courseIds)).orderBy(desc(orders.createdAt))
+      : [];
 
-    if (!coursesSnap.empty) {
-      const courseIds = coursesSnap.docs.map(d => d.id);
-      const courseNames: Record<string, string> = {};
-      coursesSnap.docs.forEach(d => { courseNames[d.id] = d.data().title || ''; });
-
-      const chunkSize = 30;
-      for (let i = 0; i < courseIds.length; i += chunkSize) {
-        const chunk = courseIds.slice(i, i + chunkSize);
-        const snap = await adminDb.collection('orders').where('courseId', 'in', chunk).get();
-        snap.docs.forEach(d => {
-          const data = d.data();
-          const totalAmount = data.totalAmount ?? data.productPrice ?? data.amount ?? 0;
-          const commissionAmount = Math.round((totalAmount * commissionRate) / 100 * 100) / 100;
-          const netAmount = Math.round((totalAmount - commissionAmount) * 100) / 100;
-          orderDocs.push({
-            id: d.id,
-            courseId: data.courseId || '',
-            courseName: courseNames[data.courseId] || data.productName || '',
-            productName: courseNames[data.courseId] || data.productName || '',
-            buyerName: data.buyerName || '',
-            buyerPhone: data.buyerPhone || '',
-            totalAmount,
-            commissionRate,
-            commissionAmount,
-            netAmount,
-            paymentMethod: data.paymentMethod || 'cod',
-            paymentStatus: data.paymentStatus || 'unpaid',
-            status: data.status || 'pending',
-            type: 'course',
-            createdAt: normalizeDate(data.createdAt),
-          });
-        });
-      }
-    }
-
-    orderDocs.sort((a, b) => {
-      const da = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const db = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-      return db - da;
+    const orderDocs = orderRows.map(o => {
+      const totalAmount = Number(o.totalAmount || 0);
+      const commissionAmount = Math.round((totalAmount * commissionRate) / 100 * 100) / 100;
+      const netAmount = Math.round((totalAmount - commissionAmount) * 100) / 100;
+      return {
+        id: o.id,
+        courseId: o.courseId || '',
+        courseName: courseNames.get(o.courseId || '') || o.productName || '',
+        productName: courseNames.get(o.courseId || '') || o.productName || '',
+        buyerName: o.buyerName || '',
+        buyerPhone: o.buyerPhone || '',
+        totalAmount,
+        commissionRate,
+        commissionAmount,
+        netAmount,
+        paymentMethod: o.paymentMethod || 'cod',
+        paymentStatus: o.paymentStatus || 'unpaid',
+        status: o.status || 'pending',
+        type: 'course',
+        createdAt: o.createdAt,
+      };
     });
 
-    // Fetch payouts for this user
-    const payoutsSnap = await adminDb.collection('payouts').where('userId', '==', uid).get();
-    const payouts = payoutsSnap.docs.map(d => ({
-      id: d.id,
-      ...d.data(),
-      createdAt: normalizeDate((d.data() as any).createdAt),
-      paidAt: normalizeDate((d.data() as any).paidAt),
-    }));
+    const payoutRows = await db.select().from(payouts).where(eq(payouts.userId, uid));
 
-    // Calculate summary
-    const totalGross = orderDocs.reduce((s, o) => s + (o.totalAmount || 0), 0);
-    const totalCommission = orderDocs.reduce((s, o) => s + (o.commissionAmount || 0), 0);
-    const totalNet = orderDocs.reduce((s, o) => s + (o.netAmount || 0), 0);
-    const totalPaid = payouts
-      .filter((p: any) => p.status === 'paid')
-      .reduce((s: number, p: any) => s + (p.amount || 0), 0);
+    const totalGross = orderDocs.reduce((s, o) => s + o.totalAmount, 0);
+    const totalCommission = orderDocs.reduce((s, o) => s + o.commissionAmount, 0);
+    const totalNet = orderDocs.reduce((s, o) => s + o.netAmount, 0);
+    const totalPaid = payoutRows
+      .filter(p => p.status === 'paid')
+      .reduce((s, p) => s + Number(p.amount || 0), 0);
     const remaining = Math.max(0, totalNet - totalPaid);
 
     return NextResponse.json({
       orders: orderDocs,
-      payouts,
+      payouts: payoutRows,
       commissionRate,
       summary: {
         totalGross: Math.round(totalGross * 100) / 100,

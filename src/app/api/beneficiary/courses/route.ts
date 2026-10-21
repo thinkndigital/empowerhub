@@ -1,41 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { verifyAuthToken } from '@/lib/auth-server';
+import { db } from '@/lib/db';
+import { courses, enrollments, users } from '@/lib/schema';
+import { eq, inArray } from 'drizzle-orm';
 
 export async function GET(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    const decoded = await adminAuth.verifyIdToken(token);
+    const decoded = await verifyAuthToken(token);
     const uid = decoded.uid;
 
-    // Get user doc for org + enrolled courses
-    const userDoc = await adminDb.collection('users').doc(uid).get();
-    const userData = userDoc.data() || {};
-    const orgId = userData.organizationId || (decoded.organizationId as string | undefined);
-    const enrolledCourseIds: string[] = userData.enrolledCourses || [];
+    const [userRow] = await db.select().from(users).where(eq(users.id, uid)).limit(1);
+    const orgId = userRow?.organizationId || decoded.organizationId;
 
-    const courseMap = new Map<string, any>();
+    const courseMap = new Map<string, typeof courses.$inferSelect>();
 
-    // 1. Org-assigned courses
+    // 1. Org-wide courses, visible to every beneficiary of the org
     if (orgId) {
-      const snap = await adminDb.collection('courses').where('organizationId', '==', orgId).get();
-      snap.docs.forEach(d => courseMap.set(d.id, { id: d.id, ...d.data() }));
+      const rows = await db.select().from(courses).where(eq(courses.organizationId, orgId));
+      rows.forEach(c => courseMap.set(c.id, c));
     }
 
-    // 2. Directly assigned courses
-    const assignedSnap = await adminDb.collection('courses').where('assignedTo', 'array-contains', uid).get();
-    assignedSnap.docs.forEach(d => courseMap.set(d.id, { id: d.id, ...d.data() }));
-
-    // 3. Individually enrolled courses (via purchase or direct enrollment)
-    if (enrolledCourseIds.length > 0) {
-      const missing = enrolledCourseIds.filter(id => !courseMap.has(id));
-      if (missing.length > 0) {
-        const docs = await Promise.all(missing.map(id => adminDb.collection('courses').doc(id).get()));
-        docs.forEach(d => { if (d.exists) courseMap.set(d.id, { id: d.id, ...d.data() }); });
-      }
+    // 2. Courses this beneficiary is enrolled in (assigned, self-enrolled, or purchased)
+    const myEnrollments = await db.select().from(enrollments).where(eq(enrollments.userId, uid));
+    const missingIds = myEnrollments.map(e => e.courseId).filter(id => !courseMap.has(id));
+    if (missingIds.length) {
+      const rows = await db.select().from(courses).where(inArray(courses.id, missingIds));
+      rows.forEach(c => courseMap.set(c.id, c));
     }
 
-    const courses = Array.from(courseMap.values());
-    return NextResponse.json({ courses });
+    return NextResponse.json({ courses: Array.from(courseMap.values()) });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
