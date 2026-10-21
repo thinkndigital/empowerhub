@@ -1,21 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { randomUUID } from 'crypto';
+import { db } from '@/lib/db';
+import { contentOffers, organizations, users, notifications } from '@/lib/schema';
+import { eq, and } from 'drizzle-orm';
+import { verifyAuthToken } from '@/lib/auth-server';
 
 export async function GET(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    const decoded = await adminAuth.verifyIdToken(token);
+    const decoded = await verifyAuthToken(token);
 
-    const userDoc = await adminDb.doc(`users/${decoded.uid}`).get();
-    const userData = userDoc.data() || {};
-    const orgId = userData.organizationId || (decoded as any).organizationId || '';
-    if (!orgId || userData.role !== 'organization') {
+    const [caller] = await db.select().from(users).where(eq(users.id, decoded.uid)).limit(1);
+    const orgId = caller?.organizationId || decoded.organizationId || '';
+    if (!orgId || caller?.role !== 'organization') {
       return NextResponse.json({ error: 'غير مصرح' }, { status: 403 });
     }
 
-    const snap = await adminDb.collection('contentOffers').where('orgId', '==', orgId).get();
-    const offers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    return NextResponse.json({ offers });
+    const rows = await db.select().from(contentOffers).where(eq(contentOffers.organizationId, orgId));
+    return NextResponse.json({ offers: rows });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
@@ -24,17 +26,16 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    const decoded = await adminAuth.verifyIdToken(token);
+    const decoded = await verifyAuthToken(token);
 
-    const userDoc = await adminDb.doc(`users/${decoded.uid}`).get();
-    const userData = userDoc.data() || {};
-    const orgId = userData.organizationId || (decoded as any).organizationId || '';
-    if (!orgId || userData.role !== 'organization') {
+    const [caller] = await db.select().from(users).where(eq(users.id, decoded.uid)).limit(1);
+    const orgId = caller?.organizationId || decoded.organizationId || '';
+    if (!orgId || caller?.role !== 'organization') {
       return NextResponse.json({ error: 'غير مصرح' }, { status: 403 });
     }
 
-    const orgSnap = await adminDb.doc(`organizations/${orgId}`).get();
-    const orgName = orgSnap.data()?.name || userData.name || '';
+    const [org] = await db.select().from(organizations).where(eq(organizations.id, orgId)).limit(1);
+    const orgName = org?.name || caller?.name || '';
 
     const body = await req.json();
     const { targetUid, targetName, targetRole, offerType, contentId = '', contentTitle = '', note = '' } = body;
@@ -44,14 +45,14 @@ export async function POST(req: NextRequest) {
     }
 
     // Prevent duplicate pending offers
-    const existing = await adminDb.collection('contentOffers')
-      .where('orgId', '==', orgId)
-      .where('targetUid', '==', targetUid)
-      .where('offerType', '==', offerType)
-      .where('contentId', '==', contentId)
-      .where('status', '==', 'pending')
-      .get();
-    if (!existing.empty) {
+    const [existing] = await db.select().from(contentOffers).where(and(
+      eq(contentOffers.organizationId, orgId),
+      eq(contentOffers.targetUid, targetUid),
+      eq(contentOffers.offerType, offerType),
+      eq(contentOffers.contentId, contentId),
+      eq(contentOffers.status, 'pending'),
+    )).limit(1);
+    if (existing) {
       return NextResponse.json({ error: 'تم إرسال عرض مماثل مسبقاً' }, { status: 400 });
     }
 
@@ -61,8 +62,9 @@ export async function POST(req: NextRequest) {
       sessions: 'خدمات الإرشاد',
     };
 
-    await adminDb.collection('contentOffers').add({
-      orgId,
+    await db.insert(contentOffers).values({
+      id: randomUUID(),
+      organizationId: orgId,
       orgName,
       targetUid,
       targetName,
@@ -72,16 +74,15 @@ export async function POST(req: NextRequest) {
       contentTitle,
       note,
       status: 'pending',
-      createdAt: new Date().toISOString(),
     });
 
-    await adminDb.collection('notifications').add({
+    await db.insert(notifications).values({
+      id: randomUUID(),
       userId: targetUid,
       title: 'عرض من منظمة',
-      description: `دعتك منظمة ${orgName} بعرض ${typeLabel[offerType] || offerType}${contentTitle ? `: ${contentTitle}` : ''}`,
+      body: `دعتك منظمة ${orgName} بعرض ${typeLabel[offerType] || offerType}${contentTitle ? `: ${contentTitle}` : ''}`,
       link: `/${targetRole}-dashboard/invitations`,
-      isRead: false,
-      createdAt: new Date().toISOString(),
+      read: false,
     });
 
     return NextResponse.json({ success: true });

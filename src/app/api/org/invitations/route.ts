@@ -1,20 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
-import { FieldValue } from 'firebase-admin/firestore';
+import { randomUUID } from 'crypto';
+import { db } from '@/lib/db';
+import { orgInvitations, users, organizations, notifications } from '@/lib/schema';
+import { eq } from 'drizzle-orm';
+import { verifyAuthToken, signAuthToken } from '@/lib/auth-server';
 import { checkOrgLimit, checkOrgLocked } from '@/lib/plan-limits';
 
 // GET: fetch invitations for the current user
 export async function GET(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    const decoded = await adminAuth.verifyIdToken(token);
+    const decoded = await verifyAuthToken(token);
 
-    const snap = await adminDb.collection('orgInvitations')
-      .where('targetUid', '==', decoded.uid)
-      .get();
-
-    const invitations = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    return NextResponse.json({ invitations });
+    const rows = await db.select().from(orgInvitations).where(eq(orgInvitations.targetUid, decoded.uid));
+    return NextResponse.json({ invitations: rows });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
@@ -24,54 +23,49 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    const decoded = await adminAuth.verifyIdToken(token);
+    const decoded = await verifyAuthToken(token);
     const { inviteId, action } = await req.json(); // action: 'accept' | 'reject'
 
-    const inviteRef = adminDb.collection('orgInvitations').doc(inviteId);
-    const inviteSnap = await inviteRef.get();
-    if (!inviteSnap.exists) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-
-    const invite = inviteSnap.data()!;
+    const [invite] = await db.select().from(orgInvitations).where(eq(orgInvitations.id, inviteId)).limit(1);
+    if (!invite) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     if (invite.targetUid !== decoded.uid) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     if (action === 'accept') {
-      const lockCheck = await checkOrgLocked(invite.orgId);
+      const lockCheck = await checkOrgLocked(invite.organizationId);
       if (!lockCheck.allowed) {
         return NextResponse.json({ error: lockCheck.message }, { status: 403 });
       }
       const limitKey = invite.targetRole === 'beneficiary' ? 'maxUsers' : invite.targetRole === 'mentor' || invite.targetRole === 'coach' ? 'maxMentors' : null;
       if (limitKey) {
-        const limitCheck = await checkOrgLimit(invite.orgId, limitKey);
+        const limitCheck = await checkOrgLimit(invite.organizationId, limitKey as 'maxUsers' | 'maxMentors');
         if (!limitCheck.allowed) {
           return NextResponse.json({ error: limitCheck.message }, { status: 403 });
         }
       }
     }
 
-    await inviteRef.update({ status: action === 'accept' ? 'accepted' : 'rejected' });
+    await db.update(orgInvitations).set({ status: action === 'accept' ? 'accepted' : 'rejected' }).where(eq(orgInvitations.id, inviteId));
 
+    let freshToken: string | undefined;
     if (action === 'accept') {
-      // Link user to org
-      await adminDb.collection('users').doc(decoded.uid).update({
-        organizationId: invite.orgId,
-      });
-      // Update custom claims
-      const currentUser = await adminAuth.getUser(decoded.uid);
-      const claims = currentUser.customClaims || {};
-      await adminAuth.setCustomUserClaims(decoded.uid, { ...claims, organizationId: invite.orgId });
+      await db.update(users).set({ organizationId: invite.organizationId }).where(eq(users.id, decoded.uid));
+      freshToken = signAuthToken({ uid: decoded.uid, role: decoded.role, organizationId: invite.organizationId });
     }
 
-    // Notify the org
-    await adminDb.collection('notifications').add({
-      userId: invite.orgId, // org admin's uid — actually we need org admin uid
-      title: action === 'accept' ? 'قبل الدعوة' : 'رفض الدعوة',
-      description: `${invite.targetName} ${action === 'accept' ? 'قبل' : 'رفض'} دعوة الانضمام للمنظمة`,
-      link: `/organization-dashboard/${invite.targetRole === 'mentor' ? 'mentors' : 'coaches'}`,
-      isRead: false,
-      createdAt: new Date().toISOString(),
-    });
+    // Notify the org admin (not the org id itself — notifications.userId must be a real user)
+    const [org] = await db.select().from(organizations).where(eq(organizations.id, invite.organizationId)).limit(1);
+    if (org?.adminId) {
+      await db.insert(notifications).values({
+        id: randomUUID(),
+        userId: org.adminId,
+        title: action === 'accept' ? 'قبل الدعوة' : 'رفض الدعوة',
+        body: `${invite.targetName} ${action === 'accept' ? 'قبل' : 'رفض'} دعوة الانضمام للمنظمة`,
+        link: `/organization-dashboard/${invite.targetRole === 'mentor' ? 'mentors' : 'coaches'}`,
+        read: false,
+      });
+    }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, token: freshToken });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }

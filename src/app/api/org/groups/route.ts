@@ -1,21 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { db } from '@/lib/db';
+import { groups, users } from '@/lib/schema';
+import { eq } from 'drizzle-orm';
+import { verifyAuthToken } from '@/lib/auth-server';
 
 export async function GET(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    const decoded = await adminAuth.verifyIdToken(token);
-    // Get orgId from token claim or from user document
-    let orgId = decoded.organizationId as string | undefined;
+    const decoded = await verifyAuthToken(token);
+    let orgId = decoded.organizationId;
     if (!orgId) {
-      const userDoc = await adminDb.collection('users').doc(decoded.uid).get();
-      orgId = userDoc.data()?.organizationId;
+      const [userRow] = await db.select().from(users).where(eq(users.id, decoded.uid)).limit(1);
+      orgId = userRow?.organizationId;
     }
     if (!orgId) return NextResponse.json({ groups: [] });
 
-    const snap = await adminDb.collection('groups').where('orgId', '==', orgId).get();
-    const groups = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    return NextResponse.json({ groups });
+    const rows = await db.select().from(groups).where(eq(groups.organizationId, orgId));
+    return NextResponse.json({ groups: rows });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }

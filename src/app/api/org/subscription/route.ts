@@ -1,19 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
-
-function normalizeDate(date: any): string | undefined {
-  if (!date) return undefined;
-  if (typeof date === 'string') return date;
-  const s = date._seconds ?? date.seconds;
-  return s ? new Date(s * 1000).toISOString() : undefined;
-}
+import { db } from '@/lib/db';
+import { organizations, plans, subscriptions, users } from '@/lib/schema';
+import { eq, asc } from 'drizzle-orm';
+import { verifyAuthToken } from '@/lib/auth-server';
 
 async function resolveOrgId(token: string): Promise<string | null> {
-  const decoded = await adminAuth.verifyIdToken(token);
-  let orgId = (decoded as any).organizationId as string | undefined;
+  const decoded = await verifyAuthToken(token);
+  let orgId = decoded.organizationId;
   if (!orgId) {
-    const userDoc = await adminDb.collection('users').doc(decoded.uid).get();
-    orgId = userDoc.data()?.organizationId;
+    const [userRow] = await db.select().from(users).where(eq(users.id, decoded.uid)).limit(1);
+    orgId = userRow?.organizationId;
   }
   return orgId || null;
 }
@@ -27,32 +23,28 @@ export async function GET(req: NextRequest) {
     const orgId = await resolveOrgId(token);
     if (!orgId) return NextResponse.json({ error: 'ليس مدير منظمة' }, { status: 403 });
 
-    const orgSnap = await adminDb.collection('organizations').doc(orgId).get();
-    const planKey = orgSnap.data()?.plan;
+    const [org] = await db.select().from(organizations).where(eq(organizations.id, orgId)).limit(1);
+    const planKey = org?.planKey;
 
-    const [plansSnap, subSnap] = await Promise.all([
-      adminDb.collection('plans').orderBy('order').get(),
-      adminDb.collection('subscriptions').doc(orgId).get(),
+    const [allPlanRows, [sub]] = await Promise.all([
+      db.select().from(plans).orderBy(asc(plans.sortOrder)),
+      db.select().from(subscriptions).where(eq(subscriptions.organizationId, orgId)).limit(1),
     ]);
 
-    const allPlans = plansSnap.docs.map(d => {
-      const data = d.data();
-      return {
-        id: d.id,
-        key: data.key || d.id,
-        name: data.name || '',
-        priceMonthly: data.priceMonthly ?? 0,
-        currency: data.currency || 'JOD',
-        features: data.features || [],
-      };
-    });
+    const allPlans = allPlanRows.map(p => ({
+      id: p.id,
+      key: p.key,
+      name: p.name || '',
+      priceMonthly: Number(p.priceMonthly ?? 0),
+      currency: p.currency || 'JOD',
+      features: p.features || [],
+    }));
 
     const currentPlan = allPlans.find(p => p.key === planKey) || null;
     const isFree = !currentPlan || currentPlan.priceMonthly <= 0;
 
-    const sub = subSnap.exists ? subSnap.data() : null;
     let daysLeft: number | null = null;
-    const endDate = normalizeDate(sub?.endDate);
+    const endDate = sub?.endDate ? new Date(sub.endDate).toISOString() : undefined;
     if (endDate) {
       daysLeft = Math.ceil((new Date(endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
     }
@@ -63,7 +55,7 @@ export async function GET(req: NextRequest) {
       currentPlan,
       status: sub?.status || (isFree ? 'trial' : null),
       billingCycle: sub?.billingCycle || 'monthly',
-      startDate: normalizeDate(sub?.startDate),
+      startDate: sub?.startDate ? new Date(sub.startDate).toISOString() : undefined,
       endDate,
       daysLeft,
       permanentFree: !!sub?.permanentFree,

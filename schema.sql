@@ -159,10 +159,12 @@ CREATE TABLE `groups` (
 CREATE TABLE `live_session_registrations` (
 	`id` varchar(36) NOT NULL,
 	`session_id` varchar(36) NOT NULL,
+	`user_id` varchar(36),
 	`name` varchar(255),
 	`email` varchar(255),
 	`phone` varchar(50),
 	`payment_status` enum('pending','free','paid') DEFAULT 'free',
+	`assigned_by` varchar(36),
 	`created_at` timestamp NOT NULL DEFAULT (now()),
 	CONSTRAINT `live_session_registrations_id` PRIMARY KEY(`id`),
 	CONSTRAINT `live_session_reg_uniq` UNIQUE(`session_id`,`email`)
@@ -380,6 +382,7 @@ CREATE TABLE `stores` (
 	`beneficiary_id` varchar(36),
 	`beneficiary_name` varchar(255),
 	`organization_id` varchar(36),
+	`hidden` boolean DEFAULT false,
 	`meta` json,
 	`created_at` timestamp NOT NULL DEFAULT (now()),
 	`updated_at` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
@@ -398,6 +401,7 @@ CREATE TABLE `subscriptions` (
 	`end_date` timestamp,
 	`permanent_free` boolean DEFAULT false,
 	`created_at` timestamp NOT NULL DEFAULT (now()),
+	`updated_at` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	CONSTRAINT `subscriptions_organization_id` PRIMARY KEY(`organization_id`)
 );
 CREATE TABLE `success_stories` (
@@ -436,6 +440,7 @@ CREATE TABLE `users` (
 	`expertise` varchar(255),
 	`avatar_url` text,
 	`display_name` varchar(255),
+	`phone` varchar(50),
 	`meta` json,
 	`created_at` timestamp NOT NULL DEFAULT (now()),
 	`updated_at` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,

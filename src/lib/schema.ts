@@ -28,6 +28,7 @@ export const users = mysqlTable('users', {
   expertise: varchar('expertise', { length: 255 }),
   avatarUrl: text('avatar_url'),
   displayName: varchar('display_name', { length: 255 }),
+  phone: varchar('phone', { length: 50 }),
   meta: json('meta').$type<Record<string, any>>(),
   createdAt: createdAt(),
   updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
@@ -85,6 +86,7 @@ export const subscriptions = mysqlTable('subscriptions', {
   endDate: timestamp('end_date'),
   permanentFree: boolean('permanent_free').default(false),
   createdAt: createdAt(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
 });
 
 export const groups = mysqlTable('groups', {
@@ -232,6 +234,7 @@ export const stores = mysqlTable('stores', {
   beneficiaryId: fk('beneficiary_id'),
   beneficiaryName: varchar('beneficiary_name', { length: 255 }),
   organizationId: fk('organization_id'),
+  hidden: boolean('hidden').default(false),
   meta: json('meta').$type<Record<string, any>>(),
   createdAt: createdAt(),
   updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
@@ -314,13 +317,16 @@ export const liveSessions = mysqlTable('live_sessions', {
 export const liveSessionRegistrations = mysqlTable('live_session_registrations', {
   id: id(),
   sessionId: fk('session_id').notNull(),
+  userId: fk('user_id'),
   name: varchar('name', { length: 255 }),
   email: varchar('email', { length: 255 }),
   phone: varchar('phone', { length: 50 }),
   paymentStatus: mysqlEnum('payment_status', ['pending', 'free', 'paid']).default('free'),
+  assignedBy: fk('assigned_by'),
   registeredAt: createdAt(),
 }, t => ({
   uniq: uniqueIndex('live_session_reg_uniq').on(t.sessionId, t.email),
+  userIdx: index('live_session_reg_user_idx').on(t.userId),
 }));
 
 export const mentoringSessions = mysqlTable('sessions', {

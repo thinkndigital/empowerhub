@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { randomUUID } from 'crypto';
+import { db } from '@/lib/db';
+import { users, coachContracts, mentoringSessions } from '@/lib/schema';
+import { eq, and, inArray } from 'drizzle-orm';
+import { verifyAuthToken, DecodedToken } from '@/lib/auth-server';
 
-async function getOrgId(decoded: any): Promise<string | null> {
-  let orgId = decoded.organizationId as string | undefined;
+async function getOrgId(decoded: DecodedToken): Promise<string | null> {
+  let orgId = decoded.organizationId;
   if (!orgId) {
-    const userDoc = await adminDb.collection('users').doc(decoded.uid).get();
-    orgId = userDoc.data()?.organizationId;
+    const [userRow] = await db.select().from(users).where(eq(users.id, decoded.uid)).limit(1);
+    orgId = userRow?.organizationId;
   }
   return orgId || null;
 }
@@ -13,66 +17,47 @@ async function getOrgId(decoded: any): Promise<string | null> {
 export async function GET(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    const decoded = await adminAuth.verifyIdToken(token);
+    const decoded = await verifyAuthToken(token);
     const orgId = await getOrgId(decoded);
     if (!orgId) return NextResponse.json({ error: 'Not an org' }, { status: 403 });
 
-    // Get all coaches in this org
-    const coachSnap = await adminDb
-      .collection('users')
-      .where('organizationId', '==', orgId)
-      .where('role', '==', 'coach')
-      .get();
-
-    const coachIds = coachSnap.docs.map(d => d.id);
+    const coachRows = await db.select().from(users).where(and(eq(users.organizationId, orgId), eq(users.role, 'coach')));
+    const coachIds = coachRows.map(c => c.id);
     if (coachIds.length === 0) return NextResponse.json({ coaches: [] });
 
-    // Get contracts for all coaches in this org
-    const contractSnap = await adminDb
-      .collection('coachContracts')
-      .where('orgId', '==', orgId)
-      .get();
-
-    const contractMap: Record<string, { hourlyRate: number; currency: string; contractedHours?: number }> = {};
-    contractSnap.docs.forEach(d => {
-      const data = d.data();
-      contractMap[data.coachId] = {
-        hourlyRate: data.hourlyRate || 0,
-        currency: data.currency || 'JOD',
-        contractedHours: data.contractedHours,
+    const contractRows = await db.select().from(coachContracts).where(eq(coachContracts.organizationId, orgId));
+    const contractMap: Record<string, { hourlyRate: number; currency: string; contractedHours?: number | null }> = {};
+    for (const c of contractRows) {
+      contractMap[c.coachId] = {
+        hourlyRate: Number(c.hourlyRate || 0),
+        currency: c.currency || 'JOD',
+        contractedHours: c.contractedHours,
       };
-    });
+    }
 
-    // Get completed sessions for each coach in this org
-    const sessionSnaps = await Promise.all(
-      coachIds.map(id =>
-        adminDb
-          .collection('sessions')
-          .where('hostId', '==', id)
-          .where('organizationId', '==', orgId)
-          .where('status', '==', 'completed')
-          .get()
-      )
-    );
+    const sessionRows = await db.select().from(mentoringSessions).where(and(
+      inArray(mentoringSessions.hostId, coachIds),
+      eq(mentoringSessions.organizationId, orgId),
+      eq(mentoringSessions.status, 'completed'),
+    ));
 
     const hoursMap: Record<string, number> = {};
-    coachIds.forEach((id, i) => {
-      let totalMinutes = 0;
-      sessionSnaps[i].docs.forEach(d => {
-        totalMinutes += d.data().duration || 0;
-      });
-      hoursMap[id] = Math.round((totalMinutes / 60) * 10) / 10;
-    });
+    for (const s of sessionRows) {
+      // `duration` is stored as free text (e.g. "60 دقيقة") elsewhere in the
+      // app; sessions created via org/coaches billing historically only ever
+      // summed a numeric minutes value, so coerce defensively.
+      const minutes = Number((s as any).duration) || 0;
+      hoursMap[s.hostId || ''] = (hoursMap[s.hostId || ''] || 0) + minutes;
+    }
 
-    const coaches = coachSnap.docs.map(d => {
-      const data = d.data();
-      const contract = contractMap[d.id] || { hourlyRate: 0, currency: 'JOD' };
-      const totalHours = hoursMap[d.id] || 0;
+    const coaches = coachRows.map(c => {
+      const contract = contractMap[c.id] || { hourlyRate: 0, currency: 'JOD' };
+      const totalHours = Math.round(((hoursMap[c.id] || 0) / 60) * 10) / 10;
       return {
-        id: d.id,
-        name: data.name || data.displayName || '',
-        email: data.email || '',
-        avatarUrl: data.avatarUrl || data.photoURL || '',
+        id: c.id,
+        name: c.name || c.displayName || '',
+        email: c.email || '',
+        avatarUrl: c.avatarUrl || '',
         hourlyRate: contract.hourlyRate,
         currency: contract.currency,
         contractedHours: contract.contractedHours,
@@ -90,7 +75,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    const decoded = await adminAuth.verifyIdToken(token);
+    const decoded = await verifyAuthToken(token);
     const orgId = await getOrgId(decoded);
     if (!orgId) return NextResponse.json({ error: 'Not an org' }, { status: 403 });
 
@@ -99,31 +84,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'coachId and hourlyRate required' }, { status: 400 });
     }
 
-    // Upsert contract
-    const existing = await adminDb
-      .collection('coachContracts')
-      .where('coachId', '==', coachId)
-      .where('orgId', '==', orgId)
-      .limit(1)
-      .get();
-
-    const contractData = {
+    await db.insert(coachContracts).values({
+      id: randomUUID(),
       coachId,
-      orgId,
-      hourlyRate: Number(hourlyRate),
+      organizationId: orgId,
+      hourlyRate: String(Number(hourlyRate)),
       currency: currency || 'JOD',
       contractedHours: contractedHours != null ? Number(contractedHours) : null,
-      updatedAt: new Date().toISOString(),
-    };
-
-    if (!existing.empty) {
-      await existing.docs[0].ref.update(contractData);
-    } else {
-      await adminDb.collection('coachContracts').add({
-        ...contractData,
-        createdAt: new Date().toISOString(),
-      });
-    }
+    }).onDuplicateKeyUpdate({
+      set: {
+        hourlyRate: String(Number(hourlyRate)),
+        currency: currency || 'JOD',
+        contractedHours: contractedHours != null ? Number(contractedHours) : null,
+      },
+    });
 
     return NextResponse.json({ ok: true });
   } catch (e: any) {

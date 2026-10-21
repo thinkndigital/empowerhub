@@ -1,15 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { db } from '@/lib/db';
+import { users, mentoringSessions } from '@/lib/schema';
+import { eq, and } from 'drizzle-orm';
+import { verifyAuthToken, stripPasswords } from '@/lib/auth-server';
 import { checkOrgLocked } from '@/lib/plan-limits';
 
 export async function GET(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    const decoded = await adminAuth.verifyIdToken(token);
-    let orgId = decoded.organizationId as string | undefined;
+    const decoded = await verifyAuthToken(token);
+    let orgId = decoded.organizationId;
     if (!orgId) {
-      const userDoc = await adminDb.collection('users').doc(decoded.uid).get();
-      orgId = userDoc.data()?.organizationId;
+      const [userRow] = await db.select().from(users).where(eq(users.id, decoded.uid)).limit(1);
+      orgId = userRow?.organizationId;
     }
     if (!orgId) return NextResponse.json({ error: 'Not an org' }, { status: 403 });
 
@@ -18,19 +21,16 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'التقارير ميزة مدفوعة — يرجى الاشتراك أو التجديد لعرضها.' }, { status: 403 });
     }
 
-    const [benefSnap, mentorSnap, sessionSnap] = await Promise.all([
-      adminDb.collection('users').where('organizationId', '==', orgId).where('role', '==', 'beneficiary').get(),
-      adminDb.collection('users').where('organizationId', '==', orgId).where('role', '==', 'mentor').get(),
-      adminDb.collection('sessions').where('organizationId', '==', orgId).get(),
+    const [beneficiaryRows, mentorRows, sessionRows] = await Promise.all([
+      db.select().from(users).where(and(eq(users.organizationId, orgId), eq(users.role, 'beneficiary'))),
+      db.select().from(users).where(and(eq(users.organizationId, orgId), eq(users.role, 'mentor'))),
+      db.select().from(mentoringSessions).where(eq(mentoringSessions.organizationId, orgId)),
     ]);
 
-    const beneficiaries = benefSnap.docs.map(d => ({ id: d.id, ...d.data() as any }));
-    const sessions = sessionSnap.docs.map(d => ({ id: d.id, ...d.data() as any }));
-
     return NextResponse.json({
-      beneficiaries,
-      mentorsCount: mentorSnap.size,
-      sessions,
+      beneficiaries: stripPasswords(beneficiaryRows),
+      mentorsCount: mentorRows.length,
+      sessions: sessionRows,
     });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });

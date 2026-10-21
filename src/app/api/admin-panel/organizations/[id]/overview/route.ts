@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { adminDb } from '@/lib/firebase-admin';
+import { db } from '@/lib/db';
+import { users, stores } from '@/lib/schema';
+import { eq } from 'drizzle-orm';
+import { stripPasswords } from '@/lib/auth-server';
 
 function checkAuth() {
   return cookies().get('ap_session')?.value === 'empowerhub-admin-2026-secret';
@@ -11,25 +14,23 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   if (!checkAuth()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const orgId = params.id;
 
-  const [usersSnap, storesSnap] = await Promise.all([
-    adminDb.collection('users').where('organizationId', '==', orgId).get(),
-    adminDb.collection('stores').where('organizationId', '==', orgId).get(),
+  const [userRows, storeRows] = await Promise.all([
+    db.select().from(users).where(eq(users.organizationId, orgId)),
+    db.select().from(stores).where(eq(stores.organizationId, orgId)),
   ]);
 
-  const users = usersSnap.docs.map(d => {
-    const data = d.data();
-    return { id: d.id, name: data.name || '', email: data.email || '', role: data.role || '', status: data.status || 'active', avatarUrl: data.avatarUrl || '' };
-  });
+  const allUsers = stripPasswords(userRows).map(u => ({
+    id: u.id, name: u.name || '', email: u.email || '', role: u.role || '', status: u.status || 'active', avatarUrl: u.avatarUrl || '',
+  }));
 
-  const stores = storesSnap.docs.map(d => {
-    const data = d.data();
-    return { id: d.id, name: data.name || '', beneficiaryId: data.beneficiaryId || '', hidden: data.hidden || false };
-  });
+  const storesResult = storeRows.map(s => ({
+    id: s.id, name: s.name || '', beneficiaryId: s.beneficiaryId || '', hidden: s.hidden || false,
+  }));
 
-  const beneficiaries = users.filter(u => u.role === 'beneficiary');
-  const mentors = users.filter(u => u.role === 'mentor');
-  const coaches = users.filter(u => u.role === 'coach');
-  const team = users.filter(u => u.role === 'organization' || u.role === 'team');
+  const beneficiaries = allUsers.filter(u => u.role === 'beneficiary');
+  const mentors = allUsers.filter(u => u.role === 'mentor');
+  const coaches = allUsers.filter(u => u.role === 'coach');
+  const team = allUsers.filter(u => u.role === 'organization' || u.role === 'team_member');
 
-  return NextResponse.json({ beneficiaries, mentors, coaches, team, stores });
+  return NextResponse.json({ beneficiaries, mentors, coaches, team, stores: storesResult });
 }

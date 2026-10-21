@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { adminDb } from '@/lib/firebase-admin';
+import { db } from '@/lib/db';
+import { subscriptions, plans, organizations } from '@/lib/schema';
+import { eq } from 'drizzle-orm';
 
 function checkAuth() {
   return cookies().get('ap_session')?.value === 'empowerhub-admin-2026-secret';
@@ -8,26 +10,24 @@ function checkAuth() {
 
 export async function GET(req: NextRequest, { params }: { params: { orgId: string } }) {
   if (!checkAuth()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const snap = await adminDb.collection('subscriptions').doc(params.orgId).get();
-  return NextResponse.json({ subscription: snap.exists ? { id: snap.id, ...snap.data() } : null });
+  const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.organizationId, params.orgId)).limit(1);
+  return NextResponse.json({ subscription: sub || null });
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: { orgId: string } }) {
   if (!checkAuth()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const body = await req.json();
 
-  // Update subscription doc
-  await adminDb.collection('subscriptions').doc(params.orgId).set({
-    ...body,
-    updatedAt: new Date(),
-  }, { merge: true });
+  // set+merge semantics: create the subscription row if it doesn't exist yet.
+  await db.insert(subscriptions)
+    .values({ organizationId: params.orgId, ...body })
+    .onDuplicateKeyUpdate({ set: body });
 
-  // Also update plan on the org doc
+  // Also update plan on the org row
   if (body.planId) {
-    const planSnap = await adminDb.collection('plans').doc(body.planId).get();
-    if (planSnap.exists) {
-      const planKey = (planSnap.data() as any).key || body.planId;
-      await adminDb.collection('organizations').doc(params.orgId).update({ plan: planKey });
+    const [plan] = await db.select().from(plans).where(eq(plans.id, body.planId)).limit(1);
+    if (plan) {
+      await db.update(organizations).set({ planKey: plan.key || body.planId }).where(eq(organizations.id, params.orgId));
     }
   }
 
@@ -36,6 +36,6 @@ export async function PATCH(req: NextRequest, { params }: { params: { orgId: str
 
 export async function DELETE(req: NextRequest, { params }: { params: { orgId: string } }) {
   if (!checkAuth()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  await adminDb.collection('subscriptions').doc(params.orgId).delete();
+  await db.delete(subscriptions).where(eq(subscriptions.organizationId, params.orgId));
   return NextResponse.json({ ok: true });
 }
