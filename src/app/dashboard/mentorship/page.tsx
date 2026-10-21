@@ -7,9 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Calendar, Clock, Video, User, Star } from "lucide-react";
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { useUser } from "@/firebase/auth/use-user";
-import { useFirestore } from "@/firebase/provider";
-import { collection, addDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
+import { useUser } from "@/hooks/use-user";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, isPast, parseISO } from "date-fns";
 import { ar } from "date-fns/locale";
@@ -34,7 +32,6 @@ export default function MentorshipPage() {
   const { toast } = useToast();
   const [message, setMessage] = useState("");
   const { user: authUser, userProfile, loading: authLoading } = useUser();
-  const firestore = useFirestore();
   const [evaluationTarget, setEvaluationTarget] = useState<EvaluationTarget | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [mentor, setMentor] = useState<any>(null);
@@ -86,40 +83,15 @@ export default function MentorshipPage() {
       toast({ variant: "destructive", title: "خطأ", description: "لا يمكن إرسال رسالة فارغة." });
       return;
     }
-    if (!firestore || !authUser || !mentor) return;
+    if (!authUser || !mentor) return;
     try {
-      const convoQuery = query(
-        collection(firestore, "conversations"),
-        where("participants", "array-contains", authUser.uid)
-      );
-      const snap = await getDocs(convoQuery);
-      let convoId: string | null = null;
-      snap.forEach(d => {
-        const p: string[] = d.data().participants || [];
-        if (p.includes(mentor.id)) convoId = d.id;
+      const token = await authUser.getIdToken();
+      const res = await fetch("/api/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", authorization: `Bearer ${token}` },
+        body: JSON.stringify({ toUserId: mentor.id, content: message.trim() }),
       });
-      if (!convoId) {
-        const convoRef = await addDoc(collection(firestore, "conversations"), {
-          participants: [authUser.uid, mentor.id],
-          createdAt: serverTimestamp(),
-          lastMessage: message.trim(),
-          lastMessageAt: serverTimestamp(),
-        });
-        convoId = convoRef.id;
-      }
-      await addDoc(collection(firestore, "conversations", convoId, "messages"), {
-        senderId: authUser.uid,
-        text: message.trim(),
-        createdAt: serverTimestamp(),
-      });
-      await addDoc(collection(firestore, "notifications"), {
-        userId: mentor.id,
-        title: "رسالة جديدة من مستفيد",
-        body: message.trim().slice(0, 80),
-        read: false,
-        createdAt: serverTimestamp(),
-        link: "/mentor-dashboard/messages",
-      });
+      if (!res.ok) throw new Error();
       toast({ title: "تم الإرسال!", description: "تم إرسال رسالتك إلى مرشدك بنجاح." });
       setMessage("");
     } catch {

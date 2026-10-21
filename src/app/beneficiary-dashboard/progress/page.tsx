@@ -6,7 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TrendingUp, BookOpen, Calendar, CheckCircle2 } from "lucide-react";
-import { useUser } from "@/firebase/auth/use-user";
+import { useUser } from "@/hooks/use-user";
 
 type CourseEnrollment = {
   courseId: string;

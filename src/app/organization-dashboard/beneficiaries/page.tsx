@@ -6,7 +6,7 @@ import {
   MoreHorizontal, PlusCircle, Users, Search, UserPlus, Mail, Upload, Loader2,
 } from "lucide-react";
 import { ExportButton } from "@/components/export-button";
-import type { User } from "firebase/auth";
+import type { AuthUser } from "@/hooks/use-user";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { useUser } from "@/firebase/auth/use-user";
+import { useUser } from "@/hooks/use-user";
 import { useOrgUsers } from "@/hooks/use-org-users";
 import { useOrgGroups } from "@/hooks/use-org-groups";
 
@@ -72,7 +72,7 @@ function derivedStatus(progress = 0): string {
   return "جديد";
 }
 
-async function apiAction(user: User, body: object) {
+async function apiAction(user: AuthUser, body: object) {
   const token = await user.getIdToken();
   const res = await fetch("/api/org/action", {
     method: "POST",

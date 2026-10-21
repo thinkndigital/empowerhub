@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useUser } from "@/firebase/auth/use-user";
+import { useUser } from "@/hooks/use-user";
 import { useCurrency } from "@/hooks/use-currency";
 import { exportToExcel, exportToPDF } from "@/lib/export-utils";
 

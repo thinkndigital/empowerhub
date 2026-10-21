@@ -13,7 +13,7 @@ import { Palette, Save, BookOpen, Users, Copy, Key, Loader2, CreditCard, CheckCi
 import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useUser } from "@/firebase/auth/use-user";
+import { useUser } from "@/hooks/use-user";
 import { uploadFile as uploadToStorage } from "@/lib/upload-file";
 
 interface SubscriptionPlan {

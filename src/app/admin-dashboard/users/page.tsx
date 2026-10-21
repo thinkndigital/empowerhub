@@ -34,14 +34,9 @@ import {
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { useCollection } from "@/firebase/firestore/use-collection";
-import { collection, query, doc, updateDoc } from "firebase/firestore";
-import { useFirestore, useMemoFirebase } from "@/firebase/provider";
-import { useUser, type UserProfile } from "@/firebase/auth/use-user";
+import { useUser, type UserProfile } from "@/hooks/use-user";
 import { Skeleton } from "@/components/ui/skeleton";
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -66,9 +61,12 @@ const editUserSchema = z.object({
 
 export default function UsersPage() {
   const { toast } = useToast();
-  const firestore = useFirestore();
+  const { user: authUser } = useUser();
   const [userToEdit, setUserToEdit] = useState<UserProfile | null>(null);
   const [userToView, setUserToView] = useState<UserProfile | null>(null);
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const form = useForm<z.infer<typeof editUserSchema>>({
     resolver: zodResolver(editUserSchema),
@@ -80,67 +78,73 @@ export default function UsersPage() {
     }
   }, [userToEdit, form]);
 
-  const usersQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, "users"));
-  }, [firestore]);
+  const fetchOverview = useCallback(async () => {
+    if (!authUser) return;
+    setLoading(true);
+    try {
+      const token = await authUser.getIdToken();
+      const res = await fetch('/api/admin/overview', { headers: { authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      setUsers(data.users || []);
+      setOrganizations(data.organizations || []);
+    } catch { /* silent */ } finally {
+      setLoading(false);
+    }
+  }, [authUser]);
 
-  const { data: users, isLoading: usersLoading } = useCollection<UserProfile>(usersQuery);
-
-  const organizationsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, "organizations"));
-  }, [firestore]);
-  const { data: organizations, isLoading: orgsLoading } = useCollection<Organization>(organizationsQuery);
+  useEffect(() => { fetchOverview(); }, [fetchOverview]);
 
   const orgMap = useMemo(() => {
-      if (!organizations) return new Map();
       return new Map(organizations.map(o => [o.id, o.name]));
   }, [organizations]);
-
-  const loading = usersLoading || orgsLoading;
 
 
   const roleAr: Record<string, string> = { admin: 'مدير', organization: 'منظمة', mentor: 'مرشد', coach: 'مدرب', beneficiary: 'مستفيد', merchant: 'تاجر' };
 
   const handleToggleStatus = async (user: UserProfile) => {
-    if (!firestore) return;
+    if (!authUser) return;
 
-    const userRef = doc(firestore, "users", user.id);
-    const newStatus = user.status === "نشط" ? "غير نشط" : "نشط";
-    
-    updateDoc(userRef, { status: newStatus })
-        .then(() => {
-            toast({
-                title: `تم تغيير حالة المستخدم`,
-                description: `أصبحت حالة ${user.name || 'المستخدم'} الآن "${newStatus}".`,
-                variant: newStatus === 'غير نشط' ? 'destructive' : 'default',
-            });
-        })
-        .catch((err) => {
-            toast({ variant: "destructive", title: "خطأ!", description: "فشلت عملية التحديث."});
-            const permissionError = new FirestorePermissionError({ path: userRef.path, operation: 'update', requestResourceData: { status: newStatus } });
-            errorEmitter.emit('permission-error', permissionError);
-        });
+    const newStatus = user.status === "active" ? "inactive" : "active";
+
+    try {
+      const token = await authUser.getIdToken();
+      const res = await fetch(`/api/admin/users/${user.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (!res.ok) throw new Error();
+      toast({
+          title: `تم تغيير حالة المستخدم`,
+          description: `أصبحت حالة ${user.name || 'المستخدم'} الآن "${newStatus === 'active' ? 'نشط' : 'غير نشط'}".`,
+          variant: newStatus === 'inactive' ? 'destructive' : 'default',
+      });
+      fetchOverview();
+    } catch {
+      toast({ variant: "destructive", title: "خطأ!", description: "فشلت عملية التحديث."});
+    }
   };
 
   async function onEditSubmit(values: z.infer<typeof editUserSchema>) {
-    if (!firestore || !userToEdit) return;
+    if (!authUser || !userToEdit) return;
 
-    const userRef = doc(firestore, "users", userToEdit.id);
-    updateDoc(userRef, { role: values.role })
-      .then(() => {
-        toast({
-          title: "تم تحديث الدور!",
-          description: `تم تغيير دور ${userToEdit.name || 'المستخدم'} إلى ${roleMap[values.role] || values.role}.`,
-        });
-        setUserToEdit(null);
-      })
-      .catch((err) => {
-        toast({ variant: "destructive", title: "خطأ!", description: "فشل تحديث الدور."});
-        const permissionError = new FirestorePermissionError({ path: userRef.path, operation: 'update', requestResourceData: { role: values.role } });
-        errorEmitter.emit('permission-error', permissionError);
+    try {
+      const token = await authUser.getIdToken();
+      const res = await fetch(`/api/admin/users/${userToEdit.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify({ role: values.role }),
       });
+      if (!res.ok) throw new Error();
+      toast({
+        title: "تم تحديث الدور!",
+        description: `تم تغيير دور ${userToEdit.name || 'المستخدم'} إلى ${roleMap[values.role] || values.role}.`,
+      });
+      setUserToEdit(null);
+      fetchOverview();
+    } catch {
+      toast({ variant: "destructive", title: "خطأ!", description: "فشل تحديث الدور."});
+    }
   }
 
   return (
@@ -159,7 +163,7 @@ export default function UsersPage() {
           u.email || '',
           roleAr[u.role || ''] || u.role || '',
           orgMap.get(u.organizationId || '') || '',
-          u.status || 'نشط',
+          u.status === 'active' ? 'نشط' : u.status === 'inactive' ? 'غير نشط' : (u.status || 'نشط'),
         ])}
         options={{ summary: { 'إجمالي المستخدمين': String((users ?? []).length) } }}
       />
@@ -217,8 +221,8 @@ export default function UsersPage() {
                 <TableCell>{roleMap[user.role || ''] || user.role || 'غير محدد'}</TableCell>
                 <TableCell className="hidden md:table-cell">{orgMap.get(user.organizationId || "") || "EmpowerHub"}</TableCell>
                 <TableCell className="text-center">
-                  <Badge variant={user.status === "نشط" ? "default" : "secondary"}>
-                    {user.status || "غير محدد"}
+                  <Badge variant={user.status === "active" ? "default" : "secondary"}>
+                    {user.status === "active" ? "نشط" : user.status === "inactive" ? "غير نشط" : (user.status || "غير محدد")}
                   </Badge>
                 </TableCell>
                 <TableCell>
@@ -239,12 +243,12 @@ export default function UsersPage() {
                         <Edit className="ml-2 h-4 w-4" />
                         تعديل الدور
                       </DropdownMenuItem>
-                      <DropdownMenuItem 
+                      <DropdownMenuItem
                         onClick={() => handleToggleStatus(user)}
-                        className={user.status === "نشط" ? "text-red-500" : ""}
+                        className={user.status === "active" ? "text-red-500" : ""}
                       >
                         <UserX className="ml-2 h-4 w-4" />
-                        {user.status === "نشط" ? "حظر المستخدم" : "تفعيل المستخدم"}
+                        {user.status === "active" ? "حظر المستخدم" : "تفعيل المستخدم"}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -279,7 +283,7 @@ export default function UsersPage() {
                 <div className="text-right space-y-2 border-t pt-4">
                     <p><strong>الدور:</strong> {roleMap[userToView?.role || ''] || userToView?.role || 'غير محدد'}</p>
                     <p><strong>المنظمة:</strong> {orgMap.get(userToView?.organizationId || "") || 'EmpowerHub (المنصة الرئيسية)'}</p>
-                    <p><strong>الحالة:</strong> <Badge variant={userToView?.status === "نشط" ? "default" : "secondary"}>{userToView?.status || 'غير محدد'}</Badge></p>
+                    <p><strong>الحالة:</strong> <Badge variant={userToView?.status === "active" ? "default" : "secondary"}>{userToView?.status === "active" ? "نشط" : userToView?.status === "inactive" ? "غير نشط" : (userToView?.status || 'غير محدد')}</Badge></p>
                 </div>
             </div>
         </DialogContent>

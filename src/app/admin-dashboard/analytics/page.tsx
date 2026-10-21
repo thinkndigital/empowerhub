@@ -1,14 +1,12 @@
 
 "use client"
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import { Bar, BarChart, CartesianGrid, Line, LineChart, Pie, PieChart, Cell, ResponsiveContainer, XAxis, YAxis, Legend } from "recharts"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { Users, Building, Activity, ShoppingCart, Download, BookOpen } from "lucide-react"
-import { useFirestore, useMemoFirebase } from "@/firebase/provider"
-import { useCollection } from "@/firebase/firestore/use-collection"
-import { collection, query } from "firebase/firestore"
+import { useUser } from "@/hooks/use-user"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
@@ -30,40 +28,52 @@ const userRolesConfig = {
 const courseEnrollmentConfig = { enrollments: { label: "المسجلون", color: "hsl(var(--chart-2))" } }
 const PIE_FILLS = ["hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"]
 
-type UserDoc = { id: string; role?: string; status?: string; createdAt?: any }
-type OrgDoc = { id: string; createdAt?: any }
-type OrderDoc = { id: string; status?: string; price?: number; orderDate?: any }
+type UserDoc = { id: string; role?: string; status?: string; createdAt?: string }
+type OrgDoc = { id: string; createdAt?: string }
+type OrderDoc = { id: string; status?: string; totalAmount?: string | number; createdAt?: string }
 type CourseDoc = { id: string; title?: string; enrolledCount?: number }
+type ProductDoc = { id: string }
 
 export default function AnalyticsPage() {
   const { toast } = useToast();
-  const firestore = useFirestore();
+  const { user: authUser } = useUser();
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [exportOptions, setExportOptions] = useState({ summary: true, userGrowth: true, salesGrowth: true, roleDistribution: true, courseEnrollment: true });
 
-  const usersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, "users")) : null, [firestore]);
-  const { data: allUsers, isLoading: usersLoading } = useCollection<UserDoc>(usersQuery);
+  const [allUsers, setAllUsers] = useState<UserDoc[] | null>(null);
+  const [allOrgs, setAllOrgs] = useState<OrgDoc[] | null>(null);
+  const [allCourses, setAllCourses] = useState<CourseDoc[] | null>(null);
+  const [allProducts, setAllProducts] = useState<ProductDoc[] | null>(null);
+  const [allOrders, setAllOrders] = useState<OrderDoc[] | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const orgsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, "organizations")) : null, [firestore]);
-  const { data: allOrgs, isLoading: orgsLoading } = useCollection<OrgDoc>(orgsQuery);
+  const fetchOverview = useCallback(async () => {
+    if (!authUser) return;
+    setLoading(true);
+    try {
+      const token = await authUser.getIdToken();
+      const res = await fetch('/api/admin/overview', { headers: { authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      setAllUsers(data.users || []);
+      setAllOrgs(data.organizations || []);
+      setAllCourses(data.courses || []);
+      setAllProducts(data.products || []);
+      setAllOrders(data.orders || []);
+    } catch { /* silent */ } finally {
+      setLoading(false);
+    }
+  }, [authUser]);
 
-  const coursesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, "courses")) : null, [firestore]);
-  const { data: allCourses, isLoading: coursesLoading } = useCollection<CourseDoc>(coursesQuery);
+  useEffect(() => { fetchOverview(); }, [fetchOverview]);
 
-  const productsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, "products")) : null, [firestore]);
-  const { data: allProducts } = useCollection(productsQuery);
-
-  const ordersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, "orders")) : null, [firestore]);
-  const { data: allOrders } = useCollection<OrderDoc>(ordersQuery);
-
-  const loading = usersLoading || orgsLoading || coursesLoading;
+  const usersLoading = loading, orgsLoading = loading, coursesLoading = loading;
 
   const stats = useMemo(() => ({
     totalUsers: allUsers?.length || 0,
     totalOrgs: allOrgs?.length || 0,
     totalCourses: allCourses?.length || 0,
     totalProducts: allProducts?.length || 0,
-    activeUsers: allUsers?.filter(u => u.status === 'نشط').length || 0,
+    activeUsers: allUsers?.filter(u => u.status === 'active').length || 0,
   }), [allUsers, allOrgs, allCourses, allProducts]);
 
   const months6 = useMemo(() => Array.from({ length: 6 }, (_, i) => {
@@ -75,8 +85,8 @@ export default function AnalyticsPage() {
     if (!allUsers || !allOrgs) return [];
     return months6.map(m => ({
       month: m.label,
-      users: allUsers.filter(u => { const t = u.createdAt?.toDate?.()?.getTime() || 0; return t >= m.start && t <= m.end; }).length,
-      orgs: allOrgs.filter(o => { const t = o.createdAt?.toDate?.()?.getTime() || 0; return t >= m.start && t <= m.end; }).length,
+      users: allUsers.filter(u => { const t = u.createdAt ? new Date(u.createdAt).getTime() : 0; return t >= m.start && t <= m.end; }).length,
+      orgs: allOrgs.filter(o => { const t = o.createdAt ? new Date(o.createdAt).getTime() : 0; return t >= m.start && t <= m.end; }).length,
     }));
   }, [allUsers, allOrgs, months6]);
 
@@ -85,9 +95,9 @@ export default function AnalyticsPage() {
     return months6.map(m => ({
       month: m.label,
       sales: allOrders.filter(o => {
-        const t = o.orderDate?.toDate?.()?.getTime() || 0;
+        const t = o.createdAt ? new Date(o.createdAt).getTime() : 0;
         return t >= m.start && t <= m.end && o.status === 'delivered';
-      }).reduce((sum, o) => sum + (o.price || 0), 0),
+      }).reduce((sum, o) => sum + Number(o.totalAmount || 0), 0),
     }));
   }, [allOrders, months6]);
 

@@ -5,7 +5,7 @@ import {
   Plus, Pencil, Trash2, Search, Eye, Users, GraduationCap,
   Store, UserCheck, RefreshCw, Upload, MoreVertical, Sliders, Building2,
 } from "lucide-react";
-import { useUser } from "@/firebase/auth/use-user";
+import { useUser } from "@/hooks/use-user";
 import { uploadFile as uploadToStorage } from "@/lib/upload-file";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { useUser } from "@/firebase/auth/use-user";
+import { useUser } from "@/hooks/use-user";
 import { CheckCircle, XCircle, Package, Store, ShoppingCart, TrendingUp, MapPin, User } from "lucide-react";
 import { translateCategory } from "@/lib/product-category";
 import {

@@ -14,10 +14,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Logo } from '@/components/logo';
 import { useToast } from "@/hooks/use-toast";
-
-import { GoogleAuthProvider, signInWithPopup, getRedirectResult, signInWithRedirect, signInWithEmailAndPassword } from "firebase/auth";
-import { doc, getDoc, setDoc } from "firebase/firestore";
-import { useFirebaseApp, useFirestore, useAuth } from '@/firebase/provider';
+import { useAuthActions } from '@/hooks/use-user';
 
 const formSchema = z.object({
   email: z.string().email({ message: "الرجاء إدخال بريد إلكتروني صحيح." }),
@@ -28,8 +25,7 @@ export default function LoginPage() {
   const loginImage = PlaceHolderImages.find((image) => image.id === 'login-background');
   const { toast } = useToast();
   const router = useRouter();
-  const auth = useAuth();
-  const firestore = useFirestore();
+  const { setToken } = useAuthActions();
   const [isLoading, setIsLoading] = useState(false);
   const [authBranding, setAuthBranding] = useState({ imageUrl: '', title: '', subtitle: '' });
   const [platformLogo, setPlatformLogo] = useState('');
@@ -54,94 +50,23 @@ export default function LoginPage() {
     defaultValues: { email: "", password: "" },
   });
 
-  const getDashboardLink = (role: string) => {
-    switch (role) {
-      case 'organization': return '/organization-dashboard';
-      case 'admin': return '/admin-dashboard';
-      case 'mentor': return '/mentor-dashboard';
-      case 'coach': return '/coach-dashboard';
-      case 'merchant': return '/merchant-dashboard';
-      default: return '/dashboard';
-    }
-  };
-
-  async function handleUserProfile(uid: string, displayName: string | null, email: string | null) {
-    if (!firestore) {
-      toast({ title: "تم تسجيل الدخول!", description: `مرحباً!` });
-      router.push('/redirect');
-      return;
-    }
-    try {
-      const userDocRef = doc(firestore, 'users', uid);
-      const userDoc = await getDoc(userDocRef);
-
-      let userData: any;
-      if (userDoc.exists()) {
-        userData = userDoc.data();
-      } else {
-        userData = {
-          id: uid,
-          name: displayName || email?.split('@')[0] || 'مستخدم',
-          email: email || '',
-          role: 'beneficiary',
-          status: 'نشط',
-          createdAt: new Date().toISOString(),
-        };
-        await setDoc(userDocRef, userData);
-      }
-      toast({ title: "تم تسجيل الدخول!", description: `مرحباً ${userData.name}!` });
-      router.push('/redirect');
-    } catch {
-      toast({ title: "تم تسجيل الدخول!", description: `مرحباً!` });
-      router.push('/redirect');
-    }
-  }
-
-  useEffect(() => {
-    if (!auth) return;
-    getRedirectResult(auth).then(result => {
-      if (result?.user) {
-        handleUserProfile(result.user.uid, result.user.displayName, result.user.email);
-      }
-    }).catch(() => {});
-  }, [auth]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  async function handleGoogleSignIn() {
-    if (!auth) return;
-    setIsLoading(true);
-    try {
-      const provider = new GoogleAuthProvider();
-      try {
-        const result = await signInWithPopup(auth, provider);
-        await handleUserProfile(result.user.uid, result.user.displayName, result.user.email);
-      } catch (popupError: any) {
-        if (popupError.code === 'auth/popup-blocked' || popupError.code === 'auth/popup-closed-by-user') {
-          await signInWithRedirect(auth, provider);
-        } else {
-          throw popupError;
-        }
-      }
-    } catch (error: any) {
-      const msg = error.code === 'auth/unauthorized-domain'
-        ? 'النطاق غير مصرح به — تحقق من Authorized domains في Firebase.'
-        : error.message || 'فشل تسجيل الدخول بـ Google.';
-      toast({ variant: "destructive", title: "خطأ Google", description: msg });
-      setIsLoading(false);
-    }
-  }
-
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!auth) return;
     setIsLoading(true);
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
-      await handleUserProfile(userCredential.user.uid, userCredential.user.displayName, userCredential.user.email);
-    } catch (error: any) {
-      let errorMessage = "البريد الإلكتروني أو كلمة المرور غير صحيحة.";
-      if (error.code !== 'auth/user-not-found' && error.code !== 'auth/wrong-password' && error.code !== 'auth/invalid-credential' && error.message) {
-        errorMessage = error.message;
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(values),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'البريد الإلكتروني أو كلمة المرور غير صحيحة.');
       }
-      toast({ variant: "destructive", title: "فشل تسجيل الدخول", description: errorMessage });
+      setToken(data.token);
+      toast({ title: "تم تسجيل الدخول!", description: `مرحباً ${data.user?.name || ''}!` });
+      router.push('/redirect');
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "فشل تسجيل الدخول", description: error.message });
     } finally {
       setIsLoading(false);
     }
@@ -213,31 +138,6 @@ export default function LoginPage() {
                 </Button>
               </form>
             </Form>
-
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs">
-                <span className="bg-card px-3 text-muted-foreground">أو</span>
-              </div>
-            </div>
-
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full h-10"
-              onClick={handleGoogleSignIn}
-              disabled={isLoading}
-            >
-              <svg className="ml-2 h-4 w-4 shrink-0" viewBox="0 0 24 24">
-                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-              </svg>
-              تسجيل الدخول بـ Google
-            </Button>
           </div>
 
           <p className="text-center text-sm text-muted-foreground">

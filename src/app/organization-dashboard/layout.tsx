@@ -7,7 +7,6 @@ import {
   BookOpen, Store, MessageSquare, GraduationCap, ClipboardList, LogOut, Briefcase, Video, Quote, ClipboardCheck,
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
-import { signOut } from "firebase/auth";
 import {
   SidebarProvider, Sidebar, SidebarHeader, SidebarContent,
   SidebarMenu, SidebarMenuItem, SidebarMenuButton,
@@ -21,8 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Logo } from "@/components/logo";
-import { useUser } from "@/firebase/auth/use-user";
-import { useAuth } from "@/firebase/provider";
+import { useUser, useAuthActions } from "@/hooks/use-user";
 import { NotificationBell } from "@/components/notification-bell";
 import { MessageBell } from "@/components/message-bell";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -50,7 +48,7 @@ export default function OrganizationDashboardLayout({ children }: { children: Re
   const pathname = usePathname();
   const router = useRouter();
   const { user: authUser, userProfile } = useUser();
-  const auth = useAuth();
+  const { logout } = useAuthActions();
   const [orgName, setOrgName] = useState('');
   const [orgLogo, setOrgLogo] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
@@ -90,7 +88,7 @@ export default function OrganizationDashboardLayout({ children }: { children: Re
   }, [fetchOrg]);
 
   const handleLogout = async () => {
-    if (auth) await signOut(auth);
+    logout();
     router.push("/login");
   };
 

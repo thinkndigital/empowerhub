@@ -6,11 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { useCollection } from "@/firebase/firestore/use-collection";
-import { collection, query, orderBy, limit } from "firebase/firestore";
-import { useFirestore, useMemoFirebase } from "@/firebase/provider";
+import { useUser } from "@/hooks/use-user";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const statColors = [
@@ -42,10 +40,35 @@ const StatCard = ({
   );
 };
 
+type OverviewUser = { id: string; name?: string; role?: string; status?: string; createdAt?: string };
+type OverviewOrg = { id: string };
+type OverviewCourse = { id: string };
+
 export default function AdminDashboardPage() {
   const { toast } = useToast();
+  const { user: authUser } = useUser();
   const [seeding, setSeeding] = useState(false);
-  const firestore = useFirestore();
+  const [users, setUsers] = useState<OverviewUser[] | null>(null);
+  const [orgs, setOrgs] = useState<OverviewOrg[] | null>(null);
+  const [courses, setCourses] = useState<OverviewCourse[] | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetchOverview = useCallback(async () => {
+    if (!authUser) return;
+    setLoading(true);
+    try {
+      const token = await authUser.getIdToken();
+      const res = await fetch('/api/admin/overview', { headers: { authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      setUsers(data.users || []);
+      setOrgs(data.organizations || []);
+      setCourses(data.courses || []);
+    } catch { /* silent */ } finally {
+      setLoading(false);
+    }
+  }, [authUser]);
+
+  useEffect(() => { fetchOverview(); }, [fetchOverview]);
 
   async function seedDemo() {
     setSeeding(true);
@@ -55,6 +78,7 @@ export default function AdminDashboardPage() {
       if (!res.ok) throw new Error(data.error || 'فشل');
       const counts = Object.entries(data.seeded).map(([k, v]) => `${k}: ${v}`).join('، ');
       toast({ title: 'تم إضافة البيانات التجريبية', description: counts });
+      fetchOverview();
     } catch (e: any) {
       toast({ variant: 'destructive', title: 'خطأ', description: e.message });
     } finally {
@@ -77,23 +101,14 @@ export default function AdminDashboardPage() {
     }
   }
 
-  const usersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, "users")) : null, [firestore]);
-  const { data: users, isLoading: usersLoading } = useCollection(usersQuery);
+  const usersLoading = loading, orgsLoading = loading, coursesLoading = loading;
 
-  const orgsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, "organizations")) : null, [firestore]);
-  const { data: orgs, isLoading: orgsLoading } = useCollection(orgsQuery);
+  const recentUsers = [...(users || [])]
+    .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
+    .slice(0, 5);
 
-  const coursesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, "courses")) : null, [firestore]);
-  const { data: courses, isLoading: coursesLoading } = useCollection(coursesQuery);
-
-  const recentUsersQuery = useMemoFirebase(() =>
-    firestore ? query(collection(firestore, "users"), orderBy("createdAt", "desc"), limit(5)) : null,
-    [firestore]
-  );
-  const { data: recentUsers } = useCollection<{ id: string; name: string; role: string; createdAt: string }>(recentUsersQuery);
-
-  const activeUsers = users?.filter((u: any) => u.status === 'نشط' || u.status === 'نشطة') || [];
-  const beneficiaries = users?.filter((u: any) => u.role === 'beneficiary') || [];
+  const activeUsers = users?.filter((u) => u.status === 'active') || [];
+  const beneficiaries = users?.filter((u) => u.role === 'beneficiary') || [];
 
   const roleLabels: Record<string, string> = {
     admin: 'مشرف',
@@ -177,7 +192,7 @@ export default function AdminDashboardPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{user.name || 'مستخدم'}</p>
-                  <p className="text-xs text-muted-foreground">{roleLabels[user.role] || user.role}</p>
+                  <p className="text-xs text-muted-foreground">{roleLabels[user.role || ''] || user.role}</p>
                 </div>
               </div>
             ))}

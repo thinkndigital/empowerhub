@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, useEffect, useCallback } from "react"
 import { Bar, BarChart, CartesianGrid, Line, LineChart, Pie, PieChart, Cell, XAxis, YAxis, Tooltip, Legend } from "recharts"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart"
@@ -13,10 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Progress } from "@/components/ui/progress"
-import { useUser } from "@/firebase/auth/use-user"
-import { useFirestore, useMemoFirebase } from "@/firebase/provider"
-import { useCollection } from "@/firebase/firestore/use-collection"
-import { collection, query, where, orderBy } from "firebase/firestore"
+import { useUser } from "@/hooks/use-user"
 import { format, subMonths, startOfMonth } from "date-fns"
 import { ar } from "date-fns/locale"
 
@@ -31,43 +28,50 @@ const CATEGORY_LABELS: Record<string, string> = {
 }
 const PIE_COLORS = ["hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"]
 
-type Order = { id: string; status: string; price?: number; orderDate?: any; productName?: string }
+type Order = { id: string; status: string; totalAmount?: string | number; createdAt?: string; productName?: string }
 type Session = { id: string; status: string; date: string }
-type Product = { id: string; name: string; price: number; category?: string; stock?: number }
+type Product = { id: string; name: string; price: string | number; category?: string; stock?: number }
 
 export default function ReportsPage() {
   const { toast } = useToast();
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [exportOptions, setExportOptions] = useState({ summary: true, revenue: true, progress: true, salesCategory: true });
   const { user: authUser, userProfile } = useUser();
-  const firestore = useFirestore();
 
-  const ordersQuery = useMemoFirebase(() => {
-    if (!firestore || !authUser) return null;
-    return query(collection(firestore, "orders"), where("beneficiaryId", "==", authUser.uid));
-  }, [firestore, authUser]);
-  const { data: orders, isLoading: ordersLoading } = useCollection<Order>(ordersQuery);
+  const [orders, setOrders] = useState<Order[] | null>(null);
+  const [sessions, setSessions] = useState<Session[] | null>(null);
+  const [products, setProducts] = useState<Product[] | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const sessionsQuery = useMemoFirebase(() => {
-    if (!firestore || !authUser) return null;
-    return query(collection(firestore, "sessions"), where("attendees", "array-contains", authUser.uid));
-  }, [firestore, authUser]);
-  const { data: sessions, isLoading: sessionsLoading } = useCollection<Session>(sessionsQuery);
+  const fetchData = useCallback(async () => {
+    if (!authUser) return;
+    setLoading(true);
+    try {
+      const token = await authUser.getIdToken();
+      const headers = { authorization: `Bearer ${token}` };
+      const [storeRes, sessionsRes] = await Promise.all([
+        fetch('/api/beneficiary/store', { headers }),
+        fetch('/api/beneficiary/sessions', { headers }),
+      ]);
+      const [storeData, sessionsData] = await Promise.all([storeRes.json(), sessionsRes.json()]);
+      setOrders(storeData.orders || []);
+      setProducts(storeData.products || []);
+      setSessions(sessionsData.sessions || []);
+    } catch {
+      setOrders([]); setProducts([]); setSessions([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [authUser]);
 
-  const productsQuery = useMemoFirebase(() => {
-    if (!firestore || !authUser) return null;
-    return query(collection(firestore, "products"), where("beneficiaryId", "==", authUser.uid));
-  }, [firestore, authUser]);
-  const { data: products, isLoading: productsLoading } = useCollection<Product>(productsQuery);
-
-  const loading = ordersLoading || sessionsLoading || productsLoading;
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   const stats = useMemo(() => {
     const deliveredOrders = orders?.filter(o => o.status === 'delivered') || [];
-    const totalRevenue = deliveredOrders.reduce((sum, o) => sum + (o.price || 0), 0);
+    const totalRevenue = deliveredOrders.reduce((sum, o) => sum + Number(o.totalAmount || 0), 0);
     const completedSessions = sessions?.filter(s => s.status === 'completed').length || 0;
     const progress = (userProfile as any)?.progress || 0;
-    const topProduct = products?.sort((a, b) => (b.price || 0) - (a.price || 0))[0];
+    const topProduct = products?.slice().sort((a, b) => Number(b.price || 0) - Number(a.price || 0))[0];
     return { totalRevenue, completedSessions, progress, topProduct };
   }, [orders, sessions, products, userProfile]);
 
@@ -79,10 +83,10 @@ export default function ReportsPage() {
       const end = new Date(d.getFullYear(), d.getMonth() + 1, 0).getTime();
       const revenue = orders
         .filter(o => {
-          const t = o.orderDate?.toDate?.()?.getTime() || 0;
+          const t = o.createdAt ? new Date(o.createdAt).getTime() : 0;
           return t >= start && t <= end && o.status === 'delivered';
         })
-        .reduce((sum, o) => sum + (o.price || 0), 0);
+        .reduce((sum, o) => sum + Number(o.totalAmount || 0), 0);
       return { date: format(d, 'MMM', { locale: ar }), revenue };
     });
   }, [orders]);
@@ -94,7 +98,7 @@ export default function ReportsPage() {
       const product = products.find(p => p.name === order.productName);
       const cat = product?.category || 'other';
       const label = CATEGORY_LABELS[cat] || cat;
-      categoryMap[label] = (categoryMap[label] || 0) + (order.price || 0);
+      categoryMap[label] = (categoryMap[label] || 0) + Number(order.totalAmount || 0);
     });
     return Object.entries(categoryMap).map(([name, value]) => ({ name, value }));
   }, [products, orders]);

@@ -1,9 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
-import { useAuth, useFirestore } from "@/firebase/provider";
+import { useAuthActions } from "@/hooks/use-user";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,8 +11,7 @@ import { CheckCircle2, Shield, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 
 export default function SetupPage() {
-  const auth = useAuth();
-  const firestore = useFirestore();
+  const { setToken } = useAuthActions();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -24,30 +21,22 @@ export default function SetupPage() {
 
   const handleSetup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!auth || !firestore) { setError("الخدمة غير متاحة مؤقتاً."); return; }
     setLoading(true);
     setError("");
 
     try {
-      const cred = await createUserWithEmailAndPassword(auth, email, password);
-      const uid = cred.user.uid;
-
-      await setDoc(doc(firestore, "users", uid), {
-        id: uid,
-        name,
-        email,
-        role: "admin",
-        status: "نشط",
-        createdAt: new Date().toISOString(),
+      const res = await fetch("/api/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password, role: "admin" }),
       });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "حدث خطأ غير متوقع.");
 
+      if (data.token) setToken(data.token);
       setDone(true);
     } catch (err: any) {
-      if (err.code === "auth/email-already-in-use") {
-        setError("هذا البريد مستخدم بالفعل. حاول تسجيل الدخول.");
-      } else {
-        setError(err.message || "حدث خطأ غير متوقع.");
-      }
+      setError(err.message || "حدث خطأ غير متوقع.");
     } finally {
       setLoading(false);
     }

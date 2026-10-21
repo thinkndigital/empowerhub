@@ -6,11 +6,7 @@ import {
   BookOpen, LayoutGrid, Search, Settings, Store,
   Users, BarChart3, MessageSquare, HelpCircle, LogOut, Layers, Contact,
 } from "lucide-react";
-import { signOut } from "firebase/auth";
-import { doc } from "firebase/firestore";
 import { useEffect, useState } from "react";
-import { useAuth, useFirestore, useMemoFirebase } from "@/firebase/provider";
-import { useDoc } from "@/firebase/firestore/use-doc";
 import Image from "next/image";
 
 import {
@@ -26,7 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Logo } from "@/components/logo";
-import { useUser } from "@/firebase/auth/use-user";
+import { useUser, useAuthActions } from "@/hooks/use-user";
 import { NotificationBell } from "@/components/notification-bell";
 import { MessageBell } from "@/components/message-bell";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -47,7 +43,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
   const router = useRouter();
   const { user: authUser, userProfile: realUserProfile, loading } = useUser();
-  const auth = useAuth();
+  const { logout } = useAuthActions();
 
   const [avatarUrl, setAvatarUrl] = useState('');
   const [platformLogo, setPlatformLogo] = useState('');
@@ -68,12 +64,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, []);
 
   const handleLogout = async () => {
-    if (auth) await signOut(auth);
+    logout();
     router.push("/login");
   };
 
   const userProfile = realUserProfile ?? null;
-  const firestore = useFirestore();
 
   const [profileTimedOut, setProfileTimedOut] = useState(false);
   useEffect(() => {
@@ -82,11 +77,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return () => clearTimeout(t);
   }, [authUser, userProfile]);
 
-  const orgRef = useMemoFirebase(() => {
-    if (!firestore || !userProfile?.organizationId) return null;
-    return doc(firestore, 'organizations', userProfile.organizationId);
-  }, [firestore, userProfile?.organizationId]);
-  const { data: organization } = useDoc<any>(orgRef);
+  const [organization, setOrganization] = useState<any>(null);
+  useEffect(() => {
+    if (!authUser || !userProfile?.organizationId) { setOrganization(null); return; }
+    authUser.getIdToken().then(token =>
+      fetch('/api/org/settings', { headers: { authorization: `Bearer ${token}` } })
+        .then(r => r.json()).then(j => setOrganization(j.org || null))
+        .catch(() => {})
+    );
+  }, [authUser, userProfile?.organizationId]);
 
   useEffect(() => {
     if (!organization?.primaryColor) return;

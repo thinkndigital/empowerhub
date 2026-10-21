@@ -21,9 +21,7 @@ import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { Logo } from "@/components/logo";
 import { useToast } from "@/hooks/use-toast";
 
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
-import { useAuth, useFirestore } from "@/firebase/provider";
+import { useAuthActions } from "@/hooks/use-user";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -73,8 +71,7 @@ function RegisterForm() {
   const { toast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const auth = useAuth();
-  const firestore = useFirestore();
+  const { setToken } = useAuthActions();
 
   const [isLoading, setIsLoading] = useState(false);
   const [step, setStep] = useState<Step>("form");
@@ -212,13 +209,7 @@ function RegisterForm() {
       try { data = await res.json(); } catch { if (!res.ok) throw new Error(`فشل الطلب (${res.status})`); }
       if (!res.ok) throw new Error(data.error || "فشل إنشاء الحساب.");
 
-      let signedInUid: string | null = data.uid || null;
-      if (auth) {
-        try {
-          const cred = await signInWithEmailAndPassword(auth, values.email, values.password);
-          signedInUid = cred.user.uid;
-        } catch { /* non-fatal */ }
-      }
+      const signedInUid: string | null = data.uid || null;
 
       if (orgInviteParam && signedInUid) {
         try {
@@ -230,32 +221,7 @@ function RegisterForm() {
         } catch { /* non-fatal */ }
       }
 
-      if (signedInUid) {
-        sessionStorage.setItem("pending_role", values.role);
-        sessionStorage.setItem("pending_uid", signedInUid);
-        sessionStorage.setItem("pending_name", values.name);
-        sessionStorage.setItem("pending_email", values.email);
-        if (data.organizationId) sessionStorage.setItem("pending_org_id", data.organizationId);
-      }
-
-      if (firestore && signedInUid) {
-        try {
-          await setDoc(
-            doc(firestore, "users", signedInUid),
-            {
-              id: signedInUid,
-              name: values.name,
-              email: values.email,
-              role: values.role,
-              status: "نشط",
-              progress: 0,
-              createdAt: new Date().toISOString(),
-              ...(data.organizationId ? { organizationId: data.organizationId } : {}),
-            },
-            { merge: true }
-          );
-        } catch { /* non-fatal */ }
-      }
+      if (data.token) setToken(data.token);
 
       // Org with paid plan → pending payment (server decides based on real plan price)
       if (values.role === "organization" && data.requiresPayment) {
@@ -270,9 +236,7 @@ function RegisterForm() {
       toast({ title: "تم إنشاء الحساب بنجاح!", description: "مرحباً بك في EmpowerHub!" });
       router.push("/redirect");
     } catch (error: any) {
-      let msg = error.message || "فشل إنشاء الحساب.";
-      if (error.code === "auth/email-already-in-use") msg = "هذا البريد الإلكتروني مستخدم بالفعل.";
-      else if (error.code === "auth/weak-password") msg = "كلمة المرور ضعيفة جدًا (6 أحرف على الأقل).";
+      const msg = error.message || "فشل إنشاء الحساب.";
       toast({ variant: "destructive", title: "حدث خطأ", description: msg });
       setStep("form");
     } finally {

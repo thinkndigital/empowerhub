@@ -7,7 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { TrendingUp, BookOpen, Calendar, Users, MessageSquare } from "lucide-react";
-import { useUser } from "@/firebase/auth/use-user";
+import { useUser } from "@/hooks/use-user";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 

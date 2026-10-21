@@ -1,13 +1,25 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { useUser } from '@/firebase/auth/use-user';
+import { useUser } from '@/hooks/use-user';
 
 export default function PaymentCallbackPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-background" dir="rtl">
+        <Loader2 className="h-16 w-16 text-primary animate-spin" />
+      </div>
+    }>
+      <PaymentCallbackContent />
+    </Suspense>
+  );
+}
+
+function PaymentCallbackContent() {
   const searchParams = useSearchParams();
   const { user: authUser, loading: authLoading } = useUser();
   const [status, setStatus] = useState<'loading' | 'paid' | 'failed'>('loading');

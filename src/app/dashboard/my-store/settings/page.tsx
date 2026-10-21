@@ -11,7 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { useUser } from "@/firebase/auth/use-user";
+import { useUser } from "@/hooks/use-user";
 import { uploadFile as uploadToStorage } from "@/lib/upload-file";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Save, Building, Facebook, Instagram, Twitter, MessageCircle, Link2, Copy, Check } from "lucide-react";

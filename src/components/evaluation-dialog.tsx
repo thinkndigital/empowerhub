@@ -11,10 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore } from '@/firebase/provider';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
+import { useUser } from '@/hooks/use-user';
 
 const evaluationSchema = z.object({
   rating: z.number().min(1, { message: 'التقييم مطلوب.' }).max(5),
@@ -43,7 +40,7 @@ export function EvaluationDialog({
   type,
 }: EvaluationDialogProps) {
   const { toast } = useToast();
-  const firestore = useFirestore();
+  const { user } = useUser();
   const [hoverRating, setHoverRating] = useState(0);
 
   const form = useForm<EvaluationFormValues>({
@@ -57,35 +54,34 @@ export function EvaluationDialog({
   const rating = form.watch('rating');
 
   const onSubmit = async (values: EvaluationFormValues) => {
-    if (!firestore) return;
-    const evaluationData = {
-      ...values,
-      sessionId,
-      evaluatorId,
-      evaluatedId,
-      type,
-      createdAt: serverTimestamp(),
-    };
+    if (!user) return;
 
     try {
-      await addDoc(collection(firestore, 'evaluations'), evaluationData);
+      const token = await user.getIdToken();
+      const res = await fetch('/api/evaluations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          sessionId,
+          evaluatedId,
+          type,
+          rating: values.rating,
+          comment: values.comment,
+        }),
+      });
+      if (!res.ok) throw new Error();
       toast({
         title: 'تم إرسال التقييم',
         description: `شكرًا لك على تقييم ${evaluatedName}.`,
       });
       form.reset();
       onOpenChange(false);
-    } catch (error) {
+    } catch {
       toast({
         variant: 'destructive',
         title: 'خطأ!',
         description: 'لم نتمكن من حفظ تقييمك.',
       });
-      errorEmitter.emit('permission-error', new FirestorePermissionError({
-        path: 'evaluations',
-        operation: 'create',
-        requestResourceData: evaluationData,
-      }));
     }
   };
 

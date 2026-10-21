@@ -76,6 +76,18 @@ CREATE TABLE `coach_contracts` (
 	CONSTRAINT `coach_contracts_uniq` UNIQUE(`coach_id`,`organization_id`)
 );
 --> statement-breakpoint
+CREATE TABLE `contact_requests` (
+	`id` varchar(36) NOT NULL,
+	`sender_id` varchar(36) NOT NULL,
+	`sender_name` varchar(255),
+	`organization_id` varchar(36),
+	`subject` varchar(255),
+	`message` text,
+	`status` enum('pending','resolved') NOT NULL DEFAULT 'pending',
+	`created_at` timestamp NOT NULL DEFAULT (now()),
+	CONSTRAINT `contact_requests_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
 CREATE TABLE `content_offers` (
 	`id` varchar(36) NOT NULL,
 	`organization_id` varchar(36) NOT NULL,
@@ -154,6 +166,18 @@ CREATE TABLE `enrollments` (
 	`updated_at` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	CONSTRAINT `enrollments_id` PRIMARY KEY(`id`),
 	CONSTRAINT `enrollments_course_user_uniq` UNIQUE(`course_id`,`user_id`)
+);
+--> statement-breakpoint
+CREATE TABLE `evaluations` (
+	`id` varchar(36) NOT NULL,
+	`session_id` varchar(36) NOT NULL,
+	`evaluator_id` varchar(36) NOT NULL,
+	`evaluated_id` varchar(36) NOT NULL,
+	`type` varchar(50) NOT NULL,
+	`rating` tinyint NOT NULL,
+	`comment` text,
+	`created_at` timestamp NOT NULL DEFAULT (now()),
+	CONSTRAINT `evaluations_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
 CREATE TABLE `group_members` (
@@ -532,11 +556,13 @@ CREATE TABLE `users` (
 --> statement-breakpoint
 CREATE INDEX `articles_org_idx` ON `articles` (`organization_id`);--> statement-breakpoint
 CREATE INDEX `assessments_org_idx` ON `assessments` (`organization_id`);--> statement-breakpoint
+CREATE INDEX `contact_requests_org_idx` ON `contact_requests` (`organization_id`);--> statement-breakpoint
 CREATE INDEX `conversation_participants_user_idx` ON `conversation_participants` (`user_id`);--> statement-breakpoint
 CREATE INDEX `course_lessons_course_idx` ON `course_lessons` (`course_id`);--> statement-breakpoint
 CREATE INDEX `courses_org_idx` ON `courses` (`organization_id`);--> statement-breakpoint
 CREATE INDEX `courses_creator_idx` ON `courses` (`created_by`);--> statement-breakpoint
 CREATE INDEX `enrollments_user_idx` ON `enrollments` (`user_id`);--> statement-breakpoint
+CREATE INDEX `evaluations_session_idx` ON `evaluations` (`session_id`);--> statement-breakpoint
 CREATE INDEX `groups_org_idx` ON `groups` (`organization_id`);--> statement-breakpoint
 CREATE INDEX `live_session_reg_user_idx` ON `live_session_registrations` (`user_id`);--> statement-breakpoint
 CREATE INDEX `live_sessions_org_idx` ON `live_sessions` (`organization_id`);--> statement-breakpoint

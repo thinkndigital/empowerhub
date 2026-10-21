@@ -2,8 +2,8 @@
 
 import { useState, useCallback } from "react";
 import Link from "next/link";
-import type { User } from "firebase/auth";
-import { useUser } from "@/firebase/auth/use-user";
+import type { AuthUser } from "@/hooks/use-user";
+import { useUser } from "@/hooks/use-user";
 import { useOrgUsers } from "@/hooks/use-org-users";
 import type { OrgUser } from "@/hooks/use-org-users";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -26,7 +26,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
-async function apiAction(user: User, body: object) {
+async function apiAction(user: AuthUser, body: object) {
   const token = await user.getIdToken();
   const res = await fetch("/api/org/action", {
     method: "POST",

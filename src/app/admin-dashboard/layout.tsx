@@ -7,9 +7,7 @@ import {
   Shield, BarChartHorizontal, BookOpen, MessageSquare, LogOut,
   Video, GraduationCap, FileText, Briefcase, Store, Quote, Layout,
 } from "lucide-react";
-import { signOut } from "firebase/auth";
 import { useMemo, useState, useEffect } from "react";
-import { useAuth } from "@/firebase/provider";
 
 import {
   SidebarProvider, Sidebar, SidebarHeader, SidebarContent,
@@ -24,7 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Logo } from "@/components/logo";
-import { useUser, type UserProfile } from "@/firebase/auth/use-user";
+import { useUser, useAuthActions, type UserProfile } from "@/hooks/use-user";
 import { NotificationBell } from "@/components/notification-bell";
 import { MessageBell } from "@/components/message-bell";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -50,7 +48,7 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
   const pathname = usePathname();
   const router = useRouter();
   const { user: authUser, userProfile: realUserProfile, loading } = useUser();
-  const auth = useAuth();
+  const { logout } = useAuthActions();
   const [platformLogo, setPlatformLogo] = useState('');
 
   useEffect(() => {
@@ -60,12 +58,13 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
   }, []);
 
   const handleLogout = async () => {
-    if (auth) await signOut(auth);
+    logout();
     router.push("/login");
   };
 
   const demoUserProfile = useMemo<UserProfile>(() => ({
     id: 'demo-admin',
+    uid: 'demo-admin',
     name: 'مشرف تجريبي',
     email: 'admin@example.com',
     role: 'admin',

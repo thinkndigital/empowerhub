@@ -49,13 +49,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
-import { useCollection } from "@/firebase/firestore/use-collection";
-import { collection, query, addDoc, doc, updateDoc, deleteDoc } from "firebase/firestore";
-import { useFirestore, useMemoFirebase } from "@/firebase/provider";
+import { useState, useEffect, useCallback } from "react";
+import { useUser } from "@/hooks/use-user";
 import { Skeleton } from "@/components/ui/skeleton";
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
 
 
 type Course = {
@@ -63,7 +59,7 @@ type Course = {
   title: string;
   category?: string;
   description?: string;
-  status?: "منشورة" | "مسودة";
+  status?: "published" | "draft";
 };
 
 const formSchema = z.object({
@@ -75,16 +71,26 @@ const formSchema = z.object({
 
 export default function CoursesPage() {
     const { toast } = useToast();
+    const { user: authUser } = useUser();
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [deleteCourse, setDeleteCourse] = useState<Course | null>(null);
-    const firestore = useFirestore();
+    const [courses, setCourses] = useState<Course[]>([]);
+    const [loading, setLoading] = useState(true);
 
-    const coursesQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
-        return query(collection(firestore, "courses"));
-    }, [firestore]);
+    const fetchCourses = useCallback(async () => {
+        if (!authUser) return;
+        setLoading(true);
+        try {
+            const token = await authUser.getIdToken();
+            const res = await fetch('/api/admin/courses', { headers: { authorization: `Bearer ${token}` } });
+            const data = await res.json();
+            setCourses(data.courses || []);
+        } catch { /* silent */ } finally {
+            setLoading(false);
+        }
+    }, [authUser]);
 
-    const { data: courses, isLoading: loading } = useCollection<Course>(coursesQuery);
+    useEffect(() => { fetchCourses(); }, [fetchCourses]);
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -92,53 +98,61 @@ export default function CoursesPage() {
     });
 
     async function onAddSubmit(values: z.infer<typeof formSchema>) {
-        if (!firestore) return;
-        const newCourseData = { ...values, status: "مسودة" as const };
-        const coursesCollection = collection(firestore, "courses");
-        
-        addDoc(coursesCollection, newCourseData)
-            .then(() => {
-                toast({ title: "تم بنجاح!", description: `تمت إضافة دورة "${values.title}" كمسودة.` });
-                form.reset();
-                setIsAddDialogOpen(false);
-            })
-            .catch((serverError) => {
-                toast({ variant: "destructive", title: "حدث خطأ!", description: "لم نتمكن من إضافة الدورة." });
-                errorEmitter.emit('permission-error', new FirestorePermissionError({ path: coursesCollection.path, operation: 'create', requestResourceData: newCourseData }));
+        if (!authUser) return;
+        try {
+            const token = await authUser.getIdToken();
+            const res = await fetch('/api/admin/courses', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
+                body: JSON.stringify(values),
             });
+            if (!res.ok) throw new Error();
+            toast({ title: "تم بنجاح!", description: `تمت إضافة دورة "${values.title}" كمسودة.` });
+            form.reset();
+            setIsAddDialogOpen(false);
+            fetchCourses();
+        } catch {
+            toast({ variant: "destructive", title: "حدث خطأ!", description: "لم نتمكن من إضافة الدورة." });
+        }
     }
-    
+
     async function handlePublish(course: Course) {
-        if (!firestore) return;
-        const courseRef = doc(firestore, "courses", course.id);
-        const newStatus = course.status === "منشورة" ? "مسودة" : "منشورة";
-        
-        updateDoc(courseRef, { status: newStatus })
-        .then(() => {
+        if (!authUser) return;
+        const newStatus = course.status === "published" ? "draft" : "published";
+        try {
+            const token = await authUser.getIdToken();
+            const res = await fetch(`/api/admin/courses/${course.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
+                body: JSON.stringify({ status: newStatus }),
+            });
+            if (!res.ok) throw new Error();
             toast({
-                title: newStatus === "منشورة" ? "تم النشر!" : "تم الإلغاء!",
+                title: newStatus === "published" ? "تم النشر!" : "تم الإلغاء!",
                 description: `تم تحديث حالة دورة "${course.title}".`,
             });
-        }).catch((err) => {
+            fetchCourses();
+        } catch {
              toast({ variant: "destructive", title: "خطأ!", description: "فشلت عملية التحديث."});
-             const permissionError = new FirestorePermissionError({ path: courseRef.path, operation: 'update', requestResourceData: { status: newStatus } });
-             errorEmitter.emit('permission-error', permissionError);
-        });
+        }
     }
-    
+
     const handleDelete = async () => {
-        if (!deleteCourse || !firestore) return;
-        const courseRef = doc(firestore, 'courses', deleteCourse.id);
-        deleteDoc(courseRef)
-            .then(() => {
-                toast({ variant: "destructive", title: "تم الحذف!", description: `تم حذف دورة "${deleteCourse.title}".` });
-                setDeleteCourse(null);
-            })
-            .catch((serverError) => {
-                toast({ variant: "destructive", title: "حدث خطأ!", description: "لم نتمكن من حذف الدورة." });
-                errorEmitter.emit('permission-error', new FirestorePermissionError({ path: courseRef.path, operation: 'delete' }));
-                setDeleteCourse(null);
+        if (!deleteCourse || !authUser) return;
+        try {
+            const token = await authUser.getIdToken();
+            const res = await fetch(`/api/admin/courses/${deleteCourse.id}`, {
+                method: 'DELETE',
+                headers: { authorization: `Bearer ${token}` },
             });
+            if (!res.ok) throw new Error();
+            toast({ variant: "destructive", title: "تم الحذف!", description: `تم حذف دورة "${deleteCourse.title}".` });
+            setDeleteCourse(null);
+            fetchCourses();
+        } catch {
+            toast({ variant: "destructive", title: "حدث خطأ!", description: "لم نتمكن من حذف الدورة." });
+            setDeleteCourse(null);
+        }
     }
 
     const handleExport = () => {
@@ -223,8 +237,8 @@ export default function CoursesPage() {
                 <TableCell className="font-medium">{course.title}</TableCell>
                  <TableCell className="hidden md:table-cell">{course.category || 'غير مصنف'}</TableCell>
                 <TableCell className="text-center">
-                  <Badge variant={course.status === "منشورة" ? "default" : "secondary"}>
-                    {course.status || 'مسودة'}
+                  <Badge variant={course.status === "published" ? "default" : "secondary"}>
+                    {course.status === "published" ? "منشورة" : "مسودة"}
                   </Badge>
                 </TableCell>
                 <TableCell>
@@ -244,8 +258,8 @@ export default function CoursesPage() {
                          </Link>
                       </DropdownMenuItem>
                        <DropdownMenuItem onClick={() => handlePublish(course)}>
-                         {course.status === "منشورة" ? <X className="ml-2 h-4 w-4" /> : <Check className="ml-2 h-4 w-4" />}
-                         {course.status === "منشورة" ? 'إلغاء النشر' : 'نشر الدورة'}
+                         {course.status === "published" ? <X className="ml-2 h-4 w-4" /> : <Check className="ml-2 h-4 w-4" />}
+                         {course.status === "published" ? 'إلغاء النشر' : 'نشر الدورة'}
                        </DropdownMenuItem>
                       <DropdownMenuItem className="text-red-500" onSelect={(e) => { e.preventDefault(); setDeleteCourse(course); }}>
                           <Trash2 className="ml-2 h-4 w-4" />

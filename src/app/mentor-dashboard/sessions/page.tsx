@@ -19,10 +19,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
-import { useUser } from "@/firebase/auth/use-user";
+import { useUser } from "@/hooks/use-user";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EvaluationDialog } from "@/components/evaluation-dialog";
-import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { uploadFile as uploadToStorage } from "@/lib/upload-file";
 
 type Beneficiary = { id: string; name?: string };
@@ -70,8 +69,6 @@ export default function MentorSessionsPage() {
   const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
-  const [googleToken, setGoogleToken] = useState<string | null>(null);
-  const [googleLinking, setGoogleLinking] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [isPublic, setIsPublic] = useState(false);
   const [editingSession, setEditingSession] = useState<Session | null>(null);
@@ -187,51 +184,6 @@ export default function MentorSessionsPage() {
     return uploadToStorage(file, folder, token);
   }
 
-  async function handleLinkGoogle() {
-    setGoogleLinking(true);
-    try {
-      const auth = getAuth();
-      const provider = new GoogleAuthProvider();
-      provider.addScope('https://www.googleapis.com/auth/calendar.events');
-      const result = await signInWithPopup(auth, provider);
-      const credential = GoogleAuthProvider.credentialFromResult(result);
-      const token = credential?.accessToken || null;
-      setGoogleToken(token);
-      toast({ title: "تم ربط حساب Google", description: "يمكنك الآن إنشاء روابط Google Meet تلقائياً." });
-    } catch (e: any) {
-      toast({ variant: 'destructive', title: 'فشل ربط Google', description: e.message });
-    } finally {
-      setGoogleLinking(false);
-    }
-  }
-
-  async function generateMeetLink(title: string, startIso: string, durationMinutes: number): Promise<string | null> {
-    if (!googleToken) return null;
-    try {
-      const endDate = new Date(new Date(startIso).getTime() + durationMinutes * 60000);
-      const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events?conferenceDataVersion=1', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${googleToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          summary: title,
-          start: { dateTime: startIso },
-          end: { dateTime: endDate.toISOString() },
-          conferenceData: {
-            createRequest: {
-              requestId: Math.random().toString(36).substring(2),
-              conferenceSolutionKey: { type: 'hangoutsMeet' },
-            },
-          },
-        }),
-      });
-      if (!res.ok) return null;
-      const data = await res.json();
-      return data.conferenceData?.entryPoints?.[0]?.uri || null;
-    } catch {
-      return null;
-    }
-  }
-
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!authUser) return;
     if (!isPublic && !values.beneficiaryId) {
@@ -243,11 +195,7 @@ export default function MentorSessionsPage() {
     const dt = new Date(values.date);
     dt.setHours(hours, minutes);
     try {
-      let meetLink = values.meetLink || '';
-      if (googleToken && !meetLink) {
-        const generated = await generateMeetLink(values.title, dt.toISOString(), values.duration);
-        if (generated) meetLink = generated;
-      }
+      const meetLink = values.meetLink || '';
 
       const token = await authUser.getIdToken();
 
@@ -569,13 +517,6 @@ export default function MentorSessionsPage() {
                         <Button type="button" variant="outline" onClick={() => field.onChange(`https://meet.google.com/lookup/${Math.random().toString(36).substring(2, 10)}`)}>إنشاء رابط</Button>
                       </div>
                       <FormDescription>يمكنك لصق رابط جلسة حالي أو إنشاء رابط جديد.</FormDescription>
-                      {!googleToken ? (
-                        <Button type="button" variant="secondary" size="sm" className="mt-2 w-full" onClick={handleLinkGoogle} disabled={googleLinking}>
-                          {googleLinking ? 'جارٍ الربط...' : 'ربط حساب Google لإنشاء رابط Meet تلقائياً'}
-                        </Button>
-                      ) : (
-                        <p className="text-xs text-green-600 mt-1">تم ربط حساب Google — سيتم إنشاء رابط Meet تلقائياً عند الجدولة.</p>
-                      )}
                       <FormMessage />
                     </FormItem>
                   )} />

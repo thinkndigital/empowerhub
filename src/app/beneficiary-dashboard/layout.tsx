@@ -6,7 +6,6 @@ import {
   LayoutGrid, Search, Settings, MessageSquare,
   BookOpen, Calendar, TrendingUp, ShoppingBag, ClipboardList, LogOut, ClipboardCheck, Layers, Users,
 } from "lucide-react";
-import { signOut } from "firebase/auth";
 import { useState, useEffect, useCallback } from "react";
 import {
   SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarMenu,
@@ -20,8 +19,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Logo } from "@/components/logo";
-import { useUser } from "@/firebase/auth/use-user";
-import { useAuth } from "@/firebase/provider";
+import { useUser, useAuthActions } from "@/hooks/use-user";
 import { NotificationBell } from "@/components/notification-bell";
 import { MessageBell } from "@/components/message-bell";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -44,7 +42,7 @@ export default function BeneficiaryDashboardLayout({ children }: { children: Rea
   const pathname = usePathname();
   const router = useRouter();
   const { user: authUser, userProfile } = useUser();
-  const auth = useAuth();
+  const { logout } = useAuthActions();
 
   const displayName = userProfile?.name || authUser?.displayName || 'مستفيد';
   const displayEmail = userProfile?.email || authUser?.email || '';
@@ -76,7 +74,7 @@ export default function BeneficiaryDashboardLayout({ children }: { children: Rea
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const handleLogout = async () => {
-    if (auth) await signOut(auth);
+    logout();
     router.push("/login");
   };
 

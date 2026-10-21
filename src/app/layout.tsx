@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Toaster } from '@/components/ui/toaster';
 import './globals.css';
-import { FirebaseProviderDynamic } from '@/components/firebase-provider-dynamic';
+import { AuthProvider } from '@/hooks/use-user';
 import { ThemeProvider } from '@/components/theme-provider';
 import { getSetting } from '@/lib/app-settings';
 
@@ -102,10 +102,10 @@ export default async function RootLayout({
       </head>
       <body className="font-body antialiased">
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} storageKey="empowerhub-theme">
-          <FirebaseProviderDynamic>
+          <AuthProvider>
             {children}
             <Toaster />
-          </FirebaseProviderDynamic>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

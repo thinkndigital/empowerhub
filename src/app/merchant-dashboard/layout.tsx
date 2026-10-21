@@ -6,9 +6,7 @@ import {
   LayoutGrid, Search, Settings, Store,
   Users, BarChart3, MessageSquare, LogOut, Layers,
 } from "lucide-react";
-import { signOut } from "firebase/auth";
 import { useEffect, useState } from "react";
-import { useAuth } from "@/firebase/provider";
 import Image from "next/image";
 
 import {
@@ -24,7 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Logo } from "@/components/logo";
-import { useUser } from "@/firebase/auth/use-user";
+import { useUser, useAuthActions } from "@/hooks/use-user";
 import { NotificationBell } from "@/components/notification-bell";
 import { MessageBell } from "@/components/message-bell";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -42,7 +40,7 @@ export default function MerchantDashboardLayout({ children }: { children: React.
   const pathname = usePathname();
   const router = useRouter();
   const { user: authUser, userProfile, loading } = useUser();
-  const auth = useAuth();
+  const { logout } = useAuthActions();
 
   const [avatarUrl, setAvatarUrl] = useState('');
   const [platformLogo, setPlatformLogo] = useState('');
@@ -63,7 +61,7 @@ export default function MerchantDashboardLayout({ children }: { children: React.
   }, []);
 
   const handleLogout = async () => {
-    if (auth) await signOut(auth);
+    logout();
     router.push("/login");
   };
 

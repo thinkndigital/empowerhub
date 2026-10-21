@@ -36,17 +36,13 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { useCollection } from "@/firebase/firestore/use-collection";
-import { collection, query, doc, deleteDoc, updateDoc } from "firebase/firestore";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { useFirestore, useMemoFirebase } from "@/firebase/provider";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect } from "react";
-import { errorEmitter } from "@/firebase/error-emitter";
-import { FirestorePermissionError } from "@/firebase/errors";
+import { useUser } from "@/hooks/use-user";
+import { useState, useEffect, useCallback } from "react";
 
 import { ORG_TYPES } from "@/lib/org-types";
 import { ExportButton } from "@/components/export-button";
@@ -62,8 +58,8 @@ type Organization = {
   id: string;
   name: string;
   orgType?: string;
-  joined?: string;
-  status?: "نشط" | "غير نشط";
+  createdAt?: string;
+  status?: "active" | "inactive";
   plan?: "basic" | "pro" | "enterprise";
   features?: { courses: boolean; mentorship: boolean };
   dashboardSections?: DashboardSections;
@@ -73,6 +69,8 @@ type Organization = {
 const PLAN_LABELS: Record<string, string> = {
   basic: "أساسي", pro: "احترافي", enterprise: "مؤسسي",
 };
+
+const STATUS_LABELS: Record<string, string> = { active: "نشط", inactive: "غير نشط" };
 
 const DEFAULT_SECTIONS: DashboardSections = {
   organization: {
@@ -142,7 +140,7 @@ const createOrgSchema = z.object({
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function OrganizationsPage() {
-  const firestore = useFirestore();
+  const { user: authUser } = useUser();
   const { toast } = useToast();
 
   const [orgToDelete, setOrgToDelete] = useState<Organization | null>(null);
@@ -153,14 +151,23 @@ export default function OrganizationsPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [settingsSections, setSettingsSections] = useState<DashboardSections>({});
   const [primaryColor, setPrimaryColor] = useState("#6366f1");
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const organizationsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, "organizations"));
-  }, [firestore]);
+  const fetchOrganizations = useCallback(async () => {
+    if (!authUser) return;
+    setLoading(true);
+    try {
+      const token = await authUser.getIdToken();
+      const res = await fetch('/api/admin/organizations', { headers: { authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      setOrganizations(data.orgs || []);
+    } catch { /* silent */ } finally {
+      setLoading(false);
+    }
+  }, [authUser]);
 
-  const { data: organizations, isLoading: loading } =
-    useCollection<Organization>(organizationsQuery);
+  useEffect(() => { fetchOrganizations(); }, [fetchOrganizations]);
 
   const form = useForm<z.infer<typeof orgFormSchema>>({
     resolver: zodResolver(orgFormSchema),
@@ -202,15 +209,21 @@ export default function OrganizationsPage() {
   // ── handlers ──────────────────────────────────────────────────────────────
 
   async function handleToggleStatus(org: Organization) {
-    if (!firestore) return;
-    const newStatus = org.status === "نشط" ? "غير نشط" : "نشط";
-    await updateDoc(doc(firestore, "organizations", org.id), { status: newStatus })
-      .then(() =>
-        toast({ title: "تم التحديث", description: `تم تغيير حالة "${org.name}" إلى ${newStatus}.` })
-      )
-      .catch(() =>
-        toast({ variant: "destructive", title: "خطأ!", description: "فشل تغيير الحالة." })
-      );
+    if (!authUser) return;
+    const newStatus = org.status === "active" ? "inactive" : "active";
+    try {
+      const token = await authUser.getIdToken();
+      const res = await fetch(`/api/admin/organizations/${org.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (!res.ok) throw new Error();
+      toast({ title: "تم التحديث", description: `تم تغيير حالة "${org.name}" إلى ${newStatus === 'active' ? 'نشط' : 'غير نشط'}.` });
+      fetchOrganizations();
+    } catch {
+      toast({ variant: "destructive", title: "خطأ!", description: "فشل تغيير الحالة." });
+    }
   }
 
   async function handleCreateOrg(values: z.infer<typeof createOrgSchema>) {
@@ -226,6 +239,7 @@ export default function OrganizationsPage() {
       toast({ title: "تم الإنشاء بنجاح!", description: data.message });
       setIsCreateOpen(false);
       createForm.reset();
+      fetchOrganizations();
     } catch (err: any) {
       toast({ variant: "destructive", title: "خطأ!", description: err.message });
     } finally {
@@ -234,44 +248,56 @@ export default function OrganizationsPage() {
   }
 
   async function onEditSubmit(values: z.infer<typeof orgFormSchema>) {
-    if (!firestore || !orgToEdit) return;
-    const orgRef = doc(firestore, "organizations", orgToEdit.id);
-    await updateDoc(orgRef, values)
-      .then(() => {
-        toast({ title: "تم الحفظ!", description: `تم تحديث "${values.name}".` });
-        setOrgToEdit(null);
-      })
-      .catch(() => {
-        toast({ variant: "destructive", title: "حدث خطأ!", description: "لم نتمكن من تحديث المنظمة." });
-        errorEmitter.emit("permission-error", new FirestorePermissionError({ path: orgRef.path, operation: "update", requestResourceData: values }));
+    if (!authUser || !orgToEdit) return;
+    try {
+      const token = await authUser.getIdToken();
+      const res = await fetch(`/api/admin/organizations/${orgToEdit.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify(values),
       });
+      if (!res.ok) throw new Error();
+      toast({ title: "تم الحفظ!", description: `تم تحديث "${values.name}".` });
+      setOrgToEdit(null);
+      fetchOrganizations();
+    } catch {
+      toast({ variant: "destructive", title: "حدث خطأ!", description: "لم نتمكن من تحديث المنظمة." });
+    }
   }
 
   async function handleSaveSettings() {
-    if (!firestore || !orgToSettings) return;
-    const orgRef = doc(firestore, "organizations", orgToSettings.id);
-    await updateDoc(orgRef, { dashboardSections: settingsSections, primaryColor })
-      .then(() => {
-        toast({ title: "تم الحفظ!", description: "تم حفظ إعدادات المنظمة." });
-        setOrgToSettings(null);
-      })
-      .catch(() =>
-        toast({ variant: "destructive", title: "خطأ!", description: "فشل حفظ الإعدادات." })
-      );
+    if (!authUser || !orgToSettings) return;
+    try {
+      const token = await authUser.getIdToken();
+      const res = await fetch(`/api/admin/organizations/${orgToSettings.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify({ dashboardSections: settingsSections, primaryColor }),
+      });
+      if (!res.ok) throw new Error();
+      toast({ title: "تم الحفظ!", description: "تم حفظ إعدادات المنظمة." });
+      setOrgToSettings(null);
+      fetchOrganizations();
+    } catch {
+      toast({ variant: "destructive", title: "خطأ!", description: "فشل حفظ الإعدادات." });
+    }
   }
 
-  function handleDelete() {
-    if (!firestore || !orgToDelete) return;
-    const orgRef = doc(firestore, "organizations", orgToDelete.id);
-    deleteDoc(orgRef)
-      .then(() => {
-        toast({ variant: "destructive", title: "تم الحذف!", description: `تم حذف "${orgToDelete.name}".` });
-        setOrgToDelete(null);
-      })
-      .catch(() => {
-        toast({ variant: "destructive", title: "حدث خطأ!", description: "لم نتمكن من الحذف." });
-        errorEmitter.emit("permission-error", new FirestorePermissionError({ path: orgRef.path, operation: "delete" }));
+  async function handleDelete() {
+    if (!authUser || !orgToDelete) return;
+    try {
+      const token = await authUser.getIdToken();
+      const res = await fetch(`/api/admin/organizations/${orgToDelete.id}`, {
+        method: 'DELETE',
+        headers: { authorization: `Bearer ${token}` },
       });
+      if (!res.ok) throw new Error();
+      toast({ variant: "destructive", title: "تم الحذف!", description: `تم حذف "${orgToDelete.name}".` });
+      setOrgToDelete(null);
+      fetchOrganizations();
+    } catch {
+      toast({ variant: "destructive", title: "حدث خطأ!", description: "لم نتمكن من الحذف." });
+    }
   }
 
   function toggleSection(role: string, key: string) {
@@ -301,10 +327,10 @@ export default function OrganizationsPage() {
                   org.name || '',
                   ORG_TYPES[org.orgType || 'organization'] || org.orgType || 'منظمة',
                   PLAN_LABELS[org.plan || 'basic'] || 'أساسي',
-                  org.status || 'غير محدد',
-                  org.joined ? new Date(org.joined).toLocaleDateString('ar-EG') : '',
+                  STATUS_LABELS[org.status || ''] || org.status || 'غير محدد',
+                  org.createdAt ? new Date(org.createdAt).toLocaleDateString('ar-EG') : '',
                 ])}
-                options={{ summary: { 'إجمالي الجهات': String((organizations ?? []).length), 'نشطة': String((organizations ?? []).filter(o => o.status === 'نشط').length) } }}
+                options={{ summary: { 'إجمالي الجهات': String((organizations ?? []).length), 'نشطة': String((organizations ?? []).filter(o => o.status === 'active').length) } }}
               />
               <Button size="sm" onClick={() => setIsCreateOpen(true)}>
                 <Plus className="ml-2 h-4 w-4" />
@@ -332,16 +358,16 @@ export default function OrganizationsPage() {
                       {ORG_TYPES[org.orgType || "organization"] || org.orgType || "منظمة"}
                     </p>
                     <div className="flex flex-wrap gap-1.5 mt-2">
-                      <Badge variant={org.status === "نشط" ? "default" : "secondary"} className="text-xs">
-                        {org.status || "غير محدد"}
+                      <Badge variant={org.status === "active" ? "default" : "secondary"} className="text-xs">
+                        {STATUS_LABELS[org.status || ""] || org.status || "غير محدد"}
                       </Badge>
                       <Badge variant="outline" className="text-xs">
                         {PLAN_LABELS[org.plan || "basic"] || "أساسي"}
                       </Badge>
                     </div>
-                    {org.joined && (
+                    {org.createdAt && (
                       <p className="text-xs text-muted-foreground mt-1">
-                        {new Date(org.joined).toLocaleDateString("ar-SA")}
+                        {new Date(org.createdAt).toLocaleDateString("ar-SA")}
                       </p>
                     )}
                   </div>
@@ -394,11 +420,11 @@ export default function OrganizationsPage() {
                         {ORG_TYPES[org.orgType || "organization"] || org.orgType || "منظمة"}
                       </TableCell>
                       <TableCell>
-                        {org.joined ? new Date(org.joined).toLocaleDateString("ar-SA") : "-"}
+                        {org.createdAt ? new Date(org.createdAt).toLocaleDateString("ar-SA") : "-"}
                       </TableCell>
                       <TableCell className="text-center">
-                        <Badge variant={org.status === "نشط" ? "default" : "secondary"}>
-                          {org.status || "غير محدد"}
+                        <Badge variant={org.status === "active" ? "default" : "secondary"}>
+                          {STATUS_LABELS[org.status || ""] || org.status || "غير محدد"}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-center">
@@ -446,12 +472,12 @@ export default function OrganizationsPage() {
             </p>
             <p>
               <strong>تاريخ الانضمام:</strong>{" "}
-              {orgToView?.joined ? new Date(orgToView.joined).toLocaleDateString("ar-SA") : "-"}
+              {orgToView?.createdAt ? new Date(orgToView.createdAt).toLocaleDateString("ar-SA") : "-"}
             </p>
             <p>
               <strong>الحالة:</strong>{" "}
-              <Badge variant={orgToView?.status === "نشط" ? "default" : "secondary"}>
-                {orgToView?.status}
+              <Badge variant={orgToView?.status === "active" ? "default" : "secondary"}>
+                {STATUS_LABELS[orgToView?.status || ""] || orgToView?.status}
               </Badge>
             </p>
             <p>
@@ -723,10 +749,10 @@ function OrgDropdown({
             عرض التفاصيل
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={onToggleStatus}>
-            {org.status === "نشط"
+            {org.status === "active"
               ? <X className="ml-2 h-4 w-4" />
               : <Check className="ml-2 h-4 w-4" />}
-            {org.status === "نشط" ? "تعطيل الاشتراك" : "تفعيل الاشتراك"}
+            {org.status === "active" ? "تعطيل الاشتراك" : "تفعيل الاشتراك"}
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={onEdit}>
             <Edit className="ml-2 h-4 w-4" />

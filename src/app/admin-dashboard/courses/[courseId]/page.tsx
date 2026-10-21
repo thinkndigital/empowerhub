@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -11,15 +11,11 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { useDoc } from "@/firebase/firestore/use-doc";
-import { doc, updateDoc } from "firebase/firestore";
-import { useFirestore, useMemoFirebase } from "@/firebase/provider";
+import { useUser } from "@/hooks/use-user";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Save, Trash2, PlusCircle, ArrowRight, BookCheck } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import Link from "next/link";
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -45,7 +41,6 @@ const courseEditSchema = z.object({
 
 type CourseEditFormValues = z.infer<typeof courseEditSchema>;
 
-// Represents the data shape in Firestore
 interface CourseDataFromDB {
   title: string;
   category: string;
@@ -53,7 +48,7 @@ interface CourseDataFromDB {
   videoUrl?: string;
   quiz?: {
     question: string;
-    options: string[]; // Note: this is an array of strings
+    options: string[];
     correctAnswer: string;
   };
   preAssessment?: any[];
@@ -124,14 +119,9 @@ const AssessmentBuilder = ({ control, name, title }: { control: any, name: "preA
 
 export default function AdminCourseEditPage({ params }: { params: { courseId: string } }) {
   const { toast } = useToast();
-  const firestore = useFirestore();
-
-  const courseRef = useMemoFirebase(() => {
-    if (!firestore || !params.courseId) return null;
-    return doc(firestore, "courses", params.courseId);
-  }, [firestore, params.courseId]);
-
-  const { data: course, isLoading: loading } = useDoc<CourseDataFromDB>(courseRef);
+  const { user: authUser } = useUser();
+  const [course, setCourse] = useState<CourseDataFromDB | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const form = useForm<CourseEditFormValues>({
     resolver: zodResolver(courseEditSchema),
@@ -149,6 +139,15 @@ export default function AdminCourseEditPage({ params }: { params: { courseId: st
       postAssessment: [],
     },
   });
+
+  useEffect(() => {
+    if (!authUser) return;
+    authUser.getIdToken().then(token =>
+      fetch(`/api/courses/${params.courseId}`, { headers: { authorization: `Bearer ${token}` } })
+    ).then(r => r.json()).then(d => {
+      setCourse(d.course || null);
+    }).catch(() => {}).finally(() => setLoading(false));
+  }, [authUser, params.courseId]);
 
   useEffect(() => {
     if (course) {
@@ -174,41 +173,39 @@ export default function AdminCourseEditPage({ params }: { params: { courseId: st
   });
 
   async function onSubmit(values: CourseEditFormValues) {
-    if (!courseRef) return;
-    
-    const dataToUpdate = {
+    if (!authUser) return;
+
+    const dataToUpdate: any = {
         ...values,
         quiz: values.quiz ? {
             ...values.quiz,
             options: values.quiz.options.map(o => o.value).filter(Boolean)
         } : null,
     };
-    
+
     if (dataToUpdate.quiz?.options.length === 0) {
         dataToUpdate.quiz = null;
     }
 
-
-    updateDoc(courseRef, dataToUpdate)
-    .then(() => {
-        toast({
-            title: "تم الحفظ بنجاح",
-            description: `تم تحديث تفاصيل دورة "${values.title}".`,
-        });
-    })
-    .catch((serverError) => {
-        toast({
-            variant: "destructive",
-            title: "حدث خطأ!",
-            description: "لم نتمكن من حفظ التغييرات. الرجاء المحاولة مرة أخرى.",
-        });
-        const permissionError = new FirestorePermissionError({
-            path: courseRef.path,
-            operation: 'update',
-            requestResourceData: dataToUpdate,
-        });
-        errorEmitter.emit('permission-error', permissionError);
-    });
+    try {
+      const token = await authUser.getIdToken();
+      const res = await fetch(`/api/courses/${params.courseId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify(dataToUpdate),
+      });
+      if (!res.ok) throw new Error();
+      toast({
+          title: "تم الحفظ بنجاح",
+          description: `تم تحديث تفاصيل دورة "${values.title}".`,
+      });
+    } catch {
+      toast({
+          variant: "destructive",
+          title: "حدث خطأ!",
+          description: "لم نتمكن من حفظ التغييرات. الرجاء المحاولة مرة أخرى.",
+      });
+    }
   }
 
   if (loading) {
@@ -284,7 +281,7 @@ export default function AdminCourseEditPage({ params }: { params: { courseId: st
             )}/>
           </CardContent>
         </Card>
-        
+
         <Card className="border-0 shadow-sm">
             <CardHeader>
                 <CardTitle>محتوى الفيديو</CardTitle>
@@ -360,7 +357,7 @@ export default function AdminCourseEditPage({ params }: { params: { courseId: st
                 </div>
             </CardContent>
         </Card>
-        
+
         <Card className="border-0 shadow-sm">
             <CardHeader>
                 <CardTitle className="flex items-center gap-2"><BookCheck className="h-5 w-5" />التقييمات</CardTitle>
@@ -395,6 +392,3 @@ export default function AdminCourseEditPage({ params }: { params: { courseId: st
     </Form>
   );
 }
-
-
-    

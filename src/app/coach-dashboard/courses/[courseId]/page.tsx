@@ -11,7 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { useUser } from "@/firebase/auth/use-user";
+import { useUser } from "@/hooks/use-user";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Save, Trash2, PlusCircle, ArrowRight, BookCheck, Video, ChevronUp, ChevronDown, Pencil, Link2, FileText, File } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";

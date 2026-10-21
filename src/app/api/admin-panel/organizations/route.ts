@@ -12,8 +12,9 @@ export async function GET() {
   if (!checkAuth()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const rows = await db.select().from(organizations);
   return NextResponse.json({
-    orgs: rows.map(o => ({
+    orgs: rows.map(({ meta, ...o }) => ({
       ...o,
+      ...(meta || {}),
       limitOverrides: { maxUsers: o.maxUsersOverride, maxMentors: o.maxMentorsOverride },
     })),
   });

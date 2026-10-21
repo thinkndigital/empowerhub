@@ -70,6 +70,17 @@ CREATE TABLE `coach_contracts` (
 	CONSTRAINT `coach_contracts_id` PRIMARY KEY(`id`),
 	CONSTRAINT `coach_contracts_uniq` UNIQUE(`coach_id`,`organization_id`)
 );
+CREATE TABLE `contact_requests` (
+	`id` varchar(36) NOT NULL,
+	`sender_id` varchar(36) NOT NULL,
+	`sender_name` varchar(255),
+	`organization_id` varchar(36),
+	`subject` varchar(255),
+	`message` text,
+	`status` enum('pending','resolved') NOT NULL DEFAULT 'pending',
+	`created_at` timestamp NOT NULL DEFAULT (now()),
+	CONSTRAINT `contact_requests_id` PRIMARY KEY(`id`)
+);
 CREATE TABLE `content_offers` (
 	`id` varchar(36) NOT NULL,
 	`organization_id` varchar(36) NOT NULL,
@@ -143,6 +154,17 @@ CREATE TABLE `enrollments` (
 	`updated_at` timestamp DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
 	CONSTRAINT `enrollments_id` PRIMARY KEY(`id`),
 	CONSTRAINT `enrollments_course_user_uniq` UNIQUE(`course_id`,`user_id`)
+);
+CREATE TABLE `evaluations` (
+	`id` varchar(36) NOT NULL,
+	`session_id` varchar(36) NOT NULL,
+	`evaluator_id` varchar(36) NOT NULL,
+	`evaluated_id` varchar(36) NOT NULL,
+	`type` varchar(50) NOT NULL,
+	`rating` tinyint NOT NULL,
+	`comment` text,
+	`created_at` timestamp NOT NULL DEFAULT (now()),
+	CONSTRAINT `evaluations_id` PRIMARY KEY(`id`)
 );
 CREATE TABLE `group_members` (
 	`group_id` varchar(36) NOT NULL,

@@ -501,6 +501,28 @@ export const coachContracts = mysqlTable('coach_contracts', {
   updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
 }, t => ({ uniq: uniqueIndex('coach_contracts_uniq').on(t.coachId, t.organizationId) }));
 
+export const contactRequests = mysqlTable('contact_requests', {
+  id: id(),
+  senderId: fk('sender_id').notNull(),
+  senderName: varchar('sender_name', { length: 255 }),
+  organizationId: fk('organization_id'),
+  subject: varchar('subject', { length: 255 }),
+  message: text('message'),
+  status: mysqlEnum('status', ['pending', 'resolved']).default('pending').notNull(),
+  createdAt: createdAt(),
+}, t => ({ orgIdx: index('contact_requests_org_idx').on(t.organizationId) }));
+
+export const evaluations = mysqlTable('evaluations', {
+  id: id(),
+  sessionId: fk('session_id').notNull(),
+  evaluatorId: fk('evaluator_id').notNull(),
+  evaluatedId: fk('evaluated_id').notNull(),
+  type: varchar('type', { length: 50 }).notNull(),
+  rating: tinyint('rating').notNull(),
+  comment: text('comment'),
+  createdAt: createdAt(),
+}, t => ({ sessionIdx: index('evaluations_session_idx').on(t.sessionId) }));
+
 export const notifications = mysqlTable('notifications', {
   id: id(),
   userId: fk('user_id').notNull(),

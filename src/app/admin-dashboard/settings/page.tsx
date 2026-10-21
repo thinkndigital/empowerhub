@@ -11,8 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { DollarSign, Save, Settings, Bell } from "lucide-react";
-import { useFirestore, useMemoFirebase } from "@/firebase/provider";
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import { useUser } from "@/hooks/use-user";
 import { useEffect, useState } from "react";
 
 const settingsSchema = z.object({
@@ -24,13 +23,8 @@ const settingsSchema = z.object({
 
 export default function AdminSettingsPage() {
   const { toast } = useToast();
-  const firestore = useFirestore();
+  const { user: authUser } = useUser();
   const [isSaving, setIsSaving] = useState(false);
-
-  const settingsRef = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return doc(firestore, "settings", "platform");
-  }, [firestore]);
 
   const form = useForm<z.infer<typeof settingsSchema>>({
     resolver: zodResolver(settingsSchema),
@@ -38,25 +32,31 @@ export default function AdminSettingsPage() {
   });
 
   useEffect(() => {
-    if (!settingsRef || !firestore) return;
-    getDoc(settingsRef).then(snap => {
-      if (snap.exists()) {
-        const data = snap.data();
-        form.reset({
-          currency: data.currency || "د.أ",
-          platformName: data.platformName || "EmpowerHub",
-          notifyOnRegister: data.notifyOnRegister ?? true,
-          notifyOnOrder: data.notifyOnOrder ?? true,
-        });
-      }
-    });
-  }, [settingsRef, firestore, form]);
+    if (!authUser) return;
+    authUser.getIdToken().then(token =>
+      fetch('/api/admin/platform-config', { headers: { authorization: `Bearer ${token}` } })
+    ).then(r => r.json()).then(d => {
+      const data = d.config || {};
+      form.reset({
+        currency: data.currency || "د.أ",
+        platformName: data.platformName || "EmpowerHub",
+        notifyOnRegister: data.notifyOnRegister ?? true,
+        notifyOnOrder: data.notifyOnOrder ?? true,
+      });
+    }).catch(() => {});
+  }, [authUser, form]);
 
   async function onSubmit(values: z.infer<typeof settingsSchema>) {
-    if (!firestore) return;
+    if (!authUser) return;
     setIsSaving(true);
     try {
-      await setDoc(doc(firestore, "settings", "platform"), values, { merge: true });
+      const token = await authUser.getIdToken();
+      const res = await fetch('/api/admin/platform-config', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify(values),
+      });
+      if (!res.ok) throw new Error();
       toast({ title: "تم حفظ الإعدادات", description: "تم تحديث إعدادات المنصة بنجاح." });
     } catch {
       toast({ variant: "destructive", title: "خطأ!", description: "فشل حفظ الإعدادات." });
