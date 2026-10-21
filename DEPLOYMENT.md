@@ -47,9 +47,16 @@ npm run build          # next build — output: standalone مفعّل بـ next.
 - `dist-cpanel.zip` — نفس المجلد مضغوط، أسهل للرفع عبر File Manager.
 
 **ليش فيه تجميع يدوي؟** وضع `output: standalone` في Next.js ينتج سيرفر Node خفيف
-(`server.js`) مع `node_modules` مُختصرة تلقائياً داخل `.next/standalone`، لكنه **لا
-ينسخ** `.next/static` ولا `public/` بنفسه — لازم تُنسخ يدوياً جنبه، وهذا بالضبط اللي
+(`server.js`) مع `node_modules` مُختصرة تلقائياً داخل `next-build/standalone`، لكنه **لا
+ينسخ** `next-build/static` ولا `public/` بنفسه — لازم تُنسخ يدوياً جنبه، وهذا بالضبط اللي
 يسويه السكريبت.
+
+**ليش `next-build` مو `.next`؟** الاسم الافتراضي لمجلد بناء Next.js هو `.next`
+(يبدأ بنقطة)، ومعظم مديري الملفات — بما فيهم File Manager بـ cPanel — **يخفون**
+الملفات والمجلدات اللي تبدأ بنقطة تلقائياً. عشان ما يصير لبس إنه "الملف ناقص"
+بعد فك الضغط، `next.config.js` مضبوط يستخدم اسم مجلد بناء عادي (`distDir:
+'next-build'`) ما يبدأ بنقطة، فيظهر مباشرة بأي مدير ملفات بدون ما تحتاج تفعّل
+"إظهار الملفات المخفية".
 
 ---
 
@@ -76,8 +83,8 @@ npm run build          # next build — output: standalone مفعّل بـ next.
 1. افتح **File Manager** → روح لمجلد التطبيق اللي أنشأته (`empowerhub` مثلاً).
 2. ارفع `dist-cpanel.zip`.
 3. يمين الفأرة عليه → **Extract** داخل نفس المجلد.
-4. تأكد إن `server.js` و `.next/` و `package.json` صاروا مباشرة داخل مجلد التطبيق
-   (مو داخل مجلد فرعي زائد بعد فك الضغط). المشروع حالياً ما فيه مجلد `public/`
+4. تأكد إن `server.js` و `next-build/` و `node_modules/` و `package.json` صاروا
+   مباشرة داخل مجلد التطبيق (مو داخل مجلد فرعي زائد بعد فك الضغط). المشروع حالياً ما فيه مجلد `public/`
    (الأيقونة المفضّلة favicon.ico معرّفة داخل `src/app/` مباشرة حسب تعريف
    Next.js App Router) — إذا أضفتوا لاحقاً ملفات ثابتة بمجلد `public/` بجذر
    المشروع، السكريبت بينسخها تلقائياً.
@@ -107,7 +114,7 @@ scp -r dist-cpanel/. USERNAME@empowerhub.tech:~/empowerhub/
 > حقل Environment Variables اللي توفره الواجهة لأنه مضمون أكيد يوصل للعملية.
 
 لا تلمس **Application startup file** ولا تضغط **"Run NPM Install"** — الحزمة
-جاهزة ومبنية مسبقاً (`node_modules` مُضمّنة ضمن `.next/standalone`)، وتشغيل
+جاهزة ومبنية مسبقاً (`node_modules` مُضمّنة ضمن `next-build/standalone`)، وتشغيل
 npm install من جديد على استضافة مشتركة غالباً أبطأ وقد يفشل بسبب حدود الذاكرة.
 
 ---

@@ -13,15 +13,20 @@
 #
 # What it does:
 #   1. npm ci (clean install matching package-lock.json)
-#   2. npm run build (next build — output: standalone is set in next.config.js)
-#   3. Assembles .next/standalone + .next/static + public into dist-cpanel/
-#      (the standalone build does NOT include .next/static or public/ by
-#      itself — Next.js expects the deployer to copy those in manually)
+#   2. npm run build (next build — output: standalone is set in next.config.js,
+#      and distDir is set to "next-build" instead of the default ".next" so the
+#      build output folder isn't hidden by default in cPanel's File Manager)
+#   3. Assembles next-build/standalone + next-build/static + public into
+#      dist-cpanel/ (the standalone build does NOT include the static assets
+#      or public/ by itself — Next.js expects the deployer to copy those in
+#      manually)
 #   4. Zips the result
-#      (package.json is already included inside .next/standalone/ by Next.js)
+#      (package.json is already included inside next-build/standalone/ by Next.js)
 
 set -euo pipefail
 cd "$(dirname "$0")/.."
+
+DIST_DIR="next-build"
 
 echo "==> Installing dependencies (npm ci)"
 npm ci
@@ -33,13 +38,13 @@ echo "==> Assembling dist-cpanel/"
 rm -rf dist-cpanel dist-cpanel.zip
 mkdir -p dist-cpanel
 
-cp -r .next/standalone/. dist-cpanel/
-mkdir -p dist-cpanel/.next
-cp -r .next/static dist-cpanel/.next/static
+cp -r "$DIST_DIR/standalone/." dist-cpanel/
+mkdir -p "dist-cpanel/$DIST_DIR"
+cp -r "$DIST_DIR/static" "dist-cpanel/$DIST_DIR/static"
 if [ -d public ]; then
   cp -r public dist-cpanel/public
 fi
-# package.json is already included by .next/standalone/ — no need to copy it again.
+# package.json is already included by next-build/standalone/ — no need to copy it again.
 
 # .env is NOT copied here on purpose — set environment variables through
 # cPanel's "Setup Node.js App" screen (or dist-cpanel/.env, see DEPLOYMENT.md).
