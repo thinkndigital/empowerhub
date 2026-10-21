@@ -4,9 +4,9 @@
 
 منصة EmpowerHub هي SaaS عربية متعددة الأدوار للتمكين الرقمي، تجمع التدريب والإرشاد والتجارة الإلكترونية في واجهة RTL موحدة.
 
-- **الرابط الحي**: https://empowerhub.thinkndigital.com
+- **الرابط الحي**: https://empowerhub.tech
 - **الإطار**: Next.js 14 (App Router) — `output: standalone`
-- **الاستضافة**: Firebase App Hosting
+- **الاستضافة**: استضافة ذاتية على Node.js 20 فوق استضافة مشتركة بـ cPanel (راجع `DEPLOYMENT.md`)
 - **مشروع Firebase**: `studio-4511819966-bc14f`
 - **قاعدة البيانات**: Firebase Firestore (مجموعات مستوية)
 - **المصادقة**: Firebase Auth — Email/Password + Google Sign-In
@@ -263,7 +263,7 @@ const state = useFirebaseState(); // كامل حالة Firebase بما فيها 
 
 **الطريقة 2**: عبر API مباشرة
 ```bash
-curl -X POST https://empowerhub.thinkndigital.com/api/make-admin \
+curl -X POST https://empowerhub.tech/api/make-admin \
   -H "Content-Type: application/json" \
   -d '{"email": "your@email.com", "secret": "empowerhub-setup-2024"}'
 ```
@@ -300,7 +300,7 @@ GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
 
 ### تسجيل الدخول بـ Google يفشل
 **السبب**: الدومين غير مُضاف في Firebase Auth.  
-**الحل**: Firebase Console → Authentication → Settings → Authorized domains → أضف `empowerhub.thinkndigital.com`.
+**الحل**: Firebase Console → Authentication → Settings → Authorized domains → أضف `empowerhub.tech`.
 
 ### المستخدم يدخل لكن لا يجد بياناته
 **السبب**: لا توجد وثيقة في `users` collection له.  

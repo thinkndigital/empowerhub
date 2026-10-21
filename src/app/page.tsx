@@ -1166,7 +1166,7 @@ export default function LandingPage() {
                         <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
                         <span className="h-2.5 w-2.5 rounded-full bg-green-400" />
                         <span className="mr-3 text-[11px] text-muted-foreground font-mono truncate">
-                          empowerhub.thinkndigital.com/{tour.path}
+                          empowerhub.tech/{tour.path}
                         </span>
                       </div>
                       <div className="p-5 space-y-4">

@@ -16,9 +16,9 @@ No test suite exists. Validate changes by building (`npm run build`) — TypeScr
 
 EmpowerHub is an Arabic-first, multi-role SaaS platform for digital empowerment. It combines training, mentoring, and e-commerce in a unified RTL interface.
 
-- **Live URL**: https://empowerhub.thinkndigital.com
-- **Firebase project**: `studio-4511819966-bc14f`
-- **Hosting**: Firebase App Hosting (`output: standalone`)
+- **Live URL**: https://empowerhub.tech
+- **Firebase project**: `studio-4511819966-bc14f` (Firestore + Auth + Storage only — the app itself is no longer hosted on Firebase App Hosting)
+- **Hosting**: Self-hosted Node.js 20 on shared cPanel hosting (Node.js Selector / Passenger), built with `output: standalone`. See `DEPLOYMENT.md` for the deploy process.
 - **Active branch**: `claude/laughing-hopper-vajfwr`
 
 ## Roles & Dashboard Routes
@@ -131,11 +131,13 @@ Radix UI `DialogContent` renders via a portal **outside the form's DOM tree**. W
 
 ```ts
 // src/lib/firebase-admin.ts
-// Production: uses Application Default Credentials (Firebase App Hosting handles this automatically)
-// Local dev: set GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
+// Reads FIREBASE_SERVICE_ACCOUNT_KEY (the full service account JSON, as a single-line string) when set.
+// Falls back to Application Default Credentials only when running on Google Cloud infrastructure
+// (e.g. Firebase App Hosting / Cloud Run) — not applicable on self-hosted cPanel, so
+// FIREBASE_SERVICE_ACCOUNT_KEY is REQUIRED there (see DEPLOYMENT.md).
 ```
 
-No `.env.local` is required for local dev except for the service account key. Firebase client config is hardcoded in `src/firebase/config.ts` (intentional — these are public values).
+`FIREBASE_SERVICE_ACCOUNT_KEY` is required both for local dev and in production on self-hosted cPanel. Firebase client config is hardcoded in `src/firebase/config.ts` (intentional — these are public values).
 
 ## UI Conventions
 

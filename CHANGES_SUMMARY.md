@@ -1,7 +1,7 @@
 # EmpowerHub — ملخص التحديثات الكاملة
 
 **المشروع:** EmpowerHub — منصة تمكين رقمي متعددة الأدوار  
-**الرابط المباشر:** https://empowerhub.thinkndigital.com  
+**الرابط المباشر:** https://empowerhub.tech  
 **مشروع Firebase:** `studio-4511819966-bc14f`  
 **فرع التطوير:** `claude/laughing-hopper-vajfwr`  
 **تاريخ آخر تحديث:** 2026-06-20

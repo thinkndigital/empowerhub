@@ -160,7 +160,7 @@ export function exportToPDF(
       <thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
       <tbody>${rows.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('')}</tbody>
     </table>
-    <div class="footer">EmpowerHub · تم التصدير بواسطة منصة إمباور هب · empowerhub.thinkndigital.com</div>
+    <div class="footer">EmpowerHub · تم التصدير بواسطة منصة إمباور هب · empowerhub.tech</div>
   `;
   document.body.appendChild(div);
   window.print();

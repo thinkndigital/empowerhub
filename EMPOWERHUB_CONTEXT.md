@@ -10,10 +10,10 @@
 |------|-------|
 | **GitHub Repo** | `thinkndigital/empowerhub` |
 | **Active Branch** | `claude/laughing-hopper-vajfwr` |
-| **Live URL** | https://empowerhub.thinkndigital.com |
-| **Firebase Project** | `studio-4511819966-bc14f` |
-| **Hosting** | Firebase App Hosting (`output: standalone`) |
-| **Admin Panel URL** | https://empowerhub.thinkndigital.com/admin |
+| **Live URL** | https://empowerhub.tech |
+| **Firebase Project** | `studio-4511819966-bc14f` (backend only — Firestore/Auth/Storage) |
+| **Hosting** | Self-hosted Node.js 20 on shared cPanel hosting (`output: standalone`) — see `DEPLOYMENT.md` |
+| **Admin Panel URL** | https://empowerhub.tech/admin |
 | **Admin Password** | `empowerhub-admin-2026` |
 
 ---

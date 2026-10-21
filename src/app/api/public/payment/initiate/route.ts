@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     const config = configSnap.exists ? configSnap.data() as any : {};
     const currency = config?.currency || 'JOD';
 
-    const host = (req.headers.get('origin') || '').replace(/\/$/, '') || 'https://empowerhub.thinkndigital.com';
+    const host = (req.headers.get('origin') || '').replace(/\/$/, '') || 'https://empowerhub.tech';
     const callbackUrl = `${host}/payment/callback?orderId=${orderId}&gateway=${gateway || 'moyasar'}`;
 
     // ─── Moyasar ─────────────────────────────────────────────────────────────

@@ -86,7 +86,7 @@ export async function PATCH(req: NextRequest) {
     const updates: any = { status };
     const courseData = courseDoc.data()!;
     const courseTitle = courseData.title || 'الدورة';
-    const courseUrl = `https://empowerhub.thinkndigital.com/courses/${orderData.courseId}`;
+    const courseUrl = `https://empowerhub.tech/courses/${orderData.courseId}`;
 
     if (status === 'confirmed') {
       updates.paymentStatus = 'paid';
