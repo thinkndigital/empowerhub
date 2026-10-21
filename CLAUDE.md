@@ -17,9 +17,9 @@ No test suite exists. Validate changes by building (`npm run build`) — TypeScr
 EmpowerHub is an Arabic-first, multi-role SaaS platform for digital empowerment. It combines training, mentoring, and e-commerce in a unified RTL interface.
 
 - **Live URL**: https://empowerhub.tech
-- **Firebase project**: `studio-4511819966-bc14f` (Firestore + Auth + Storage only — the app itself is no longer hosted on Firebase App Hosting)
+- **Backend**: Self-hosted MySQL (via Drizzle ORM) + JWT auth + local-disk file storage. No Firebase anywhere in this project.
 - **Hosting**: Self-hosted Node.js 20 on shared cPanel hosting (Node.js Selector / Passenger), built with `output: standalone`. See `DEPLOYMENT.md` for the deploy process.
-- **Active branch**: `claude/laughing-hopper-vajfwr`
+- **Active branch**: `claude/last-repo-worked-on-yq293j`
 
 ## Roles & Dashboard Routes
 
@@ -33,74 +33,67 @@ EmpowerHub is an Arabic-first, multi-role SaaS platform for digital empowerment.
 
 Default password for org-created users: `EmpowerHub@2024`
 
-## Critical Architecture Constraint: Firebase Client SDK Is Broken on Server
-
-The Firebase Client SDK requires browser APIs (IndexedDB, localStorage) and **cannot run server-side**. This is solved by:
-
-1. `src/components/firebase-provider-dynamic.tsx` wraps the provider with `next/dynamic` + `ssr: false`
-2. `src/app/layout.tsx` uses `FirebaseProviderDynamic` — never import Firebase client directly in server components
-3. As a result, `useFirestore()`, `useDoc()`, `useCollection()` hooks may silently return `null` or fail — **never use the client Firestore SDK for critical data reads**
-
-**All data must go through Next.js API routes using Admin SDK.**
-
 ## Data Fetching Pattern
 
 Every API route follows this pattern:
 
 ```ts
 // Server: src/app/api/*/route.ts
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { verifyAuthToken } from '@/lib/auth-server';
+import { db } from '@/lib/db';
+import { users } from '@/lib/schema';
+import { eq } from 'drizzle-orm';
 
 export async function GET(req: NextRequest) {
   const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-  const decoded = await adminAuth.verifyIdToken(token);
+  const decoded = await verifyAuthToken(token); // throws on invalid/expired — same shape as the old adminAuth.verifyIdToken
   const uid = decoded.uid;
-  // query adminDb ...
+  // db.select().from(...).where(...) ...
 }
 ```
 
 ```ts
 // Client: any component
-const { user } = useUser();
-const token = await user!.getIdToken();
+const { user } = useUser(); // src/hooks/use-user.tsx
+const token = await user!.getIdToken(); // returns the stored JWT
 const res = await fetch('/api/endpoint', {
   headers: { authorization: `Bearer ${token}` }
 });
 ```
 
-`organizationId` is in custom claims and in the Firestore `users` doc — but **not always in the token on first login**. Always fall back to reading `users/{uid}` if `decoded.organizationId` is missing.
+`organizationId` is in the JWT payload (set at login/register from the `users` row) — but **not always present** (e.g. right after accepting an org invite, before a fresh token is issued). Always fall back to reading `users/{uid}` if `decoded.organizationId` is missing.
 
 ## Authentication: `useUser()` Hook
 
 ```ts
-const { user, userProfile, loading } = useUser(); // src/firebase/auth/use-user.tsx
-// user: Firebase Auth User object (has getIdToken())
-// userProfile: merged Firestore + claims data (name, role, organizationId, mentorId, coachId, ...)
-// loading: composed of authChecked + profileLoading — may stay true if Firestore client fails
+const { user, userProfile, loading } = useUser(); // src/hooks/use-user.tsx
+// user: { uid, email, displayName, getIdToken() } — getIdToken() resolves the JWT from localStorage
+// userProfile: the full `users` row (minus passwordHash) returned by GET /api/me
+// loading: true until the stored token (if any) has been validated against /api/me
 ```
 
-**Do not use `loading` as a full-page blocker** — if the Firestore profile subscription fails, `loading` never resolves. Instead, gate only specific sections on loading state, and use `if (!user) return` for auth guards.
+The JWT is stored in `localStorage` (via `useAuthActions().setToken()` after login/register) and restored on page load by `AuthProvider` (wraps the app in `src/app/layout.tsx`) calling `GET /api/me`. Sign out with `useAuthActions().logout()`.
 
-**Do not use `auth.currentUser` synchronously** — it's null before Firebase Auth initializes. Always use `useUser()` with the `user` in `useEffect` deps.
+**Do not use `loading` as a full-page blocker on pages that don't require auth** — gate only auth-dependent sections on it, and use `if (!user) return` for guards.
 
 ## Firestore Timestamp Normalization
 
-Admin SDK returns timestamps as `{ _seconds, _nanoseconds }` objects, not ISO strings. Always normalize in API routes before returning to the client:
+**No longer applicable.** Drizzle/mysql2 return `timestamp` columns as native JS `Date` objects, which `NextResponse.json()` serializes to plain ISO strings automatically. No manual normalization needed.
 
-```ts
-function normalizeDate(date: any): string | undefined {
-  if (!date || typeof date === 'string') return date;
-  if (date._seconds || date.seconds) {
-    return new Date((date._seconds ?? date.seconds) * 1000).toISOString();
-  }
-}
-```
+## MySQL / Drizzle Notes
 
-## Firestore Query Constraints
-
-- **No `orderBy` + `where` without a composite index** — Firestore throws. Sort in-memory instead.
-- **Status fields are mixed Arabic/English** — e.g., courses may have `status: 'published'` OR `status: 'منشورة'`. Always check both.
-- **Sessions** may reference a beneficiary via `attendees` array (array-contains) OR `beneficiaryId` field. Always query both and deduplicate.
+- **Schema source of truth**: `src/lib/schema.ts` (Drizzle table definitions). `schema.sql` (repo root) is the same schema as a plain `.sql` file for one-time import via phpMyAdmin on the production host (no CLI migration runner there). After changing `schema.ts`, regenerate it:
+  ```bash
+  rm -rf drizzle && npx drizzle-kit generate
+  cp drizzle/0000_*.sql schema.sql
+  grep -v "statement-breakpoint" schema.sql > schema.sql.tmp && mv schema.sql.tmp schema.sql
+  ```
+  (`--> statement-breakpoint` lines are not valid MySQL comments and break phpMyAdmin import — always strip them.)
+- **Status/enum fields are English-only** (`'published'`, `'active'`, etc.) — never mixed Arabic/English. Translate to Arabic only at the UI display layer, never in a stored value or a comparison.
+- **Fields with no dedicated column**: several tables have a catch-all `meta: json('meta')` column for fields that don't justify a real column (e.g. `courses.meta` holds `quiz`/`preAssessment`/`postAssessment`/`videoUrl`; `organizations.meta` holds `orgType`/`features`/`dashboardSections`). Routes that read/write these flatten `meta` onto the top-level object in responses and merge new values into existing `meta` on write — **never blindly spread a request body into `db.update(...).set(body)`**, since any key without a real column is silently dropped by Drizzle. See `src/app/api/courses/[courseId]/route.ts` and `src/app/api/admin-panel/organizations/[id]/route.ts` for the pattern.
+- **Unified tables replacing old Firestore duplication**: `enrollments` (replaces the old `courses/{id}/enrollments` subcollection + separate `courseProgress` collection — one row per `(courseId, userId)`, with an `assigned` boolean distinguishing org-assigned from self/coach-enrolled), `session_attendees` (replaces the mentoring-session `attendees[]` array), `app_settings` (key/value JSON table replacing the old `config/{platform,site,payment,trial,landing}` singleton docs — see `src/lib/app-settings.ts`'s `getSetting`/`patchSetting`, which deep-merges nested objects on patch).
+- **Sessions** (the mentoring `sessions` table, not `live_sessions`) may reference a beneficiary via the `session_attendees` join table OR the `beneficiaryId` column directly. Always query both and deduplicate (see `src/app/api/beneficiary/sessions/route.ts`).
+- **No test suite** — validate schema changes by re-importing `schema.sql` into a real MySQL/MariaDB instance, not just by reading the generated SQL.
 
 ## Dialog / Form Pattern
 
@@ -113,31 +106,27 @@ Radix UI `DialogContent` renders via a portal **outside the form's DOM tree**. W
 </DialogFooter>
 ```
 
-## Firestore Collections
+## Database Tables
 
-| Collection | Key Fields |
+| Table | Key Fields |
 |-----------|-----------|
-| `users` | `name, email, role, organizationId, status, mentorId, coachId, progress` |
-| `organizations` | `name, adminId, inviteCode, plan` |
-| `courses` | `title, description, status, createdBy, organizationId` |
-| `courses/{id}/enrollments` | `progress, enrolledAt` (subcollection, keyed by uid) |
-| `sessions` | `title, date, status, hostId, attendees[], beneficiaryId, organizationId` |
-| `messages` | conversation metadata |
-| `notifications` | per-user notifications |
-| `stores` | `name, beneficiaryId, organizationId` |
-| `products` | `name, price, category, status, userId` |
+| `users` | `name, email, passwordHash, role, organizationId, status, mentorId, coachId, progress` |
+| `organizations` | `name, adminId, inviteCode, planKey, meta` |
+| `courses` | `title, description, status, createdBy, organizationId, meta` |
+| `enrollments` | `courseId, userId, progress, completedLessons, assigned` |
+| `sessions` (mentoring) | `title, date, status, hostId, beneficiaryId, organizationId` + `session_attendees` join table |
+| `live_sessions` | `coachId, title, date, price, status` + `live_session_registrations` |
+| `conversations` / `messages` | `conversation_participants` (per-user unreadCount) / `conversationId, senderId, content` |
+| `notifications` | `userId, type, title, body, link, read` |
+| `stores` | `name, slug, beneficiaryId, organizationId` |
+| `products` | `name, price, category, status, userId, storeId` |
+| `orders` | `type ('product'/'session'/'subscription'), userId, hostId, storeId, totalAmount, status, paymentStatus` |
+| `app_settings` | `key, value (JSON)` — replaces the old Firestore `config/*` singleton docs |
 
-## Firebase Admin SDK Setup
+## Auth & Storage Modules
 
-```ts
-// src/lib/firebase-admin.ts
-// Reads FIREBASE_SERVICE_ACCOUNT_KEY (the full service account JSON, as a single-line string) when set.
-// Falls back to Application Default Credentials only when running on Google Cloud infrastructure
-// (e.g. Firebase App Hosting / Cloud Run) — not applicable on self-hosted cPanel, so
-// FIREBASE_SERVICE_ACCOUNT_KEY is REQUIRED there (see DEPLOYMENT.md).
-```
-
-`FIREBASE_SERVICE_ACCOUNT_KEY` is required both for local dev and in production on self-hosted cPanel. Firebase client config is hardcoded in `src/firebase/config.ts` (intentional — these are public values).
+- `src/lib/auth-server.ts` — `hashPassword`/`verifyPassword` (bcryptjs), `signAuthToken`/`verifyAuthToken` (JWT), `requireAuth(req)` (returns `null` instead of throwing), `stripPassword`/`stripPasswords` (**always use on any route returning a `users` row** — unlike the old Firestore docs, the row carries `passwordHash`).
+- `src/lib/storage.ts` — `saveUploadedFile(file, folder)` writes to `UPLOADS_DIR` (env var, must point **outside** `next-build/` since that folder is replaced wholesale on every deploy) and returns a `/api/files/...` URL; served back by `src/app/api/files/[...path]/route.ts`.
 
 ## UI Conventions
 
@@ -148,6 +137,6 @@ Radix UI `DialogContent` renders via a portal **outside the form's DOM tree**. W
 
 ## Debugging
 
-A diagnostic page exists at `/beneficiary-dashboard/debug` (served by `src/app/api/beneficiary/debug/route.ts`) — shows the authenticated user's full Firestore data: sessions, enrollments, store, products. Use this to verify actual Firestore state.
+A diagnostic page exists at `/beneficiary-dashboard/debug` (served by `src/app/api/beneficiary/debug/route.ts`) — shows the authenticated user's full data: sessions, enrollments, store, products. Use this to verify actual database state.
 
 First-admin setup: POST `/api/make-admin` with `{ email, secret: "empowerhub-setup-2024" }`, or visit `/setup`.

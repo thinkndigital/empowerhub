@@ -1,43 +1,29 @@
 # نشر EmpowerHub على empowerhub.tech (استضافة cPanel مشتركة)
 
-هذا الدليل لنشر نفس مشروع EmpowerHub — **بنفس الباك إند (Firestore + Firebase Auth من
-مشروع `studio-4511819966-bc14f`)**، بدون أي تغيير عليه — على سيرفر جديد: استضافة
-مشتركة بلوحة تحكم cPanel، على دومين `empowerhub.tech`، باستخدام Node.js 20 عبر ميزة
-"Setup Node.js App" (Phusion Passenger / CloudLinux NodeJS Selector). لا يوجد VPS ولا
-Docker ولا SSH هنا — الاعتماد **فقط على File Manager و"Setup Node.js App"** من واجهة
-cPanel.
+هذا الدليل لنشر مشروع EmpowerHub — **بباك إند MySQL ذاتي الاستضافة بالكامل (بدون
+Firebase نهائياً)** — على استضافة مشتركة بلوحة تحكم cPanel، على دومين
+`empowerhub.tech`، باستخدام Node.js 20 عبر ميزة "Setup Node.js App" (Phusion
+Passenger / CloudLinux NodeJS Selector). لا يوجد VPS ولا Docker ولا SSH هنا —
+الاعتماد **فقط على File Manager، phpMyAdmin، و"Setup Node.js App"** من واجهة cPanel.
 
-> **ملاحظة مهمة**: "نقل المشروع من Firebase" هنا يعني بس نقل **مكان استضافة التطبيق
-> نفسه** (كان على Firebase App Hosting، هلأ عم ينتقل لـ cPanel). قاعدة البيانات
-> (Firestore) ونظام تسجيل الدخول (Firebase Auth) **بيضلوا زي ما هم بالضبط** — هذا
-> المشروع مبني بالكامل عليهم، وإزالتهم تعني إعادة كتابة الباك إند من الصفر، مو جزء
-> من هالنشر.
+> **ملاحظة مهمة**: المشروع لا يعتمد على Firebase بأي شكل — لا Firestore، لا
+> Firebase Auth، لا Firebase Storage. قاعدة البيانات MySQL (مُدارة عبر Drizzle
+> ORM)، تسجيل الدخول عبر JWT موقّع ذاتياً، والملفات المرفوعة تُخزَّن على قرص
+> السيرفر نفسه وتُعرض من مسار `/api/files/...`.
 
 الملف المرفق (`empowerhub-full.zip`) فيه **كل شي سوا**: الكود المصدري الكامل **+**
-نسخة جاهزة ومبنية مسبقاً للتشغيل الفوري (`next-build/standalone/`) — جُربت فعلياً
-(استخراج نظيف من نفس الملف المرفق، تشغيل `server.js`، واستجابة HTTP 200 على الصفحة
-الرئيسية ولوحة التحكم) قبل ما يُرسل لك.
+نسخة جاهزة ومبنية مسبقاً للتشغيل الفوري (`next-build/standalone/`).
 
 ---
 
 ## 0) تجهيزات لمرة واحدة قبل النشر
 
-### أ) أضف الدومين الجديد في Firebase (إلزامي، وإلا تسجيل الدخول ما يشتغل)
-Firebase Console → مشروع `studio-4511819966-bc14f` → Authentication → Settings
-→ Authorized domains → **Add domain** → `empowerhub.tech`
-(أضف أيضاً `www.empowerhub.tech` إذا بتستخدمه).
+### أ) تأكد من وجود قاعدة بيانات MySQL
+من cPanel → **MySQL Databases** (أو **MySQL Database Wizard**) أنشئ قاعدة بيانات
+ومستخدم MySQL (إذا لم يكونا موجودين أصلاً) وامنح المستخدم كل الصلاحيات على
+القاعدة. سجّل اسم القاعدة، اسم المستخدم، وكلمة المرور — تحتاجها بالخطوة 3.
 
-### ب) ولّد مفتاح حساب خدمة Firebase (Service Account)
-Firebase Console → Project settings (⚙️) → Service accounts → **Generate new private key**.
-يتنزّل ملف JSON — هذا يحتاجه السيرفر الجديد لأنه (خلافاً لـ Firebase App Hosting) ما
-عنده Application Default Credentials تلقائية. حوّل محتواه لسطر واحد (minify) وخزّنه
-بأمان، بتحتاجه بالخطوة 3.
-
-```bash
-node -e "console.log(JSON.stringify(require('./service-account.json')))"
-```
-
-### ج) تأكد من DNS الدومين
+### ب) تأكد من DNS الدومين
 وجّه A record (أو CNAME حسب ما تطلبه الاستضافة) لـ `empowerhub.tech` و `www` على IP
 السيرفر المشترك، وفعّل SSL (عادة AutoSSL مجاني من cPanel بعد ما يصير الدومين نشط عليه).
 
@@ -65,6 +51,10 @@ node -e "console.log(JSON.stringify(require('./service-account.json')))"
 2. ارفع `empowerhub-full.zip` → يمين الفأرة عليه → **Extract** داخل نفس المجلد.
 3. تأكد إن `package.json` و `src/` و `next-build/` صاروا مباشرة داخل مجلد التطبيق
    (مو داخل مجلد فرعي زائد بعد فك الضغط).
+4. **أنشئ مجلد رفع الملفات خارج `next-build/`** — مثلاً مجلد شقيق لمجلد التطبيق
+   نفسه، مثل `/home/username/empowerhub-uploads` — لأن `next-build/` يُستبدل
+   بالكامل عند كل نشر جديد، وأي ملفات مرفوعة بداخله ستُفقد. ستحتاج هذا المسار
+   بالخطوة 3 (`UPLOADS_DIR`).
 
 ### ⚠️ عن خطأ "Cloudlinux NodeJS Selector demands to store node modules..."
 هاي الرسالة تظهر لو صار فيه مجلد اسمه `node_modules` **مباشرة بجذر مجلد التطبيق**
@@ -79,50 +69,62 @@ node -e "console.log(JSON.stringify(require('./service-account.json')))"
 
 ---
 
-## 3) ضبط متغيرات البيئة
+## 3) استيراد جداول قاعدة البيانات
+
+1. افتح **phpMyAdmin** من cPanel → اختر قاعدة البيانات التي أنشأتها بالخطوة 0-أ.
+2. تبويب **Import** → اختر ملف `schema.sql` (موجود بجذر المشروع المرفق) → **Go**.
+3. تأكد من ظهور الجداول (36+ جدول) في قائمة الجداول على اليسار بدون أي رسالة خطأ.
+
+هذه الخطوة **مرة واحدة فقط** عند أول نشر على قاعدة بيانات فارغة. لا تُعِد استيراد
+`schema.sql` على قاعدة تحتوي بيانات حقيقية بالفعل — فقط عند الإعداد الأولي.
+
+---
+
+## 4) ضبط متغيرات البيئة
 
 ارجع لصفحة **Setup Node.js App** → افتح تطبيقك → قسم **Environment Variables**.
-
-**احذف أي متغيرات قديمة مالها علاقة بهالمشروع** إذا موجودة من محاولة سابقة (مثل
-`DB_NAME` / `DB_USER` / `DB_PASSWORD` / `DB_SOCKET` الخاصة بـ MySQL، أو `APP_URL`
-مكررة) — هذا المشروع يستخدم Firestore، مو MySQL.
 
 أضف المتغيرات التالية (الموجودة أيضاً بملف `.env.production.example` المرفق):
 
 | المتغير | القيمة |
 |---|---|
 | `NODE_ENV` | `production` |
-| `FIREBASE_SERVICE_ACCOUNT_KEY` | محتوى ملف الـ service account كسطر JSON واحد (من الخطوة 0-ب) |
-| `FIREBASE_PROJECT_ID` | `studio-4511819966-bc14f` |
-| `FIREBASE_STORAGE_BUCKET` | `studio-4511819966-bc14f.firebasestorage.app` |
+| `DB_NAME` | اسم قاعدة بيانات MySQL (من الخطوة 0-أ) |
+| `DB_USER` | اسم مستخدم MySQL |
+| `DB_PASSWORD` | كلمة مرور مستخدم MySQL |
+| `DB_SOCKET` | عادة `/var/lib/mysql/mysql.sock` (أو احذفه واستخدم `DB_HOST`/`DB_PORT` إذا لم يكن متوفراً) |
+| `JWT_SECRET` | قيمة سرية عشوائية طويلة من اختيارك — لا تغيّرها بعد النشر |
+| `UPLOADS_DIR` | المسار المطلق لمجلد رفع الملفات من الخطوة 2-4، مثلاً `/home/username/empowerhub-uploads` |
 | `CRON_SECRET` | قيمة سرية عشوائية من اختيارك |
 
 **لا تضغط "Run NPM Install"** — الملف المرفق جاهز ومبني مسبقاً، ما في داعي.
 
 ---
 
-## 4) التشغيل
+## 5) التشغيل
 
 ارجع لصفحة **Setup Node.js App** → اضغط **Restart** (أو **Start**) على التطبيق.
 بعدها جرّب فتح `https://empowerhub.tech` — المفروض توصل للصفحة الرئيسية، فارغة
-وجاهزة لتعبئة بياناتك من جديد.
+وجاهزة لتعبئة بياناتك من جديد. أنشئ أول حساب مشرف عبر `/setup`.
 
 ### لو ظهر خطأ 503 أو التطبيق ما يشتغل
 من **Setup Node.js App** → فتح التطبيق فيه رابط لسجلات الأخطاء (Error Log) — افتحه
 وشوف آخر سطور. الأسباب الشائعة:
 - **Application startup file** مو مضبوط بالضبط على `next-build/standalone/server.js`.
-- `FIREBASE_SERVICE_ACCOUNT_KEY` ناقصة أو JSON غير صحيح (تأكد إنه سطر واحد كامل
-  بين علامتي اقتباس، بدون أسطر جديدة).
-- الدومين الجديد مو مضاف في Firebase Authorized domains (تسجيل الدخول بيفشل
-  بصمت أو برسالة `auth/unauthorized-domain`).
+- متغيرات `DB_*` ناقصة أو غير صحيحة (تحقق من اسم القاعدة/المستخدم/كلمة المرور
+  من phpMyAdmin).
+- `schema.sql` لم يُستورد بعد (الصفحة تفتح لكن أي عملية تسجيل/دخول تفشل بخطأ
+  قاعدة بيانات).
+- `UPLOADS_DIR` غير محدد، أو يشير لمسار داخل `next-build/` (سيُفقد عند أي نشر لاحق).
 - رفعت محتوى المشروع داخل مجلد فرعي إضافي بدل جذر مجلد التطبيق مباشرة.
 
 ---
 
-## 5) لو عملت تعديل على الكود لاحقاً
+## 6) لو عملت تعديل على الكود لاحقاً
 
 الطريقة الأسهل: اطلب نسخة محدّثة من `empowerhub-full.zip` (نفس طريقة التجهيز)،
-وكرّر الخطوة 2 (رفع واستخراج فوق الملفات القديمة) ثم **Restart**.
+وكرّر الخطوة 2 (رفع واستخراج فوق الملفات القديمة) ثم **Restart**. لا حاجة لإعادة
+استيراد `schema.sql` إلا إذا تغيّر هيكل الجداول فعلياً (راجع التغييرات أولاً).
 
 بديل (لمن عنده استعداد يستخدم "Run NPM Install" لإعادة البناء مباشرة من السيرفر):
 المشروع فيه `postinstall` script جاهز يبني تلقائياً لما تضيف متغير بيئة
@@ -131,7 +133,7 @@ node -e "console.log(JSON.stringify(require('./service-account.json')))"
 
 ---
 
-## 6) الفحص اليومي للاشتراكات (Cron)
+## 7) الفحص اليومي للاشتراكات (Cron)
 
 المسار `/api/cron/check-subscriptions` يتطلب رأس `Authorization` يطابق `CRON_SECRET`.
 
@@ -143,11 +145,10 @@ curl -s -X POST https://empowerhub.tech/api/cron/check-subscriptions \
 
 ---
 
-## 7) ملاحظة عن GitHub Actions القديم
+## 8) ملاحظة عن GitHub Actions القديم
 
-`.github/workflows/deploy.yml` الحالي ينشر تلقائياً إلى **Firebase App Hosting** عند
-push لبعض الفروع — وهذا مسار النشر القديم. بما إنكم انتقلتوا لاستضافة cPanel، هذا
-الـ workflow ما عاد يعكس مكان الاستضافة الفعلي. لم يُعدَّل تلقائياً هنا تجنباً
+`.github/workflows/deploy.yml` إذا كان لا يزال ينشر تلقائياً إلى **Firebase App
+Hosting** عند push لبعض الفروع، فهذا مسار نشر قديم لم يُعدَّل تلقائياً هنا تجنباً
 لتغيير سلوك CI دون طلب صريح — قرر وأخبرني إذا تبي أعدّله أو أعطّله.
 
 ---
@@ -156,6 +157,8 @@ push لبعض الفروع — وهذا مسار النشر القديم. بما
 
 - `empowerhub-full.zip` (مرسل لك مباشرة) — السورس كود الكامل + النسخة الجاهزة
   للتشغيل الفوري سوا، بدون أي `node_modules` بجذر المشروع.
+- `schema.sql` — جداول قاعدة البيانات الكاملة، للاستيراد عبر phpMyAdmin مرة واحدة
+  (الخطوة 3).
 - `.npmrc` — يضمن تثبيت أدوات البناء (TypeScript) حتى مع `NODE_ENV=production`،
   يُستخدم فقط لو رجعت تعيد البناء عبر "Run NPM Install" لاحقاً.
 - `scripts/postinstall-gate.js` + `scripts/postbuild-cpanel.sh` — يشغّلان البناء
