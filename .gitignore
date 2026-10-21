@@ -18,6 +18,7 @@
 /build
 /dist-cpanel
 /dist-cpanel.zip
+/empowerhub-source.zip
 
 # misc
 .DS_Store
