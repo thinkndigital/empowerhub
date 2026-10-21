@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { getStorageBucket, buildDownloadUrl } from '@/lib/storage-bucket';
+import { saveUploadedFile } from '@/lib/storage';
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
 const MAX_SIZE = 5 * 1024 * 1024;
@@ -25,21 +25,8 @@ export async function POST(req: NextRequest) {
     }
 
     const folder = (formData.get('folder') as string) || 'admin-uploads';
-    const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-    const fileName = `${Date.now()}-${crypto.randomUUID()}.${ext}`;
-    const storagePath = `${folder}/${fileName}`;
-
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const downloadToken = crypto.randomUUID();
-
-    const { bucket, bucketName } = await getStorageBucket();
-    const fileRef = bucket.file(storagePath);
-
-    await fileRef.save(buffer, { contentType: file.type, resumable: false });
-    await fileRef.setMetadata({ metadata: { firebaseStorageDownloadTokens: downloadToken } });
-
-    const url = buildDownloadUrl(bucketName, storagePath, downloadToken);
-    return NextResponse.json({ url, path: storagePath });
+    const { url, path } = await saveUploadedFile(file, folder);
+    return NextResponse.json({ url, path });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { adminDb } from '@/lib/firebase-admin';
+import { getSetting, patchSetting } from '@/lib/app-settings';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,8 +35,7 @@ const defaultConfig = {
 
 export async function GET() {
   if (!checkAuth()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const snap = await adminDb.collection('config').doc('platform').get();
-  const data = snap.exists ? snap.data() as any : {};
+  const data = (await getSetting<any>('platform')) || {};
   return NextResponse.json({
     config: {
       platformName: data.platformName ?? defaultConfig.platformName,
@@ -56,6 +55,6 @@ export async function GET() {
 export async function PATCH(req: NextRequest) {
   if (!checkAuth()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const body = await req.json();
-  await adminDb.collection('config').doc('platform').set(body, { merge: true });
+  await patchSetting('platform', body);
   return NextResponse.json({ ok: true });
 }

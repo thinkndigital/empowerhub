@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { adminDb, adminAuth } from '@/lib/firebase-admin';
+import { db } from '@/lib/db';
+import { users } from '@/lib/schema';
+import { eq } from 'drizzle-orm';
 
 function checkAuth() {
   return cookies().get('ap_session')?.value === 'empowerhub-admin-2026-secret';
@@ -16,25 +18,15 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (name) updates.name = name;
   if (status) updates.status = status;
   if (organizationId !== undefined) updates.organizationId = organizationId;
-  if (role) {
-    updates.role = role;
-    try {
-      const existing = await adminAuth.getUser(params.id);
-      const currentClaims = existing.customClaims || {};
-      await adminAuth.setCustomUserClaims(params.id, { ...currentClaims, role });
-    } catch {}
-  }
+  if (role) updates.role = role;
 
-  await adminDb.collection('users').doc(params.id).update(updates);
+  await db.update(users).set(updates).where(eq(users.id, params.id));
   return NextResponse.json({ ok: true });
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   if (!checkAuth()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  await Promise.all([
-    adminDb.collection('users').doc(params.id).delete(),
-    adminAuth.deleteUser(params.id).catch(() => {}),
-  ]);
+  await db.delete(users).where(eq(users.id, params.id));
   return NextResponse.json({ ok: true });
 }

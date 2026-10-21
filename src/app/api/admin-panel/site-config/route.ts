@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { adminDb } from '@/lib/firebase-admin';
+import { getSetting, patchSetting } from '@/lib/app-settings';
 
 function checkAuth() {
   return cookies().get('ap_session')?.value === 'empowerhub-admin-2026-secret';
@@ -108,10 +108,7 @@ const defaultConfig = {
 
 export async function GET() {
   if (!checkAuth()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const snap = await adminDb.collection('config').doc('site').get();
-  const data = snap.exists ? snap.data() : {};
-  // Deep merge with defaults
-  const d = data as any;
+  const d = (await getSetting<any>('site')) || {};
   const config = {
     ...defaultConfig,
     ...d,
@@ -142,6 +139,6 @@ export async function GET() {
 export async function PATCH(req: NextRequest) {
   if (!checkAuth()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const body = await req.json();
-  await adminDb.collection('config').doc('site').set(body, { merge: true });
+  await patchSetting('site', body);
   return NextResponse.json({ ok: true });
 }

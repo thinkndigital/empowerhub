@@ -1,20 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { verifyAuthToken } from '@/lib/auth-server';
+import { getSetting, patchSetting } from '@/lib/app-settings';
 
 export const dynamic = 'force-dynamic';
 
 async function isAdmin(req: NextRequest): Promise<boolean> {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    const decoded = await adminAuth.verifyIdToken(token);
+    const decoded = await verifyAuthToken(token);
     return decoded.role === 'admin';
   } catch { return false; }
 }
 
 export async function GET() {
   try {
-    const snap = await adminDb.collection('config').doc('site').get();
-    return NextResponse.json({ config: snap.exists ? snap.data() : {} });
+    const config = (await getSetting<any>('site')) || {};
+    return NextResponse.json({ config });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
@@ -24,7 +25,7 @@ export async function PATCH(req: NextRequest) {
   if (!await isAdmin(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   try {
     const body = await req.json();
-    await adminDb.collection('config').doc('site').set(body, { merge: true });
+    await patchSetting('site', body);
     return NextResponse.json({ ok: true });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });

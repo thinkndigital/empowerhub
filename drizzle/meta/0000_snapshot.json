@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "mysql",
-  "id": "1b36ec61-b35b-47cd-9daf-bb98bf3315b1",
+  "id": "bf45b7cb-e3a9-4ae2-b45d-10b9268f64d4",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "app_settings": {
@@ -3526,6 +3526,41 @@
         "linkedin": {
           "name": "linkedin",
           "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "instagram": {
+          "name": "instagram",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "bio": {
+          "name": "bio",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "specializations": {
+          "name": "specializations",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "session_price": {
+          "name": "session_price",
+          "type": "decimal(10,2)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "years_of_experience": {
+          "name": "years_of_experience",
+          "type": "int",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false

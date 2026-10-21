@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth } from '@/lib/firebase-admin';
-import { getStorageBucket, buildDownloadUrl } from '@/lib/storage-bucket';
+import { verifyAuthToken } from '@/lib/auth-server';
+import { saveUploadedFile } from '@/lib/storage';
 
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
 const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime'];
@@ -11,7 +11,7 @@ const MAX_VIDEO_SIZE = 20 * 1024 * 1024;  // 20 MB
 export async function POST(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || '';
-    await adminAuth.verifyIdToken(token);
+    await verifyAuthToken(token);
 
     const formData = await req.formData();
     const file = formData.get('file') as File | null;
@@ -33,23 +33,8 @@ export async function POST(req: NextRequest) {
     }
 
     const folder = (formData.get('folder') as string) || 'uploads';
-    const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-    const fileName = `${Date.now()}-${crypto.randomUUID()}.${ext}`;
-    const storagePath = `${folder}/${fileName}`;
-
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const downloadToken = crypto.randomUUID();
-
-    const { bucket, bucketName } = await getStorageBucket();
-    const fileRef = bucket.file(storagePath);
-
-    await fileRef.save(buffer, { contentType: file.type, resumable: false });
-    await fileRef.setMetadata({
-      metadata: { firebaseStorageDownloadTokens: downloadToken },
-    });
-
-    const url = buildDownloadUrl(bucketName, storagePath, downloadToken);
-    return NextResponse.json({ url, path: storagePath });
+    const { url, path } = await saveUploadedFile(file, folder);
+    return NextResponse.json({ url, path });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }

@@ -1,17 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { adminDb } from '@/lib/firebase-admin';
+import { db } from '@/lib/db';
+import { users } from '@/lib/schema';
+import { and, eq } from 'drizzle-orm';
 
 function checkAuth() {
   return cookies().get('ap_session')?.value === 'empowerhub-admin-2026-secret';
-}
-
-function normalizeDate(d: any): string | undefined {
-  if (!d) return undefined;
-  if (typeof d === 'string') return d;
-  const s = d._seconds ?? d.seconds;
-  if (s) return new Date(s * 1000).toISOString();
-  return undefined;
 }
 
 export async function GET(req: NextRequest) {
@@ -21,15 +15,18 @@ export async function GET(req: NextRequest) {
   const orgId = searchParams.get('orgId');
   const role = searchParams.get('role');
 
-  let query: FirebaseFirestore.Query = adminDb.collection('users');
-  if (orgId) query = query.where('organizationId', '==', orgId);
-  if (role) query = query.where('role', '==', role);
+  const conditions = [];
+  if (orgId) conditions.push(eq(users.organizationId, orgId));
+  if (role) conditions.push(eq(users.role, role as any));
 
-  const snap = await query.get();
-  const users = snap.docs.map(d => {
-    const data = d.data();
-    return { id: d.id, name: data.name, email: data.email, role: data.role, organizationId: data.organizationId, status: data.status, avatarUrl: data.avatarUrl, createdAt: normalizeDate(data.createdAt) };
+  const rows = conditions.length
+    ? await db.select().from(users).where(and(...conditions))
+    : await db.select().from(users);
+
+  return NextResponse.json({
+    users: rows.map(u => ({
+      id: u.id, name: u.name, email: u.email, role: u.role, organizationId: u.organizationId,
+      status: u.status, avatarUrl: u.avatarUrl, createdAt: u.createdAt,
+    })),
   });
-
-  return NextResponse.json({ users });
 }

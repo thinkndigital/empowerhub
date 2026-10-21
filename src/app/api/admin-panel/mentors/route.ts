@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { adminDb } from '@/lib/firebase-admin';
+import { db } from '@/lib/db';
+import { users } from '@/lib/schema';
+import { eq, inArray } from 'drizzle-orm';
+import { hashPassword } from '@/lib/auth-server';
+import { randomUUID } from 'crypto';
 
 function checkAuth() {
   return cookies().get('ap_session')?.value === 'empowerhub-admin-2026-secret';
@@ -9,19 +13,16 @@ function checkAuth() {
 export async function GET() {
   if (!checkAuth()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const [mentorsSnap, coachesSnap] = await Promise.all([
-    adminDb.collection('users').where('role', '==', 'mentor').get(),
-    adminDb.collection('users').where('role', '==', 'coach').get(),
-  ]);
+  const rows = await db.select().from(users).where(inArray(users.role, ['mentor', 'coach']));
 
-  const pick = (d: FirebaseFirestore.QueryDocumentSnapshot) => {
-    const data = d.data();
-    return { id: d.id, name: data.name, email: data.email, role: data.role, organizationId: data.organizationId, status: data.status, specializations: data.specializations, avatarUrl: data.avatarUrl };
-  };
+  const pick = (u: typeof users.$inferSelect) => ({
+    id: u.id, name: u.name, email: u.email, role: u.role, organizationId: u.organizationId,
+    status: u.status, specializations: u.specializations, avatarUrl: u.avatarUrl,
+  });
 
   return NextResponse.json({
-    mentors: mentorsSnap.docs.map(pick),
-    coaches: coachesSnap.docs.map(pick),
+    mentors: rows.filter(u => u.role === 'mentor').map(pick),
+    coaches: rows.filter(u => u.role === 'coach').map(pick),
   });
 }
 
@@ -35,24 +36,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'الاسم والدور مطلوبان' }, { status: 400 });
   }
 
-  const docRef = adminDb.collection('users').doc();
-  await docRef.set({
+  const id = randomUUID();
+  const passwordHash = await hashPassword(randomUUID());
+  await db.insert(users).values({
+    id,
     name,
+    email: email || `${id}@placeholder.empowerhub.local`,
+    passwordHash,
     role,
     bio: bio || '',
     specializations: Array.isArray(specializations) ? specializations : (specializations ? [specializations] : []),
-    sessionPrice: sessionPrice ? Number(sessionPrice) : null,
+    sessionPrice: sessionPrice ? String(Number(sessionPrice)) : null,
     avatarUrl: avatarUrl || '',
     whatsapp: whatsapp || '',
     linkedin: linkedin || '',
     instagram: instagram || '',
-    email: email || '',
     yearsOfExperience: yearsOfExperience ? Number(yearsOfExperience) : null,
     status: 'active',
-    createdAt: new Date(),
   });
 
-  return NextResponse.json({ ok: true, id: docRef.id });
+  return NextResponse.json({ ok: true, id });
 }
 
 export async function DELETE(req: NextRequest) {
@@ -61,6 +64,6 @@ export async function DELETE(req: NextRequest) {
   const { id } = await req.json();
   if (!id) return NextResponse.json({ error: 'id مطلوب' }, { status: 400 });
 
-  await adminDb.collection('users').doc(id).delete();
+  await db.delete(users).where(eq(users.id, id));
   return NextResponse.json({ ok: true });
 }

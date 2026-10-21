@@ -1,6 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { adminDb } from '@/lib/firebase-admin';
+import { db } from '@/lib/db';
+import { organizations, users, courses, products } from '@/lib/schema';
+import { sql, eq } from 'drizzle-orm';
 
 function checkAuth() {
   return cookies().get('ap_session')?.value === 'empowerhub-admin-2026-secret';
@@ -9,26 +11,21 @@ function checkAuth() {
 export async function GET() {
   if (!checkAuth()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const [orgsSnap, usersSnap, coursesSnap, productsSnap] = await Promise.all([
-    adminDb.collection('organizations').get(),
-    adminDb.collection('users').get(),
-    adminDb.collection('courses').get(),
-    adminDb.collection('products').get(),
+  const [[{ c: orgCount }], [{ c: userCount }], [{ c: mentorCount }], [{ c: coachCount }], [{ c: courseCount }], [{ c: productCount }]] = await Promise.all([
+    db.select({ c: sql<number>`count(*)` }).from(organizations),
+    db.select({ c: sql<number>`count(*)` }).from(users),
+    db.select({ c: sql<number>`count(*)` }).from(users).where(eq(users.role, 'mentor')),
+    db.select({ c: sql<number>`count(*)` }).from(users).where(eq(users.role, 'coach')),
+    db.select({ c: sql<number>`count(*)` }).from(courses),
+    db.select({ c: sql<number>`count(*)` }).from(products),
   ]);
 
-  let mentors = 0, coaches = 0;
-  usersSnap.docs.forEach(d => {
-    const r = d.data().role;
-    if (r === 'mentor') mentors++;
-    if (r === 'coach') coaches++;
-  });
-
   return NextResponse.json({
-    orgs: orgsSnap.size,
-    users: usersSnap.size,
-    mentors,
-    coaches,
-    courses: coursesSnap.size,
-    products: productsSnap.size,
+    orgs: Number(orgCount),
+    users: Number(userCount),
+    mentors: Number(mentorCount),
+    coaches: Number(coachCount),
+    courses: Number(courseCount),
+    products: Number(productCount),
   });
 }

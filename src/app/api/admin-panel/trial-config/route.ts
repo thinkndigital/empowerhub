@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { adminDb } from '@/lib/firebase-admin';
+import { getSetting, patchSetting } from '@/lib/app-settings';
 
 function checkAuth() {
   return cookies().get('ap_session')?.value === 'empowerhub-admin-2026-secret';
@@ -8,8 +8,8 @@ function checkAuth() {
 
 export async function GET() {
   if (!checkAuth()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const snap = await adminDb.collection('config').doc('trial').get();
-  return NextResponse.json({ days: snap.exists ? (snap.data()?.days ?? 30) : 30 });
+  const data = await getSetting<any>('trial');
+  return NextResponse.json({ days: data?.days ?? 30 });
 }
 
 export async function PUT(req: NextRequest) {
@@ -19,6 +19,6 @@ export async function PUT(req: NextRequest) {
   if (!allowed.includes(Number(days))) {
     return NextResponse.json({ error: 'قيمة غير صحيحة لمدة الفترة التجريبية' }, { status: 400 });
   }
-  await adminDb.collection('config').doc('trial').set({ days: Number(days) }, { merge: true });
+  await patchSetting('trial', { days: Number(days) });
   return NextResponse.json({ ok: true });
 }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { adminDb } from '@/lib/firebase-admin';
+import { getSetting, patchSetting } from '@/lib/app-settings';
 
 function checkAuth() {
   return cookies().get('ap_session')?.value === 'empowerhub-admin-2026-secret';
@@ -22,8 +22,7 @@ const defaultConfig = {
 
 export async function GET() {
   if (!checkAuth()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const snap = await adminDb.collection('config').doc('payment').get();
-  const data = snap.exists ? snap.data() as any : {};
+  const data = (await getSetting<any>('payment')) || {};
   return NextResponse.json({
     config: {
       allowCOD: data.allowCOD ?? defaultConfig.allowCOD,
@@ -44,6 +43,6 @@ export async function GET() {
 export async function PATCH(req: NextRequest) {
   if (!checkAuth()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const body = await req.json();
-  await adminDb.collection('config').doc('payment').set(body, { merge: true });
+  await patchSetting('payment', body);
   return NextResponse.json({ ok: true });
 }
