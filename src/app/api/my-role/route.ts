@@ -12,6 +12,12 @@ export async function GET(req: NextRequest) {
 
     const decoded = await verifyAuthToken(idToken);
 
+    // Matches the break-glass admin login in /api/login — resolve without
+    // touching the database.
+    if (decoded.uid === 'env-admin') {
+      return NextResponse.json({ role: 'admin', organizationId: undefined });
+    }
+
     // role/organizationId live directly on the users row (no separate claims
     // store to drift out of sync with, unlike the old Firebase Auth claims +
     // Firestore doc setup) — just read the current values straight from it.
