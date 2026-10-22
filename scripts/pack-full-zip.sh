@@ -17,6 +17,14 @@ mkdir -p "$STAGE/next-build/standalone/next-build"
 cp -r next-build/standalone/. "$STAGE/next-build/standalone/"
 cp -r next-build/static "$STAGE/next-build/standalone/next-build/static"
 
+# public/ (logo, favicon, etc.) must be a sibling of server.js inside
+# standalone/ to be served — Next.js does not bundle it there automatically,
+# same as static/ above. The git-archived copy at $STAGE/public is also kept
+# for the source tree, but it's this one the running server actually reads.
+if [ -d public ]; then
+  cp -r public "$STAGE/next-build/standalone/public"
+fi
+
 if [ ! -d "$STAGE/next-build/standalone/next-build/static/chunks" ]; then
   echo "FATAL: static/chunks missing from the package — aborting." >&2
   exit 1
