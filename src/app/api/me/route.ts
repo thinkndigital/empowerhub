@@ -14,6 +14,23 @@ export async function GET(req: NextRequest) {
     if (!idToken) return NextResponse.json({ error: 'No token' }, { status: 401 });
 
     const decoded = await verifyAuthToken(idToken);
+
+    // Matches the break-glass admin login in /api/login — resolve without
+    // touching the database.
+    if (decoded.uid === 'env-admin') {
+      return NextResponse.json({
+        user: {
+          uid: 'env-admin',
+          id: 'env-admin',
+          name: 'Admin',
+          email: process.env.ADMIN_EMAIL || '',
+          role: 'admin',
+          organizationId: null,
+          status: 'active',
+        },
+      });
+    }
+
     const [user] = await db.select().from(users).where(eq(users.id, decoded.uid)).limit(1);
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 

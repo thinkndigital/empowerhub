@@ -11,6 +11,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'البريد الإلكتروني وكلمة المرور مطلوبان' }, { status: 400 });
     }
 
+    // Break-glass admin login: bypasses the database entirely when
+    // ADMIN_EMAIL/ADMIN_PASSWORD are set, so the dashboard is reachable even
+    // if MySQL connectivity is still broken. Data-fetching routes still need
+    // a working DB connection, but at least login itself no longer blocks on it.
+    if (
+      process.env.ADMIN_EMAIL &&
+      process.env.ADMIN_PASSWORD &&
+      email === process.env.ADMIN_EMAIL &&
+      password === process.env.ADMIN_PASSWORD
+    ) {
+      const token = signAuthToken({ uid: 'env-admin', role: 'admin', organizationId: null });
+      return NextResponse.json({
+        success: true,
+        token,
+        user: {
+          uid: 'env-admin',
+          name: 'Admin',
+          email: process.env.ADMIN_EMAIL,
+          role: 'admin',
+          organizationId: null,
+          avatarUrl: null,
+        },
+      });
+    }
+
     const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
     if (!user) {
       return NextResponse.json({ error: 'البريد الإلكتروني أو كلمة المرور غير صحيحة' }, { status: 401 });
