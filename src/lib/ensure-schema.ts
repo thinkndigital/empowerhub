@@ -28,10 +28,28 @@ async function doEnsure() {
       .split(/;\s*\n/)
       .map((s) => s.trim())
       .filter(Boolean);
+
+    let created = 0;
     for (const statement of statements) {
-      await db.execute(sql.raw(statement));
+      // Idempotent: a leftover table from an earlier partial manual import
+      // (e.g. phpMyAdmin) must not abort the rest of the migration.
+      const idempotentStatement = statement.replace(/^CREATE TABLE\s+/i, 'CREATE TABLE IF NOT EXISTS ');
+      try {
+        await db.execute(sql.raw(idempotentStatement));
+        created++;
+      } catch (e: any) {
+        const code = e?.cause?.code || e?.code;
+        if (code === 'ER_DUP_KEYNAME' || code === 'ER_TABLE_EXISTS_ERROR') {
+          continue; // already created in a previous (partial) run — fine
+        }
+        console.error(
+          '[ensureSchema] statement failed:', code, e?.cause?.sqlMessage || e?.message,
+          '\n  statement:', statement.slice(0, 100).replace(/\n/g, ' ')
+        );
+        throw e;
+      }
     }
-    console.log(`[ensureSchema] Created ${statements.length} tables from schema.sql`);
+    console.log(`[ensureSchema] Ensured ${created}/${statements.length} tables/indexes from schema.sql`);
   }
 
   if (process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD) {

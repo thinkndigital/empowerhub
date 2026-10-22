@@ -17,7 +17,9 @@ export async function POST(req: NextRequest) {
     // /setup step needed once DB_* env vars are correct. Swallowed on
     // failure (e.g. DB still unreachable) so the break-glass fallback below
     // still works in the meantime.
-    await ensureSchemaAndAdmin().catch((e) => console.error('[ensureSchema] skipped:', e?.message));
+    await ensureSchemaAndAdmin().catch((e) =>
+      console.error('[ensureSchema] skipped:', e?.cause?.code || e?.code, e?.cause?.sqlMessage || e?.message)
+    );
 
     // Break-glass admin login: bypasses the database entirely when
     // ADMIN_EMAIL/ADMIN_PASSWORD are set, so the dashboard is reachable even
