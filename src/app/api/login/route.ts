@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { users } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
 import { verifyPassword, signAuthToken } from '@/lib/auth-server';
+import { ensureSchemaAndAdmin } from '@/lib/ensure-schema';
 
 export async function POST(req: NextRequest) {
   try {
@@ -10,6 +11,13 @@ export async function POST(req: NextRequest) {
     if (!email || !password) {
       return NextResponse.json({ error: 'البريد الإلكتروني وكلمة المرور مطلوبان' }, { status: 400 });
     }
+
+    // Auto-create tables (from schema.sql) and seed the initial admin row
+    // on first successful DB connection — no manual phpMyAdmin import or
+    // /setup step needed once DB_* env vars are correct. Swallowed on
+    // failure (e.g. DB still unreachable) so the break-glass fallback below
+    // still works in the meantime.
+    await ensureSchemaAndAdmin().catch((e) => console.error('[ensureSchema] skipped:', e?.message));
 
     // Break-glass admin login: bypasses the database entirely when
     // ADMIN_EMAIL/ADMIN_PASSWORD are set, so the dashboard is reachable even

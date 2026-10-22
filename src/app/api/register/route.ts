@@ -5,9 +5,14 @@ import { organizations, plans, subscriptions, users, appSettings } from '@/lib/s
 import { eq } from 'drizzle-orm';
 import { hashPassword, signAuthToken } from '@/lib/auth-server';
 import { checkOrgLimit, checkOrgLocked } from '@/lib/plan-limits';
+import { ensureSchemaAndAdmin } from '@/lib/ensure-schema';
 
 export async function POST(req: NextRequest) {
   try {
+    // Auto-create tables (from schema.sql) on first successful DB
+    // connection — no manual phpMyAdmin import needed on a fresh deploy.
+    await ensureSchemaAndAdmin().catch((e) => console.error('[ensureSchema] skipped:', e?.message));
+
     const body = await req.json();
     const { name, email, password, role, organizationName, orgInviteCode, plan, billingCycle } = body;
     const cycle = billingCycle === 'annual' ? 'annual' : 'monthly';
