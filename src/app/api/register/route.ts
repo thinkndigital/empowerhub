@@ -146,7 +146,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('Register error:', error?.code, error?.message);
+    console.error('Register error:', error?.code, error?.message, 'cause:', error?.cause?.code, error?.cause?.errno, error?.cause?.sqlMessage);
     return NextResponse.json(
       { error: error.message || 'حدث خطأ غير متوقع' },
       { status: 500 }
